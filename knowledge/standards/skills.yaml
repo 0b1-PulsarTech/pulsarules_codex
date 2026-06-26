@@ -1,0 +1,520 @@
+skills:
+  - id: app-bootstrap
+    name: App bootstrap
+    description: Bootstrapping and wiring an app - thin main(), zero init() side effects, typed Config, constructor-based DI (singletons vs factories), the per-request principal from JWT, the new-app skeleton.
+    triggers:
+      - bootstrapping a new deployable binary
+      - writing or editing main() / bootstrap files
+      - registering a service/repository/facade/router in the injector
+      - deciding singleton vs per-request factory lifetime
+      - wiring the per-request principal from JWT claims
+    always_load: false
+    order: 60
+    compose_rules:
+      - startup
+      - config
+      - dependency-injection
+    compose_patterns:
+      - bootstrap-and-di
+      - app-skeleton
+      - user-from-context
+      - config-layout
+      - embedded-migrations
+  - id: authorization
+    name: Authorization
+    description: Bitwise, reflection-free, per-module permission schemas; checks in the use case (never ad-hoc isAdmin); a registry built at boot and injected; one marshal format for DB column and JWT claim.
+    triggers:
+      - protecting an endpoint or use case with a permission
+      - a module declaring its own permission schema
+      - granting/revoking permissions
+      - marshalling permissions for the DB column or the JWT claim
+      - wiring the permission registry at bootstrap
+    always_load: false
+    order: 65
+    compose_rules:
+      - authorization
+    compose_patterns:
+      - permitek-schema
+  - id: build
+    name: Build & tooling
+    description: CGO-free default build; Taskfile entrypoints; reproducible codegen (sqlc/Atlas/mockgen/seed); container images pinned by digest; no go run for daemons; no curl|sh build-time downloads.
+    triggers:
+      - adding or changing a Taskfile target, linter config, or build tag
+      - running code generation
+      - building a binary or container image
+      - adding a tool dependency
+    always_load: false
+    order: 73
+    compose_rules:
+      - build
+      - fitness-functions
+  - id: code-minimalism
+    name: Code minimalism
+    description: Function-scope minimalism - the necessity -> stdlib -> platform -> existing-dep -> one-line -> implement decision ladder. Never architecture; never trims mandated patterns or guardrails.
+    triggers:
+      - writing or editing any function/method body
+      - about to add an abstraction/interface/option/generic/helper
+      - about to add a third-party dependency
+      - reviewing a diff for bloat or speculative generality
+    always_load: true
+    order: 40
+    compose_rules:
+      - minimalism
+  - id: code-placement
+    name: Code placement
+    description: Where code lives - apps/libs/tools/build vs cmd/internal/pkg; one-way apps-depend-on-libs; non-API under internal/. Use when creating a module/app/lib or deciding where a file belongs.
+    triggers:
+      - creating a new module/app/lib
+      - deciding where a file or package belongs
+      - adding a cross-module dependency
+      - reviewing layout for boundary violations
+    always_load: true
+    order: 30
+    compose_rules:
+      - code-placement
+      - dependency-rule
+  - id: commits
+    name: Commits
+    description: Emoji-prefixed Conventional Commits; one logical change per commit; no tool-attribution trailers; each commit builds and passes tests standalone. Loaded last by the router before committing.
+    triggers:
+      - writing a commit message
+      - squashing/rebasing or cleaning history before review
+      - documenting a breaking change
+      - committing AI-assisted changes
+    always_load: false
+    order: 90
+    compose_rules:
+      - commits
+  - id: concurrency
+    name: Concurrency
+    description: Goroutine ownership and context discipline; errgroup/WaitGroup; worker loops on ctx.Done(); -race never silenced. Use when spawning goroutines, using channels/mutexes, or a worker loop.
+    triggers:
+      - spawning a goroutine or fanning out work
+      - using channels, sync.Mutex, or sync.WaitGroup
+      - designing a long-running worker/relay loop
+      - propagating or honoring context cancellation
+    always_load: false
+    order: 50
+    compose_rules:
+      - concurrency
+    compose_patterns:
+      - observer-weakptr
+      - dispatch-pool
+  - id: database-persistence
+    name: Database persistence
+    description: The persistence chain - ent schema, Atlas migrations, sqlc queries, repositories that convert rows to domain DTOs via goverter (no generated types escape), errors mapped by a DB error wrapper.
+    triggers:
+      - adding or modifying a database entity
+      - writing a .sql query or generating migrations
+      - creating or editing a repository
+      - mapping generated rows to domain entities
+      - setting up repository tests
+    always_load: false
+    order: 66
+    compose_rules:
+      - database
+    compose_patterns:
+      - ent-schema
+      - sqlc-queries
+      - goverter-mapping
+      - repository-layout
+  - id: design-patterns
+    name: Design patterns
+    description: The classic patterns used (Strategy, Adapter, Facade, Registry, Decorator, Composite, Observer) and the anti-patterns rejected (Singleton, Template-Method inheritance, reflection dispatch, Service Locator, FSM state objects) with the rule each breaks.
+    triggers:
+      - reviewing a PR/design for architectural correctness
+      - adding a new pattern or introducing a new external dependency
+      - choosing DI vs singleton, inheritance vs composition, reflection vs type-safety
+    always_load: false
+    order: 78
+    compose_rules:
+      - dependency-injection
+      - types
+      - module-boundaries
+      - frameworks-as-plugins
+    compose_patterns:
+      - design-patterns
+  - id: errors-logging
+    name: Errors & logging
+    description: Error wrapping (%w, sentinels, domain-error contract) and structured slog logging (typed attrs, no PII). Use when returning/wrapping an error or adding any log statement.
+    triggers:
+      - returning / wrapping / mapping an error
+      - defining a sentinel error
+      - creating a domain error that maps to a status code
+      - adding any log statement
+      - deciding a log level or whether to log vs return
+    always_load: true
+    order: 20
+    compose_rules:
+      - errors
+      - logging
+      - command-query-separation
+  - id: eventing-outbox
+    name: Eventing & outbox
+    description: Cross-boundary side effects via the mandatory transactional outbox; deterministic idempotency keys; idempotent sinks deduped by a DB unique index; replay-safe projections; ephemeral fan-out via a weak-pointer bus.
+    triggers:
+      - a use case needs a side effect outside its boundary
+      - implementing the relay worker or a Sink consumer
+      - defining a domain event or the event catalog
+      - projecting the audit trail or handling an erasure/DSAR job
+      - choosing durable outbox vs ephemeral fan-out
+    always_load: false
+    order: 68
+    compose_rules:
+      - eventing
+    compose_patterns:
+      - event-sink-worker
+  - id: external-provider
+    name: External provider
+    description: Onboard an external integration as a Strategy port with a per-provider package (fixed file set, unexported DTOs, mapper.go), DI binding, config, and bootstrap switching on the code.
+    triggers:
+      - adding a new external HTTP fetcher/provider/integration
+      - onboarding a Strategy implementation behind a port
+    always_load: false
+    order: 74
+    compose_rules:
+      - http-clients
+      - dependency-injection
+    compose_patterns:
+      - external-provider
+  - id: go-style
+    name: Go style
+    description: Baseline Go style - formatting, identifier/package/file naming, three-group imports, named structs over map[string]any, consumer-declared small interfaces. Use when writing or editing any Go file.
+    triggers:
+      - writing or editing any .go file
+      - naming a package/type/file/test
+      - writing an import block or aliasing a proto package
+      - choosing struct vs map at a boundary
+      - declaring an interface
+      - writing doc comments for exported symbols
+    always_load: true
+    order: 10
+    compose_rules:
+      - effective-go
+      - naming
+      - imports
+      - types
+      - flag-arguments
+    compose_patterns:
+      - iterator-seq
+  - id: git-history
+    name: Git history
+    description: Surgical git history rewriting - rebuild a squash into clean one-logical-change commits, fold every fix-up into its file's creation commit, keep moves pure, verify the final-tree invariant, never force-push a shared branch without consent.
+    triggers:
+      - rebuilding a squashed or temp commit into clean incremental history
+      - cleaning, reordering, or splitting commits before review
+      - folding a later change into the commit that introduced a file
+      - splitting a commit that mixes a move/rename with new implementation
+      - rewording commit messages across a range
+    always_load: false
+    order: 91
+    compose_rules:
+      - commits
+  - id: grpc-adapter
+    name: gRPC adapter
+    description: Consuming/serving gRPC against a proto module; proto aliased <service>v<n>; consumer port wraps the client; server is a thin shell; proto never leaks into the domain.
+    triggers:
+      - consuming a gRPC service
+      - implementing a gRPC server an app exposes
+      - importing proto packages/stubs
+      - mapping proto messages to domain entities
+      - editing a .proto file
+    always_load: false
+    order: 64
+    compose_rules:
+      - grpc
+    compose_patterns:
+      - grpc-adapter
+  - id: http-clients
+    name: HTTP clients
+    description: All outbound HTTP through one infra gateway; no http.DefaultClient; per-request timeouts; no TLS skip-verify; cache at the call site; retries are the caller's responsibility.
+    triggers:
+      - making an outbound HTTP call
+      - adding a fetcher/provider/adapter that calls an external API
+      - deciding where HTTP setup lives
+    always_load: false
+    order: 72
+    compose_rules:
+      - http-clients
+  - id: integration-tests
+    name: Integration tests
+    description: Colocated same-package tests, one _test.go per source file, table-driven with slice testCases / row testCase (never tt) covering success AND every failure path; deterministic time via testing/synctest (never a now func() clock-injection field, never time.Sleep); repo tests against a real DB behind //go:build integration (never a SQL mock); E2E boots the real server via an engine factory + TestMain; gRPC on bufconn; mockgen mocks.
+    triggers:
+      - writing unit tests for business logic
+      - writing repository tests against a real database
+      - writing end-to-end tests that exercise the booted server
+      - building fixtures or mocking a dependency
+    always_load: false
+    order: 71
+    compose_rules:
+      - testing
+    compose_patterns:
+      - integration-tests
+      - colocated-mocks
+      - fixture-builder
+  - id: observability
+    name: Observability
+    description: Tracing via an injected Tracer (never global); spans with defer span.End(); errors recorded on the originating span; logs correlated via WithSpan; the concrete tracer chosen at cmd/infra with OTel confined to the adapter.
+    triggers:
+      - instrumenting a use case with tracing spans
+      - wiring the observability adapter at bootstrap
+      - choosing no-op vs basic vs OTel tracing
+      - correlating logs with trace spans
+    always_load: false
+    order: 70
+    compose_patterns:
+      - observability
+  - id: project-router
+    name: Project router
+    description: MANDATORY first step for any code change - inspects the task, loads the required skills in composition order, and enforces their rules. Always prefer routing over implementing directly.
+    triggers:
+      - any code creation or modification
+      - new app / use case / repository / endpoint / entity / migration / query / event / worker / lib / permission / test
+    always_load: true
+    order: 0
+    compose_workflows:
+      - feature-development
+    compose_skills:
+      - go-style
+      - errors-logging
+      - code-placement
+      - code-minimalism
+      - commits
+      - concurrency
+      - security
+      - design-patterns
+      - app-bootstrap
+      - usecase-layout
+      - transport-interop
+      - rest-adapter
+      - grpc-adapter
+      - authorization
+      - database-persistence
+      - transactions
+      - eventing-outbox
+      - retry-backoff
+      - observability
+      - integration-tests
+      - http-clients
+      - build
+      - external-provider
+      - template-engine
+      - rule-engine
+      - proposal-window
+      - refactoring
+  - id: proposal-window
+    name: Proposal window
+    description: A bounded numeric value window (Validate/Clamp/Steps); money as minor-unit int64; rigid Proposal/Suggestion structs; versioned windows; append-only sent records renegotiated as revisions.
+    triggers:
+      - validating a bounded numeric value against a template's bounds
+      - clamping an AI-suggested value to policy
+      - generating UI step selectors for numeric values
+      - building a rigid Proposal/Suggestion AI output
+      - versioning a template and tracking renegotiation as revisions
+    always_load: false
+    order: 77
+    compose_patterns:
+      - proposal-window
+  - id: refactoring
+    name: Refactoring
+    description: Behavior-preserving cleanup - the two hats, small green steps, the code-smell catalog and its Go-linter remedies, refactor commits kept separate from features.
+    triggers:
+      - cleaning up a code smell before adding behavior
+      - a function or file trips funlen/cyclop/nestif/dupl
+      - splitting a refactor out of a feature change
+    always_load: false
+    order: 79
+    compose_rules:
+      - code-smells
+    compose_workflows:
+      - refactoring
+  - id: rest-adapter
+    name: REST adapter
+    description: Expose a use case over REST with typed Input/Output DTOs driving OpenAPI; a parse-call-map-respond handler; a router contract with a permission guard; domain errors mapped to HTTP status by middleware.
+    triggers:
+      - exposing a use case over REST
+      - building typed Input/Output structs for OpenAPI
+      - implementing a handler (parse, call, map, respond)
+      - registering routes via a router contract
+      - applying a per-route permission guard
+    always_load: false
+    order: 63
+    compose_rules:
+      - transport
+    compose_patterns:
+      - rest-adapter
+  - id: retry-backoff
+    name: Retry & backoff
+    description: An injected Policy wrapped as a Decorator over a port; retry only retryable errors; backoff waits on context; only retry writes with an idempotency key.
+    triggers:
+      - a sender/port can fail transiently (429, 5xx, network timeout)
+      - wrapping a provider adapter, webhook delivery, or external call
+      - an operation carries an idempotency key
+      - building a decorator over a port interface
+    always_load: false
+    order: 69
+    compose_rules:
+      - concurrency
+    compose_patterns:
+      - retry-backoff
+  - id: rule-engine
+    name: Rule engine
+    description: Data-driven JSON rule selection - domain-agnostic Rule/Evaluator, And/Or composites, a RuleTree with branches, a Registry of type-keyed constructors (no switch, no reflection), write-time validation, injected RunObserver and Debouncer.
+    triggers:
+      - implementing dynamic/stored JSON rule configs (automation, conditions, branching, segments)
+      - registering domain-specific rule types
+      - auditing why a rule did/didn't fire
+      - coalescing bursts of inputs before evaluation
+    always_load: false
+    order: 76
+    compose_rules:
+      - dependency-injection
+    compose_patterns:
+      - rule-engine
+  - id: security
+    name: Security
+    description: Secrets via typed config (zeroed after load), no secrets/PII in logs, boundary input validation, SQL via generated queries, JWT verified at middleware, images pinned by digest.
+    triggers:
+      - loading secrets or credentials
+      - writing a log line that could touch PII or tokens
+      - validating user/network input at a boundary
+      - constructing or executing SQL
+      - working with JWT/identity verification
+      - editing a Dockerfile/Containerfile or pinning dependencies
+    always_load: false
+    order: 51
+    compose_rules:
+      - security
+  - id: template-engine
+    name: Template engine
+    description: A variable-registry render engine (variables are data, not code); lazy Resolver lookups; render via text/template with missingkey=error; hidden variables resolved separately; per-target adapters for positional external formats.
+    triggers:
+      - building user-defined template authoring/rendering
+      - rendering text from a variable registry
+      - compiling a template to a positional external format
+    always_load: false
+    order: 75
+    compose_patterns:
+      - template-engine
+  - id: transactions
+    name: Transactions
+    description: Mandatory multi-write atomicity; the outbox event commits in the same transaction; commit-on-success/rollback-on-error via defer keyed on the named return error.
+    triggers:
+      - a use case performs more than one write/update/delete
+      - writing business state and an outbox event together
+      - implementing a Transactioner or a unit-of-work Tx port
+      - testing commit vs rollback paths
+    always_load: false
+    order: 67
+    compose_patterns:
+      - transactions
+  - id: transport-interop
+    name: Transport & interop
+    description: Transport-agnostic use cases (domain imports no net/http/grpc/proto) and cross-module facades (consumer-declared port implemented in interop/facades).
+    triggers:
+      - writing an HTTP or gRPC handler
+      - designing request/response DTOs vs domain entities
+      - deciding where validation vs business logic lives
+      - one feature/module needs to call another's use case
+    always_load: false
+    order: 62
+    compose_rules:
+      - transport
+      - interop
+  - id: usecase-layout
+    name: Use-case layout
+    description: The UseCase struct with a consumer-declared Repository port and the per-request principal; one action per file; typed Input; infra errors mapped to the domain-error type; a factory constructor.
+    triggers:
+      - creating a new use-case package for a feature
+      - adding a new action/method to a use case
+      - declaring the Repository (or other ports) the use case depends on
+      - wiring a use-case constructor in DI
+      - writing unit tests for a use case with a mocked repository
+    always_load: false
+    order: 61
+    compose_rules:
+      - transport
+      - authorization
+    compose_patterns:
+      - usecase-layout
+  - id: codebase-design
+    name: Codebase design
+    description: Shared vocabulary for designing deep modules - a lot of behavior behind a small interface at a clean seam, testable through that interface; the deletion test, interface-as-test-surface, one-adapter-is-hypothetical. The design language design-patterns and refactoring build on.
+    triggers:
+      - designing or reshaping a module's interface
+      - deciding where a seam goes or whether to introduce one
+      - making code more testable or navigable
+      - another skill needs the deep-module vocabulary
+    always_load: false
+    order: 80
+    compose_patterns:
+      - deep-modules
+  - id: improve-codebase-architecture
+    name: Improve codebase architecture
+    description: Scan a codebase for deepening opportunities - refactors that turn shallow modules into deep ones - scope by recent churn, present candidates as a report, then grill the chosen one before landing it via refactoring.
+    triggers:
+      - reviewing a codebase or subsystem for architectural friction
+      - looking for refactors that improve testability and locality
+      - an area keeps causing bugs or is hard to test through its interface
+    always_load: false
+    order: 81
+  - id: domain-modeling
+    name: Domain modeling
+    description: Actively build and sharpen the domain model - challenge terms against CONTEXT.md, sharpen fuzzy language, cross-check code, and record decisions as ADRs sparingly. Pairs with the architecture-decision-records workflow.
+    triggers:
+      - pinning down domain terminology or a ubiquitous language
+      - a term is overloaded, fuzzy, or conflicts with the glossary
+      - recording an architectural decision as an ADR
+      - another skill needs the domain model kept current
+    always_load: false
+    order: 82
+    compose_workflows:
+      - architecture-decision-records
+  - id: grilling
+    name: Grilling
+    description: Grill the user relentlessly about a plan or decision - one question at a time, always with a recommendation, researching facts via tools instead of asking, until a shared understanding is reached; do not build before that.
+    triggers:
+      - stress-testing a plan, decision, or design before building
+      - the user uses a grill trigger phrase
+      - a task has open decisions with dependencies between them
+    always_load: false
+    order: 85
+    compose_rules:
+      - grilling
+  - id: agent-orchestration
+    name: Agent orchestration
+    description: Split work across agents safely - the main session orchestrates and integrates, scouts are read-only, parallel writers get isolated worktrees verified via git reflog, and git-history operations are never delegated.
+    triggers:
+      - delegating implementation or review to subagents
+      - running agents in parallel against a working tree
+      - deciding what a subagent is allowed to do
+      - about to hand any git operation to an agent
+    always_load: false
+    order: 92
+    compose_rules:
+      - agent-orchestration
+    compose_skills:
+      - git-history
+  - id: verification-before-done
+    name: Verification before done
+    description: Nothing is done on a claim - build, race tests, formatting, linters, and governance must be green on the final tree and seen this session; every behavior change proven by a failing-then-passing test; status reported faithfully.
+    triggers:
+      - about to report a task complete or write a commit
+      - claiming something is fixed, passing, or working
+      - finishing a bug fix or a behavior change
+    always_load: false
+    order: 95
+    compose_rules:
+      - verification
+  - id: skill-authoring
+    name: Skill authoring
+    description: Add or change a skill in this repo - edit the knowledge source not the generated mirrors, body plus skills.yaml entry, compose canonical clauses, wire the router, validate and generate for every target, and back objective rules with an analyzer.
+    triggers:
+      - adding or editing a skill, rule, pattern, or workflow
+      - composing shared clauses into a skill
+      - wiring a new skill into the router
+      - making a skill rule machine-enforced
+    always_load: false
+    order: 99
+    compose_rules:
+      - skill-authoring
