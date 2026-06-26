@@ -1,0 +1,37 @@
+---
+name: {{.ID}}
+description: {{.Description}}
+---
+
+# {{.Name}}
+
+{{.Description}}
+
+## Steps
+{{- range .Steps}}
+- {{.}}
+{{- end}}
+{{- if .Body}}
+
+{{.Body}}
+{{- end}}
+{{- if .Rules}}
+
+## Applicable rules
+{{- range .Rules}}
+
+### {{.Name}}
+
+{{.Body}}
+{{- end}}
+{{- end}}
+{{- if .Patterns}}
+
+## Applicable patterns
+{{- range .Patterns}}
+
+### {{.Name}}
+
+{{.Body}}
+{{- end}}
+{{- end}}

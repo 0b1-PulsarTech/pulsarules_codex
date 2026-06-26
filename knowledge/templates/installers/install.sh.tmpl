@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# No-Go fallback installer: copies pre-generated skills from generated/skills/
+# into a project's .claude/skills, installs the skill-router reminder hook into
+# .claude/hooks, idempotently wires it into a settings file, and (when gopls is on
+# PATH) wires the gopls MCP into .mcp.json plus a generated gopls-navigation skill.
+# Prefer the Go installer (`pulsarules_codex-installer install`), which renders
+# skills from the knowledge base; this script only copies already-generated output
+# (run `pulsarules_codex-installer generate` first, or use the committed output).
+#
+# Requires: bash, jq, cp, chmod. No node.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SRC="$ROOT/generated/skills"
+HOOKS_SRC="$ROOT/knowledge/templates/hooks"
+MCP_SRC="$ROOT/knowledge/templates/mcp"
+GOPLS_HEADER="$ROOT/knowledge/templates/skills/gopls-navigation.header.md"
+
+usage() {
+  cat <<EOF
+Usage: $0 --global  [--skills a,b,c] [--router-only] [--no-hooks] [--no-mcp] [--hooks-scope project|local]
+       $0 --project PATH [--skills a,b,c] [--router-only] [--no-hooks] [--no-mcp] [--hooks-scope project|local]
+
+Copies skills from $SRC and wires the skill-router hook + gopls MCP.
+  --global         install to ~/.claude
+  --project PATH   install to PATH/.claude
+  --skills LIST    comma-separated skill ids (default: all)
+  --router-only    install only project-router
+  --no-hooks       install skills only; skip the hook + settings wiring
+  --no-mcp         skip .mcp.json + the gopls-navigation skill
+  --hooks-scope    settings file: project (settings.json, default) | local (settings.local.json)
+EOF
+  exit 1
+}
+
+CLAUDE_DIR=""
+REPO_DIR=""
+SKILLS=""
+ROUTER_ONLY=0
+NO_HOOKS=0
+NO_MCP=0
+HOOKS_SCOPE="project"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --global) CLAUDE_DIR="$HOME/.claude"; REPO_DIR="$HOME";;
+    --project) shift; REPO_DIR="$(cd "$1" && pwd)"; CLAUDE_DIR="$REPO_DIR/.claude";;
+    --skills) shift; SKILLS="$1";;
+    --router-only) ROUTER_ONLY=1;;
+    --no-hooks) NO_HOOKS=1;;
+    --no-mcp) NO_MCP=1;;
+    --hooks-scope) shift; HOOKS_SCOPE="$1";;
+    *) usage;;
+  esac
+  shift
+done
+
+[ -n "$CLAUDE_DIR" ] || usage
+[ -d "$SRC" ] || { echo "missing $SRC - run 'pulsarules_codex-installer generate' first"; exit 1; }
+case "$HOOKS_SCOPE" in
+  project) SETTINGS_FILE="settings.json";;
+  local)   SETTINGS_FILE="settings.local.json";;
+  *) echo "invalid --hooks-scope '$HOOKS_SCOPE' (want project|local)"; exit 1;;
+esac
+
+DEST="$CLAUDE_DIR/skills"
+if [ "$ROUTER_ONLY" = 1 ]; then SKILLS="project-router"; fi
+if [ -z "$SKILLS" ]; then SKILLS="$(ls "$SRC")"; fi
+
+mkdir -p "$DEST"
+IFS=',' read -ra IDS <<<"$SKILLS"
+for id in "${IDS[@]}"; do
+  id="$(echo "$id" | xargs)"
+  if [ ! -d "$SRC/$id" ]; then echo "skip: unknown skill '$id'"; continue; fi
+  mkdir -p "$DEST/$id"
+  cp -R "$SRC/$id/." "$DEST/$id/"
+  echo "installed: $DEST/$id"
+done
+
+# Keep the installed .claude contents local/untracked.
+gitignore="$CLAUDE_DIR/.gitignore"
+touch "$gitignore"
+grep -qx '\*' "$gitignore" || printf '*\n' >> "$gitignore"
+
+# Wire the gopls MCP into <repo>/.mcp.json and regenerate the gopls-navigation skill.
+if [ "$NO_MCP" != 1 ]; then
+  if command -v gopls >/dev/null 2>&1; then
+    mcp_json="$(sed "s#{{REPO_DIR}}#$REPO_DIR#g" "$MCP_SRC/mcp.json.tmpl")"
+    mcp_file="$REPO_DIR/.mcp.json"
+    if [ -f "$mcp_file" ]; then
+      tmp="$(mktemp)"
+      jq --argjson new "$(printf '%s' "$mcp_json" | jq -c '.')" \
+        '.mcpServers = ((.mcpServers // {}) + $new.mcpServers)' "$mcp_file" > "$tmp" && mv "$tmp" "$mcp_file"
+    else
+      printf '%s\n' "$mcp_json" | jq '.' > "$mcp_file"
+    fi
+    mkdir -p "$DEST/gopls-navigation"
+    { cat "$GOPLS_HEADER"; printf '\n## Full gopls MCP reference\n\n'; gopls mcp -instructions; } \
+      > "$DEST/gopls-navigation/SKILL.md"
+    echo "wired gopls MCP into $mcp_file; generated gopls-navigation skill"
+  else
+    echo "gopls not on PATH; skipping gopls MCP + gopls-navigation skill (install: go install golang.org/x/tools/gopls@latest)" >&2
+  fi
+fi
+
+if [ "$NO_HOOKS" = 1 ]; then exit 0; fi
+
+# Install the hook script (+x) and its README.
+hooks_dst="$CLAUDE_DIR/hooks"
+mkdir -p "$hooks_dst"
+cp "$HOOKS_SRC/skill-router-reminder.sh" "$hooks_dst/"
+chmod +x "$hooks_dst/skill-router-reminder.sh"
+cp "$HOOKS_SRC/README.md" "$hooks_dst/"
+
+# Merge the hooks block idempotently: drop any prior skill-router-reminder entries,
+# then append the fresh ones, preserving permissions / enabledMcpjsonServers /
+# unrelated hooks. The hook command resolves the project root via $CLAUDE_PROJECT_DIR.
+hooks_json="$(jq -c '.' "$HOOKS_SRC/settings.hooks.json.tmpl")"
+settings="$CLAUDE_DIR/$SETTINGS_FILE"
+if [ -f "$settings" ]; then
+  tmp="$(mktemp)"
+  jq --argjson new "$hooks_json" '
+    .hooks = ((.hooks // {})) |
+    .hooks.SessionStart = ((.hooks.SessionStart // []) | map(select(any(.hooks[]?.command; test("skill-router-reminder.sh")) | not))) + $new.hooks.SessionStart |
+    .hooks.PreToolUse  = ((.hooks.PreToolUse  // []) | map(select(any(.hooks[]?.command; test("skill-router-reminder.sh")) | not))) + $new.hooks.PreToolUse
+  ' "$settings" > "$tmp" && mv "$tmp" "$settings"
+else
+  printf '%s\n' "$hooks_json" | jq '.' > "$settings"
+fi
+echo "wired hook into $settings"

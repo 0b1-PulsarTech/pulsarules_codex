@@ -1,0 +1,71 @@
+# AGENTS.md - {{.ProjectName}}
+
+Entry point for human contributors and AI agents working on this repository.
+
+> **Rules tell you what. Patterns show you how.**
+
+## What this repo is
+
+{{.ProjectDescription}}
+
+## Engineering standards
+
+This project follows the cross-project engineering standards from `pulsarules_codex` (rules,
+patterns, workflows), rendered as skills under `{{.SkillsDir}}/`. When a rule or pattern is
+ambiguous, fall back to the Effective Go / Code Review Comments baseline.
+
+## Mandatory routing contract (read before any Go/SQL/config change)
+
+opencode has no SessionStart hook, so this contract is stated here instead: ANY Go/SQL/config change
+MUST begin by consulting the `project-router` skill (`{{.SkillsDir}}/project-router/SKILL.md`):
+classify the task against its dispatch table, LOAD every matched skill, and APPLY each skill's rules
+WHILE writing (not as an afterthought). Baseline always applies: `go-style`, `errors-logging`,
+`code-placement`, `code-minimalism`. Load `integration-tests` for ANY `_test.go`. Tests are
+same-package, one `_test.go` per source file, table-driven (`testCases`/`testCase`, never `tt`),
+cover every failure path, and use `testing/synctest` for time (never a `now func()` clock field). No
+em dash (U+2014) in `.go`. Before committing, run each loaded skill's Validation checklist and the
+verify suite (`go build && go vet && go test -race`, golangci-lint, `gofmt -l`).
+
+## Available skills
+{{- range .Skills}}
+- `{{.ID}}` - {{.Description}}
+{{- end}}
+
+## Stop signs (not negotiable)
+
+- No global mutable state. Singletons live in the DI injector.
+- No side effects in `init()` or at package load. Connections, goroutines, env reads happen inside
+  `main()` -> the bootstrap composition root.
+- No cross-app/cross-binary imports. Share via libs/pkg.
+- No libs/pkg importing apps/cmd.
+- No `panic` outside `main()`. Libraries return errors.
+- No raw SQL strings in handlers/use cases. Persistence goes through generated queries inside
+  repositories.
+- No generated row types returned from repositories. Convert to domain DTOs before returning.
+- No direct cross-module calls. Use a facade interface declared in the consuming package.
+- No transport imports in domain code. Use cases are transport-agnostic.
+- No silent error swallowing. Wrap with `fmt.Errorf("%w", err)` or convert to a domain error.
+
+## How to run things
+
+All workflows are wired through Taskfile:
+
+```sh
+task               # vet + tests
+task tools:fmt     # gofumpt + goimports + golines
+task tools:lint    # golangci-lint
+task main:test     # go test ./...
+```
+
+CI must pass `task tools:lint` and `task main:test` before merge.
+
+## For AI agents
+
+- Start every change by routing through the `project-router` skill (see the contract above).
+- Prefer surgical edits. Don't reformat unrelated files. The formatter does that already.
+- When wiring a new service, every collaborator arrives through the constructor; nothing is read
+  from process globals.
+- The per-request principal is provided by a DI factory, parsed from JWT context. Use cases that
+  need the caller declare it as a constructor argument.
+- Commits follow the emoji-prefixed Conventional Commits convention. No `Co-Authored-By` or
+  tool-attribution trailers.

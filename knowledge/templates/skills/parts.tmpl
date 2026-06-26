@@ -1,0 +1,37 @@
+{{define "merged"}}{{- range .}}
+
+### {{.Heading}}
+{{- range .Items}}
+
+#### {{.Name}}
+
+{{.Body}}
+{{- end}}
+{{- end}}{{end}}
+{{define "sources"}}{{- range .}}
+
+### {{.Name}}
+{{- range .Sections}}
+
+#### {{.Heading}}
+
+{{.Body}}
+{{- end}}
+{{- end}}{{end}}
+{{define "workflows"}}{{- if .}}
+
+## Workflows
+{{- range .}}
+
+### {{.Name}}
+
+{{.Body}}
+{{- end}}
+{{- end}}{{end}}
+{{define "references"}}{{- if .}}
+
+## References
+{{- range .}}
+- [{{.Title}}]({{.URL}}){{if .Note}} - {{.Note}}{{end}}
+{{- end}}
+{{- end}}{{end}}

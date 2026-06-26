@@ -1,0 +1,38 @@
+---
+name: {{.ID}}
+description: {{.Description}}
+---
+
+# {{.Name}}
+
+{{.Description}}
+
+## Activation conditions
+{{- range .Triggers}}
+- {{.}}
+{{- end}}
+{{- if .Sidecar}}
+
+{{.Sidecar}}
+{{- end}}
+{{- if .Merged}}
+
+## Applicable rules and patterns
+{{template "merged" .Merged}}
+{{- else if .Sources}}
+
+## Applicable rules and patterns
+{{template "sources" .Sources}}
+{{- end}}
+{{- template "workflows" .Workflows}}
+{{- template "references" .References}}
+
+## Composition
+- Always load: {{.AlwaysLoad}}
+- Order: {{.Order}}
+{{- if .ComposeSkills}}
+- Compose with: {{range $i, $s := .ComposeSkills}}{{if $i}}, {{end}}`{{$s}}`{{end}}
+{{- end}}
+{{- if .Linters}}
+- Linters: {{range $i, $l := .Linters}}{{if $i}}, {{end}}`{{$l}}`{{end}}
+{{- end}}
