@@ -14,7 +14,7 @@ dependencies:
 
 > Any use case doing two or more writes (including a business write plus its outbox event) runs them
 > in one transaction - either all land or none do. A single write uses the implicit per-statement
-> transaction. The outbox event commits in the same transaction (see [[eventing]]).
+> transaction. The outbox event commits in the same transaction (see [[eventing-outbox]]).
 
 Reference tools: `sqlc` `Queries.WithTx`; a small tx helper package.
 

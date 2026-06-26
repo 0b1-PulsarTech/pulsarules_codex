@@ -42,3 +42,7 @@ type Skill struct {
 	ComposeWorkflows []string `yaml:"compose_workflows,omitempty"`
 	ComposeSkills    []string `yaml:"compose_skills,omitempty"`
 }
+
+type skillsFile struct {
+	Skills []Skill `yaml:"skills"`
+}

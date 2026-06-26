@@ -5,7 +5,7 @@ form the engineering contract for any new or modified Go code. Rules are phrased
 principles; where a rule is automateable, the `## Linters` section names the linter.
 
 Rules are grouped into themed subdirectories to reduce directory noise. The ID in each file's
-frontmatter is the canonical reference.
+frontmatter is the canonical reference - file location does not affect how skills compose rules.
 
 ## `style/` - how code looks and reads
 

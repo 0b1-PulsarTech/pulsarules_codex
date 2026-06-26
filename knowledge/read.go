@@ -1,8 +1,14 @@
 package knowledge
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
+)
+
+var (
+	errUnknownSkill   = errors.New("unknown skill")
+	errDuplicateSkill = errors.New("duplicate skill sidecar")
 )
 
 func readIndex(standards fs.FS) (*Index, error) {
@@ -10,6 +16,7 @@ func readIndex(standards fs.FS) (*Index, error) {
 		ruleByID:     map[string]Rule{},
 		patternByID:  map[string]Pattern{},
 		workflowByID: map[string]Workflow{},
+		skillByID:    map[string]Skill{},
 		bodies:       map[string]string{},
 	}
 	kindLoaders := []struct {
@@ -39,6 +46,12 @@ func readIndex(standards fs.FS) (*Index, error) {
 		if err := loader.load(standards); err != nil {
 			return nil, fmt.Errorf("load %s: %w", loader.kind, err)
 		}
+	}
+	if err := readSkills(standards, idx); err != nil {
+		return nil, err
+	}
+	if err := readSkillSidecars(standards, idx); err != nil {
+		return nil, fmt.Errorf("load skill sidecars: %w", err)
 	}
 	return idx, nil
 }

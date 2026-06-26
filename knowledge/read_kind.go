@@ -80,3 +80,22 @@ func markdownPaths(fsys fs.FS, dir string) ([]string, error) {
 	sort.Strings(paths)
 	return paths, nil
 }
+
+func readSkills(standards fs.FS, idx *Index) error {
+	raw, err := fs.ReadFile(standards, "skills.yaml")
+	if err != nil {
+		return fmt.Errorf("read skills.yaml: %w", err)
+	}
+	var loaded skillsFile
+	if err = yaml.Unmarshal(raw, &loaded); err != nil {
+		return fmt.Errorf("parse skills.yaml: %w", err)
+	}
+	for _, skill := range loaded.Skills {
+		if _, dup := idx.skillByID[skill.ID]; dup {
+			return fmt.Errorf("duplicate skill id %q", skill.ID)
+		}
+		idx.skillByID[skill.ID] = skill
+		idx.Skills = append(idx.Skills, skill)
+	}
+	return nil
+}
