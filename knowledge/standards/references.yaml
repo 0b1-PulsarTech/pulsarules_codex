@@ -1,0 +1,57 @@
+# External canonical references. A rule or pattern cites an id in its frontmatter
+# `references:` list; the renderer surfaces the cited ones under "## References" in
+# the generated skill. They are the external baseline the enforceable rules sit on.
+references:
+  - id: effective-go
+    title: Effective Go
+    url: https://go.dev/doc/effective_go
+  - id: code-review-comments
+    title: Go Code Review Comments
+    url: https://go.dev/wiki/CodeReviewComments
+  - id: go-stdlib
+    title: Go standard library
+    url: https://pkg.go.dev/std
+  - id: golangci-lint
+    title: golangci-lint v2
+    url: https://golangci-lint.run/
+    note: the enforceable linter subset
+  - id: taskfile
+    title: Taskfile
+    url: https://taskfile.dev/
+    note: the build/task entrypoint
+  - id: govulncheck
+    title: govulncheck
+    url: https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck
+    note: vulnerability scanning
+  - id: ent
+    title: ent
+    url: https://entgo.io/
+    note: schema-as-code
+  - id: atlas
+    title: Atlas
+    url: https://atlasgo.io/
+    note: declarative migrations
+  - id: sqlc
+    title: sqlc
+    url: https://sqlc.dev/
+    note: type-safe SQL query generation
+  - id: goverter
+    title: goverter
+    url: https://github.com/jmattheis/goverter
+    note: compile-time struct mapping
+  - id: goremy-di
+    title: goremy-di (remy)
+    url: https://github.com/wrapped-owls/goremy-di
+    note: constructor-based DI with duck-typed resolution
+  - id: fuego
+    title: Fuego
+    url: https://fuego.go-lab.io/
+    note: OpenAPI-first Go web framework
+  - id: otel-go
+    title: OpenTelemetry for Go
+    url: https://pkg.go.dev/go.opentelemetry.io/otel
+    note: wired only at the infra/cmd adapter
+  - id: text-template
+    title: text/template
+    url: https://pkg.go.dev/text/template
+    note: the rendering primitive behind the template engine

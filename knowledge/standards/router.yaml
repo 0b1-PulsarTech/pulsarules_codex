@@ -1,0 +1,101 @@
+# The project-router's baseline, dispatch table, and composition order as data,
+# so the rendered router can be filtered to only the skills actually installed.
+# A skill reference here that is not installed is dropped from the rendered
+# router; a dispatch row or order step with no installed skill is omitted whole.
+router:
+  baseline:
+    always:
+      - { skill: go-style, note: "formatting, naming, imports, types." }
+      - { skill: errors-logging, note: "`%w` wrapping, domain-error contract, slog." }
+      - { skill: code-placement, note: "where the file/package belongs." }
+      - { skill: code-minimalism, note: "the minimum that works at function scope (never trims mandated patterns)." }
+    commit_last:
+      - { skill: verification-before-done, note: "definition of done - build, race tests, lint, governance green before you commit." }
+      - { skill: commits, note: "load LAST, before committing." }
+    conditional:
+      - { skill: concurrency, note: "goroutines, channels, worker loops, context fan-out." }
+      - { skill: security, note: "secrets/config, PII, SQL, JWT/identity, Dockerfile." }
+      - { skill: design-patterns, note: "architectural decision or review (DI vs singleton, new external dep, pattern)." }
+  dispatch:
+    - signal: New deployable app/service
+      skills: [ app-bootstrap, code-placement, integration-tests ]
+      note: plus the feature skills for the area
+    - signal: Wiring main() / bootstrap/ / DI registration
+      skills: [ app-bootstrap ]
+      note: + security for config
+    - signal: New feature use case / business logic
+      skills: [ usecase-layout, transport-interop, authorization, integration-tests ]
+    - signal: REST endpoint
+      skills: [ usecase-layout, rest-adapter, authorization, transport-interop, observability, integration-tests ]
+    - signal: gRPC service
+      skills: [ usecase-layout, grpc-adapter, authorization, transport-interop, observability, integration-tests ]
+    - signal: New ent entity / migration
+      skills: [ database-persistence, integration-tests ]
+    - signal: New sqlc query / repository
+      skills: [ database-persistence, transactions, integration-tests ]
+      note: transactions if multi-write
+    - signal: Multi-write / state + event in one tx
+      skills: [ transactions, database-persistence, eventing-outbox, integration-tests ]
+    - signal: Outbox event / cross-service side effect / webhook / audit
+      skills: [ eventing-outbox, transactions, retry-backoff, concurrency, integration-tests ]
+    - signal: Background worker / relay
+      skills: [ eventing-outbox, concurrency, retry-backoff, observability, app-bootstrap, integration-tests ]
+    - signal: Permission check / new permission module
+      skills: [ authorization ]
+    - signal: Per-request principal / auth loading
+      skills: [ app-bootstrap, authorization, usecase-layout ]
+      note: app-bootstrap for user-from-context
+    - signal: External provider / fetcher / integration
+      skills: [ external-provider, http-clients, retry-backoff, observability, transport-interop ]
+    - signal: Outbound HTTP call
+      skills: [ http-clients, retry-backoff ]
+    - signal: Template authoring / rendering / positional compile
+      skills: [ template-engine, authorization ]
+    - signal: Data-driven rule / automation / segment / branching
+      skills: [ rule-engine, eventing-outbox ]
+    - signal: Bounded numeric value / proposal / clamping
+      skills: [ proposal-window, template-engine, database-persistence ]
+    - signal: Build / tooling / codegen / container
+      skills: [ build ]
+    - signal: Rebuilding/cleaning git history; folding or splitting commits
+      skills: [ git-history, commits ]
+    - signal: Any test work
+      skills: [ integration-tests ]
+      note: plus whatever is under test
+    - signal: Module boundary / facade / cross-module call
+      skills: [ code-placement, design-patterns ]
+      note: cohesion high, connascence weak across the facade
+    - signal: Refactoring / cleaning up a code smell
+      skills: [ refactoring, design-patterns ]
+      note: two hats; small green steps; refactor commit separate from feature
+    - signal: Architecture review / new external dependency
+      skills: [ design-patterns ]
+      note: plus the affected area skill
+    - signal: Designing or reshaping a module interface / seam / deepening
+      skills: [ codebase-design, design-patterns ]
+      note: deep modules - small interface, real seam, interface as test surface
+    - signal: Architecture review of a codebase / subsystem for friction
+      skills: [ improve-codebase-architecture, codebase-design, grilling, refactoring ]
+      note: scope by churn; present candidates; grill the pick; land via refactoring
+    - signal: Domain terminology / ubiquitous language / ADR
+      skills: [ domain-modeling ]
+      note: sharpen the glossary; record ADRs sparingly
+    - signal: Planning / stress-testing a decision before building
+      skills: [ grilling ]
+      note: one question at a time; do not build before shared understanding
+    - signal: Delegating to subagents / running agents in parallel
+      skills: [ agent-orchestration, git-history ]
+      note: scouts read-only; isolate writers in worktrees; never delegate git ops
+    - signal: Reporting a task done / finishing a change
+      skills: [ verification-before-done ]
+  order:
+    - { skills: [ code-placement ], note: "decide where it lives." }
+    - { skills: [ app-bootstrap ], note: "wiring/DI (if a new app or new registration)." }
+    - { skills: [ usecase-layout ], note: "domain: the use case plus the relevant feature skill (the business invariants)." }
+    - { skills: [ database-persistence, transactions ], note: "persistence, then transactions if multi-write." }
+    - { skills: [ eventing-outbox, retry-backoff ], note: "eventing for side effects." }
+    - { skills: [ rest-adapter, grpc-adapter, transport-interop, authorization ], note: "transport." }
+    - { skills: [ observability ], note: "cross-cutting, plus baseline go-style/errors-logging/concurrency/security throughout." }
+    - { skills: [ integration-tests ], note: "prove it." }
+    - { skills: [ verification-before-done ], note: "definition of done - build, race tests, lint, governance green." }
+    - { skills: [ commits ], note: "last, before committing." }
