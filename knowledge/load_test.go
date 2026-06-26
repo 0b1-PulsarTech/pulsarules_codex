@@ -21,6 +21,7 @@ func TestLoad_EmbeddedCountsAndTransclusionBodies(t *testing.T) {
 		{"patterns", len(idx.Patterns), 25},
 		{"workflows", len(idx.Workflows), 8},
 		{"skills", len(idx.Skills), 29},
+		{"references", len(idx.References), 14},
 	}
 	for _, testCase := range testCases {
 		if testCase.got != testCase.want {

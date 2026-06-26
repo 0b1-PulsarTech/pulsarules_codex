@@ -20,6 +20,17 @@ type Pattern struct {
 	References   []string `yaml:"references,omitempty"`
 }
 
+type Reference struct {
+	ID    string `yaml:"id"`
+	Title string `yaml:"title"`
+	URL   string `yaml:"url"`
+	Note  string `yaml:"note,omitempty"`
+}
+
+type referencesFile struct {
+	References []Reference `yaml:"references"`
+}
+
 type Workflow struct {
 	ID               string   `yaml:"id"`
 	Name             string   `yaml:"name"`
@@ -45,6 +56,22 @@ type Skill struct {
 
 type skillsFile struct {
 	Skills []Skill `yaml:"skills"`
+}
+
+type SkillOverride struct {
+	ComposeRules    []string `yaml:"compose_rules,omitempty"`
+	ComposePatterns []string `yaml:"compose_patterns,omitempty"`
+}
+
+type Profile struct {
+	ID          string                   `yaml:"id"`
+	Axis        string                   `yaml:"axis"`
+	Description string                   `yaml:"description"`
+	Overrides   map[string]SkillOverride `yaml:"overrides,omitempty"`
+}
+
+type profilesFile struct {
+	Profiles []Profile `yaml:"profiles"`
 }
 
 type RouterBaselineEntry struct {
