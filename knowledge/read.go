@@ -11,14 +11,17 @@ var (
 	errDuplicateSkill = errors.New("duplicate skill sidecar")
 )
 
-func readIndex(standards fs.FS) (*Index, error) {
-	idx := &Index{
+func newIndex() *Index {
+	return &Index{
 		ruleByID:     map[string]Rule{},
 		patternByID:  map[string]Pattern{},
 		workflowByID: map[string]Workflow{},
 		skillByID:    map[string]Skill{},
 		bodies:       map[string]string{},
 	}
+}
+
+func loadKinds(standards fs.FS, idx *Index) error {
 	kindLoaders := []struct {
 		kind string
 		load func(fs.FS) error
@@ -44,14 +47,25 @@ func readIndex(standards fs.FS) (*Index, error) {
 	}
 	for _, loader := range kindLoaders {
 		if err := loader.load(standards); err != nil {
-			return nil, fmt.Errorf("load %s: %w", loader.kind, err)
+			return fmt.Errorf("load %s: %w", loader.kind, err)
 		}
+	}
+	return nil
+}
+
+func readIndex(standards fs.FS) (*Index, error) {
+	idx := newIndex()
+	if err := loadKinds(standards, idx); err != nil {
+		return nil, err
 	}
 	if err := readSkills(standards, idx); err != nil {
 		return nil, err
 	}
 	if err := readSkillSidecars(standards, idx); err != nil {
 		return nil, fmt.Errorf("load skill sidecars: %w", err)
+	}
+	if err := readRouter(standards, idx); err != nil {
+		return nil, fmt.Errorf("load router: %w", err)
 	}
 	return idx, nil
 }
