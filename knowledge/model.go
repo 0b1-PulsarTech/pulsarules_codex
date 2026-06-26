@@ -46,3 +46,35 @@ type Skill struct {
 type skillsFile struct {
 	Skills []Skill `yaml:"skills"`
 }
+
+type RouterBaselineEntry struct {
+	Skill string `yaml:"skill"`
+	Note  string `yaml:"note"`
+}
+
+type RouterBaseline struct {
+	Always      []RouterBaselineEntry `yaml:"always"`
+	CommitLast  []RouterBaselineEntry `yaml:"commit_last"`
+	Conditional []RouterBaselineEntry `yaml:"conditional"`
+}
+
+type RouterDispatchRow struct {
+	Signal string   `yaml:"signal"`
+	Skills []string `yaml:"skills"`
+	Note   string   `yaml:"note,omitempty"`
+}
+
+type RouterOrderStep struct {
+	Skills []string `yaml:"skills"`
+	Note   string   `yaml:"note"`
+}
+
+type RouterSpec struct {
+	Baseline RouterBaseline      `yaml:"baseline"`
+	Dispatch []RouterDispatchRow `yaml:"dispatch"`
+	Order    []RouterOrderStep   `yaml:"order"`
+}
+
+type routerFile struct {
+	Router RouterSpec `yaml:"router"`
+}

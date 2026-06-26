@@ -10,6 +10,7 @@ type Index struct {
 	Patterns  []Pattern
 	Workflows []Workflow
 	Skills    []Skill
+	Router    RouterSpec
 
 	ruleByID     map[string]Rule
 	patternByID  map[string]Pattern

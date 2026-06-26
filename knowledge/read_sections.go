@@ -4,7 +4,26 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+
+	"gopkg.in/yaml.v3"
 )
+
+func readRouter(standards fs.FS, idx *Index) error {
+	raw, err := fs.ReadFile(standards, "router.yaml")
+	if err != nil {
+		// The file is optional.
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil
+		}
+		return fmt.Errorf("read router.yaml: %w", err)
+	}
+	var loaded routerFile
+	if err = yaml.Unmarshal(raw, &loaded); err != nil {
+		return fmt.Errorf("parse router.yaml: %w", err)
+	}
+	idx.Router = loaded.Router
+	return nil
+}
 
 func readSkillSidecars(standards fs.FS, idx *Index) error {
 	paths, pathsErr := markdownPaths(standards, "skills")
