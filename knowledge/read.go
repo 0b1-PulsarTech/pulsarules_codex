@@ -13,11 +13,13 @@ var (
 
 func newIndex() *Index {
 	return &Index{
-		ruleByID:     map[string]Rule{},
-		patternByID:  map[string]Pattern{},
-		workflowByID: map[string]Workflow{},
-		skillByID:    map[string]Skill{},
-		bodies:       map[string]string{},
+		ruleByID:      map[string]Rule{},
+		patternByID:   map[string]Pattern{},
+		workflowByID:  map[string]Workflow{},
+		skillByID:     map[string]Skill{},
+		profileByID:   map[string]Profile{},
+		referenceByID: map[string]Reference{},
+		bodies:        map[string]string{},
 	}
 }
 
@@ -63,6 +65,12 @@ func readIndex(standards fs.FS) (*Index, error) {
 	}
 	if err := readSkillSidecars(standards, idx); err != nil {
 		return nil, fmt.Errorf("load skill sidecars: %w", err)
+	}
+	if err := readReferences(standards, idx); err != nil {
+		return nil, fmt.Errorf("load references: %w", err)
+	}
+	if err := readProfiles(standards, idx); err != nil {
+		return nil, fmt.Errorf("load profiles: %w", err)
 	}
 	if err := readRouter(standards, idx); err != nil {
 		return nil, fmt.Errorf("load router: %w", err)

@@ -1,0 +1,14 @@
+# Customization profiles, one axis each. Add axes here (no Go change needed).
+profiles:
+  - id: monorepo
+    axis: code-layout
+    description: Multi-module monorepo (apps/libs/tools/build/database/test), one go.mod per module.
+    overrides:
+      code-placement:
+        compose_rules: [ code-placement-monorepo ]
+  - id: inner-modules
+    axis: code-layout
+    description: Single repository with several inner Go modules joined by one root go.work.
+    overrides:
+      code-placement:
+        compose_rules: [ code-placement-inner-modules ]
