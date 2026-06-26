@@ -1,0 +1,86 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - cyclop
+    - depguard
+    - funlen
+    - gosec
+    - importas
+    - interfacebloat
+    - ireturn
+    - modernize
+    - nakedret
+    - nestif
+    - noctx
+    - prealloc
+    - predeclared
+    - sloglint
+    - tagalign
+    - unconvert
+    - unparam
+    - whitespace
+    - wrapcheck
+    # knowledge/standards/rules/process/code-smells.md also names dupl, goconst, and
+    # gochecknoglobals as the linters that catch the smells it catalogs; the gap below is
+    # deliberate, not an oversight. goconst is measured at ~50 findings, almost all emoji/theme
+    # data tables (false positives for this codebase). dupl finds nothing at its default 150-token
+    # threshold, because the duplication that shows up here is smaller than that: a repeated
+    # 6-line helper, not a repeated function. Neither is enabled.
+    # gochecknoglobals has not been measured against this codebase and is left off pending
+    # that evaluation.
+  settings:
+    govet:
+      enable:
+        - shadow
+    funlen:
+      lines: 80
+      statements: 0
+    cyclop:
+      max-complexity: 15
+    ireturn:
+      allow:
+        - error
+        - empty
+        - stdlib
+        - generic
+        - anon
+    depguard:
+      rules:
+        Main:
+          list-mode: lax
+          allow:
+            - $gostd
+            - github.com/0b1-PulsarTech/pulsarules_codex
+            - gopkg.in/yaml.v3
+            - github.com/wrapped-owls/goremy-di/remy
+    wrapcheck:
+      ignorePackageGlobs:
+        - github.com/0b1-PulsarTech/pulsarules_codex/**
+  exclusions:
+    generated: strict
+    warn-unused: true
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
+          - wrapcheck
+
+formatters:
+  enable:
+    - gofumpt
+    - golines
+    - goimports
+  exclusions:
+    generated: strict
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly

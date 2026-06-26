@@ -1,0 +1,28 @@
+# Generated skill output (produced by `pulsarules_codex-installer generate`/`install`)
+generated/
+# Locally installed skills + hook (produced by the installer; kept per-target, untracked)
+.claude/
+# Locally wired MCP config (produced by the installer; machine-specific absolute paths)
+.mcp.json
+
+# Build outputs
+build/bin/
+build/*.zip
+*.zip
+# A stray `go build` in the repo root writes the CLI here; it must never be tracked.
+/pulsarules_cli
+
+# Go
+vendor/
+
+# Editor / IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+# Rendered by `install --target opencode`, same as .claude/ and generated/.
+.opencode/
+opencode.json
