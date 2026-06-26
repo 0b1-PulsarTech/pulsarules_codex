@@ -11,7 +11,7 @@ import (
 func readRouter(standards fs.FS, idx *Index) error {
 	raw, err := fs.ReadFile(standards, "router.yaml")
 	if err != nil {
-		// The file is optional.
+		// The file is optional; its absence leaves the router prose-only.
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}

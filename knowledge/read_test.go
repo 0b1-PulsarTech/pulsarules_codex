@@ -12,7 +12,7 @@ import (
 func TestReadSkillSidecars_NonRouter(t *testing.T) {
 	t.Parallel()
 
-	idx, err := Load("")
+	idx, _, err := Load("")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -44,7 +44,7 @@ func TestReadSkillSidecars_NonRouter(t *testing.T) {
 func TestReadRouter_Loaded(t *testing.T) {
 	t.Parallel()
 
-	idx, err := Load("")
+	idx, _, err := Load("")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
