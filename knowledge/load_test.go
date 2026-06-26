@@ -8,7 +8,7 @@ import (
 func TestLoad_EmbeddedCountsAndTransclusionBodies(t *testing.T) {
 	t.Parallel()
 
-	idx, err := Load("")
+	idx, _, err := Load("")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestLoad_EmbeddedCountsAndTransclusionBodies(t *testing.T) {
 func TestLoad_BadRoot(t *testing.T) {
 	t.Parallel()
 
-	if _, err := Load(t.TempDir()); err == nil {
+	if _, _, err := Load(t.TempDir()); err == nil {
 		t.Fatal("expected error loading from an empty root, got nil")
 	}
 }
@@ -48,7 +48,7 @@ func TestLoad_BadRoot(t *testing.T) {
 func TestLoad_EveryWorkflowHasSteps(t *testing.T) {
 	t.Parallel()
 
-	idx, err := Load("")
+	idx, _, err := Load("")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}

@@ -7,30 +7,35 @@ import (
 	"path/filepath"
 )
 
-func Load(root string) (*Index, error) {
+func Load(root string) (*Index, fs.FS, error) {
 	if root == "" {
 		return loadEmbedded()
 	}
 	return loadDisk(filepath.Join(root, "knowledge"))
 }
 
-func loadEmbedded() (*Index, error) {
+func loadEmbedded() (*Index, fs.FS, error) {
 	standards, err := fs.Sub(standardsFS, "standards")
 	if err != nil {
-		return nil, fmt.Errorf("sub standards: %w", err)
+		return nil, nil, fmt.Errorf("sub standards: %w", err)
+	}
+	templates, err := fs.Sub(templatesFS, "templates")
+	if err != nil {
+		return nil, nil, fmt.Errorf("sub templates: %w", err)
 	}
 	idx, err := readIndex(standards)
 	if err != nil {
-		return nil, fmt.Errorf("read index: %w", err)
+		return nil, nil, fmt.Errorf("read index: %w", err)
 	}
-	return idx, nil
+	return idx, templates, nil
 }
 
-func loadDisk(dir string) (*Index, error) {
+func loadDisk(dir string) (*Index, fs.FS, error) {
 	standards := os.DirFS(filepath.Join(dir, "standards"))
+	templates := os.DirFS(filepath.Join(dir, "templates"))
 	idx, err := readIndex(standards)
 	if err != nil {
-		return nil, fmt.Errorf("read index: %w", err)
+		return nil, nil, fmt.Errorf("read index: %w", err)
 	}
-	return idx, nil
+	return idx, templates, nil
 }
