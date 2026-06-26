@@ -7,7 +7,7 @@ import (
 	"io/fs"
 )
 
-//go:embed data/catalog.txt
+//go:embed data/catalog.txt data/themes.txt
 var dataFS embed.FS
 
 type Catalog struct {
