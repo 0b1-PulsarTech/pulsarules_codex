@@ -52,10 +52,10 @@ Applies to: every commit in every project.
    body stays short and wraps at 100 columns. Footer references: `Refs: #42`, `Closes: #99`.
 10. Breaking change: add a `BREAKING CHANGE:` footer with migration notes.
 11. Each commit must compile and pass tests standalone (docs-only commits are exempt from the test
-    bar). Exception - history rebuild: during a deliberate history rewrite the per-commit build/test
-    bar is relaxed (intermediate commits need not compile); the gate becomes the final-tree
-    invariant plus one full build+lint+test sweep on the final HEAD. This relaxation is scoped to
-    rebuilds and never licenses a broken commit in normal work.
+    bar). Exception - history rebuild: during a deliberate history rewrite (see `[[git-history]]`)
+    the per-commit build/test bar is relaxed (intermediate commits need not compile); the gate
+    becomes the final-tree invariant plus one full build+lint+test sweep on the final HEAD. This
+    relaxation is scoped to rebuilds and never licenses a broken commit in normal work.
 12. Do not append `Co-Authored-By`, `Claude-Session`, or any other tool-attribution trailer, even
     for AI-assisted commits.
 {{end}}

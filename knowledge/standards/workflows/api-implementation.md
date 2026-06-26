@@ -46,9 +46,9 @@ composes_patterns:
    `Repository` port and the per-request principal; one action per file; typed `Input`; infra errors
    mapped to the domain-error type; register as a factory. (pattern: [[usecase-layout]],
    [[user-from-context]], rule: [[transport]])
-2. **Persistence** (if needed): schema/query/migration per the migration-creation workflow;
-   repository per [[repository-layout]]; `transactions` if multi-write. (rules: [[database]],
-   [[eventing]] if a side effect)
+2. **Persistence** (if needed): schema/query/migration per the migration-creation workflow; repository
+   per [[repository-layout]]; `transactions` if multi-write. (rules: [[database]],
+   [[eventing-outbox]] if a side effect)
 3. **Authorization:** declare the module's permission schema; check `Has` in the use case; a route
    guard is only a coarse pre-check. (rule: [[authorization]], pattern: [[permitek-schema]])
 4. **Transport:** REST via [[rest-adapter]] (typed DTOs, OpenAPI, router contract) or gRPC via

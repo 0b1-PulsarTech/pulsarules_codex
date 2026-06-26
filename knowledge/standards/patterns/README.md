@@ -7,7 +7,7 @@ canonical reference implementations, not requirements.
 
 Patterns are known-good recipes for recurring problems - mandatory in shape, adaptable in detail.
 They are grouped into themed subdirectories; the ID in each file's frontmatter is the canonical
-reference.
+reference used in `skills.yaml` composition lists.
 
 ## `bootstrap/` - wiring, DI, and app skeleton
 
