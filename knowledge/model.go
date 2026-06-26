@@ -52,7 +52,10 @@ type Skill struct {
 	ComposePatterns  []string `yaml:"compose_patterns,omitempty"`
 	ComposeWorkflows []string `yaml:"compose_workflows,omitempty"`
 	ComposeSkills    []string `yaml:"compose_skills,omitempty"`
+	NoMerge          bool     `yaml:"no_merge,omitempty"`
 }
+
+func (skill Skill) Merged() bool { return !skill.NoMerge }
 
 type skillsFile struct {
 	Skills []Skill `yaml:"skills"`

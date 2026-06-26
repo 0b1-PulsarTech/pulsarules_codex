@@ -7,6 +7,49 @@ principles; where a rule is automateable, the `## Linters` section names the lin
 Rules are grouped into themed subdirectories to reduce directory noise. The ID in each file's
 frontmatter is the canonical reference - file location does not affect how skills compose rules.
 
+## Generic section defines
+
+Each rule/pattern body declares its sections as bare, generic `{{define}}` blocks on their own lines
+(the preamble - H1, summary, `Applies to:` - stays as loose text above them):
+
+```
+{{define "when"}}
+- A function returns an error.
+{{end}}
+
+{{define "must"}}
+1. Return `(T, error)` as the last value ...
+{{end}}
+```
+
+The canonical section keys are `when`, `catalog`, `must`, `recipe`, `approved`, `rejected`,
+`examples`, `forbidden`, `validation`. Bodies are logic-free named text rendered with
+`missingkey=error`.
+
+## Merged composition
+
+The skill's sidecar is the untitled orientation head - what the skill governs and when to reach for
+it. The actionable synthesis is what follows: when a skill composes several rules/patterns, the
+renderer's controller parses each body (one namespace per file, so the repeated `must`/`forbidden`
+names do not collide) and **merges same-keyed sections** as the source detail, under a single
+`## Applicable rules and patterns` parent (`### <Section>` then `#### <Name>`):
+
+```
+## Applicable rules and patterns
+
+### Must
+
+#### Effective Go subset
+1. Format with the project formatter ...
+
+#### Naming
+1. MixedCaps for exported ...
+```
+
+A skill opts out with `no_merge: true` in `skills.yaml`, which instead groups by source first
+(`### <Rule>` then `#### <Section>`). The same per-file generic names are the seam for future
+multi-language variants.
+
 ## `style/` - how code looks and reads
 
 | Rule                                         | Topic                                          |
@@ -63,3 +106,9 @@ frontmatter is the canonical reference - file location does not affect how skill
 | [code-smells.md](process/code-smells.md)     | Smell catalog + Go-linter remedies                          |
 | [commits.md](process/commits.md)             | Emoji-prefixed Conventional Commits                         |
 | [testing.md](process/testing.md)             | Colocated table-driven tests; real-DB integration tests     |
+
+## How rules relate to skills
+
+Rules are the knowledge; skills are generated. A skill composes one or more rules (and patterns) -
+see `skills.yaml`. Multiple rules can collapse into one capability skill (e.g. `effective-go` +
+`naming` + `imports` + `types` -> `go-style`).

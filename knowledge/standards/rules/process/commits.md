@@ -33,7 +33,7 @@ Applies to: every commit in every project.
    including on AI-assisted commits.
 4. Pick the emoji for the area the change touches, not for its type - a `feat` extending an existing
    area takes that area's emoji. Keep an area recognisable through a family rather than one fixed
-   mascot.
+   mascot, in specificity order: {{ emojiAnchors }}.
 5. No emoji may repeat within five commits. Rotating inside an area's family is how you keep both
    variety and recognisability. Root commit is `:ghost:`, merges are `:volcano:`; both are exempt.
 6. Use a type from: feat, fix, chore, refactor, docs, test, perf, build, ci, style, revert. Add a
