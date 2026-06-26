@@ -21,8 +21,9 @@ linters:
 > a concrete Go remedy and the linter that flags it, so "this needs a refactor" is an objective call,
 > not a taste argument.
 
-Applies to: spotting and clearing structural debt. Remedies route into [[effective-go]], [[types]],
-[[module-boundaries]], and [[design-patterns]].
+Applies to: spotting and clearing structural debt. This rule is the trigger list for the
+[[refactoring]] workflow; remedies route into [[effective-go]], [[types]], [[module-boundaries]], and
+[[design-patterns]].
 
 {{define "when"}}
 - A function/file trips `funlen`/`cyclop`/`nestif`/`dupl`.
@@ -50,8 +51,8 @@ Applies to: spotting and clearing structural debt. Remedies route into [[effecti
    suppressing it with `//nolint`.
 2. Apply the listed remedy, not a local patch: a repeated switch becomes a Strategy+Registry; a data
    clump becomes a named struct; primitive obsession becomes a domain type.
-3. Clear the smell as a behavior-preserving step before the feature change that exposed it, in its
-   own commit.
+3. Clear the smell as a behavior-preserving step before the feature change that exposed it, in its own
+   commit (see [[refactoring]]).
 4. Review-only smells (feature envy, repeated switch, primitive obsession) still count - name them
    in review even though no linter fires.
 {{end}}
