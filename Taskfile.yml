@@ -26,3 +26,10 @@ tasks:
     desc: golangci-lint (if installed)
     cmds:
       - golangci-lint run ./...
+
+  emoji:
+    desc: regenerate the commit emoji catalog (needs network + a jane clone)
+    vars:
+      JANE: '{{.JANE | default "../../inspiration/jane"}}'
+    cmds:
+      - go run ./tools/emojigen --jane {{.JANE}} --out internal/emoji/data

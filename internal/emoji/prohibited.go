@@ -7,7 +7,7 @@ func IsProhibited(shortcode string) bool {
 
 func ProhibitedReplacement(shortcode string) (string, bool) {
 	switch shortcode {
-	// Banned by decision, not by rendering.
+	// Banned by decision, not by rendering, even when the reference repo uses them.
 	case "test_tube":
 		return "tea", true
 	case "robot", "compass", "sparkles":
@@ -18,7 +18,8 @@ func ProhibitedReplacement(shortcode string) (string, bool) {
 
 func IsNonRendering(shortcode string) bool {
 	switch shortcode {
-	// These show as raw text in the owner's GitKraken (confirmed by hand).
+	// Named here so the reason survives regeneration: these show as raw text in the
+	// owner's GitKraken (confirmed by hand).
 	case "clown_face", "adhesive_bandage", "abacus":
 		return true
 	}
