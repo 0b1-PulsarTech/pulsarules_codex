@@ -1,5 +1,6 @@
 # External canonical references. A rule or pattern cites an id in its frontmatter
-# `references:` list. They are the external baseline the enforceable rules sit on.
+# `references:` list; the renderer surfaces the cited ones under "## References" in
+# the generated skill. They are the external baseline the enforceable rules sit on.
 references:
   - id: effective-go
     title: Effective Go
