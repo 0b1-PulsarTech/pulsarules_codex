@@ -10,7 +10,32 @@ type Index struct {
 	Patterns  []Pattern
 	Workflows []Workflow
 	Skills    []Skill
+
+	ruleByID     map[string]Rule
+	patternByID  map[string]Pattern
+	workflowByID map[string]Workflow
+	bodies       map[string]string
 }
+
+func (idx *Index) Rule(id string) (Rule, bool) { rule, ok := idx.ruleByID[id]; return rule, ok }
+
+func (idx *Index) Pattern(id string) (Pattern, bool) {
+	pattern, ok := idx.patternByID[id]
+	return pattern, ok
+}
+
+func (idx *Index) Workflow(id string) (Workflow, bool) {
+	workflow, ok := idx.workflowByID[id]
+	return workflow, ok
+}
+
+func (idx *Index) RuleExists(id string) bool { _, ok := idx.ruleByID[id]; return ok }
+
+func (idx *Index) PatternExists(id string) bool { _, ok := idx.patternByID[id]; return ok }
+
+func (idx *Index) WorkflowExists(id string) bool { _, ok := idx.workflowByID[id]; return ok }
+
+func (idx *Index) Body(kind, id string) string { return idx.bodies[kind+":"+id] }
 
 func (idx *Index) SkillsOrdered() []Skill {
 	ordered := make([]Skill, len(idx.Skills))

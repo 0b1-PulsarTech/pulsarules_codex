@@ -50,6 +50,7 @@ linters:
           allow:
             - $gostd
             - github.com/0b1-PulsarTech/pulsarules_codex
+            - gopkg.in/yaml.v3
     wrapcheck:
       ignorePackageGlobs:
         - github.com/0b1-PulsarTech/pulsarules_codex/**
