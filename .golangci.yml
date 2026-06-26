@@ -1,0 +1,76 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - cyclop
+    - depguard
+    - funlen
+    - gosec
+    - importas
+    - interfacebloat
+    - ireturn
+    - modernize
+    - nakedret
+    - nestif
+    - noctx
+    - prealloc
+    - predeclared
+    - sloglint
+    - tagalign
+    - unconvert
+    - unparam
+    - whitespace
+    - wrapcheck
+  settings:
+    govet:
+      enable:
+        - shadow
+    funlen:
+      lines: 80
+      statements: 0
+    cyclop:
+      max-complexity: 15
+    ireturn:
+      allow:
+        - error
+        - empty
+        - stdlib
+        - generic
+        - anon
+    depguard:
+      rules:
+        Main:
+          list-mode: lax
+          allow:
+            - $gostd
+            - github.com/0b1-PulsarTech/pulsarules_codex
+    wrapcheck:
+      ignorePackageGlobs:
+        - github.com/0b1-PulsarTech/pulsarules_codex/**
+  exclusions:
+    generated: strict
+    warn-unused: true
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
+          - wrapcheck
+
+formatters:
+  enable:
+    - gofumpt
+    - golines
+    - goimports
+  exclusions:
+    generated: strict
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly

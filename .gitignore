@@ -1,0 +1,21 @@
+# Generated skill output
+/generated/
+# Local agent config (untracked)
+.claude/
+
+# Build outputs
+build/bin/
+build/*.zip
+*.zip
+
+# Go
+vendor/
+
+# Editor / IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,28 @@
+version: "3"
+
+tasks:
+  default:
+    desc: vet + test
+    cmds:
+      - task: vet
+      - task: test
+
+  vet:
+    desc: go vet
+    cmds:
+      - go vet ./...
+
+  test:
+    desc: go test
+    cmds:
+      - go test ./...
+
+  fmt:
+    desc: gofmt (use gofumpt+golines+goimports in projects that have them)
+    cmds:
+      - gofmt -w knowledge internal cmd
+
+  lint:
+    desc: golangci-lint (if installed)
+    cmds:
+      - golangci-lint run ./...
