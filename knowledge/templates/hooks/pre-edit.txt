@@ -1,0 +1,1 @@
+Writing Go/SQL: confirm project-router ran and the matched skills are LOADED and being applied right now - integration-tests (testCases/testCase + testing/synctest, every failure path), errors-logging (%w, sentinels, domain-error contract), security (secrets/path-traversal), code-minimalism. Run each loaded skill Validation checklist + the verify suite before commit.

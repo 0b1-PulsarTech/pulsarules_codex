@@ -1,0 +1,6 @@
+Post-edit: verify before committing:
+  go build ./... && go vet ./... && go test -race ./...
+  golangci-lint run (curated bar)
+  gofmt -l (must be clean)
+
+Run each loaded skill Validation checklist.

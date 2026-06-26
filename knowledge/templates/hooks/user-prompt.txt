@@ -1,0 +1,3 @@
+Have you invoked the project-router skill for this task?
+
+If you are about to write or change Go/SQL/config: call the project-router skill FIRST to load the matched baseline + dispatch skills. Skipping the router skips the rules.
