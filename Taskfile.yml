@@ -26,3 +26,8 @@ tasks:
     desc: golangci-lint (if installed)
     cmds:
       - golangci-lint run ./...
+
+  emoji:
+    desc: regenerate the commit emoji catalog from this repo's history (needs network)
+    cmds:
+      - go run ./tools/emojigen

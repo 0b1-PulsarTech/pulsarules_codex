@@ -26,9 +26,9 @@ Applies to: every commit in every project.
 1. Format the subject as `:<emoji>: <type>[(<scope>)]: <subject>` - a gitmoji shortcode, then a
    Conventional Commit type, optional scope, then an imperative subject that starts with an Uppercase
    letter, has no trailing period, and stays under 72 chars.
-2. Take the emoji from the project catalog: the GitHub shortcodes at Emoji version 1.0 or older,
-   minus country flags. Newer emoji render as raw text in the tools the history is read through.
-   When in doubt prefer an emoji that predates 2011.
+2. Take the emoji from the project catalog (`internal/emoji/data/catalog.txt`, the GitHub shortcodes
+   at Emoji version 1.0 or older, minus country flags). Newer emoji render as raw text in the tools
+   the history is read through. When in doubt prefer an emoji that predates 2011.
 3. `:robot:`, `:test_tube:` (use `:tea:`), `:compass:` and `:sparkles:` are prohibited outright,
    including on AI-assisted commits.
 4. Pick the emoji for the area the change touches, not for its type - a `feat` extending an existing
