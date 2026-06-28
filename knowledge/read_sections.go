@@ -28,7 +28,7 @@ func readRouter(standards fs.FS, idx *Index) error {
 func readReferences(standards fs.FS, idx *Index) error {
 	raw, err := fs.ReadFile(standards, "references.yaml")
 	if err != nil {
-		// The file is optional.
+		// The file is optional; without it citations fail validation but a base with none renders.
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}
@@ -81,6 +81,7 @@ func readSkillSidecars(standards fs.FS, idx *Index) error {
 	paths, pathsErr := markdownPaths(standards, "skills")
 	if pathsErr != nil {
 		if errors.Is(pathsErr, fs.ErrNotExist) {
+			// No sidecars present; validate reports missing coverage.
 			return nil
 		}
 		return pathsErr

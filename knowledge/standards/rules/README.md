@@ -23,8 +23,8 @@ Each rule/pattern body declares its sections as bare, generic `{{define}}` block
 ```
 
 The canonical section keys are `when`, `catalog`, `must`, `recipe`, `approved`, `rejected`,
-`examples`, `forbidden`, `validation`. Bodies are logic-free named text rendered with
-`missingkey=error`.
+`examples`, `forbidden`, `validation`. The validator rejects any other define name (it would never
+render). Bodies are logic-free named text rendered with `missingkey=error`.
 
 ## Merged composition
 
