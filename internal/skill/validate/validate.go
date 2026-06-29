@@ -21,6 +21,7 @@ func Validate(idx *knowledge.Index, extra ...Check) Result {
 		skillSidecars,
 		profileOverrides,
 		routerPresent,
+		emojiThemeShortcodes,
 	}
 	var result Result
 	for _, step := range pipeline {
