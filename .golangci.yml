@@ -51,6 +51,7 @@ linters:
             - $gostd
             - github.com/0b1-PulsarTech/pulsarules_codex
             - gopkg.in/yaml.v3
+            - github.com/wrapped-owls/goremy-di/remy
     wrapcheck:
       ignorePackageGlobs:
         - github.com/0b1-PulsarTech/pulsarules_codex/**
