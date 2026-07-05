@@ -1,0 +1,11 @@
+pulsarules_cli - render and manage engineering-standards skills
+
+Usage:
+  pulsarules_cli generate [--root DIR] [--out DIR]
+  pulsarules_cli validate [--root DIR]
+  pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
+  pulsarules_cli package [--root DIR] [--out FILE]
+  pulsarules_cli version
+
+With no --root, the binary reads the embedded knowledge snapshot. Pass --root DIR
+to read <DIR>/knowledge from disk (dev edits without rebuild).
