@@ -53,7 +53,7 @@ linters:
             - gopkg.in/yaml.v3
             - github.com/wrapped-owls/goremy-di/remy
     wrapcheck:
-      ignorePackageGlobs:
+      ignore-package-globs:
         - github.com/0b1-PulsarTech/pulsarules_codex/**
   exclusions:
     generated: strict

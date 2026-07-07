@@ -79,3 +79,7 @@ composes_patterns:
    backed by an automated fitness function, not just review. (rule: [[fitness-functions]])
 10. **Commit hygiene:** one logical change per commit; emoji Conventional Commit format; no
     tool-attribution trailer. (rule: [[commits]])
+
+## References
+
+- generated skill: `project-router` (enforcement checklist)

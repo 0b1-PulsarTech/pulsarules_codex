@@ -7,6 +7,8 @@
 build/bin/
 build/*.zip
 *.zip
+# A stray `go build` in the repo root writes the CLI here; it must never be tracked.
+/pulsarules_cli
 
 # Go
 vendor/

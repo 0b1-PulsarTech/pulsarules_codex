@@ -18,7 +18,7 @@ func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 	t.Parallel()
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := doInjections(inj, Options{}); err != nil {
+	if err := DoInjections(inj, Options{}); err != nil {
 		t.Fatalf("DoInjections: %v", err)
 	}
 
@@ -45,7 +45,7 @@ func TestDoInjections_KnowledgeLoadFailure(t *testing.T) {
 	t.Parallel()
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	err := doInjections(inj, Options{Root: t.TempDir()})
+	err := DoInjections(inj, Options{Root: t.TempDir()})
 	if err == nil {
 		t.Fatal("DoInjections: want error for a dev root with no knowledge directory, got nil")
 	}

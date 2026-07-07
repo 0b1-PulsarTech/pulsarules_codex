@@ -110,5 +110,5 @@ multi-language variants.
 ## How rules relate to skills
 
 Rules are the knowledge; skills are generated. A skill composes one or more rules (and patterns) -
-see `skills.yaml`. Multiple rules can collapse into one capability skill (e.g. `effective-go` +
-`naming` + `imports` + `types` -> `go-style`).
+see `skills.yaml` and `pulsarules_cli list skills`. Multiple rules can collapse into one
+capability skill (e.g. `effective-go` + `naming` + `imports` + `types` -> `go-style`).
