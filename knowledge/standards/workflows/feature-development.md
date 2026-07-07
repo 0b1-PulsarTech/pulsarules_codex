@@ -26,6 +26,7 @@ composes_patterns:
 
 > The mandatory entry sequence for any code change: classify the task -> load the applicable skills
 > in composition order -> implement -> validate against each loaded skill's checklist -> commit.
+> This is the human/machine expression of the `project-router` skill.
 
 ## When to use
 
@@ -33,8 +34,8 @@ composes_patterns:
 
 ## Steps
 
-1. **Classify the task.** Match it against the router dispatch table. A task often matches several
-   rows - union them.
+1. **Classify the task.** Match it against the router dispatch table (see
+   `generated/skills/project-router/SKILL.md`). A task often matches several rows - union them.
 2. **Load the baseline (every Go change):** `go-style`, `errors-logging`, `code-placement`,
    `code-minimalism`. Load conditionally: `concurrency` (goroutines/channels/workers), `security`
    (secrets/PII/SQL/JWT/containers), `design-patterns` (architectural decision).
@@ -66,3 +67,4 @@ defines what, the pattern skill defines how, the rule/baseline skill is the non-
 
 - rules: [[code-placement]], [[commits]], [[minimalism]]
 - patterns: [[bootstrap-and-di]], [[usecase-layout]]
+- generated skill: `project-router`
