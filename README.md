@@ -1,0 +1,98 @@
+# pulsarules_codex
+
+A knowledge-first repository of reusable engineering standards, rules, patterns, and workflows for
+Go services - plus a small Go CLI that embeds them and renders Claude skills on demand.
+
+> **Knowledge is the primary asset. Skills are an output artifact.**
+> Markdown (with YAML frontmatter) is the canonical source of truth. The repo stays useful even if
+> Claude Code disappears.
+
+## What this is
+
+Every project re-discovers the same engineering contract: how to name things, wrap errors, wire
+dependencies, lay out a monorepo, run migrations, write tests, commit, review. This repo captures
+that contract once, independent of any product domain, so projects consume it instead of
+re-authoring it.
+
+The knowledge lives in `knowledge/standards/` (rules, patterns, workflows as markdown with
+frontmatter, plus a single `skills.yaml` defining the 29 skill compositions). The Go binary embeds
+it via `//go:embed` and renders skills on demand - it never hand-writes them and nothing derived is
+committed.
+
+## Philosophy (order of importance)
+
+1. Standards: the contract.
+2. Rules: mandatory, enforceable.
+3. Patterns: how to apply the rules (copyable code).
+4. Workflows: the order to apply them for a task.
+5. Metadata: frontmatter on each item + `skills.yaml` for composition.
+6. Skills: generated from the above; one consumer of the model.
+7. Tooling: the embedded CLI that does the generation.
+
+## What lives here vs in application repos
+
+| Here (portable)                                      | Application repos (not moved)        |
+|------------------------------------------------------|--------------------------------------|
+| Go conventions, naming, imports, types               | Business logic, product requirements |
+| Errors, logging, concurrency, security               | Customer-specific rules              |
+| Code placement, startup, config, DI                  | Domain-specific concepts             |
+| Transport-agnostic use cases, interop, gRPC          | Application-specific workflows       |
+| Authorization model, database chain, eventing/outbox | Product specs                        |
+| Testing, HTTP clients, build, minimalism             | The product itself                   |
+
+## Quick start
+
+```sh
+go run ./cmd/pulsarules_cli validate   # check the embedded knowledge
+go run ./cmd/pulsarules_cli list        # print the skill catalog
+go run ./cmd/pulsarules_cli generate    # render generated/skills/ (gitignored)
+go run ./cmd/pulsarules_cli package     # zip all skills into build/
+```
+
+With no `--root`, the binary reads the embedded snapshot. Pass `--root DIR` to read
+`<DIR>/knowledge` from disk, so you can edit a rule and re-run without rebuilding.
+
+See [INSTALL.md](INSTALL.md).
+
+## Repository layout
+
+```
+pulsarules_codex/
+├── knowledge/                       # Go package: embeds + parses the knowledge base
+│   ├── embed.go                     # //go:embed standards templates
+│   ├── model.go  frontmatter.go  index.go
+│   ├── standards/
+│   │   ├── rules/<id>.md            # rule + YAML frontmatter
+│   │   ├── patterns/<id>.md         # pattern + frontmatter
+│   │   ├── skills/<id>.md           # skill sidecar (the untitled orientation head)
+│   │   ├── workflows/<id>.md        # workflow + frontmatter
+│   │   ├── skills.yaml              # the 29 skill compositions (single file)
+│   │   └── router.yaml  profiles.yaml  references.yaml
+│   └── templates/
+│       ├── skills/{SKILL.md.tmpl, router.md.tmpl}
+├── internal/skill/
+│   ├── render/                      # transclude composed bodies into a SKILL.md
+│   ├── validate/                    # knowledge-base integrity checks
+│   └── output/                      # generate / package the rendered skills
+├── cmd/pulsarules_cli/              # CLI entrypoint (main.go; commands live in internal/cli)
+├── README.md  INSTALL.md
+├── Taskfile.yml  go.mod  go.sum  .gitignore
+```
+
+`generated/` is produced on demand and gitignored.
+
+## Customization
+
+- To add a rule, write `knowledge/standards/rules/<id>.md` (with frontmatter), reference it from a
+  skill in `knowledge/standards/skills.yaml` (`compose_rules`). Rebuild.
+- To add a skill, add an entry to `skills.yaml` declaring its `compose_rules`/`compose_patterns`
+  /`compose_workflows`/`triggers`. Rebuild; the skill is rendered by transcluding its composed
+  knowledge.
+- To generalize a project convention, extract the principle into a rule/pattern here; keep the
+  product-specific instantiation in the application repo.
+
+## Origin
+
+This repository is the source of truth for these standards. It was initially seeded from the
+engineering conventions of several Go services by the same author. The standards here stand on
+their own - application projects copy from this repo, never the reverse.
