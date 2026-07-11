@@ -1,0 +1,130 @@
+package analysis
+
+import (
+	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+)
+
+// stubAnalyzer is a minimal Analyzer for testing the stage runner.
+type stubAnalyzer struct {
+	id       string
+	stage    core.StageID
+	category core.Category
+	findings []core.Finding
+}
+
+func (s stubAnalyzer) ID() string               { return s.id }
+func (s stubAnalyzer) Name() string             { return "stub-" + s.id }
+func (s stubAnalyzer) Description() string      { return "stub analyzer" }
+func (s stubAnalyzer) Stage() core.StageID      { return s.stage }
+func (s stubAnalyzer) Category() core.Category  { return s.category }
+func (s stubAnalyzer) Needs() core.Requirements { return core.Requirements{} }
+func (s stubAnalyzer) Analyze(_ *core.AnalysisContext) []core.Finding {
+	return s.findings
+}
+
+func TestStageRunnerRegisterAndRun(t *testing.T) {
+	t.Parallel()
+
+	r := NewStageRunner(nil)
+	r.Register(stubAnalyzer{
+		id:       "a1",
+		stage:    core.StageStatic,
+		category: core.CatSyntax,
+		findings: []core.Finding{
+			{AnalyzerID: "a1", Message: "issue 1", Severity: core.SeverityWarning},
+		},
+	})
+	r.Register(stubAnalyzer{
+		id:       "a2",
+		stage:    core.StageAST,
+		category: core.CatAST,
+		findings: []core.Finding{
+			{AnalyzerID: "a2", Message: "issue 2", Severity: core.SeverityError},
+		},
+	})
+
+	ctx := &core.AnalysisContext{}
+	findings := r.RunStages(ctx)
+	if len(findings) != 2 {
+		t.Fatalf("expected 2 findings, got %d", len(findings))
+	}
+	if findings[0].AnalyzerID != "a1" {
+		t.Errorf("first finding should be from a1, got %s", findings[0].AnalyzerID)
+	}
+	if findings[1].AnalyzerID != "a2" {
+		t.Errorf("second finding should be from a2, got %s", findings[1].AnalyzerID)
+	}
+}
+
+func TestStageRunnerDisabledAnalyzer(t *testing.T) {
+	t.Parallel()
+
+	cfg := &core.AnalysisConfig{
+		Analyzers: map[string]core.AnalyzerConfig{
+			"disabled": {Enabled: false},
+		},
+	}
+	r := NewStageRunner(cfg)
+	r.Register(stubAnalyzer{
+		id:       "disabled",
+		stage:    core.StageStatic,
+		findings: []core.Finding{{AnalyzerID: "disabled", Message: "should not appear"}},
+	})
+	r.Register(stubAnalyzer{
+		id:       "enabled",
+		stage:    core.StageStatic,
+		findings: []core.Finding{{AnalyzerID: "enabled", Message: "should appear"}},
+	})
+
+	ctx := &core.AnalysisContext{}
+	findings := r.RunStages(ctx)
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding (disabled analyzer skipped), got %d", len(findings))
+	}
+	if findings[0].AnalyzerID != "enabled" {
+		t.Errorf("expected enabled, got %s", findings[0].AnalyzerID)
+	}
+}
+
+func TestStageRunnerStageOrder(t *testing.T) {
+	t.Parallel()
+
+	// Register out of stage order (AST, static, arch) so a pass proves
+	// RunStages orders by stage, not by registration order.
+	r := NewStageRunner(nil)
+	r.Register(stubAnalyzer{
+		id:       "ast",
+		stage:    core.StageAST,
+		findings: []core.Finding{{AnalyzerID: "ast"}},
+	})
+	r.Register(stubAnalyzer{
+		id:       "static",
+		stage:    core.StageStatic,
+		findings: []core.Finding{{AnalyzerID: "static"}},
+	})
+	r.Register(stubAnalyzer{
+		id:       "arch",
+		stage:    core.StageArch,
+		findings: []core.Finding{{AnalyzerID: "arch"}},
+	})
+
+	ctx := &core.AnalysisContext{}
+	findings := r.RunStages(ctx)
+
+	want := []string{"static", "ast", "arch"}
+	if len(findings) != len(want) {
+		t.Fatalf("expected %d findings, got %d: %+v", len(want), len(findings), findings)
+	}
+	for i, id := range want {
+		if findings[i].AnalyzerID != id {
+			t.Errorf(
+				"findings[%d].AnalyzerID = %q, want %q (stage order violated)",
+				i,
+				findings[i].AnalyzerID,
+				id,
+			)
+		}
+	}
+}
