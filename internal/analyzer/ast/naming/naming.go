@@ -1,0 +1,79 @@
+package naming
+
+import (
+	"go/ast"
+	"go/token"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+)
+
+// Analyzer reports identifiers that violate project naming conventions:
+// numbered names, Hungarian notation, noise words, and disinformation patterns.
+type Analyzer struct {
+	allowlist map[string]bool
+}
+
+var namingReporter = core.NewReporter("naming", core.SeverityWarning, core.CatSyntax)
+
+// NewAnalyzer creates a naming-convention analyzer.
+func NewAnalyzer() *Analyzer {
+	return &Analyzer{allowlist: make(map[string]bool)}
+}
+
+func (a *Analyzer) ID() string   { return "naming" }
+func (a *Analyzer) Name() string { return "Naming conventions" }
+func (a *Analyzer) Description() string {
+	return "Reports numbered names, Hungarian notation, noise words, and misleading names"
+}
+func (a *Analyzer) Stage() core.StageID     { return core.StageStatic }
+func (a *Analyzer) Category() core.Category { return core.CatSyntax }
+func (a *Analyzer) Needs() core.Requirements {
+	return core.Requirements{}
+}
+
+func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	if ctx.ASTCache == nil {
+		return nil
+	}
+
+	fset := ctx.ASTCache.FileSet()
+	var findings []core.Finding
+	for fc, f := range ctx.ChangedGoASTs() {
+		findings = append(findings, a.checkFile(fset, fc, f)...)
+	}
+	return findings
+}
+
+func (a *Analyzer) checkFile(
+	fset *token.FileSet,
+	fc core.FileChange,
+	f *ast.File,
+) []core.Finding {
+	var findings []core.Finding
+	emit := func(pos token.Pos, msg, suggestion string) {
+		findings = append(
+			findings,
+			namingReporter.At(fc.Path, fset.Position(pos).Line, msg, suggestion),
+		)
+	}
+
+	ast.Inspect(f, func(n ast.Node) bool {
+		switch v := n.(type) {
+		case *ast.FuncDecl:
+			checkFuncDecl(v, emit)
+		case *ast.GenDecl:
+			checkGenDecl(v, emit)
+		case *ast.AssignStmt:
+			if v.Tok == token.DEFINE {
+				for _, lhs := range v.Lhs {
+					if id, ok := lhs.(*ast.Ident); ok && id.Name != "_" {
+						checkName(id.Name, id.NamePos, emit)
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	return findings
+}
