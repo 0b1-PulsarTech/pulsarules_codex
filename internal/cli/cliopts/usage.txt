@@ -1,0 +1,85 @@
+pulsarules_cli - render and manage engineering-standards skills
+
+Usage:
+  pulsarules_cli generate [--root DIR] [--out DIR]
+  pulsarules_cli validate [--root DIR]
+  pulsarules_cli list [skills|rules|patterns|workflows] [--root DIR]
+  pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--git-hooks commit-msg,pre-commit] [--no-git-hooks]
+  pulsarules_cli package [--root DIR] [--out FILE]
+  pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
+  pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files]
+  pulsarules_cli version
+
+--target is repeatable (default claude); pass it twice (--target claude --target
+opencode) to install both layouts in one run. The opencode target renders skills
+into <target>/.opencode/skills, writes <target>/.opencode/AGENTS.md (carrying the
+routing contract), and wires <target>/opencode.json (skills as instructions + the
+gopls MCP server).
+
+--layout applies a customization profile (e.g. monorepo | inner-modules) that
+overrides which rules a skill composes; --interactive prompts for it when unset.
+
+--preset selects an analyzer configuration preset for the governance subcommand
+(recommended|strict|minimal). recommended keeps all analyzers with standard
+thresholds; strict lowers thresholds (max_lines=180, max_complexity=10); minimal
+disables AST, architecture, and delegated tool analyzers, keeping only static
+checks.
+
+--scope limits the governance analysis to a subset of analyzers (full = all,
+commit = static + AST + commit analyzers only, skipping delegation and arch).
+Use --scope commit in pre-commit hooks for fast checks.
+
+--golangci-config overrides the golangci-lint config discovery path. When unset,
+the runner searches the project root, tools/, and build/ directories for
+.golangci.yml, and on go.work repositories runs per-module.
+
+install renders the selected skills into <target>/.claude/skills, installs the
+skill-router reminder hook into <target>/.claude/hooks, and idempotently wires it
+into the chosen settings file. --hooks-scope project (the default) wires into
+<target>/.claude/settings.json; --hooks-scope local wires into
+settings.local.json. The wired hook command resolves the project root at runtime
+via $CLAUDE_PROJECT_DIR. Unless --no-mcp is given and when gopls is on PATH, it
+also merges the gopls server into <target>/.mcp.json and regenerates the
+gopls-navigation skill from "gopls mcp -instructions". Use --no-hooks for skills
+only, or --print-hooks to inspect the resolved hooks block without writing.
+
+Choosing which skills to install requires exactly one of --all, --skills, or
+--router-only. With none given on an interactive terminal, install prompts with
+a numbered list of every skill (id, one-line description, mandatory skills
+shown pre-selected and locked); accepts "1,4,7-9" ranges, "a" for all, or Enter
+for the mandatory-only baseline. With none given and no terminal (e.g. CI), it
+fails naming the fix rather than guessing. project-router plus every
+always_load skill is always installed and cannot be deselected. A selected
+skill whose compose_skills names another skill pulls that skill in too
+(transitively, cycle-safe); install prints each one added and which skill
+required it, e.g. "pulled in by dependency: usecase-layout (required by
+rest-adapter)".
+
+--git-hooks installs git hook scripts into <target>/.git/hooks/ that delegate to
+the installed binary. Default: commit-msg,pre-commit. Use --no-git-hooks to skip.
+
+commitlint validates a commit message against the emoji, format, type, scope, and
+body rules. Use --msg "..." for a direct string, --file PATH to read from a
+COMMIT_EDITMSG file (the git commit-msg hook passes $1), and --project DIR to
+enable emoji-variance against recent git history. Exits non-zero on
+error-severity findings.
+
+governance runs the analyzer pipeline (static, AST, architecture, delegation,
+rule injection) against the project and prints findings to stderr. Exits non-zero
+on any error-severity finding. Use --scope commit in pre-commit hooks for a
+lightweight run that omits delegation and architecture checks.
+
+By default governance analyzes only files git reports as changed (via
+`git status`), so it reports nothing on a clean tree - the fast path the Stop
+hook and pre-commit hook rely on. --all-files instead walks every source file
+in the project tree (skipping .git/, .claude/, .opencode/, generated/, build/,
+and vendor/), so a full audit of the whole repository sees files the
+changed-set never would. Combine with --scope full for a complete governance
+sweep: `pulsarules_cli governance --scope full --all-files`.
+
+With no --root, the binary reads the embedded knowledge snapshot. Pass --root DIR
+to read <DIR>/knowledge from disk (dev edits without rebuild).
+
+--log-level (debug|info|warn|error) enables hook execution logging to
+<projectDir>/.claude/hook-execution.log; falls back to $PULSARULES_LOG_LEVEL when
+unset. Logging is off by default and costs nothing (no file is created).
