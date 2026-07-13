@@ -1,0 +1,32 @@
+package governance
+
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/rulesummary"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
+)
+
+func analyzerSpecs() []analyzerSpec {
+	return []analyzerSpec{
+		{
+			build: func(
+				index *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
+			) pass.Analyzer {
+				return rulesummary.NewAnalyzer(index)
+			},
+			scopes: staticScopes(),
+		},
+		staticSpec(output.NewAnalyzer),
+	}
+}
+
+func staticSpec[Built pass.Analyzer](ctor func() Built) analyzerSpec {
+	return analyzerSpec{
+		build: func(_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository) pass.Analyzer {
+			return ctor()
+		},
+		scopes: staticScopes(),
+	}
+}
