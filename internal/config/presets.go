@@ -21,7 +21,14 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 }
 
 func strictAnalyzers() map[string]AnalyzerConfig {
-	return map[string]AnalyzerConfig{}
+	const (
+		strictMaxFileLines = 180
+	)
+	return map[string]AnalyzerConfig{
+		// Same number as the analyzer's default; stated here anyway since this
+		// is the policy layer a caller reads to learn the project's limit.
+		"file-size": {Enabled: true, Params: map[string]any{"max_lines": strictMaxFileLines}},
+	}
 }
 
 func (govCfg *GovernanceConfig) ApplyPreset() {

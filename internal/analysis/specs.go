@@ -4,12 +4,14 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ruleinjection"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func analyzerSpecs() []analyzerSpec {
 	return []analyzerSpec{
+		staticSpec(filesize.NewAnalyzer),
 		{
 			build: func(
 				index *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,

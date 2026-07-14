@@ -16,18 +16,32 @@ func TestInjectRuleBodies(t *testing.T) {
 	}
 
 	findings := []core.Finding{
+		{AnalyzerID: "file-size", Severity: core.SeverityWarning, Message: "file too long"},
 		{AnalyzerID: "unknown-analyzer", Severity: core.SeverityError, Message: "unknown"},
 	}
 
 	injectRuleBodies(findings, idx)
 
-	if findings[0].RuleID != "" || findings[0].RuleBody != "" {
-		t.Errorf(
-			"unknown analyzer: got RuleID=%q and a %d-byte body, want neither",
-			findings[0].RuleID,
-			len(findings[0].RuleBody),
-		)
+	check := func(t *testing.T, i int, wantRuleID string, wantBody bool) {
+		t.Helper()
+		f := findings[i]
+		if f.RuleID != wantRuleID {
+			t.Errorf("finding %d: got RuleID=%q, want %q", i, f.RuleID, wantRuleID)
+		}
+		hasBody := f.RuleBody != ""
+		if hasBody != wantBody {
+			t.Errorf(
+				"finding %d: hasBody=%v, want %v (body length %d)",
+				i,
+				hasBody,
+				wantBody,
+				len(f.RuleBody),
+			)
+		}
 	}
+
+	check(t, 0, "effective-go", true)
+	check(t, 1, "", false)
 }
 
 func TestInjectRuleBodies_NilIndex(t *testing.T) {
