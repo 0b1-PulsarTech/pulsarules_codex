@@ -8,7 +8,9 @@ import (
 
 func defaultRuleMap() map[string]string {
 	// A new analyzer goes here by exact ID.
-	return map[string]string{}
+	return map[string]string{
+		"file-size": "effective-go",
+	}
 }
 
 type Analyzer struct {
