@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/imports"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ruleinjection"
@@ -12,6 +13,14 @@ import (
 func analyzerSpecs() []analyzerSpec {
 	return []analyzerSpec{
 		staticSpec(filesize.NewAnalyzer),
+		{
+			build: func(
+				_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,
+			) core.Analyzer {
+				return imports.NewAnalyzer("github.com/0b1-PulsarTech/pulsarules_codex")
+			},
+			scopes: staticScopes(),
+		},
 		{
 			build: func(
 				index *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,
