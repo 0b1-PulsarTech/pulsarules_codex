@@ -9,6 +9,7 @@ func defaultRuleMap() map[string]string {
 	// A new analyzer goes here by exact ID.
 	return map[string]string{
 		"file-size":     "effective-go",
+		"no-em-dash":    "effective-go",
 		"import-groups": "imports",
 	}
 }
