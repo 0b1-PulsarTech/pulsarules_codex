@@ -5,6 +5,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/importgroup"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/noemdash"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/rulesummary"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -13,6 +14,7 @@ import (
 func analyzerSpecs() []analyzerSpec {
 	return []analyzerSpec{
 		staticSpec(filesize.NewAnalyzer),
+		staticSpec(noemdash.NewAnalyzer),
 		{
 			build: func(
 				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
