@@ -12,6 +12,7 @@ func defaultRuleMap() map[string]string {
 		"file-size":     "effective-go",
 		"no-em-dash":    "effective-go",
 		"import-groups": "imports",
+		"naming":        "naming",
 	}
 }
 
