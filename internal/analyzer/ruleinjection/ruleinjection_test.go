@@ -17,6 +17,7 @@ func TestInjectRuleBodies(t *testing.T) {
 
 	findings := []core.Finding{
 		{AnalyzerID: "file-size", Severity: core.SeverityWarning, Message: "file too long"},
+		{AnalyzerID: "naming", Severity: core.SeverityWarning, Message: "bad name"},
 		{AnalyzerID: "unknown-analyzer", Severity: core.SeverityError, Message: "unknown"},
 	}
 
@@ -41,7 +42,8 @@ func TestInjectRuleBodies(t *testing.T) {
 	}
 
 	check(t, 0, "effective-go", true)
-	check(t, 1, "", false)
+	check(t, 1, "naming", true)
+	check(t, 2, "", false)
 }
 
 func TestInjectRuleBodies_NilIndex(t *testing.T) {
@@ -132,12 +134,7 @@ func TestRuleInjectionAnalyzer_AnalyzePopulatesBodies(t *testing.T) {
 	a := NewAnalyzer(idx)
 	ctx := &core.AnalysisContext{
 		Findings: []core.Finding{
-			{
-				AnalyzerID: "custom-tool",
-				RuleID:     "code-smells",
-				Severity:   core.SeverityWarning,
-				Message:    "high cyclomatic",
-			},
+			{AnalyzerID: "naming", Severity: core.SeverityWarning, Message: "bad name"},
 		},
 	}
 
@@ -148,7 +145,7 @@ func TestRuleInjectionAnalyzer_AnalyzePopulatesBodies(t *testing.T) {
 	if ctx.Findings[0].RuleBody == "" {
 		t.Fatal("expected RuleBody to be populated via pipeline context mutation")
 	}
-	if ctx.Findings[0].RuleID != "code-smells" {
-		t.Fatalf("expected RuleID=code-smells, got %q", ctx.Findings[0].RuleID)
+	if ctx.Findings[0].RuleID != "naming" {
+		t.Fatalf("expected RuleID=naming, got %q", ctx.Findings[0].RuleID)
 	}
 }

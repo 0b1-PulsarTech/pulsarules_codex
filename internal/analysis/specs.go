@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/imports"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/naming"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ruleinjection"
@@ -23,6 +24,7 @@ func analyzerSpecs() []analyzerSpec {
 			},
 			scopes: staticScopes(),
 		},
+		staticSpec(naming.NewAnalyzer),
 		{
 			build: func(
 				index *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,
