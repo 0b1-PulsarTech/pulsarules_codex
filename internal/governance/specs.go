@@ -1,6 +1,7 @@
 package governance
 
 import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/banner"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/importgroup"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/identifier"
@@ -25,6 +26,7 @@ func analyzerSpecs() []analyzerSpec {
 			scopes: staticScopes(),
 		},
 		staticSpec(identifier.NewAnalyzer),
+		langSpec(banner.NewAnalyzer),
 		{
 			build: func(
 				index *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
@@ -41,6 +43,17 @@ func staticSpec[Built pass.Analyzer](ctor func() Built) analyzerSpec {
 	return analyzerSpec{
 		build: func(_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository) pass.Analyzer {
 			return ctor()
+		},
+		scopes: staticScopes(),
+	}
+}
+
+func langSpec[Built pass.Analyzer](ctor func(*pass.LanguageRegistry) Built) analyzerSpec {
+	return analyzerSpec{
+		build: func(
+			_ *knowledge.Index, langs *pass.LanguageRegistry, _ vcs.Repository,
+		) pass.Analyzer {
+			return ctor(langs)
 		},
 		scopes: staticScopes(),
 	}
