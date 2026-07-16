@@ -8,6 +8,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ruleinjection"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/noemdash"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/topoffile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -25,6 +26,7 @@ func analyzerSpecs() []analyzerSpec {
 			scopes: staticScopes(),
 		},
 		staticSpec(naming.NewAnalyzer),
+		langSpec(topoffile.NewAnalyzer),
 		{
 			build: func(
 				index *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,
@@ -41,6 +43,17 @@ func staticSpec[Built core.Analyzer](ctor func() Built) analyzerSpec {
 	return analyzerSpec{
 		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
 			return ctor()
+		},
+		scopes: staticScopes(),
+	}
+}
+
+func langSpec[Built core.Analyzer](ctor func(*core.LanguageRegistry) Built) analyzerSpec {
+	return analyzerSpec{
+		build: func(
+			_ *knowledge.Index, langs *core.LanguageRegistry, _ vcs.Repository,
+		) core.Analyzer {
+			return ctor(langs)
 		},
 		scopes: staticScopes(),
 	}
