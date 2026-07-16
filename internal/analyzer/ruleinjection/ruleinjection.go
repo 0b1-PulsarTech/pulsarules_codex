@@ -13,6 +13,7 @@ func defaultRuleMap() map[string]string {
 		"import-groups": "imports",
 		"naming":        "naming",
 		"top-of-file":   "effective-go",
+		"big-comment":   "effective-go",
 	}
 }
 
