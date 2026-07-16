@@ -2,6 +2,7 @@ package governance
 
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/banner"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/blocksize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/importgroup"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/identifier"
@@ -27,6 +28,7 @@ func analyzerSpecs() []analyzerSpec {
 		},
 		staticSpec(identifier.NewAnalyzer),
 		langSpec(banner.NewAnalyzer),
+		langSpec(blocksize.NewAnalyzer),
 		{
 			build: func(
 				index *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
