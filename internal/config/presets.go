@@ -20,17 +20,26 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 	return map[string]AnalyzerConfig{
 		// AST analyzers are disabled in minimal mode.
 		"control-flow": {Enabled: false},
+		"complexity":   {Enabled: false},
 	}
 }
 
 func strictAnalyzers() map[string]AnalyzerConfig {
 	const (
 		strictMaxFileLines = 180
+		strictMaxFuncLines = 50
+		strictMaxParams    = 4
+		strictComplexity   = 10
 	)
 	return map[string]AnalyzerConfig{
 		// Same number as the analyzer's default; stated here anyway since this
 		// is the policy layer a caller reads to learn the project's limit.
 		"file-size": {Enabled: true, Params: map[string]any{"max_lines": strictMaxFileLines}},
+		"complexity": {Enabled: true, Params: map[string]any{
+			"max_complexity": strictComplexity,
+			"max_func_lines": strictMaxFuncLines,
+			"max_params":     strictMaxParams,
+		}},
 	}
 }
 

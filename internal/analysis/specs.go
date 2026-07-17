@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/complexity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/controlflow"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/imports"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/naming"
@@ -31,6 +32,7 @@ func analyzerSpecs() []analyzerSpec {
 		langSpec(topoffile.NewAnalyzer),
 		langSpec(bigcomment.NewAnalyzer),
 		staticSpec(controlflow.NewAnalyzer),
+		staticSpec(complexity.NewAnalyzer),
 		{
 			build: func(
 				index *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,
