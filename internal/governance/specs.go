@@ -5,6 +5,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/blocksize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/complexity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/controlflow"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/shadowing"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/importgroup"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/identifier"
@@ -32,6 +33,7 @@ func analyzerSpecs() []analyzerSpec {
 		langSpec(banner.NewAnalyzer),
 		langSpec(blocksize.NewAnalyzer),
 		staticSpec(controlflow.NewAnalyzer),
+		staticSpec(shadowing.NewAnalyzer),
 		staticSpec(complexity.NewAnalyzer),
 		{
 			build: func(
