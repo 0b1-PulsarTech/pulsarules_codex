@@ -1,0 +1,221 @@
+package shadowing
+
+import "testing"
+
+func TestShadowing_SwitchSelectClauseBlock(t *testing.T) {
+	t.Parallel()
+
+	a := NewAnalyzer()
+
+	for _, testCase := range clauseTestCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			runCheckFile(t, a, testCase)
+		})
+	}
+}
+
+func clauseTestCases() []checkFileTestCase {
+	return append(clauseBindingCases(), clauseGuardCases()...)
+}
+
+func clauseBindingCases() []checkFileTestCase {
+	return []checkFileTestCase{
+		{
+			name: "each switch clause shadows the param independently",
+			source: "package foo\n" +
+				"func f(v int, x int) {\n" +
+				"	switch x {\n" +
+				"	case 1:\n" +
+				"		v := 1\n" +
+				"		_ = v\n" +
+				"	case 2:\n" +
+				"		v := 2\n" +
+				"		_ = v\n" +
+				"	}\n" +
+				"}\n",
+			expect:    2,
+			wantReuse: 0,
+		},
+		{
+			name: "a select comm clause binds and is checked",
+			source: "package foo\n" +
+				"func f(v int, ch chan int) {\n" +
+				"	select {\n" +
+				"	case v := <-ch:\n" +
+				"		_ = v\n" +
+				"	}\n" +
+				"}\n",
+			expect:    1,
+			wantReuse: 0,
+		},
+		{
+			name: "a comm clause binding is visible to its own body",
+			source: "package foo\n" +
+				"func f(ch chan int) {\n" +
+				"	select {\n" +
+				"	case v := <-ch:\n" +
+				"		if true {\n" +
+				"			v := 2\n" +
+				"			_ = v\n" +
+				"		}\n" +
+				"		_ = v\n" +
+				"	}\n" +
+				"}\n",
+			expect:    1,
+			wantReuse: 0,
+		},
+	}
+}
+
+func clauseGuardCases() []checkFileTestCase {
+	return []checkFileTestCase{
+		{
+			name: "the type-switch guard is checked like any declaration",
+			source: "package foo\n" +
+				"func f(v int, i any) {\n" +
+				"	switch v := i.(type) {\n" +
+				"	case int:\n" +
+				"		_ = v\n" +
+				"	}\n" +
+				"}\n",
+			expect:    1,
+			wantReuse: 0,
+		},
+		{
+			name: "a clean switch reports nothing",
+			source: "package foo\n" +
+				"func f(x int) {\n" +
+				"	switch x {\n" +
+				"	case 1:\n" +
+				"		y := 1\n" +
+				"		_ = y\n" +
+				"	case 2:\n" +
+				"		z := 2\n" +
+				"		_ = z\n" +
+				"	}\n" +
+				"}\n",
+			expect:    0,
+			wantReuse: 0,
+		},
+	}
+}
+
+func TestShadowing_ClosuresKnownGap(t *testing.T) {
+	t.Parallel()
+
+	a := NewAnalyzer()
+
+	for _, testCase := range closureTestCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			runCheckFile(t, a, testCase)
+		})
+	}
+}
+
+func closureTestCases() []checkFileTestCase {
+	return append(closureAssignedCases(), closureConcurrentCases()...)
+}
+
+func closureAssignedCases() []checkFileTestCase {
+	return []checkFileTestCase{
+		{
+			name: "a closure assigned to a variable",
+			source: "package foo\n" +
+				"func f(x int) {\n" +
+				"	g := func() {\n" +
+				"		x := 2\n" +
+				"		_ = x\n" +
+				"	}\n" +
+				"	_ = g\n" +
+				"}\n",
+			expect:    0,
+			wantReuse: 0,
+		},
+		{
+			name: "a deferred closure",
+			source: "package foo\n" +
+				"func f(x int) {\n" +
+				"	defer func() {\n" +
+				"		x := 2\n" +
+				"		_ = x\n" +
+				"	}()\n" +
+				"}\n",
+			expect:    0,
+			wantReuse: 0,
+		},
+		{
+			name: "a closure parameter",
+			source: "package foo\n" +
+				"func f(x int) {\n" +
+				"	g := func(x int) { _ = x }\n" +
+				"	_ = g\n" +
+				"}\n",
+			expect:    0,
+			wantReuse: 0,
+		},
+		{
+			name: "a closure parameter reused by := in the closure body",
+			source: "package foo\n" +
+				"func f() {\n" +
+				"	g := func(ctx int) {\n" +
+				"		ctx, extra := 1, 2\n" +
+				"		_, _ = ctx, extra\n" +
+				"	}\n" +
+				"	_ = g\n" +
+				"}\n",
+			expect:    0,
+			wantReuse: 0,
+		},
+	}
+}
+
+func closureConcurrentCases() []checkFileTestCase {
+	return []checkFileTestCase{
+		{
+			name: "a goroutine closure",
+			source: "package foo\n" +
+				"func f(err error) {\n" +
+				"	go func() {\n" +
+				"		err := g()\n" +
+				"		_ = err\n" +
+				"	}()\n" +
+				"}\n" +
+				"func g() error { return nil }\n",
+			expect:    0,
+			wantReuse: 0,
+		},
+		{
+			name: "the mandated commit-rollback defer is silent",
+			source: "package foo\n" +
+				"func f() (err error) {\n" +
+				"	defer func() { err = finish(err) }()\n" +
+				"	return nil\n" +
+				"}\n" +
+				"func finish(e error) error { return e }\n",
+			expect:    0,
+			wantReuse: 0,
+		},
+	}
+}
+
+func TestReuseReportedOncePerName(t *testing.T) {
+	t.Parallel()
+
+	a := NewAnalyzer()
+	testCase := checkFileTestCase{
+		name: "a named result reused twice reports once",
+		source: "package foo\n" +
+			"func f() (out int, err error) {\n" +
+			"	a, err := g()\n" +
+			"	b, err := g()\n" +
+			"	_, _, _ = a, b, out\n" +
+			"	return out, err\n" +
+			"}\n" +
+			"func g() (int, error) { return 0, nil }\n",
+		expect:    0,
+		wantReuse: 1,
+	}
+	runCheckFile(t, a, testCase)
+}

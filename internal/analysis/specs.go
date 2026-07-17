@@ -5,6 +5,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/controlflow"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/imports"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/naming"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/shadowing"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ruleinjection"
@@ -32,6 +33,7 @@ func analyzerSpecs() []analyzerSpec {
 		langSpec(topoffile.NewAnalyzer),
 		langSpec(bigcomment.NewAnalyzer),
 		staticSpec(controlflow.NewAnalyzer),
+		staticSpec(shadowing.NewAnalyzer),
 		staticSpec(complexity.NewAnalyzer),
 		{
 			build: func(

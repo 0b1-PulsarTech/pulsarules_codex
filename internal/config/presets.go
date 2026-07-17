@@ -20,6 +20,7 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 	return map[string]AnalyzerConfig{
 		// AST analyzers are disabled in minimal mode.
 		"control-flow": {Enabled: false},
+		"shadowing":    {Enabled: false},
 		"complexity":   {Enabled: false},
 	}
 }
