@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/controlflow"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/imports"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/naming"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
@@ -29,6 +30,7 @@ func analyzerSpecs() []analyzerSpec {
 		staticSpec(naming.NewAnalyzer),
 		langSpec(topoffile.NewAnalyzer),
 		langSpec(bigcomment.NewAnalyzer),
+		staticSpec(controlflow.NewAnalyzer),
 		{
 			build: func(
 				index *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,

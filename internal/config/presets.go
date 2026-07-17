@@ -17,7 +17,10 @@ func presetAnalyzers() map[string]map[string]AnalyzerConfig {
 }
 
 func minimalAnalyzers() map[string]AnalyzerConfig {
-	return map[string]AnalyzerConfig{}
+	return map[string]AnalyzerConfig{
+		// AST analyzers are disabled in minimal mode.
+		"control-flow": {Enabled: false},
+	}
 }
 
 func strictAnalyzers() map[string]AnalyzerConfig {
