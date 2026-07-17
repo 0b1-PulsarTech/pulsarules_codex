@@ -15,6 +15,7 @@ func defaultRuleMap() map[string]string {
 		"naming":        "naming",
 		"top-of-file":   "effective-go",
 		"big-comment":   "effective-go",
+		"control-flow":  "code-smells",
 	}
 }
 
