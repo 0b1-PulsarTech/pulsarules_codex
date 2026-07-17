@@ -10,7 +10,8 @@ func TestToAnalysisConfig(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.Defaults()
-	cfg.Analyzers["complexity"] = config.AnalyzerConfig{Enabled: false}
+	cfg.Preset = config.PresetMinimal
+	cfg.ApplyPreset()
 
 	cfg.Analyzers["kept-on"] = config.AnalyzerConfig{Enabled: true}
 

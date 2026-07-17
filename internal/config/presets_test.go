@@ -4,6 +4,36 @@ import (
 	"testing"
 )
 
+func TestApplyPreset_RecommendedDefaults(t *testing.T) {
+	t.Parallel()
+
+	cfg := Defaults()
+	cfg.Preset = PresetRecommended
+	cfg.ApplyPreset()
+
+	if isEnabled(cfg, "complexity") != true {
+		t.Error("complexity should be enabled in recommended")
+	}
+}
+
+func TestApplyPreset_Minimal(t *testing.T) {
+	t.Parallel()
+
+	cfg := Defaults()
+	cfg.Preset = PresetMinimal
+	cfg.ApplyPreset()
+
+	if isEnabled(cfg, "complexity") {
+		t.Error("complexity should be disabled in minimal preset")
+	}
+	if !isEnabled(cfg, "file-size") {
+		t.Error("file-size should be enabled in minimal preset")
+	}
+	if !isEnabled(cfg, "naming") {
+		t.Error("naming should be enabled in minimal preset")
+	}
+}
+
 func TestApplyPreset_Strict(t *testing.T) {
 	t.Parallel()
 
@@ -13,6 +43,9 @@ func TestApplyPreset_Strict(t *testing.T) {
 
 	if !isEnabled(cfg, "file-size") {
 		t.Error("file-size should be enabled in strict preset")
+	}
+	if !isEnabled(cfg, "complexity") {
+		t.Error("complexity should be enabled in strict preset")
 	}
 }
 
