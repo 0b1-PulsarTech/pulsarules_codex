@@ -73,6 +73,12 @@ func TestSession_ScopeChanged(t *testing.T) {
 
 	foundStatic := false
 	for _, finding := range findings {
+		if finding.AnalyzerID == "golangci-lint" {
+			t.Fatalf(
+				"ScopeChanged must not invoke external-tool delegation, got analyzer %q",
+				finding.AnalyzerID,
+			)
+		}
 		if finding.AnalyzerID == "no-em-dash" {
 			foundStatic = true
 		}

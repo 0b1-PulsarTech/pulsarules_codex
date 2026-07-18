@@ -24,6 +24,7 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 		"complexity":    {Enabled: false},
 		"arch-boundary": {Enabled: false},
 		"import-cycle":  {Enabled: false},
+		"golangci-lint": {Enabled: false},
 	}
 }
 

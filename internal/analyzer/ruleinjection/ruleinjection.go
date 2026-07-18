@@ -1,12 +1,14 @@
 package ruleinjection
 
 import (
+	"strings"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func defaultRuleMap() map[string]string {
-	// A new analyzer goes here by exact ID.
+	// A new analyzer goes here by exact ID; sub-ID tools also need a lookupRule prefix.
 	return map[string]string{
 		"file-size":     "effective-go",
 		"no-em-dash":    "effective-go",
@@ -19,6 +21,7 @@ func defaultRuleMap() map[string]string {
 		"complexity":    "code-smells",
 		"arch-boundary": "dependency-rule",
 		"import-cycle":  "module-boundaries",
+		"golangci-lint": "code-smells",
 	}
 }
 
@@ -50,10 +53,21 @@ func injectRuleBodies(findings []core.Finding, index *knowledge.Index) {
 			continue
 		}
 		if findings[idx].RuleID == "" {
-			findings[idx].RuleID = rules[findings[idx].AnalyzerID]
+			findings[idx].RuleID = lookupRule(rules, findings[idx].AnalyzerID)
 		}
 		if findings[idx].RuleID != "" {
 			findings[idx].RuleBody = index.Body("rules", findings[idx].RuleID)
 		}
 	}
+}
+
+func lookupRule(rules map[string]string, analyzerID string) string {
+	if rid, ok := rules[analyzerID]; ok {
+		return rid
+	}
+	// Sub-IDs like "golangci-lint/gocyclo" come from the delegated linter.
+	if strings.HasPrefix(analyzerID, "golangci-lint/") {
+		return "code-smells"
+	}
+	return ""
 }

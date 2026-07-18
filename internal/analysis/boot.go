@@ -28,6 +28,10 @@ func archScopes() []Scope {
 	return []Scope{ScopeFull, ScopeChanged}
 }
 
+func delegationScopes() []Scope {
+	return []Scope{ScopeFull}
+}
+
 func (r *StageRunner) registerForScope(index *knowledge.Index, repo vcs.Repository, scope Scope) {
 	langs := core.NewLanguageRegistry()
 	langs.Register(golang.New())

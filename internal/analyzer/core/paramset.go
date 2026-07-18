@@ -24,6 +24,14 @@ func (params ParamSet) Int(key string, fallback int) int {
 	return value
 }
 
+func (params ParamSet) String(key string, fallback string) string {
+	val, ok := params[key].(string)
+	if !ok {
+		return fallback
+	}
+	return val
+}
+
 func (ctx *AnalysisContext) Params(analyzerID string) ParamSet {
 	if ctx.Config == nil {
 		return nil
