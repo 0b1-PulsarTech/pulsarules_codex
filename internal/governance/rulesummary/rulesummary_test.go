@@ -20,6 +20,11 @@ func TestInjectRuleBodies(t *testing.T) {
 		{AnalyzerID: "file-size", Severity: finding.SeverityWarning, Message: "file too long"},
 		{AnalyzerID: "naming", Severity: finding.SeverityWarning, Message: "bad name"},
 		{AnalyzerID: "unknown-analyzer", Severity: finding.SeverityError, Message: "unknown"},
+		{
+			AnalyzerID: "arch-boundary",
+			Severity:   finding.SeverityError,
+			Message:    "boundary violation",
+		},
 	}
 
 	injectRuleBodies(findings, idx)
@@ -45,6 +50,7 @@ func TestInjectRuleBodies(t *testing.T) {
 	check(t, 0, "effective-go", true)
 	check(t, 1, "naming", true)
 	check(t, 2, "", false)
+	check(t, 3, "dependency-rule", true)
 }
 
 func TestInjectRuleBodies_NilIndex(t *testing.T) {

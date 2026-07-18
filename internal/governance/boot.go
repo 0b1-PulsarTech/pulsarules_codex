@@ -24,6 +24,10 @@ func staticScopes() []Scope {
 	return []Scope{ScopeFull, ScopeCommit, ScopeChanged}
 }
 
+func archScopes() []Scope {
+	return []Scope{ScopeFull, ScopeChanged}
+}
+
 func (r *StageRunner) registerForScope(index *knowledge.Index, repo vcs.Repository, scope Scope) {
 	langs := pass.NewLanguageRegistry()
 	langs.Register(golang.New())
