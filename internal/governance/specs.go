@@ -1,7 +1,6 @@
 package governance
 
 import (
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/arch"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/banner"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/blocksize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/complexity"
@@ -10,16 +9,14 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/importgroup"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/identifier"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/noemdash"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/rulesummary"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func analyzerSpecs() []analyzerSpec {
-	return []analyzerSpec{
+	return append([]analyzerSpec{
 		staticSpec(filesize.NewAnalyzer),
 		staticSpec(noemdash.NewAnalyzer),
 		{
@@ -36,32 +33,7 @@ func analyzerSpecs() []analyzerSpec {
 		staticSpec(controlflow.NewAnalyzer),
 		staticSpec(shadowing.NewAnalyzer),
 		staticSpec(complexity.NewAnalyzer),
-		{
-			build: func(
-				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
-			) pass.Analyzer {
-				return arch.NewPackageBoundaryAnalyzer()
-			},
-			scopes: archScopes(),
-		},
-		{
-			build: func(
-				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
-			) pass.Analyzer {
-				return arch.NewImportCycleAnalyzer()
-			},
-			scopes: archScopes(),
-		},
-		{
-			build: func(
-				index *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
-			) pass.Analyzer {
-				return rulesummary.NewAnalyzer(index)
-			},
-			scopes: staticScopes(),
-		},
-		staticSpec(output.NewAnalyzer),
-	}
+	}, pipelineAnalyzerSpecs()...)
 }
 
 func staticSpec[Built pass.Analyzer](ctor func() Built) analyzerSpec {

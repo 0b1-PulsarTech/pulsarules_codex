@@ -40,6 +40,32 @@ func TestParamSetInt(t *testing.T) {
 	}
 }
 
+func TestParamSetString(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		params   ParamSet
+		key      string
+		fallback string
+		want     string
+	}{
+		{"nil params keeps fallback", nil, "mode", "default", "default"},
+		{"missing key keeps fallback", ParamSet{}, "mode", "default", "default"},
+		{"string value wins", ParamSet{"mode": "strict"}, "mode", "default", "strict"},
+		{"wrong type keeps fallback", ParamSet{"mode": 1}, "mode", "default", "default"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := testCase.params.String(testCase.key, testCase.fallback)
+			if got != testCase.want {
+				t.Errorf("String(%q) = %q, want %q", testCase.key, got, testCase.want)
+			}
+		})
+	}
+}
+
 func TestAnalysisContextParams(t *testing.T) {
 	t.Parallel()
 

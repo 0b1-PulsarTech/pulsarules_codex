@@ -21,6 +21,11 @@ func TestInjectRuleBodies(t *testing.T) {
 		{AnalyzerID: "naming", Severity: finding.SeverityWarning, Message: "bad name"},
 		{AnalyzerID: "unknown-analyzer", Severity: finding.SeverityError, Message: "unknown"},
 		{
+			AnalyzerID: "golangci-lint/gocyclo",
+			Severity:   finding.SeverityWarning,
+			Message:    "high cyclomatic",
+		},
+		{
 			AnalyzerID: "arch-boundary",
 			Severity:   finding.SeverityError,
 			Message:    "boundary violation",
@@ -50,7 +55,8 @@ func TestInjectRuleBodies(t *testing.T) {
 	check(t, 0, "effective-go", true)
 	check(t, 1, "naming", true)
 	check(t, 2, "", false)
-	check(t, 3, "dependency-rule", true)
+	check(t, 3, "code-smells", true)
+	check(t, 4, "dependency-rule", true)
 }
 
 func TestInjectRuleBodies_NilIndex(t *testing.T) {

@@ -1,0 +1,72 @@
+package golangcilint
+
+import (
+	"os/exec"
+	"path/filepath"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+)
+
+type Runner struct {
+	path    string
+	failure finding.Reporter
+}
+
+func NewRunner(golangciLintPath string) *Runner {
+	return &Runner{
+		path:    golangciLintPath,
+		failure: finding.NewReporter("golangci-lint", finding.SeverityError, finding.CatSyntax),
+	}
+}
+
+func (r *Runner) Run(projectDir, configPath string) []finding.Finding {
+	if r.path == "" {
+		return nil
+	}
+	return r.runLint(projectDir, configPath)
+}
+
+func (r *Runner) runLint(projectDir, configPath string) []finding.Finding {
+	if hasGoWork(projectDir) {
+		return r.runPerModule(projectDir, configPath)
+	}
+
+	return r.runSingle(projectDir, configPath)
+}
+
+func (r *Runner) runPerModule(projectDir, configPath string) []finding.Finding {
+	modules := parseGoWorkModules(projectDir)
+	if len(modules) == 0 {
+		return r.runSingle(projectDir, configPath)
+	}
+
+	configFlag := resolvedConfigFlag(projectDir, configPath)
+
+	var allFindings []finding.Finding
+	for _, mod := range modules {
+		modDir := filepath.Join(projectDir, mod)
+		args := []string{"run", "--output.json.path=stdout", modDir + "/..."}
+		if configFlag != "" {
+			args = append(args, "--config", configFlag)
+		}
+		//nolint:gosec,noctx
+		cmd := exec.Command(r.path, args...)
+		cmd.Dir = projectDir
+		out, err := cmd.Output()
+		allFindings = append(allFindings, r.parseOutput(out, err)...)
+	}
+	return allFindings
+}
+
+func (r *Runner) runSingle(projectDir, configPath string) []finding.Finding {
+	args := []string{"run", "--output.json.path=stdout", "./..."}
+	configFlag := resolvedConfigFlag(projectDir, configPath)
+	if configFlag != "" {
+		args = append(args, "--config", configFlag)
+	}
+	//nolint:gosec,noctx
+	cmd := exec.Command(r.path, args...)
+	cmd.Dir = projectDir
+	out, err := cmd.Output()
+	return r.parseOutput(out, err)
+}
