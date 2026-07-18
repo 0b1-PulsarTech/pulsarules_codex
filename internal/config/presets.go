@@ -18,10 +18,12 @@ func presetAnalyzers() map[string]map[string]AnalyzerConfig {
 
 func minimalAnalyzers() map[string]AnalyzerConfig {
 	return map[string]AnalyzerConfig{
-		// AST analyzers are disabled in minimal mode.
-		"control-flow": {Enabled: false},
-		"shadowing":    {Enabled: false},
-		"complexity":   {Enabled: false},
+		// AST and arch analyzers are disabled in minimal mode.
+		"control-flow":  {Enabled: false},
+		"shadowing":     {Enabled: false},
+		"complexity":    {Enabled: false},
+		"arch-boundary": {Enabled: false},
+		"import-cycle":  {Enabled: false},
 	}
 }
 

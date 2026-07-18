@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/arch"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/complexity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/controlflow"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/imports"
@@ -35,6 +36,22 @@ func analyzerSpecs() []analyzerSpec {
 		staticSpec(controlflow.NewAnalyzer),
 		staticSpec(shadowing.NewAnalyzer),
 		staticSpec(complexity.NewAnalyzer),
+		{
+			build: func(
+				_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,
+			) core.Analyzer {
+				return arch.NewPackageBoundaryAnalyzer()
+			},
+			scopes: archScopes(),
+		},
+		{
+			build: func(
+				_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,
+			) core.Analyzer {
+				return arch.NewImportCycleAnalyzer()
+			},
+			scopes: archScopes(),
+		},
 		{
 			build: func(
 				index *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,

@@ -17,6 +17,8 @@ func defaultRuleMap() map[string]string {
 		"control-flow":  "code-smells",
 		"shadowing":     "effective-go",
 		"complexity":    "code-smells",
+		"arch-boundary": "dependency-rule",
+		"import-cycle":  "module-boundaries",
 	}
 }
 

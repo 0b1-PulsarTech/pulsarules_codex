@@ -26,6 +26,9 @@ func TestApplyPreset_Minimal(t *testing.T) {
 	if isEnabled(cfg, "complexity") {
 		t.Error("complexity should be disabled in minimal preset")
 	}
+	if isEnabled(cfg, "arch-boundary") {
+		t.Error("arch-boundary should be disabled in minimal preset")
+	}
 	if !isEnabled(cfg, "file-size") {
 		t.Error("file-size should be enabled in minimal preset")
 	}
