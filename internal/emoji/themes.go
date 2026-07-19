@@ -41,3 +41,39 @@ func Anchors() ([]Anchor, error) {
 	}
 	return anchors, nil
 }
+
+func (catalog *Catalog) themeMatches(text string) []string {
+	lowered := strings.ToLower(text)
+	words := strings.FieldsFunc(lowered, func(char rune) bool {
+		return (char < 'a' || char > 'z') && (char < '0' || char > '9')
+	})
+	if len(words) == 0 {
+		return nil
+	}
+
+	var matched []string
+	seen := make(map[string]bool)
+	for _, candidate := range catalog.themes {
+		if !hitsAny(words, candidate.keywords) {
+			continue
+		}
+		for _, shortcode := range candidate.shortcodes {
+			if !seen[shortcode] {
+				seen[shortcode] = true
+				matched = append(matched, shortcode)
+			}
+		}
+	}
+	return matched
+}
+
+func hitsAny(words, keywords []string) bool {
+	for _, word := range words {
+		for _, keyword := range keywords {
+			if word == keyword || strings.HasPrefix(word, keyword) {
+				return true
+			}
+		}
+	}
+	return false
+}
