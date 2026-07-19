@@ -3,6 +3,7 @@ package vcs
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -41,4 +42,12 @@ func runGit(dir string, args ...string) (string, error) {
 		return "", &gitError{args: full, stderr: strings.TrimSpace(stderr.String()), err: err}
 	}
 	return strings.TrimRight(stdout.String(), "\n"), nil
+}
+
+func isEmptyRepoError(err error) bool {
+	var gitErr *gitError
+	if !errors.As(err, &gitErr) {
+		return false
+	}
+	return strings.Contains(gitErr.stderr, "does not have any commits yet")
 }

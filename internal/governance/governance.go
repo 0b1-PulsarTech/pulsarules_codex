@@ -57,7 +57,7 @@ func (s *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) []find
 }
 
 func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Request {
-	d := &Request{}
+	d := &Request{GitHistory: s.gitHistory()}
 	if s.repo == nil {
 		return d
 	}
