@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -60,6 +61,26 @@ func TestOpen_NotARepository(t *testing.T) {
 	}
 }
 
+func TestOpen_EmptyRepository(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+
+	repo, err := Open(dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+
+	subjects, err := repo.RecentSubjects(10)
+	if err != nil {
+		t.Fatalf("RecentSubjects: %v", err)
+	}
+	if subjects != nil {
+		t.Fatalf("RecentSubjects() = %v, want nil", subjects)
+	}
+}
+
 func TestRoot(t *testing.T) {
 	t.Parallel()
 
@@ -81,6 +102,50 @@ func TestRoot(t *testing.T) {
 	}
 	if gotRoot != wantRoot {
 		t.Fatalf("Root() = %q, want %q", gotRoot, wantRoot)
+	}
+}
+
+func TestRecentSubjects(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeAndCommit(t, dir, "first", map[string]string{"a.txt": "one"})
+	writeAndCommit(t, dir, "second", map[string]string{"b.txt": "two"})
+	writeAndCommit(t, dir, "third", map[string]string{"c.txt": "three"})
+
+	testCases := []struct {
+		name  string
+		limit int
+		want  []string
+	}{
+		{"newest first, no limit truncation", 10, []string{"third", "second", "first"}},
+		{"limit caps the result", 2, []string{"third", "second"}},
+		{"limit of one", 1, []string{"third"}},
+		{"limit of zero returns nil", 0, nil},
+		{"negative limit returns nil", -5, nil},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo, err := Open(dir)
+			if err != nil {
+				t.Fatalf("Open: %v", err)
+			}
+			got, err := repo.RecentSubjects(testCase.limit)
+			if err != nil {
+				t.Fatalf("RecentSubjects: %v", err)
+			}
+			if len(got) != len(testCase.want) {
+				t.Fatalf("RecentSubjects() = %v, want %v", got, testCase.want)
+			}
+			for idx, want := range testCase.want {
+				if got[idx] != want {
+					t.Fatalf("RecentSubjects()[%d] = %q, want %q", idx, got[idx], want)
+				}
+			}
+		})
 	}
 }
 
@@ -110,5 +175,13 @@ func TestOpen_LinkedWorktree(t *testing.T) {
 	}
 	if gotRoot != wantRoot {
 		t.Fatalf("Root() = %q, want %q", gotRoot, wantRoot)
+	}
+
+	subjects, err := repo.RecentSubjects(1)
+	if err != nil {
+		t.Fatalf("RecentSubjects: %v", err)
+	}
+	if !slices.Equal(subjects, []string{"main commit"}) {
+		t.Fatalf("RecentSubjects(1) = %v, want [main commit]", subjects)
 	}
 }
