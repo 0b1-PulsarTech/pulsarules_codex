@@ -41,7 +41,18 @@ func run() error {
 	); writeCatalogErr != nil {
 		return writeCatalogErr
 	}
+	allowed := make(map[string]bool, len(entries))
+	for _, entry := range entries {
+		allowed[entry.Name] = true
+	}
+	if writeTypesErr := writeTypes(
+		filepath.Join(outDir, "types.txt"),
+		usage.byType,
+		allowed,
+	); writeTypesErr != nil {
+		return writeTypesErr
+	}
 
-	fmt.Printf("emojigen: %d catalog entries\n", len(entries))
+	fmt.Printf("emojigen: %d catalog entries, %d typed subjects\n", len(entries), usage.typed)
 	return nil
 }

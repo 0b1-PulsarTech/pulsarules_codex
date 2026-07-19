@@ -1,5 +1,7 @@
 # keywords	shortcodes
-# One theme per line. Every shortcode here must also appear in catalog.txt.
+# One theme per line, most specific first: themeMatches walks the file in
+# order and the first keyword match wins, so a narrower area must precede a
+# broader one. Every shortcode here must also appear in catalog.txt.
 lead,prospect,funnel,segment	seedling,herb,deciduous_tree,four_leaf_clover,tulip
 conversation,message,chat,inbox,mail,email,reply,notify,notification	envelope,mailbox,incoming_envelope,mailbox_with_mail,postal_horn
 agent,bot,llm,prompt,model,inference,ai	honeybee,ant,beetle,snail

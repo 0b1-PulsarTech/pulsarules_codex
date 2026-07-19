@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 
 type commitUsage struct {
 	byEmoji map[string]int
+	byType  map[string]map[string]int
+	typed   int
 }
 
 func readUsage(dir string) (commitUsage, error) {
@@ -20,6 +23,7 @@ func readUsage(dir string) (commitUsage, error) {
 		estimatedEmojiVocabulary = 512
 	)
 
+	allowedTypes := commitmsg.AllowedTypes()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
@@ -32,9 +36,10 @@ func readUsage(dir string) (commitUsage, error) {
 
 	usage := commitUsage{
 		byEmoji: make(map[string]int, estimatedEmojiVocabulary),
+		byType:  make(map[string]map[string]int, len(allowedTypes)),
 	}
 	for subject := range strings.SplitSeq(string(out), "\n") {
-		usage.add(commitmsg.Parse(subject))
+		usage.add(commitmsg.Parse(subject), allowedTypes)
 	}
 	if len(usage.byEmoji) == 0 {
 		return commitUsage{}, fmt.Errorf("read git log of %s: no emoji subjects found", dir)
@@ -42,10 +47,23 @@ func readUsage(dir string) (commitUsage, error) {
 	return usage, nil
 }
 
-func (usage *commitUsage) add(msg commitmsg.Message) {
+func (usage *commitUsage) add(msg commitmsg.Message, allowedTypes []string) {
+	const estimatedTypeVocabulary = 64
+
 	if len(msg.Emojis) == 0 {
 		return
 	}
 	shortcode := msg.Emojis[0]
 	usage.byEmoji[shortcode]++
+
+	if msg.Type == "" || !slices.Contains(allowedTypes, msg.Type) {
+		return
+	}
+	usage.typed++
+	bucket, ok := usage.byType[msg.Type]
+	if !ok {
+		bucket = make(map[string]int, estimatedTypeVocabulary)
+		usage.byType[msg.Type] = bucket
+	}
+	bucket[shortcode]++
 }
