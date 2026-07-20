@@ -247,6 +247,46 @@ func checkBody(t *testing.T, got, want Message) {
 	}
 }
 
+func TestToolTrailer(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		msg  Message
+		want string
+	}{
+		{
+			"co-authored-by footer",
+			Message{Footers: []Footer{{Key: "Co-Authored-By", Value: "x"}}},
+			"Co-Authored-By",
+		},
+		{
+			"claude-session footer",
+			Message{Footers: []Footer{{Key: "Claude-Session", Value: "url"}}},
+			"Claude-Session",
+		},
+		{
+			"attribution marker in raw",
+			Message{Raw: ":wrench: feat: x\n\nGenerated with Claude Code."},
+			"generated with claude",
+		},
+		{
+			"legit footer only",
+			Message{Footers: []Footer{{Key: "Closes", Value: "#1"}}},
+			"",
+		},
+		{"empty message", Message{}, ""},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := testCase.msg.ToolTrailer(); got != testCase.want {
+				t.Fatalf("ToolTrailer = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}
+
 func emojisEqual(left, right []string) bool {
 	if len(left) != len(right) {
 		return false
