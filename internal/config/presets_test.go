@@ -76,11 +76,3 @@ func TestApplyPreset_StrictOverridesMaxLinesParam(t *testing.T) {
 		t.Errorf("expected max_lines=180 in strict preset, got %v", maxLines)
 	}
 }
-
-func isEnabled(cfg *GovernanceConfig, analyzerID string) bool {
-	ac, ok := cfg.Analyzers[analyzerID]
-	if !ok {
-		return true
-	}
-	return ac.Enabled
-}

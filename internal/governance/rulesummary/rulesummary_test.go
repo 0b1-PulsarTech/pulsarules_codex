@@ -26,6 +26,11 @@ func TestInjectRuleBodies(t *testing.T) {
 			Message:    "high cyclomatic",
 		},
 		{
+			AnalyzerID: "commit-type-required",
+			Severity:   finding.SeverityError,
+			Message:    "type required",
+		},
+		{
 			AnalyzerID: "arch-boundary",
 			Severity:   finding.SeverityError,
 			Message:    "boundary violation",
@@ -56,7 +61,8 @@ func TestInjectRuleBodies(t *testing.T) {
 	check(t, 1, "naming", true)
 	check(t, 2, "", false)
 	check(t, 3, "code-smells", true)
-	check(t, 4, "dependency-rule", true)
+	check(t, 4, "commits", true)
+	check(t, 5, "dependency-rule", true)
 }
 
 func TestInjectRuleBodies_NilIndex(t *testing.T) {

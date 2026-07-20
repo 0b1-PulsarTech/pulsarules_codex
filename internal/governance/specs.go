@@ -1,8 +1,11 @@
 package governance
 
 import (
+	"log/slog"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/banner"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/blocksize"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/message"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/complexity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/controlflow"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/shadowing"
@@ -11,6 +14,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/identifier"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/noemdash"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -30,6 +34,22 @@ func analyzerSpecs() []analyzerSpec {
 		staticSpec(identifier.NewAnalyzer),
 		langSpec(banner.NewAnalyzer),
 		langSpec(blocksize.NewAnalyzer),
+		{
+			build: func(
+				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
+			) pass.Analyzer {
+				catalog, err := emoji.NewCatalog()
+				if err != nil {
+					// simplification: analyzerBuilder returns only core.Analyzer; log
+					// once and skip registering rather than widen that contract.
+					// Upgrade path: give analyzerBuilder an error return.
+					slog.Error("build commit emoji analyzer", slog.String("error", err.Error()))
+					return nil
+				}
+				return message.NewAnalyzer(catalog)
+			},
+			scopes: staticScopes(),
+		},
 		staticSpec(controlflow.NewAnalyzer),
 		staticSpec(shadowing.NewAnalyzer),
 		staticSpec(complexity.NewAnalyzer),

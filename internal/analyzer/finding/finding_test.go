@@ -38,3 +38,21 @@ func TestReporter_New(t *testing.T) {
 		t.Fatalf("New() = %+v, want %+v", got, want)
 	}
 }
+
+func TestReporter_NewWithSuggestion(t *testing.T) {
+	t.Parallel()
+
+	reporter := NewReporter("commit-emoji-repeat", SeverityError, CatCommit)
+	got := reporter.NewWithSuggestion("emoji already used", "try one of: :wrench:")
+
+	want := Finding{
+		AnalyzerID: "commit-emoji-repeat",
+		Severity:   SeverityError,
+		Category:   CatCommit,
+		Message:    "emoji already used",
+		Suggestion: "try one of: :wrench:",
+	}
+	if got != want {
+		t.Fatalf("NewWithSuggestion() = %+v, want %+v", got, want)
+	}
+}
