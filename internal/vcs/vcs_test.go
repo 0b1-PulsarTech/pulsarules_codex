@@ -79,6 +79,14 @@ func TestOpen_EmptyRepository(t *testing.T) {
 	if subjects != nil {
 		t.Fatalf("RecentSubjects() = %v, want nil", subjects)
 	}
+
+	epoch, ok, err := repo.HeadAuthorEpoch()
+	if err != nil {
+		t.Fatalf("HeadAuthorEpoch: %v", err)
+	}
+	if ok || epoch != 0 {
+		t.Fatalf("HeadAuthorEpoch() = (%d, %v), want (0, false)", epoch, ok)
+	}
 }
 
 func TestRoot(t *testing.T) {
@@ -102,6 +110,29 @@ func TestRoot(t *testing.T) {
 	}
 	if gotRoot != wantRoot {
 		t.Fatalf("Root() = %q, want %q", gotRoot, wantRoot)
+	}
+}
+
+func TestHeadAuthorEpoch(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeAndCommit(t, dir, "first", map[string]string{"a.txt": "one"})
+
+	repo, err := Open(dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	epoch, ok, err := repo.HeadAuthorEpoch()
+	if err != nil {
+		t.Fatalf("HeadAuthorEpoch: %v", err)
+	}
+	if !ok {
+		t.Fatal("HeadAuthorEpoch() ok = false, want true")
+	}
+	if want := int64(1704067200); epoch != want {
+		t.Fatalf("HeadAuthorEpoch() = %d, want %d", epoch, want)
 	}
 }
 
