@@ -42,3 +42,9 @@ func (r Reporter) New(message string) Finding {
 		Message:    message,
 	}
 }
+
+func (r Reporter) NewWithSuggestion(message, suggestion string) Finding {
+	f := r.New(message)
+	f.Suggestion = suggestion
+	return f
+}

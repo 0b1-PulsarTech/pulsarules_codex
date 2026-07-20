@@ -209,17 +209,3 @@ func TestValidateMergeCommitWrongEmoji(t *testing.T) {
 		t.Errorf("expected commit-merge finding for wrong emoji")
 	}
 }
-
-func hasAnalyzer(findings []core.Finding, id string) bool {
-	_, ok := findingByID(findings, id)
-	return ok
-}
-
-func findingByID(findings []core.Finding, id string) (core.Finding, bool) {
-	for _, finding := range findings {
-		if finding.AnalyzerID == id {
-			return finding, true
-		}
-	}
-	return core.Finding{}, false
-}

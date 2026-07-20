@@ -41,3 +41,21 @@ func defaultRuleReporters() ruleReporters {
 		noCoauthor:      commitReporter("commit-no-coauthor"),
 	}
 }
+
+type emojiReporters struct {
+	prohibited core.Reporter
+	catalog    core.Reporter
+	repeat     core.Reporter
+	softRepeat core.Reporter
+}
+
+func defaultEmojiReporters() emojiReporters {
+	return emojiReporters{
+		prohibited: commitReporter("commit-emoji-prohibited"),
+		catalog:    commitReporter("commit-emoji-catalog"),
+		repeat:     commitReporter("commit-emoji-repeat"),
+		softRepeat: core.NewReporter(
+			"commit-emoji-soft-repeat", core.SeverityInfo, core.CatCommit,
+		),
+	}
+}

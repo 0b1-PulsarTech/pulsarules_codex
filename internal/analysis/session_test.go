@@ -32,6 +32,42 @@ func TestSession_NilRepo_ScopeChanged(t *testing.T) {
 	}
 }
 
+func TestSession_WithCommitMsg(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	gitInitRepo(t, dir)
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+
+	cfg := config.Defaults()
+	cfg.ApplyPreset()
+
+	repo, err := vcs.Open(dir)
+	if err != nil {
+		t.Fatalf("vcs.Open: %v", err)
+	}
+
+	sess := NewSession(repo, "bad commit message", idx, cfg)
+	findings := sess.Analyze(ScopeFull, nil, FileSetChanged)
+
+	found := false
+	for _, f := range findings {
+		if f.AnalyzerID == "commit-emoji-required" || f.AnalyzerID == "commit-type-required" {
+			found = true
+			if f.RuleBody == "" {
+				t.Error("expected RuleBody to be populated for commit finding")
+			}
+		}
+	}
+	if !found {
+		t.Error("expected at least one commit-lint finding")
+	}
+}
+
 func TestSession_NilConfigAndKnowledge_ScopeChanged(t *testing.T) {
 	t.Parallel()
 
@@ -43,6 +79,21 @@ func TestSession_NilConfigAndKnowledge_ScopeChanged(t *testing.T) {
 			len(findings),
 			findings,
 		)
+	}
+}
+
+func TestSession_ScopeCommit(t *testing.T) {
+	t.Parallel()
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+
+	sess := NewSession(nil, "bad commit message", idx, nil)
+	findings := sess.Analyze(ScopeCommit, nil, FileSetChanged)
+	if len(findings) == 0 {
+		t.Fatal("expected findings for invalid commit message")
 	}
 }
 
