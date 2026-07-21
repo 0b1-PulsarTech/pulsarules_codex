@@ -32,3 +32,13 @@ func ChangesToFileChanges(changes []vcs.Change) []pass.FileChange {
 	}
 	return files
 }
+
+func ToCoreRenames(renames []vcs.Rename) []pass.Rename {
+	out := make([]pass.Rename, len(renames))
+	for idx, rename := range renames {
+		out[idx] = pass.Rename{
+			OldPath: rename.OldPath, NewPath: rename.NewPath, Score: rename.Score,
+		}
+	}
+	return out
+}

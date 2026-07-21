@@ -15,19 +15,26 @@ type FileChange struct {
 	Staged    bool
 }
 
+type Rename struct {
+	OldPath string
+	NewPath string
+	Score   int
+}
+
 type GitCommitEntry struct {
 	Subject string
 }
 
 type Context struct {
-	ProjectDir   string
-	ChangedFiles []FileChange
-	CommitMsg    string
-	GitHistory   []GitCommitEntry
-	Config       *AnalysisConfig
-	ASTCache     *astcache.Cache
-	Sources      SourceProvider
-	Findings     []finding.Finding
+	ProjectDir    string
+	ChangedFiles  []FileChange
+	StagedRenames []Rename
+	CommitMsg     string
+	GitHistory    []GitCommitEntry
+	Config        *AnalysisConfig
+	ASTCache      *astcache.Cache
+	Sources       SourceProvider
+	Findings      []finding.Finding
 }
 
 func (ctx *Context) ChangedGoASTs() iter.Seq2[FileChange, *ast.File] {

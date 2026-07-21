@@ -6,6 +6,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/banner"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/blocksize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/message"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/complexity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/controlflow"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/shadowing"
@@ -47,6 +48,14 @@ func analyzerSpecs() []analyzerSpec {
 					return nil
 				}
 				return message.NewAnalyzer(catalog)
+			},
+			scopes: staticScopes(),
+		},
+		{
+			build: func(
+				_ *knowledge.Index, _ *pass.LanguageRegistry, repo vcs.Repository,
+			) pass.Analyzer {
+				return movepurity.NewAnalyzer(repo)
 			},
 			scopes: staticScopes(),
 		},

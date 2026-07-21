@@ -14,6 +14,9 @@ type Repository interface {
 	HeadAuthorEpoch() (int64, bool, error)
 	RecentSubjects(limit int) ([]string, error)
 	WorktreeStatus() (Status, error)
+	StagedRenames(minScore int) ([]Rename, error)
+	StagedDiff(path string) (string, error)
+	StagedRenameDiff(oldPath, newPath string, minScore int) (string, error)
 }
 
 type repository struct {
