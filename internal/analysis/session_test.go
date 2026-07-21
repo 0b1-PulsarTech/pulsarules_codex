@@ -138,3 +138,47 @@ func TestSession_ScopeChanged(t *testing.T) {
 		t.Fatal("expected a no-em-dash finding over the changed file")
 	}
 }
+
+func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	gitInitRepo(t, dir)
+
+	emDash := "\u2014"
+	content := "package x\n\n// bad note " + emDash + " trips no-em-dash\n"
+	writeFileAt(t, dir, "violation.go", content)
+	runGitAt(t, dir, "add", "violation.go")
+	commitAllowEmpty(t, dir, ":sparkles: feat: Add violation.go")
+
+	repo, err := vcs.Open(dir)
+	if err != nil {
+		t.Fatalf("vcs.Open: %v", err)
+	}
+
+	cfg := config.Defaults()
+	cfg.ApplyPreset()
+
+	changedFindings := NewSession(repo, "", nil, cfg).
+		Analyze(ScopeChanged, nil, FileSetChanged)
+	for _, f := range changedFindings {
+		if f.AnalyzerID == "no-em-dash" {
+			t.Fatalf(
+				"FileSetChanged on a clean tree must not see committed defects, got %+v",
+				f,
+			)
+		}
+	}
+
+	allFindings := NewSession(repo, "", nil, cfg).
+		Analyze(ScopeChanged, nil, FileSetAll)
+	foundAll := false
+	for _, f := range allFindings {
+		if f.AnalyzerID == "no-em-dash" && f.File == "violation.go" {
+			foundAll = true
+		}
+	}
+	if !foundAll {
+		t.Fatalf("expected FileSetAll to report the committed defect, got %+v", allFindings)
+	}
+}
