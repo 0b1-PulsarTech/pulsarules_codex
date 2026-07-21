@@ -34,6 +34,16 @@ func changesToFileChanges(changes []vcs.Change) []core.FileChange {
 	return files
 }
 
+func toCoreRenames(renames []vcs.Rename) []core.Rename {
+	out := make([]core.Rename, len(renames))
+	for idx, rename := range renames {
+		out[idx] = core.Rename{
+			OldPath: rename.OldPath, NewPath: rename.NewPath, Score: rename.Score,
+		}
+	}
+	return out
+}
+
 func populateASTCache(
 	changedFiles []core.FileChange,
 	sources core.SourceProvider,

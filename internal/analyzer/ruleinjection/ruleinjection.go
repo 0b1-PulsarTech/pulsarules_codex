@@ -35,6 +35,7 @@ func defaultRuleMap() map[string]string {
 		"commit-body-length":       "commits",
 		"commit-body-total-length": "commits",
 		"commit-no-coauthor":       "commits",
+		"commit-move-purity":       "commits",
 		"control-flow":             "code-smells",
 		"shadowing":                "effective-go",
 		"complexity":               "code-smells",

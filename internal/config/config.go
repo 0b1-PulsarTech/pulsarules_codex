@@ -1,9 +1,10 @@
 package config
 
 type GovernanceConfig struct {
-	Preset    string
-	Analyzers map[string]AnalyzerConfig
-	Emoji     EmojiConfig
+	Preset     string
+	Analyzers  map[string]AnalyzerConfig
+	Emoji      EmojiConfig
+	MovePurity MovePurityConfig
 }
 
 type AnalyzerConfig struct {
@@ -17,11 +18,17 @@ type EmojiConfig struct {
 	SuggestionCount int
 }
 
+type MovePurityConfig struct {
+	MinSimilarity int
+	Severity      string
+}
+
 func Defaults() *GovernanceConfig {
 	const (
 		defaultEmojiWindowSize      = 5
 		defaultEmojiSoftWindowSize  = 20
 		defaultEmojiSuggestionCount = 7
+		defaultMoveMinSimilarity    = 90
 	)
 
 	return &GovernanceConfig{
@@ -31,6 +38,10 @@ func Defaults() *GovernanceConfig {
 			WindowSize:      defaultEmojiWindowSize,
 			SoftWindowSize:  defaultEmojiSoftWindowSize,
 			SuggestionCount: defaultEmojiSuggestionCount,
+		},
+		MovePurity: MovePurityConfig{
+			MinSimilarity: defaultMoveMinSimilarity,
+			Severity:      "warning",
 		},
 	}
 }

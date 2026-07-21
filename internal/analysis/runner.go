@@ -19,6 +19,7 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *core.AnalysisConfig {
 		}
 	}
 	withEmojiParams(analyzers, cfg.Emoji)
+	withMovePurityParams(analyzers, cfg.MovePurity)
 	return &core.AnalysisConfig{Analyzers: analyzers}
 }
 
@@ -37,4 +38,20 @@ func withEmojiParams(analyzers map[string]core.AnalyzerConfig, emojiCfg config.E
 
 	entry.Params = params
 	analyzers[commitAnalyzerID] = entry
+}
+
+func withMovePurityParams(analyzers map[string]core.AnalyzerConfig, cfg config.MovePurityConfig) {
+	const movePurityAnalyzerID = "commit-move-purity"
+
+	entry, found := analyzers[movePurityAnalyzerID]
+	if !found {
+		entry = core.AnalyzerConfig{Enabled: true}
+	}
+	params := make(map[string]any, len(entry.Params)+2)
+	maps.Copy(params, entry.Params)
+	params["min_similarity"] = cfg.MinSimilarity
+	params["severity"] = cfg.Severity
+
+	entry.Params = params
+	analyzers[movePurityAnalyzerID] = entry
 }

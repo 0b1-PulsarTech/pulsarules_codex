@@ -40,9 +40,10 @@ func NewSession(
 }
 
 type Discovery struct {
-	Sources      core.SourceProvider
-	ChangedFiles []core.FileChange
-	GitHistory   []core.GitCommitEntry
+	Sources       core.SourceProvider
+	ChangedFiles  []core.FileChange
+	GitHistory    []core.GitCommitEntry
+	StagedRenames []core.Rename
 }
 
 func (s *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) []core.Finding {
@@ -58,6 +59,11 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Disc
 	d := &Discovery{GitHistory: s.gitHistory()}
 	if s.repo == nil {
 		return d
+	}
+
+	const renameProbeScore = 1
+	if renames, err := s.repo.StagedRenames(renameProbeScore); err == nil {
+		d.StagedRenames = toCoreRenames(renames)
 	}
 
 	if scope == ScopeFull || scope == ScopeChanged {
@@ -87,12 +93,13 @@ func (s *Session) Load(d *Discovery) *core.AnalysisContext {
 	}
 
 	ctx := &core.AnalysisContext{
-		ProjectDir:   root,
-		CommitMsg:    s.commitMsg,
-		Config:       s.cfgAnalysis,
-		Sources:      d.Sources,
-		ChangedFiles: d.ChangedFiles,
-		GitHistory:   d.GitHistory,
+		ProjectDir:    root,
+		CommitMsg:     s.commitMsg,
+		Config:        s.cfgAnalysis,
+		Sources:       d.Sources,
+		ChangedFiles:  d.ChangedFiles,
+		GitHistory:    d.GitHistory,
+		StagedRenames: d.StagedRenames,
 	}
 
 	if len(d.ChangedFiles) > 0 && d.Sources != nil {
