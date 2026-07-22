@@ -21,43 +21,38 @@ func findMagicNumbers(
 	var findings []core.Finding
 	fired := false
 
-	ast.Inspect(fn, func(n ast.Node) bool {
+	ast.Inspect(fn, func(node ast.Node) bool {
 		// Skip const blocks: their literals are intentional.
-		if gen, ok := n.(*ast.GenDecl); ok && gen.Tok == token.CONST {
+		if gen, ok := node.(*ast.GenDecl); ok && gen.Tok == token.CONST {
 			return false
 		}
-		lit, ok := n.(*ast.BasicLit)
-		if !ok {
+		lit, ok := node.(*ast.BasicLit)
+		if !ok || (lit.Kind != token.INT && lit.Kind != token.FLOAT) {
 			return true
 		}
-		if lit.Kind != token.INT && lit.Kind != token.FLOAT {
-			return true
-		}
-		val := lit.Value
-		if val == "0" || val == "1" || val == "-1" || val == "0.0" || val == "1.0" {
-			return true
-		}
-		switch val {
-		case "2", "10", "60", "100", "1000", "3600", "86400",
-			"255", "256", "1024", "1025":
-			return true
-		}
-		if isOctalModeLiteral(val) {
-			return true
-		}
-		if fired {
+		if isSkippableLiteralValue(lit.Value) || fired {
 			return true
 		}
 		fired = true
 		findings = append(findings, reporter.At(
 			fc.Path,
 			fset.Position(lit.Pos()).Line,
-			fmt.Sprintf("magic number %s in %s", val, fn.Name.Name),
+			fmt.Sprintf("magic number %s in %s", lit.Value, fn.Name.Name),
 			"assign to a named constant",
 		))
 		return true
 	})
 	return findings
+}
+
+func isSkippableLiteralValue(val string) bool {
+	switch val {
+	case "0", "1", "-1", "0.0", "1.0",
+		"2", "10", "60", "100", "1000", "3600", "86400",
+		"255", "256", "1024", "1025":
+		return true
+	}
+	return isOctalModeLiteral(val)
 }
 
 func isOctalModeLiteral(val string) bool {
