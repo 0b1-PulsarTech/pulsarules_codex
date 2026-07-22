@@ -21,17 +21,23 @@ func findMagicNumbers(
 ) []finding.Finding {
 	var findings []finding.Finding
 	fired := false
+	// ast.Inspect visits a call before its arguments, so an exemption is marked in time.
+	exemptPos := map[token.Pos]bool{}
 
 	ast.Inspect(fn, func(node ast.Node) bool {
 		// Skip const blocks: their literals are intentional.
 		if gen, ok := node.(*ast.GenDecl); ok && gen.Tok == token.CONST {
 			return false
 		}
+		if call, ok := node.(*ast.CallExpr); ok {
+			markStdlibBitSizeArg(call, exemptPos)
+			return true
+		}
 		lit, ok := node.(*ast.BasicLit)
 		if !ok || (lit.Kind != token.INT && lit.Kind != token.FLOAT) {
 			return true
 		}
-		if isSkippableLiteralValue(lit.Value) || fired {
+		if exemptPos[lit.Pos()] || isSkippableLiteralValue(lit.Value) || fired {
 			return true
 		}
 		fired = true
@@ -58,4 +64,30 @@ func isSkippableLiteralValue(val string) bool {
 
 func isOctalModeLiteral(val string) bool {
 	return strings.HasPrefix(val, "0o") || strings.HasPrefix(val, "0O")
+}
+
+func isStrconvBitSizeFunc(name string) bool {
+	switch name {
+	case "ParseInt", "ParseUint", "ParseFloat":
+		return true
+	}
+	return false
+}
+
+func markStdlibBitSizeArg(call *ast.CallExpr, exempt map[token.Pos]bool) {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return
+	}
+	pkg, ok := sel.X.(*ast.Ident)
+	if !ok || pkg.Name != "strconv" || !isStrconvBitSizeFunc(sel.Sel.Name) {
+		return
+	}
+	if len(call.Args) == 0 {
+		return
+	}
+	// Only the last argument slot is exempt: the same literal elsewhere still flags.
+	if lit, ok := call.Args[len(call.Args)-1].(*ast.BasicLit); ok {
+		exempt[lit.Pos()] = true
+	}
 }
