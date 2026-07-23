@@ -7,6 +7,11 @@ type Options struct {
 	Out string
 
 	Kind string
+
+	CommitMsg  string
+	CommitFile string
+
+	ProjectDir string
 }
 
 func (opts *Options) applyDefaults() {

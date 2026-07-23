@@ -42,6 +42,9 @@ func main() {
 }
 
 func die(err error) {
+	if exitErr, ok := errors.AsType[*cli.ExitError](err); ok {
+		os.Exit(exitErr.Code)
+	}
 	_, _ = fmt.Fprintln(os.Stderr, "pulsarules_cli:", err)
 	os.Exit(1)
 }
