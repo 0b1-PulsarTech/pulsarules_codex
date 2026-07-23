@@ -43,6 +43,10 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 			"output zip path (defaults to ./build/standards-skills.zip)",
 		)
 	case "list", "validate":
+	case "commitlint":
+		fs.StringVar(&opts.CommitMsg, "msg", "", "commit message to validate")
+		fs.StringVar(&opts.CommitFile, "file", "", "path to a COMMIT_EDITMSG file")
+		fs.StringVar(&opts.ProjectDir, "project", "", "project dir for git history lookup")
 	default:
 		return fmt.Errorf("unknown command %q", command)
 	}

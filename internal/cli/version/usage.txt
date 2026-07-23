@@ -5,7 +5,14 @@ Usage:
   pulsarules_cli validate [--root DIR]
   pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
   pulsarules_cli package [--root DIR] [--out FILE]
+  pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
   pulsarules_cli version
+
+commitlint validates a commit message against the emoji, format, type, scope, and
+body rules. Use --msg "..." for a direct string, --file PATH to read from a
+COMMIT_EDITMSG file (the git commit-msg hook passes $1), and --project DIR to
+enable emoji-variance against recent git history. Exits non-zero on
+error-severity findings.
 
 With no --root, the binary reads the embedded knowledge snapshot. Pass --root DIR
 to read <DIR>/knowledge from disk (dev edits without rebuild).

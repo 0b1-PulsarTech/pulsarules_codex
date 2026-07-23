@@ -6,6 +6,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -18,7 +19,7 @@ func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 	t.Parallel()
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := DoInjections(inj, Options{}); err != nil {
+	if err := DoInjections(inj, Options{ProjectDir: "."}); err != nil {
 		t.Fatalf("DoInjections: %v", err)
 	}
 
@@ -29,6 +30,10 @@ func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 		}},
 		{"renderer", func(inj remy.Injector) error {
 			_, err := remy.Get[*render.Renderer](inj)
+			return err
+		}},
+		{"vcs repository", func(inj remy.Injector) error {
+			_, err := remy.Get[vcs.Repository](inj)
 			return err
 		}},
 	}

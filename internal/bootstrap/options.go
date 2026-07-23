@@ -1,5 +1,6 @@
 package bootstrap
 
 type Options struct {
-	Root string
+	Root       string
+	ProjectDir string
 }

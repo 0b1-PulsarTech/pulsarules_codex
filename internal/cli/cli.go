@@ -13,6 +13,15 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 )
 
+type ExitError struct {
+	Code int
+}
+
+func (e *ExitError) Error() string {
+	// Fallback only: the command printed its findings before returning this.
+	return fmt.Sprintf("exit code %d", e.Code)
+}
+
 func Run(inj remy.Injector, opts *version.Options) error {
 	switch opts.Command {
 	case "generate":
@@ -23,6 +32,8 @@ func Run(inj remy.Injector, opts *version.Options) error {
 		return validate.RunValidate(inj, opts)
 	case "package":
 		return packaging.RunPackage(inj, opts)
+	case "commitlint":
+		return runCommitLint(inj, opts)
 	default:
 		return fmt.Errorf("unknown command %q", opts.Command)
 	}
@@ -31,6 +42,14 @@ func Run(inj remy.Injector, opts *version.Options) error {
 func BootstrapOptions(opts *version.Options) bootstrap.Options {
 	// The bootstrap package never imports cli, so the translation lives here.
 	return bootstrap.Options{
-		Root: opts.Root,
+		Root:       opts.Root,
+		ProjectDir: resolveProjectDir(opts),
 	}
+}
+
+func resolveProjectDir(opts *version.Options) string {
+	if opts.ProjectDir != "" {
+		return opts.ProjectDir
+	}
+	return "."
 }
