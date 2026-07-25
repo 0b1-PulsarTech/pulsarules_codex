@@ -11,5 +11,6 @@ func DoInjections(inj remy.Injector, opts Options) error {
 		return fmt.Errorf("register knowledge: %w", err)
 	}
 	registerVCS(inj, opts)
+	registerObs(inj, opts)
 	return nil
 }

@@ -33,7 +33,7 @@ func main() {
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
 	if bootErr := bootstrap.DoInjections(inj, cli.BootstrapOptions(opts)); bootErr != nil {
-		die(bootErr)
+		os.Exit(cli.HandleBootstrapErr(opts.Command, bootErr))
 	}
 
 	if err = cli.Run(inj, opts); err != nil {

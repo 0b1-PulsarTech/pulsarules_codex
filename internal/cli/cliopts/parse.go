@@ -3,6 +3,7 @@ package cliopts
 import (
 	"flag"
 	"fmt"
+	"os"
 )
 
 func ParseArgs(args []string) (*Options, error) {
@@ -18,6 +19,12 @@ func ParseArgs(args []string) (*Options, error) {
 	fs := flag.NewFlagSet(opts.Command, flag.ContinueOnError)
 	fs.Usage = func() { _ = Usage() }
 	fs.StringVar(&opts.Root, "root", "", "repository root for dev mode (defaults to embedded)")
+	fs.StringVar(
+		&opts.LogLevel,
+		"log-level",
+		os.Getenv("PULSARULES_LOG_LEVEL"),
+		"hook execution log level: debug|info|warn|error (empty disables logging)",
+	)
 	if err := bindCommandFlags(opts.Command, fs, opts); err != nil {
 		return nil, err
 	}
@@ -42,7 +49,7 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 			"",
 			"output zip path (defaults to ./build/standards-skills.zip)",
 		)
-	case "list", "validate":
+	case "list", "validate", "hook":
 	case "commitlint":
 		fs.StringVar(&opts.CommitMsg, "msg", "", "commit message to validate")
 		fs.StringVar(&opts.CommitFile, "file", "", "path to a COMMIT_EDITMSG file")
@@ -59,5 +66,8 @@ func parsePositionalArgs(opts *Options, fs *flag.FlagSet) {
 		if fs.NArg() > 0 {
 			opts.Kind = fs.Arg(0)
 		}
+	}
+	if opts.Command == "hook" && fs.NArg() > 0 {
+		opts.Mode = fs.Arg(0)
 	}
 }

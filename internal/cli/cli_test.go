@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -85,6 +86,33 @@ func TestExitError_Error(t *testing.T) {
 	}
 }
 
+func TestHandleBootstrapErr(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		command string
+		want    int
+	}{
+		{name: "hook degrades to success", command: "hook", want: 0},
+		{name: "unknown command fails loudly", command: "", want: 1},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := HandleBootstrapErr(testCase.command, errors.New("boom"))
+			if got != testCase.want {
+				t.Errorf(
+					"HandleBootstrapErr(%q) = %d, want %d",
+					testCase.command,
+					got,
+					testCase.want,
+				)
+			}
+		})
+	}
+}
+
 func TestResolveProjectDir(t *testing.T) {
 	t.Parallel()
 
@@ -112,4 +140,20 @@ func TestResolveProjectDir(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResolveLogPath(t *testing.T) {
+	t.Run("unset env leaves the path to obs", func(t *testing.T) {
+		t.Setenv("CLAUDE_PROJECT_DIR", "")
+		if got := resolveLogPath(); got != "" {
+			t.Errorf("resolveLogPath() = %q, want empty", got)
+		}
+	})
+	t.Run("set env lands under .claude", func(t *testing.T) {
+		t.Setenv("CLAUDE_PROJECT_DIR", "/proj")
+		want := filepath.Join("/proj", ".claude", "hook-execution.log")
+		if got := resolveLogPath(); got != want {
+			t.Errorf("resolveLogPath() = %q, want %q", got, want)
+		}
+	})
 }

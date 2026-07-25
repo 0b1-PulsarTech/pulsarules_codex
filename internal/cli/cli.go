@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
@@ -28,6 +30,8 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 		return runValidate(inj, opts)
 	case "package":
 		return runPackage(inj, opts)
+	case "hook":
+		return runHook(inj, opts)
 	case "commitlint":
 		return runCommitLint(inj, opts)
 	default:
@@ -35,11 +39,23 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 	}
 }
 
+func HandleBootstrapErr(command string, err error) int {
+	if command == "hook" {
+		_, _ = fmt.Fprintln(os.Stderr, "pulsarules_cli: hook:", err)
+		// A hook invocation must never block the caller's turn.
+		return 0
+	}
+	_, _ = fmt.Fprintln(os.Stderr, "pulsarules_cli:", err)
+	return 1
+}
+
 func BootstrapOptions(opts *cliopts.Options) bootstrap.Options {
 	// The bootstrap package never imports cli, so the translation lives here.
 	return bootstrap.Options{
 		Root:       opts.Root,
 		ProjectDir: resolveProjectDir(opts),
+		LogLevel:   opts.LogLevel,
+		LogPath:    resolveLogPath(),
 	}
 }
 
@@ -48,4 +64,12 @@ func resolveProjectDir(opts *cliopts.Options) string {
 		return opts.ProjectDir
 	}
 	return "."
+}
+
+func resolveLogPath() string {
+	dir := os.Getenv("CLAUDE_PROJECT_DIR")
+	if dir == "" {
+		return ""
+	}
+	return filepath.Join(dir, ".claude", "hook-execution.log")
 }
