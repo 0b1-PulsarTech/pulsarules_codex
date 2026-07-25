@@ -1,6 +1,9 @@
 package bootstrap
 
 import (
+	"io"
+	"io/fs"
+	"log/slog"
 	"testing"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -28,12 +31,24 @@ func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 			_, err := remy.Get[*knowledge.Index](inj)
 			return err
 		}},
+		{"templates fs.FS", func(inj remy.Injector) error {
+			_, err := remy.Get[fs.FS](inj)
+			return err
+		}},
 		{"renderer", func(inj remy.Injector) error {
 			_, err := remy.Get[*render.Renderer](inj)
 			return err
 		}},
 		{"vcs repository", func(inj remy.Injector) error {
 			_, err := remy.Get[vcs.Repository](inj)
+			return err
+		}},
+		{"logger", func(inj remy.Injector) error {
+			_, err := remy.Get[*slog.Logger](inj)
+			return err
+		}},
+		{"logger closer", func(inj remy.Injector) error {
+			_, err := remy.Get[io.Closer](inj)
 			return err
 		}},
 	}

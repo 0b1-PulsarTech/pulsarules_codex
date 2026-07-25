@@ -1,0 +1,44 @@
+package hook
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
+
+type Output struct {
+	HookSpecificOutput Specific `json:"hookSpecificOutput"`
+}
+
+type Specific struct {
+	HookEventName     string `json:"hookEventName"`
+	AdditionalContext string `json:"additionalContext"`
+}
+
+type hookPayload struct {
+	SessionID string `json:"session_id"`
+	ToolInput struct {
+		FilePath string `json:"file_path"`
+	} `json:"tool_input"`
+}
+
+// simplification: a malformed payload degrades to the zero value (handlers
+// already treat that as "nothing to do") instead of a decode error. Upgrade
+// path: return the error too if a handler needs "malformed" vs "empty".
+func decodeHookPayload(payload []byte) hookPayload {
+	var in hookPayload
+	_ = json.Unmarshal(payload, &in)
+	return in
+}
+
+func (d *Dispatcher) emitOutput(event, context string) {
+	out, err := json.Marshal(Output{HookSpecificOutput: Specific{
+		HookEventName:     event,
+		AdditionalContext: context,
+	}})
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "hook: marshal:", err)
+		return
+	}
+	_, _ = fmt.Fprintln(d.out, string(out))
+}

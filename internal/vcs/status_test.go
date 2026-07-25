@@ -3,6 +3,8 @@ package vcs
 import (
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 )
 
@@ -21,8 +23,8 @@ func TestWorktreeStatus_CleanRepo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
-	if len(status.Changes) != 0 {
-		t.Fatalf("changes = %+v, want none", status.Changes)
+	if !status.IsClean() {
+		t.Fatalf("IsClean() = false, want true; changes = %+v", status.Changes)
 	}
 }
 
@@ -109,6 +111,79 @@ func TestWorktreeStatus_Changes(t *testing.T) {
 			}
 			if change.Extension != ".go" {
 				t.Fatalf("Extension = %q, want %q", change.Extension, ".go")
+			}
+		})
+	}
+
+	assertStatusSummary(t, status)
+}
+
+func assertStatusSummary(t *testing.T, status Status) {
+	t.Helper()
+
+	if status.IsClean() {
+		t.Fatal("IsClean() = true, want false")
+	}
+	if exts := status.Extensions(); !exts[".go"] {
+		t.Fatalf("Extensions() = %v, want it to contain .go", exts)
+	}
+
+	rendered := status.String()
+	if rendered == "" {
+		t.Fatal("String() = empty, want a rendered listing")
+	}
+	wantLine := "R  old_name.go -> new_name.go"
+	if !slices.Contains(strings.Split(rendered, "\n"), wantLine) {
+		t.Fatalf("String() = %q, want it to contain %q", rendered, wantLine)
+	}
+}
+
+func TestStatus_IsCleanAndExtensions(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		status      Status
+		wantClean   bool
+		wantExts    map[string]bool
+		wantNonZero bool
+	}{
+		{
+			name:      "no changes",
+			status:    Status{},
+			wantClean: true,
+			wantExts:  map[string]bool{},
+		},
+		{
+			name: "mixed extensions",
+			status: Status{Changes: []Change{
+				{Path: "a.go", Extension: ".go", Staging: ' ', Worktree: 'M'},
+				{Path: "b.sql", Extension: ".sql", Staging: 'M', Worktree: ' '},
+				{Path: "c.go", Extension: ".go", Staging: ' ', Worktree: 'M'},
+			}},
+			wantClean:   false,
+			wantExts:    map[string]bool{".go": true, ".sql": true},
+			wantNonZero: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := testCase.status.IsClean(); got != testCase.wantClean {
+				t.Fatalf("IsClean() = %v, want %v", got, testCase.wantClean)
+			}
+			got := testCase.status.Extensions()
+			if len(got) != len(testCase.wantExts) {
+				t.Fatalf("Extensions() = %v, want %v", got, testCase.wantExts)
+			}
+			for ext := range testCase.wantExts {
+				if !got[ext] {
+					t.Fatalf("Extensions() = %v, missing %q", got, ext)
+				}
+			}
+			if s := testCase.status.String(); testCase.wantNonZero && s == "" {
+				t.Fatal("String() = empty, want non-empty")
 			}
 		})
 	}

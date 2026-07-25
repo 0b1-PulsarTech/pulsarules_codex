@@ -20,6 +20,31 @@ type Status struct {
 	Changes []Change
 }
 
+func (s Status) IsClean() bool {
+	return len(s.Changes) == 0
+}
+
+func (s Status) Extensions() map[string]bool {
+	exts := make(map[string]bool, len(s.Changes))
+	for _, c := range s.Changes {
+		exts[c.Extension] = true
+	}
+	return exts
+}
+
+func (s Status) String() string {
+	lines := make([]string, 0, len(s.Changes))
+	for _, c := range s.Changes {
+		xy := string([]byte{c.Staging, c.Worktree})
+		if c.OldPath != "" {
+			lines = append(lines, fmt.Sprintf("%s %s -> %s", xy, c.OldPath, c.Path))
+			continue
+		}
+		lines = append(lines, xy+" "+c.Path)
+	}
+	return strings.Join(lines, "\n")
+}
+
 func (repo *repository) WorktreeStatus() (Status, error) {
 	out, err := runGit(repo.root, "status", "--porcelain")
 	if err != nil {

@@ -19,7 +19,9 @@ func registerKnowledge(inj remy.Injector, opts Options) error {
 		return fmt.Errorf("new renderer: %w", err)
 	}
 
+	// One Load feeds the index, templates and renderer, all registered as singletons.
 	remy.RegisterInstance(inj, idx)
+	remy.RegisterInstance(inj, templates)
 	remy.RegisterInstance(inj, rnd)
 	return nil
 }

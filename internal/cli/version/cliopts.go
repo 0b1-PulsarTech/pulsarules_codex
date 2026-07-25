@@ -1,12 +1,15 @@
 package version
 
 type Options struct {
-	Command string
-	Root    string
+	Command  string
+	Root     string
+	LogLevel string
 
 	Out string
 
 	Kind string
+
+	Mode string
 
 	CommitMsg  string
 	CommitFile string
