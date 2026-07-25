@@ -45,7 +45,7 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	msg := commitmsg.Parse(ctx.CommitMsg)
 	windowCfg := a.windowCfg.merge(ctx.Params(a.ID()))
 
-	findings := make([]finding.Finding, 0, 8)
+	findings := make([]finding.Finding, 0, typicalFindingCapacity)
 	findings = append(findings, Validate(msg, a.ruleCfg, a.ruleReporters)...)
 	findings = append(findings, emojiCheck{
 		Message:   msg,

@@ -15,18 +15,25 @@ type ruleConfig struct {
 	RejectToolTrailers bool
 }
 
+const typicalFindingCapacity = 8
+
 func DefaultRuleConfig() ruleConfig {
+	const (
+		defaultMaxSubjectLen  = 72
+		defaultMaxBodyLineLen = 100
+		defaultMaxBodyLen     = 150
+	)
 	return ruleConfig{
-		MaxSubjectLen:      72,
-		MaxBodyLineLen:     100,
-		MaxBodyLen:         150,
+		MaxSubjectLen:      defaultMaxSubjectLen,
+		MaxBodyLineLen:     defaultMaxBodyLineLen,
+		MaxBodyLen:         defaultMaxBodyLen,
 		RequireEmoji:       true,
 		RejectToolTrailers: true,
 	}
 }
 
 func Validate(msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters) []finding.Finding {
-	findings := make([]finding.Finding, 0, 8)
+	findings := make([]finding.Finding, 0, typicalFindingCapacity)
 
 	rawAfterEmoji := strings.TrimSpace(msg.Raw)
 	for _, emoji := range msg.Emojis {

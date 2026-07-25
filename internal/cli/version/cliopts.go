@@ -7,6 +7,11 @@ type Options struct {
 
 	Out string
 
+	Preset         string
+	Scope          string
+	GolangciConfig string
+	AllFiles       bool
+
 	Kind string
 
 	Mode string

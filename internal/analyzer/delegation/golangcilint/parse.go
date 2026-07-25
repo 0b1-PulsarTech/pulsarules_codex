@@ -71,7 +71,11 @@ func (r *Runner) parseOutput(out []byte, cmdErr error) []finding.Finding {
 }
 
 func isLintExit(code int) bool {
+	const (
+		lintExitIssuesFound    = 1
+		lintExitErrorWasLogged = 7
+	)
 	// golangci-lint's pkg/exitcodes reserves 1 (issues found) and 7 (issues surfaced
 	// through its own error log) for "ran fine, found something", not a failure.
-	return code == 1 || code == 7
+	return code == lintExitIssuesFound || code == lintExitErrorWasLogged
 }

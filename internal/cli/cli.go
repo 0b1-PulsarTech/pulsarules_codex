@@ -39,6 +39,8 @@ func Run(inj remy.Injector, opts *version.Options) error {
 		return hook.RunHook(inj, opts)
 	case "commitlint":
 		return runCommitLint(inj, opts)
+	case "governance":
+		return runGovernance(inj, opts)
 	default:
 		return fmt.Errorf("unknown command %q", opts.Command)
 	}
@@ -67,6 +69,9 @@ func BootstrapOptions(opts *version.Options) bootstrap.Options {
 func resolveProjectDir(opts *version.Options) string {
 	if opts.ProjectDir != "" {
 		return opts.ProjectDir
+	}
+	if opts.Command == "governance" {
+		return os.Getenv("CLAUDE_PROJECT_DIR")
 	}
 	return "."
 }

@@ -54,6 +54,8 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 		fs.StringVar(&opts.CommitMsg, "msg", "", "commit message to validate")
 		fs.StringVar(&opts.CommitFile, "file", "", "path to a COMMIT_EDITMSG file")
 		fs.StringVar(&opts.ProjectDir, "project", "", "project dir for git history lookup")
+	case "governance":
+		bindGovernanceFlags(fs, opts)
 	default:
 		return fmt.Errorf("unknown command %q", command)
 	}
@@ -70,4 +72,27 @@ func parsePositionalArgs(opts *Options, fs *flag.FlagSet) {
 	if opts.Command == "hook" && fs.NArg() > 0 {
 		opts.Mode = fs.Arg(0)
 	}
+}
+
+func bindGovernanceFlags(fs *flag.FlagSet, opts *Options) {
+	fs.StringVar(&opts.ProjectDir, "project", "", "project dir to analyze")
+	fs.StringVar(
+		&opts.Preset,
+		"preset",
+		"recommended",
+		"analyzer preset (recommended|strict|minimal)",
+	)
+	fs.StringVar(&opts.Scope, "scope", "full", "analysis scope (full|commit)")
+	fs.StringVar(
+		&opts.GolangciConfig,
+		"golangci-config",
+		"",
+		"path to .golangci.yml (overrides auto-discovery)",
+	)
+	fs.BoolVar(
+		&opts.AllFiles,
+		"all-files",
+		false,
+		"analyze every source file in the tree instead of only changed ones",
+	)
 }
