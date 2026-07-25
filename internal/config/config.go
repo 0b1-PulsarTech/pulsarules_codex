@@ -45,3 +45,18 @@ func Defaults() *GovernanceConfig {
 		},
 	}
 }
+
+func (govCfg *GovernanceConfig) SetParam(analyzerID, key string, value any) {
+	if govCfg.Analyzers == nil {
+		govCfg.Analyzers = map[string]AnalyzerConfig{}
+	}
+	cfg, ok := govCfg.Analyzers[analyzerID]
+	if !ok {
+		cfg = AnalyzerConfig{Enabled: true}
+	}
+	if cfg.Params == nil {
+		cfg.Params = map[string]any{}
+	}
+	cfg.Params[key] = value
+	govCfg.Analyzers[analyzerID] = cfg
+}

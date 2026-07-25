@@ -24,6 +24,7 @@ pulsarules_cli validate [--root DIR]
 pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
+pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files]
 pulsarules_cli version
 ```
 
@@ -73,6 +74,22 @@ error-severity findings.
 
 ```sh
 pulsarules_cli commitlint --file .git/COMMIT_EDITMSG --project .
+```
+
+### Governance
+
+Run the analyzer pipeline (static, AST, architecture, delegation, rule injection) against the
+project and print findings to stderr, exiting non-zero on any error-severity finding. By default it
+analyzes only files `git status` reports as changed; `--all-files` walks the whole source tree
+instead (skipping `.git/`, `.claude/`, `generated/`, `build/`, and `vendor/`). `--scope commit` runs
+the lightweight static + AST + commit checks only; `--scope full` (default) adds architecture and
+delegation. `--preset recommended|strict|minimal` selects analyzer thresholds.
+
+```sh
+pulsarules_cli governance --project . --all-files
+
+# full sweep, explicit scope:
+pulsarules_cli governance --scope full --all-files
 ```
 
 ## Dev mode

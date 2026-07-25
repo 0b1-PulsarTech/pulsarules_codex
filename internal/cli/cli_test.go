@@ -95,6 +95,7 @@ func TestHandleBootstrapErr(t *testing.T) {
 		want    int
 	}{
 		{name: "hook degrades to success", command: "hook", want: 0},
+		{name: "governance fails loudly", command: "governance", want: 1},
 		{name: "unknown command fails loudly", command: "", want: 1},
 	}
 	for _, testCase := range testCases {
@@ -114,27 +115,38 @@ func TestHandleBootstrapErr(t *testing.T) {
 }
 
 func TestResolveProjectDir(t *testing.T) {
-	t.Parallel()
-
 	testCases := []struct {
-		name string
-		opts *cliopts.Options
-		want string
+		name   string
+		opts   *cliopts.Options
+		envDir string
+		want   string
 	}{
 		{
-			name: "explicit flag wins",
-			opts: &cliopts.Options{Command: "commitlint", ProjectDir: "/explicit"},
+			name: "explicit flag wins everywhere",
+			opts: &cliopts.Options{Command: "governance", ProjectDir: "/explicit"},
 			want: "/explicit",
 		},
 		{
-			name: "no flag defaults to the working directory",
-			opts: &cliopts.Options{Command: "commitlint"},
-			want: ".",
+			name:   "governance falls back to the env var",
+			opts:   &cliopts.Options{Command: "governance"},
+			envDir: "/from-env",
+			want:   "/from-env",
+		},
+		{
+			name: "governance with no env reports nothing rather than guessing",
+			opts: &cliopts.Options{Command: "governance"},
+			want: "",
+		},
+		{
+			name:   "every other command defaults to the working directory",
+			opts:   &cliopts.Options{Command: "list"},
+			envDir: "/from-env",
+			want:   ".",
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
+			t.Setenv("CLAUDE_PROJECT_DIR", testCase.envDir)
 			if got := resolveProjectDir(testCase.opts); got != testCase.want {
 				t.Errorf("resolveProjectDir() = %q, want %q", got, testCase.want)
 			}
