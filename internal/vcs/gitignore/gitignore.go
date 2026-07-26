@@ -1,0 +1,62 @@
+package gitignore
+
+import (
+	"errors"
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+)
+
+func Ensure(dir string, entries ...string) error {
+	if err := os.MkdirAll(dir, disk.DirPrivate); err != nil {
+		return fmt.Errorf("mkdir %q: %w", dir, err)
+	}
+	path := filepath.Join(dir, ".gitignore")
+	existing, err := os.ReadFile(path) //nolint:gosec // path is under the caller's dir.
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("read %q: %w", path, err)
+	}
+	lines := splitLines(string(existing))
+	missing := missingEntries(lines, entries)
+	if len(missing) == 0 {
+		return nil
+	}
+	content := appendEntries(string(existing), missing)
+	//nolint:gosec // path is under the caller's dir.
+	if err = os.WriteFile(path, []byte(content), disk.FilePrivate); err != nil {
+		return fmt.Errorf("write %q: %w", path, err)
+	}
+	return nil
+}
+
+func missingEntries(lines, entries []string) []string {
+	var missing []string
+	for _, entry := range entries {
+		if !slices.Contains(lines, entry) {
+			missing = append(missing, entry)
+		}
+	}
+	return missing
+}
+
+func appendEntries(content string, missing []string) string {
+	if content != "" && !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+	for _, entry := range missing {
+		content += entry + "\n"
+	}
+	return content
+}
+
+func splitLines(text string) []string {
+	if text == "" {
+		return nil
+	}
+	return strings.Split(strings.TrimSuffix(text, "\n"), "\n")
+}
