@@ -68,6 +68,7 @@ pulsarules_codex/
 │   │   └── router.yaml  profiles.yaml  references.yaml
 │   └── templates/
 │       ├── skills/{SKILL.md.tmpl, router.md.tmpl}
+│       ├── hooks/{skill-router-reminder.sh, README.md, settings.hooks.json.tmpl}
 ├── internal/skill/
 │   ├── render/                      # transclude composed bodies into a SKILL.md
 │   ├── validate/                    # knowledge-base integrity checks
@@ -77,7 +78,8 @@ pulsarules_codex/
 ├── Taskfile.yml  go.mod  go.sum  .gitignore
 ```
 
-`generated/` is produced on demand and gitignored.
+Hook assets are embedded under `knowledge/templates/hooks/`. `generated/` is produced on demand and
+gitignored.
 
 ## Customization
 
