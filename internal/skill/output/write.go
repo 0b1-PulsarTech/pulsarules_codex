@@ -17,3 +17,14 @@ func writeFile(filePath, content string) error {
 	}
 	return nil
 }
+
+func WriteDoc(dir, docName, body string) error {
+	if err := writeFile(filepath.Join(dir, docName), body); err != nil {
+		return fmt.Errorf("write %q: %w", docName, err)
+	}
+	gitignoreBody := docName + "\n.gitignore\n"
+	if err := writeFile(filepath.Join(dir, ".gitignore"), gitignoreBody); err != nil {
+		return fmt.Errorf("gitignore for %q: %w", docName, err)
+	}
+	return nil
+}

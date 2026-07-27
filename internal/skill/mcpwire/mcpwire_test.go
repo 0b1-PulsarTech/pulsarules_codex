@@ -19,5 +19,8 @@ func fakeTemplates() fstest.MapFS {
   }
 }
 `)},
+		"skills/gopls-navigation.header.md": {
+			Data: []byte("---\nname: gopls-navigation\n---\n\n# gopls navigation\n"),
+		},
 	}
 }
