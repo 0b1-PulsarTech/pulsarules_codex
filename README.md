@@ -72,7 +72,8 @@ pulsarules_codex/
 ├── internal/skill/
 │   ├── render/                      # transclude composed bodies into a SKILL.md
 │   ├── validate/                    # knowledge-base integrity checks
-│   └── output/                      # generate / package the rendered skills
+│   ├── output/                      # generate / package the rendered skills
+│   └── hookwire/                    # install the hook + idempotently wire the Claude settings file
 ├── cmd/pulsarules_cli/              # CLI entrypoint (main.go; commands live in internal/cli)
 ├── README.md
 ├── Taskfile.yml  go.mod  go.sum  .gitignore
@@ -90,6 +91,17 @@ gitignored.
   knowledge.
 - To generalize a project convention, extract the principle into a rule/pattern here; keep the
   product-specific instantiation in the application repo.
+
+## Why hooks?
+
+Claude Code's autonomous skill activation is unreliable: the agent invokes `project-router`, sees
+the dispatch table, then skips to implementation without actually loading and applying every matched
+skill when it writes code. A skill description is a suggestion the model can ignore; a hook fires
+deterministically. The embedded `knowledge/templates/hooks/skill-router-reminder.sh` injects the
+routing contract at `SessionStart` and a pointed reminder at the first `.go`/`.sql` write of a
+session (non-blocking, always exit 0, fires once per session via a per-session flag). See
+[`knowledge/templates/hooks/README.md`](knowledge/templates/hooks/README.md) for the full rationale
+and design constraints - it is installed alongside the hook.
 
 ## Origin
 
