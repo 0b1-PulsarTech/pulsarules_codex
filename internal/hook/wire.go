@@ -17,8 +17,13 @@ type Specific struct {
 
 type hookPayload struct {
 	SessionID string `json:"session_id"`
+	ToolName  string `json:"tool_name"`
 	ToolInput struct {
 		FilePath string `json:"file_path"`
+		Pattern  string `json:"pattern"`
+		Glob     string `json:"glob"`
+		Path     string `json:"path"`
+		Command  string `json:"command"`
 	} `json:"tool_input"`
 }
 
