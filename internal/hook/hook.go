@@ -26,6 +26,8 @@ func (d *Dispatcher) Dispatch(mode string, payload []byte) error {
 		err = d.emitPreEdit(session, in)
 	case "post-edit":
 		err = d.emitPostEdit(session, in)
+	case "pre-search":
+		err = d.emitPreSearch(session, in)
 	case "user-prompt":
 		err = d.emitUserPrompt(session)
 	case "stop":

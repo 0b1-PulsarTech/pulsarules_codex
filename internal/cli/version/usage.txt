@@ -42,8 +42,8 @@ the whole repository sees files the changed-set never would. Combine with
 
 hook dispatches a single Claude Code hook event by mode, reading the
 tool/session JSON payload from stdin and writing the hookSpecificOutput JSON to
-stdout. Modes: session-start, pre-edit, post-edit, user-prompt, stop,
-session-end.
+stdout. Modes: session-start, pre-edit, post-edit, pre-search, user-prompt,
+stop, session-end.
 
 With no --root, the binary reads the embedded knowledge snapshot. Pass --root DIR
 to read <DIR>/knowledge from disk (dev edits without rebuild).

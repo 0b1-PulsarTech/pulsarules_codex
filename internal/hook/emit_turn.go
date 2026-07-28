@@ -3,10 +3,55 @@ package hook
 import (
 	"fmt"
 	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
+
+func (d *Dispatcher) emitPreSearch(session *sessionTracker, in hookPayload) error {
+	if !searchTargetsGo(in) {
+		return nil
+	}
+	projectDir := d.resolveProjectDir()
+	if projectDir == "" {
+		return nil
+	}
+	// The projectDir is under CLAUDE_PROJECT_DIR, a hook-provided project root.
+	if _, err := os.Stat(filepath.Join(projectDir, "go.mod")); err != nil {
+		return nil //nolint:nilerr // no go.mod means "not a Go project", not a failure.
+	}
+	skillsDir := filepath.Join(projectDir, ".claude", "skills")
+	if len(filterInstalled([]string{"gopls-navigation"}, skillsDir)) == 0 {
+		return nil
+	}
+	if !session.OncePerSession("pre-search") {
+		return nil
+	}
+	return d.emitContext("hooks/pre-search.txt", "PreToolUse")
+}
+
+func searchTargetsGo(in hookPayload) bool {
+	for _, field := range []string{in.ToolInput.Pattern, in.ToolInput.Glob, in.ToolInput.Path} {
+		if strings.Contains(strings.ToLower(field), ".go") {
+			return true
+		}
+	}
+	if in.ToolName != "Bash" {
+		return false
+	}
+	fields := strings.Fields(in.ToolInput.Command)
+	if len(fields) == 0 {
+		return false
+	}
+	switch filepath.Base(fields[0]) {
+	case "grep", "rg", "ag", "find":
+		return true
+	default:
+		return false
+	}
+}
 
 func (d *Dispatcher) emitUserPrompt(session *sessionTracker) error {
 	if !session.OncePerSession("prompt") {
