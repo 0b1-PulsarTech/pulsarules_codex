@@ -51,6 +51,7 @@ func (p *fileSourceProvider) Walk(fn func(path string, ext string) bool) {
 	skipDirs := map[string]bool{
 		".git":      true,
 		".claude":   true,
+		".opencode": true,
 		"generated": true,
 		"build":     true,
 		"vendor":    true,
