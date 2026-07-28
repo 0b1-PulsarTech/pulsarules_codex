@@ -71,6 +71,7 @@ pulsarules_codex/
 │   └── templates/
 │       ├── skills/{SKILL.md.tmpl, router.md.tmpl}
 │       ├── hooks/{skill-router-reminder.sh, README.md, settings.hooks.json.tmpl}
+│       ├── docs/
 ├── internal/skill/
 │   ├── render/                      # transclude composed bodies into a SKILL.md
 │   ├── validate/                    # knowledge-base integrity checks

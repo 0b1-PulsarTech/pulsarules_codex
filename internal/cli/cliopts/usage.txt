@@ -35,9 +35,9 @@ on any error-severity finding.
 By default governance analyzes only files git reports as changed (via
 `git status`), so it reports nothing on a clean tree - the fast path the Stop
 hook relies on. --all-files instead walks every source file in the project tree
-(skipping .git/, .claude/, generated/, build/, and vendor/), so a full audit of
-the whole repository sees files the changed-set never would. Combine with
---scope full for a complete governance sweep:
+(skipping .git/, .claude/, .opencode/, generated/, build/, and vendor/), so a
+full audit of the whole repository sees files the changed-set never would.
+Combine with --scope full for a complete governance sweep:
 `pulsarules_cli governance --scope full --all-files`.
 
 hook dispatches a single Claude Code hook event by mode, reading the

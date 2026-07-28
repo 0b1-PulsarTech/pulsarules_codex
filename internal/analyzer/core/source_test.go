@@ -24,6 +24,7 @@ func TestFileSourceProvider_WalkSkipsExcludedDirs(t *testing.T) {
 	writeTestFile(t, dir, "main.go", "package main\n")
 	writeTestFile(t, dir, ".git/HEAD", "ref: refs/heads/main\n")
 	writeTestFile(t, dir, ".claude/skills/foo/SKILL.md", "# foo\n")
+	writeTestFile(t, dir, ".opencode/plugins/x.js", "// x\n")
 	writeTestFile(t, dir, "generated/claude/skills/foo/SKILL.md", "# foo\n")
 	writeTestFile(t, dir, "build/bin/tool", "binary\n")
 	writeTestFile(t, dir, "vendor/pkg/pkg.go", "package pkg\n")
