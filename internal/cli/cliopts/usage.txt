@@ -17,6 +17,7 @@ architecture, and delegated tool analyzers, keeping only static checks.
 
 --scope limits the governance analysis to a subset of analyzers (full = all,
 commit = static + AST + commit analyzers only, skipping delegation and arch).
+Use --scope commit in pre-commit hooks for fast checks.
 
 --golangci-config overrides the golangci-lint config discovery path. When unset,
 the runner searches the project root, tools/, and build/ directories for
@@ -29,15 +30,16 @@ enable emoji-variance against recent git history. Exits non-zero on
 error-severity findings.
 
 governance runs the analyzer pipeline (static, AST, architecture, delegation,
-rule injection) against the project and prints findings to stderr. Exits non-zero
-on any error-severity finding.
+rule injection) against the project and prints findings to stderr. Exits
+non-zero on any error-severity finding. Use --scope commit in pre-commit hooks
+for a lightweight run that omits delegation and architecture checks.
 
 By default governance analyzes only files git reports as changed (via
 `git status`), so it reports nothing on a clean tree - the fast path the Stop
-hook relies on. --all-files instead walks every source file in the project tree
-(skipping .git/, .claude/, .opencode/, generated/, build/, and vendor/), so a
-full audit of the whole repository sees files the changed-set never would.
-Combine with --scope full for a complete governance sweep:
+hook and pre-commit hook rely on. --all-files instead walks every source file in
+the project tree (skipping .git/, .claude/, .opencode/, generated/, build/, and
+vendor/), so a full audit of the whole repository sees files the changed-set
+never would. Combine with --scope full for a complete governance sweep:
 `pulsarules_cli governance --scope full --all-files`.
 
 hook dispatches a single Claude Code hook event by mode, reading the

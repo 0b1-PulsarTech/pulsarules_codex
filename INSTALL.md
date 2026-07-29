@@ -82,8 +82,9 @@ Run the analyzer pipeline (static, AST, architecture, delegation, rule injection
 project and print findings to stderr, exiting non-zero on any error-severity finding. By default it
 analyzes only files `git status` reports as changed; `--all-files` walks the whole source tree
 instead (skipping `.git/`, `.claude/`, `.opencode/`, `generated/`, `build/`, and `vendor/`).
-`--scope commit` runs the lightweight static + AST + commit checks only; `--scope full` (default)
-adds architecture and delegation. `--preset recommended|strict|minimal` selects analyzer thresholds.
+`--scope commit` runs the lightweight static + AST + commit checks only (what the pre-commit hook
+uses); `--scope full` (default) adds architecture and delegation.
+`--preset recommended|strict|minimal` selects analyzer thresholds.
 
 ```sh
 pulsarules_cli governance --project . --all-files
