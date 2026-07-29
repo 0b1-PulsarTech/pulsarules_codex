@@ -42,9 +42,9 @@ vendor/), so a full audit of the whole repository sees files the changed-set
 never would. Combine with --scope full for a complete governance sweep:
 `pulsarules_cli governance --scope full --all-files`.
 
-hook dispatches a single Claude Code hook event by mode, reading the
-tool/session JSON payload from stdin and writing the hookSpecificOutput JSON to
-stdout. Modes: session-start, pre-edit, post-edit, pre-search, user-prompt,
+hook dispatches a single Claude Code (or opencode) hook event by mode, reading
+the tool/session JSON payload from stdin and writing the hookSpecificOutput JSON
+to stdout. Modes: session-start, pre-edit, post-edit, pre-search, user-prompt,
 stop, session-end.
 
 With no --root, the binary reads the embedded knowledge snapshot. Pass --root DIR
