@@ -26,16 +26,18 @@ Applies to: every commit in every project.
 1. Format the subject as `:<emoji>: <type>[(<scope>)]: <subject>` - a gitmoji shortcode, then a
    Conventional Commit type, optional scope, then an imperative subject that starts with an Uppercase
    letter, has no trailing period, and stays under 72 chars.
-2. Take the emoji from the project catalog (`internal/emoji/data/catalog.txt`, the GitHub shortcodes
-   at Emoji version 1.0 or older, minus country flags). Newer emoji render as raw text in the tools
-   the history is read through. When in doubt prefer an emoji that predates 2011.
+2. Take the emoji from the project catalog (`internal/emoji/data/catalog.txt`, the GitHub
+   shortcodes at Emoji version 1.0 or older, minus country flags). Anything outside it is rejected
+   by the hook, because newer emoji render as raw text in the tools the history is read through.
+   When in doubt prefer an emoji that predates 2011.
 3. `:robot:`, `:test_tube:` (use `:tea:`), `:compass:` and `:sparkles:` are prohibited outright,
    including on AI-assisted commits.
 4. Pick the emoji for the area the change touches, not for its type - a `feat` extending an existing
    area takes that area's emoji. Keep an area recognisable through a family rather than one fixed
    mascot, in specificity order: {{ emojiAnchors }}.
-5. No emoji may repeat within five commits. Rotating inside an area's family is how you keep both
-   variety and recognisability. Root commit is `:ghost:`, merges are `:volcano:`; both are exempt.
+5. No emoji may repeat within five commits. The hook blocks it, and rotating inside an area's family
+   is how you keep both variety and recognisability. Root commit is `:ghost:`, merges are
+   `:volcano:`; both are exempt.
 6. Use a type from: feat, fix, chore, refactor, docs, test, perf, build, ci, style, revert. Add a
    scope (the module/feature) when it sharpens the message.
 7. One logical change per commit. Do not mix a refactor with a feature.
@@ -49,7 +51,8 @@ Applies to: every commit in every project.
    change. A body is an exception, written only when a reader needs something absent from both - a
    non-obvious why, a constraint that forced the shape, an alternative that was rejected. If you
    cannot name what the body adds beyond the subject and the diff, do not write one. An exceptional
-   body stays short and wraps at 100 columns. Footer references: `Refs: #42`, `Closes: #99`.
+   body stays short (the hook rejects an oversized one) and wraps at 100 columns. Footer references:
+   `Refs: #42`, `Closes: #99`.
 10. Breaking change: add a `BREAKING CHANGE:` footer with migration notes.
 11. Each commit must compile and pass tests standalone (docs-only commits are exempt from the test
     bar). Exception - history rebuild: during a deliberate history rewrite (see `[[git-history]]`)
@@ -68,7 +71,7 @@ Applies to: every commit in every project.
 - Repeating an emoji used in any of the last five commits.
 - A move/rename commit that also edits the moved file beyond the mechanical consequences of the
   relocation (package clause, import paths, an import alias).
-- `Co-Authored-By` / `Claude-Session` / tool-attribution trailers.
+- `Co-Authored-By` / `Claude-Session` / tool-attribution trailers (the hook rejects them).
 - A body written by habit rather than necessity; oversized bodies; bodies that merely restate the
   subject or the diff.
 {{end}}
