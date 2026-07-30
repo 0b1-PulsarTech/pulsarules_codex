@@ -17,7 +17,7 @@ func Generate(idx *knowledge.Index, rnd *render.Renderer, outDir string) ([]stri
 	}
 	written := make([]string, 0, len(idx.Skills))
 	for _, skill := range idx.SkillsOrdered() {
-		body, renderErr := rnd.RenderSkill(idx, skill)
+		body, renderErr := rnd.RenderSkill(idx, skill, nil)
 		if renderErr != nil {
 			return nil, fmt.Errorf("render %q: %w", skill.ID, renderErr)
 		}

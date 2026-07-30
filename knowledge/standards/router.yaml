@@ -1,4 +1,7 @@
-# The project-router's baseline, dispatch table, and composition order as data.
+# The project-router's baseline, dispatch table, and composition order as data,
+# so the rendered router can be filtered to only the skills actually installed.
+# A skill reference here that is not installed is dropped from the rendered
+# router; a dispatch row or order step with no installed skill is omitted whole.
 router:
   baseline:
     always:

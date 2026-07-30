@@ -20,7 +20,7 @@ func TestRenderSkill_NormativeSection(t *testing.T) {
 	}
 
 	for _, skill := range idx.Skills {
-		body, renderErr := rnd.RenderSkill(idx, skill)
+		body, renderErr := rnd.RenderSkill(idx, skill, nil)
 		if renderErr != nil {
 			t.Errorf("render %q: %v", skill.ID, renderErr)
 			continue
@@ -36,7 +36,7 @@ func TestRenderSkill_NormativeSection(t *testing.T) {
 		}
 	}
 
-	router, err := rnd.RenderRouter(idx)
+	router, err := rnd.RenderRouter(idx, nil)
 	if err != nil {
 		t.Fatalf("RenderRouter: %v", err)
 	}

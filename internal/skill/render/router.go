@@ -8,19 +8,21 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func (renderer *Renderer) RenderRouter(idx *knowledge.Index) (string, error) {
+func (renderer *Renderer) RenderRouter(idx *knowledge.Index, installed []string) (string, error) {
 	router, ok := idx.Skill("project-router")
 	if !ok {
 		return "", errors.New("missing project-router skill")
 	}
+	keep := installFilter(installed)
 	doc := routerDoc{
 		ID: router.ID, Name: router.Name, Description: router.Description,
-		Baseline: idx.Router.Baseline,
-		Dispatch: idx.Router.Dispatch,
-		Order:    idx.Router.Order,
+		Baseline:        filterBaseline(idx.Router.Baseline, keep),
+		Dispatch:        filterDispatch(idx.Router.Dispatch, keep),
+		Order:           filterOrder(idx.Router.Order, keep),
+		ShowTestCallout: keep("integration-tests"),
 	}
 	for _, skill := range idx.SkillsOrdered() {
-		if skill.ID == "project-router" {
+		if skill.ID == "project-router" || !keep(skill.ID) {
 			continue
 		}
 		doc.AvailableSkills = append(doc.AvailableSkills, skillSummary{
