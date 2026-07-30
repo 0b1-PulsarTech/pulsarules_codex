@@ -21,6 +21,8 @@ Before writing or editing any Go / SQL / config:
 3. Implement with the loaded skills' rules active while you write (not as an afterthought); then run
    each loaded skill's Validation checklist and confirm none of its Forbidden actions were taken.
 Do not implement directly without routing first.
+
+{{- if .ShowTestCallout}}
 > **Tests are not optional routing.** If your change will add or edit any `_test.go` - including
 > tests written alongside a feature, a lib, or a bugfix - you are doing test work: load
 > `integration-tests` before you write the test, so its table-driven `testCases`/`testCase` shape,
@@ -28,6 +30,7 @@ Do not implement directly without routing first.
 > clock-injection fields, no `time.Sleep`) shape the code as you write it - not a cleanup pass after.
 > Loading a skill is step one; its rules are meant to run continuously during authoring, and its
 > Validation checklist is a pre-commit gate you MUST actually run.
+{{- end}}
 
 ## 1. Always-load baseline (every Go change)
 {{- range .Baseline.Always}}

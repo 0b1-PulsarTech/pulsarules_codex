@@ -36,7 +36,7 @@ func Package(idx *knowledge.Index, rnd *render.Renderer, outPath string) (err er
 	}()
 
 	for _, skill := range idx.SkillsOrdered() {
-		body, renderErr := rnd.RenderSkill(idx, skill)
+		body, renderErr := rnd.RenderSkill(idx, skill, nil)
 		if renderErr != nil {
 			return fmt.Errorf("render %q: %w", skill.ID, renderErr)
 		}

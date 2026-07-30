@@ -56,10 +56,12 @@ func (renderer *Renderer) Render(idx *knowledge.Index, skill knowledge.Skill) (s
 }
 
 func (renderer *Renderer) RenderSkill(
-	idx *knowledge.Index, skill knowledge.Skill,
+	idx *knowledge.Index,
+	skill knowledge.Skill,
+	installed []string,
 ) (string, error) {
 	if skill.ID == "project-router" {
-		return renderer.RenderRouter(idx)
+		return renderer.RenderRouter(idx, installed)
 	}
 	return renderer.Render(idx, skill)
 }

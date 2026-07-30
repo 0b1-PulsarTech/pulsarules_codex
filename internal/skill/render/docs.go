@@ -36,4 +36,5 @@ type routerDoc struct {
 	Dispatch              []knowledge.RouterDispatchRow
 	Order                 []knowledge.RouterOrderStep
 	AvailableSkills       []skillSummary
+	ShowTestCallout       bool
 }
