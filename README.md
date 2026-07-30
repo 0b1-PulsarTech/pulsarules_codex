@@ -75,7 +75,7 @@ pulsarules_codex/
 ├── internal/skill/
 │   ├── render/                      # transclude composed bodies into a SKILL.md
 │   ├── validate/                    # knowledge-base integrity checks
-│   ├── output/                      # generate / package the rendered skills
+│   ├── output/                      # install / generate / package the rendered skills
 │   └── hookwire/                    # install the hook + idempotently wire the Claude settings file
 ├── cmd/pulsarules_cli/              # CLI entrypoint (main.go; commands live in internal/cli)
 ├── README.md  INSTALL.md

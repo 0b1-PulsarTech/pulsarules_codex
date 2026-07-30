@@ -1,0 +1,147 @@
+package output
+
+import (
+	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestInstall_RouterAndUnknown(t *testing.T) {
+	t.Parallel()
+
+	idx, rnd := loadFixture(t)
+	dest := t.TempDir()
+
+	installed, skipped, err := Install(idx, rnd, dest, []string{"project-router", "ghost"}, nil)
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if len(installed) != 1 || installed[0] != "project-router" {
+		t.Errorf("installed = %v, want [project-router]", installed)
+	}
+	if len(skipped) != 1 || skipped[0] != "ghost" {
+		t.Errorf("skipped = %v, want [ghost]", skipped)
+	}
+	if _, statErr := os.Stat(filepath.Join(dest, "project-router", "SKILL.md")); statErr != nil {
+		t.Errorf("router SKILL.md not written: %v", statErr)
+	}
+	if _, statErr := os.Stat(filepath.Join(dest, "project-router", ".gitignore")); statErr != nil {
+		t.Errorf("router .gitignore not written: %v", statErr)
+	}
+	data, err := os.ReadFile(filepath.Join(dest, "project-router", ".gitignore"))
+	if err != nil {
+		t.Fatalf("read .gitignore: %v", err)
+	}
+	if want := "SKILL.md\n.gitignore\n"; string(data) != want {
+		t.Errorf(".gitignore content = %q, want %q", string(data), want)
+	}
+	if _, statErr := os.Stat(filepath.Join(dest, "ghost")); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("ghost should not be written, stat err = %v", statErr)
+	}
+}
+
+func TestInstallDocs_RenderFailureLeavesPriorFiles(t *testing.T) {
+	t.Parallel()
+
+	dest := t.TempDir()
+	wantErr := errors.New("boom")
+	render := func(id string) (string, bool, error) {
+		if id == "broken" {
+			return "", true, wantErr
+		}
+		return "body for " + id, true, nil
+	}
+
+	installed, skipped, err := installDocs(
+		dest,
+		"SKILL.md",
+		[]string{"good", "broken", "unreached"},
+		render,
+	)
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("err = %v, want %v", err, wantErr)
+	}
+	if len(skipped) != 0 {
+		t.Errorf("skipped = %v, want none", skipped)
+	}
+	if len(installed) != 1 || installed[0] != "good" {
+		t.Errorf("installed = %v, want [good]", installed)
+	}
+	if _, statErr := os.Stat(filepath.Join(dest, "good", "SKILL.md")); statErr != nil {
+		t.Errorf("expected good/SKILL.md to remain after a later failure, stat err = %v", statErr)
+	}
+	if _, statErr := os.Stat(filepath.Join(dest, "broken")); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("broken must not have written a partial dir, stat err = %v", statErr)
+	}
+	if _, statErr := os.Stat(
+		filepath.Join(dest, "unreached"),
+	); !errors.Is(
+		statErr,
+		fs.ErrNotExist,
+	) {
+		t.Errorf("unreached must never be processed, stat err = %v", statErr)
+	}
+}
+
+func TestInstallDocs_WriteDocFailure(t *testing.T) {
+	t.Parallel()
+
+	dest := t.TempDir()
+	blocked := filepath.Join(dest, "blocked")
+	if err := os.WriteFile(blocked, []byte("x"), 0o600); err != nil {
+		t.Fatalf("seed blocker: %v", err)
+	}
+	render := func(id string) (string, bool, error) {
+		return "body for " + id, true, nil
+	}
+
+	installed, skipped, err := installDocs(dest, "SKILL.md", []string{"good", "blocked"}, render)
+	if err == nil {
+		t.Fatal("installDocs: expected an error from the blocked destination")
+	}
+	if len(skipped) != 0 {
+		t.Errorf("skipped = %v, want none (a write error is not an unknown id)", skipped)
+	}
+	if len(installed) != 1 || installed[0] != "good" {
+		t.Errorf("installed = %v, want [good]", installed)
+	}
+	if _, statErr := os.Stat(filepath.Join(dest, "good", "SKILL.md")); statErr != nil {
+		t.Errorf("expected good/SKILL.md to remain after a later failure, stat err = %v", statErr)
+	}
+}
+
+func TestInstall_WriteDocFailureLeavesPriorFiles(t *testing.T) {
+	t.Parallel()
+
+	idx, rnd := loadFixture(t)
+	dest := t.TempDir()
+	blocked := filepath.Join(dest, "code-minimalism")
+	if err := os.WriteFile(blocked, []byte("x"), 0o600); err != nil {
+		t.Fatalf("seed blocker: %v", err)
+	}
+
+	installed, skipped, err := Install(
+		idx,
+		rnd,
+		dest,
+		[]string{"project-router", "code-minimalism"},
+		nil,
+	)
+	if err == nil {
+		t.Fatal("Install: expected an error from the blocked destination")
+	}
+	if len(skipped) != 0 {
+		t.Errorf("skipped = %v, want none", skipped)
+	}
+	if len(installed) != 1 || installed[0] != "project-router" {
+		t.Errorf("installed = %v, want [project-router]", installed)
+	}
+	if _, statErr := os.Stat(filepath.Join(dest, "project-router", "SKILL.md")); statErr != nil {
+		t.Errorf(
+			"expected project-router/SKILL.md to remain after a later failure, stat err = %v",
+			statErr,
+		)
+	}
+}
