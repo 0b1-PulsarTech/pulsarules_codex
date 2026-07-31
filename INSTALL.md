@@ -90,11 +90,14 @@ pulsarules_cli install --project . --print-hooks
 ```
 
 `--global` -> `~/.claude/`; `--project PATH` -> `PATH/.claude/`. Mutually exclusive. Installing
-skills requires exactly one of `--all`, `--skills a,b,c`, or `--router-only`; with none of them, it
-fails rather than guessing. `project-router` plus every `always_load` skill is always installed and
-cannot be deselected; a selected skill whose `compose_skills` names another skill pulls that skill
-in too (transitively), and `install` prints each one it added and which skill required it. The skill
-render is idempotent (overwrites). The hook wiring is idempotent too: it copies the hook to
+skills requires exactly one of `--all`, `--skills a,b,c`, or `--router-only`; with none of them and
+an interactive terminal, `install` prompts with a numbered list of every skill (mandatory skills
+shown pre-selected and locked) accepting `1,4,7-9` ranges, `a` for all, or Enter for the
+mandatory-only baseline. With no flag and no terminal (e.g. CI), it fails rather than guessing.
+`project-router` plus every `always_load` skill is always installed and cannot be deselected; a
+selected skill whose `compose_skills` names another skill pulls that skill in too (transitively),
+and `install` prints each one it added and which skill required it. The skill render is idempotent
+(overwrites). The hook wiring is idempotent too: it copies the hook to
 `.claude/hooks/skill-router-reminder.sh` (executable) and merges its `SessionStart`, `PreToolUse`,
 `PostToolUse`, `UserPromptSubmit`, `Stop` and `SessionEnd` entries into the chosen settings file -
 preserving existing permissions / `enabledMcpjsonServers` / unrelated hooks, never duplicating on

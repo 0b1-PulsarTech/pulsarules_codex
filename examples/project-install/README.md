@@ -31,10 +31,11 @@ go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
   --skills go-style,errors-logging,commits
 ```
 
-One of `--all`, `--skills`, or `--router-only` is required. This writes
+One of `--all`, `--skills`, or `--router-only` is required; on an interactive terminal, omitting all
+three prompts with a numbered list instead. This writes
 `/path/to/my-service/.claude/skills/<id>/SKILL.md` for each selected skill, plus the mandatory
-baseline (`project-router` and every `always_load` skill, which are always installed) and any skill
-a selection's `compose_skills` pulls in transitively - the installer prints what it added and why.
+baseline (`project-router` and every `always_load` skill, which are always installed) and any skill a
+selection's `compose_skills` pulls in transitively - the installer prints what it added and why.
 
 ## 4. Wire the project's AGENTS.md to the standards
 

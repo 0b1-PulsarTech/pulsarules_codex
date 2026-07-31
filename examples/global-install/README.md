@@ -27,6 +27,9 @@ go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
 ./build/bin/pulsarules_cli install --global --router-only
 ```
 
+`install` requires exactly one of `--all`, `--skills a,b,c`, or `--router-only`; with none of them and
+no interactive terminal (e.g. CI), it fails rather than guessing.
+
 This writes `~/.claude/skills/<id>/SKILL.md` for each selected skill.
 
 ## 4. Package (optional, for distribution)
