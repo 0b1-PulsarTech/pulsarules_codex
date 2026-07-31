@@ -66,6 +66,45 @@ func (renderer *Renderer) RenderSkill(
 	return renderer.Render(idx, skill)
 }
 
+func (renderer *Renderer) RenderWorkflow(
+	idx *knowledge.Index, wf knowledge.Workflow,
+) (string, error) {
+	doc := workflowDoc{
+		ID: wf.ID, Name: wf.Name, Description: wf.Description,
+		Steps: wf.Steps,
+		Body:  idx.Body("workflows", wf.ID),
+	}
+	for _, entry := range wf.ComposesRules {
+		id := entryID(entry)
+		rule, ok := idx.Rule(id)
+		if !ok {
+			return "", fmt.Errorf("workflow %q: composed rule %q not found", wf.ID, id)
+		}
+		body, bodyErr := wholeBody(idx.Body("rules", id))
+		if bodyErr != nil {
+			return "", fmt.Errorf("workflow %q: %w", wf.ID, bodyErr)
+		}
+		doc.Rules = append(doc.Rules, ref{Name: rule.Name, Body: bodyWithoutH1(body)})
+	}
+	for _, entry := range wf.ComposesPatterns {
+		id := entryID(entry)
+		pat, ok := idx.Pattern(id)
+		if !ok {
+			return "", fmt.Errorf("workflow %q: composed pattern %q not found", wf.ID, id)
+		}
+		body, bodyErr := wholeBody(idx.Body("patterns", id))
+		if bodyErr != nil {
+			return "", fmt.Errorf("workflow %q: %w", wf.ID, bodyErr)
+		}
+		doc.Patterns = append(doc.Patterns, ref{Name: pat.Name, Body: bodyWithoutH1(body)})
+	}
+	var buf bytes.Buffer
+	if err := renderer.base.ExecuteTemplate(&buf, "WORKFLOW.md.tmpl", doc); err != nil {
+		return "", fmt.Errorf("render workflow %q: %w", wf.ID, err)
+	}
+	return buf.String(), nil
+}
+
 func composedLinters(idx *knowledge.Index, skill knowledge.Skill) []string {
 	var linters []string
 	seen := map[string]bool{}

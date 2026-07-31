@@ -75,6 +75,36 @@ func TestComposedLinters_NoDuplicates(t *testing.T) {
 	}
 }
 
+func TestRender_Workflow(t *testing.T) {
+	t.Parallel()
+
+	idx, templates, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	rnd, err := NewRenderer(templates)
+	if err != nil {
+		t.Fatalf("NewRenderer: %v", err)
+	}
+
+	wf, ok := idx.Workflow("refactoring")
+	if !ok {
+		t.Fatal("refactoring workflow not found in index")
+	}
+	body, renderErr := rnd.RenderWorkflow(idx, wf)
+	if renderErr != nil {
+		t.Fatalf("RenderWorkflow: %v", renderErr)
+	}
+	if !strings.HasPrefix(body, "---\nname: refactoring\n") {
+		t.Errorf("RenderWorkflow: missing frontmatter, got prefix: %q", body[:min(len(body), 80)])
+	}
+	for _, want := range []string{"# Refactoring", "## Steps", "put on one hat"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("RenderWorkflow output missing %q", want)
+		}
+	}
+}
+
 func TestRender_UnknownComposition(t *testing.T) {
 	t.Parallel()
 

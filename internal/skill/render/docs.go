@@ -38,3 +38,10 @@ type routerDoc struct {
 	AvailableSkills       []skillSummary
 	ShowTestCallout       bool
 }
+
+type workflowDoc struct {
+	ID, Name, Description string
+	Steps                 []string
+	Body                  string
+	Rules, Patterns       []ref
+}

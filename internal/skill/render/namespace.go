@@ -10,7 +10,7 @@ import (
 )
 
 func topTemplates() []string {
-	return []string{"SKILL.md.tmpl", "router.md.tmpl"}
+	return []string{"SKILL.md.tmpl", "WORKFLOW.md.tmpl", "router.md.tmpl"}
 }
 
 func funcs() template.FuncMap {
