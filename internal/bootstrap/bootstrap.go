@@ -12,5 +12,7 @@ func DoInjections(inj remy.Injector, opts Options) error {
 	}
 	registerVCS(inj, opts)
 	registerLogfile(inj, opts)
+	registerRegistries(inj)
+	registerEmoji(inj)
 	return nil
 }

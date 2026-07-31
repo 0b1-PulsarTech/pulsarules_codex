@@ -8,6 +8,9 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -49,6 +52,18 @@ func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 		}},
 		{"logger closer", func(inj remy.Injector) error {
 			_, err := remy.Get[io.Closer](inj)
+			return err
+		}},
+		{"emoji catalog", func(inj remy.Injector) error {
+			_, err := remy.Get[*emoji.Catalog](inj)
+			return err
+		}},
+		{"install registry", func(inj remy.Injector) error {
+			_, err := remy.Get[*install.Registry](inj)
+			return err
+		}},
+		{"target registry", func(inj remy.Injector) error {
+			_, err := remy.Get[*host.Registry](inj)
 			return err
 		}},
 	}
