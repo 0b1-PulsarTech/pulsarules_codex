@@ -4,11 +4,18 @@ Usage:
   pulsarules_cli generate [--root DIR] [--out DIR]
   pulsarules_cli validate [--root DIR]
   pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
+  pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--no-git-hooks]
   pulsarules_cli package [--root DIR] [--out FILE]
   pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
   pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files]
   pulsarules_cli hook <mode>
   pulsarules_cli version
+
+--target is repeatable (default claude); pass it twice (--target claude --target
+opencode) to install both layouts in one run. The opencode target renders skills
+into <target>/.opencode/skills, writes <target>/.opencode/AGENTS.md (carrying
+the routing contract), and wires <target>/opencode.json (skills as instructions
++ the gopls MCP server).
 
 --preset selects an analyzer configuration preset for the governance subcommand
 (recommended|strict|minimal). recommended keeps all analyzers with standard
@@ -22,6 +29,27 @@ Use --scope commit in pre-commit hooks for fast checks.
 --golangci-config overrides the golangci-lint config discovery path. When unset,
 the runner searches the project root, tools/, and build/ directories for
 .golangci.yml, and on go.work repositories runs per-module.
+
+install renders the selected skills into <target>/.claude/skills, installs the
+skill-router reminder hook into <target>/.claude/hooks, and idempotently wires it
+into the chosen settings file. --hooks-scope project (the default) wires into
+<target>/.claude/settings.json; --hooks-scope local wires into
+settings.local.json. The wired hook command resolves the project root at runtime
+via $CLAUDE_PROJECT_DIR. Unless --no-mcp is given and when gopls is on PATH, it
+also merges the gopls server into <target>/.mcp.json and regenerates the
+gopls-navigation skill from "gopls mcp -instructions". Use --no-hooks for skills
+only, or --print-hooks to inspect the resolved hooks block without writing.
+
+Choosing which skills to install requires exactly one of --all, --skills, or
+--router-only; with none given, install fails naming the fix rather than
+guessing. project-router plus every always_load skill is always installed and
+cannot be deselected. A selected skill whose compose_skills names another skill
+pulls that skill in too (transitively, cycle-safe); install prints each one
+added and which skill required it, e.g. "pulled in by dependency: usecase-layout
+(required by rest-adapter)".
+
+--no-git-hooks skips the commit-msg and pre-commit git hook scripts that
+delegate to the installed binary; the binary is still copied.
 
 commitlint validates a commit message against the emoji, format, type, scope, and
 body rules. Use --msg "..." for a direct string, --file PATH to read from a
@@ -45,7 +73,8 @@ never would. Combine with --scope full for a complete governance sweep:
 hook dispatches a single Claude Code (or opencode) hook event by mode, reading
 the tool/session JSON payload from stdin and writing the hookSpecificOutput JSON
 to stdout. Modes: session-start, pre-edit, post-edit, pre-search, user-prompt,
-stop, session-end.
+stop, session-end. install wires this invocation into the target's hook script
+automatically; there is normally no reason to invoke it by hand.
 
 With no --root, the binary reads the embedded knowledge snapshot. Pass --root DIR
 to read <DIR>/knowledge from disk (dev edits without rebuild).

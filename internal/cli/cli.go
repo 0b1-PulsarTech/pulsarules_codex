@@ -10,6 +10,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/generate"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/list"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/packaging"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/validate"
@@ -29,6 +30,11 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	switch opts.Command {
 	case "generate":
 		return generate.RunGenerate(inj, opts)
+	case "install":
+		if installErr := install.Run(inj, opts); installErr != nil {
+			return fmt.Errorf("install: %w", installErr)
+		}
+		return nil
 	case "list":
 		return list.RunList(inj, opts)
 	case "validate":

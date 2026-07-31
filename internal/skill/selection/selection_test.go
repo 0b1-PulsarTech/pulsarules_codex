@@ -1,0 +1,97 @@
+package selection
+
+import (
+	"slices"
+	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
+)
+
+func dependencyFixtureIndex() *knowledge.Index {
+	return &knowledge.Index{Skills: []knowledge.Skill{
+		{ID: "project-router", Order: 0, AlwaysLoad: true, ComposeSkills: []string{"solo"}},
+		{ID: "go-style", Order: 10, AlwaysLoad: true},
+		{ID: "solo", Order: 20},
+		{ID: "chain-a", Order: 30, ComposeSkills: []string{"chain-b"}},
+		{ID: "chain-b", Order: 31, ComposeSkills: []string{"chain-c"}},
+		{ID: "chain-c", Order: 32},
+		{ID: "cycle-a", Order: 40, ComposeSkills: []string{"cycle-b"}},
+		{ID: "cycle-b", Order: 41, ComposeSkills: []string{"cycle-a"}},
+	}}
+}
+
+func TestSelectionResolve(t *testing.T) {
+	t.Parallel()
+
+	idx := dependencyFixtureIndex()
+	testCases := []struct {
+		name       string
+		sel        Choice
+		wantIDs    []string
+		wantPulled []DependencyPull
+	}{
+		{
+			name:    "router-only yields just the router",
+			sel:     Choice{RouterOnly: true},
+			wantIDs: []string{"project-router"},
+		},
+		{
+			name:    "empty selection resolves to the mandatory baseline only",
+			sel:     Choice{},
+			wantIDs: []string{"project-router", "go-style"},
+		},
+		{
+			name: "all yields every skill",
+			sel:  Choice{All: true},
+			wantIDs: []string{
+				"project-router",
+				"go-style",
+				"solo",
+				"chain-a",
+				"chain-b",
+				"chain-c",
+				"cycle-a",
+				"cycle-b",
+			},
+		},
+		{
+			name:    "a skill with no deps",
+			sel:     Choice{IDs: []string{"solo"}},
+			wantIDs: []string{"project-router", "go-style", "solo"},
+		},
+		{
+			name:    "a chain a->b->c pulls in every link",
+			sel:     Choice{IDs: []string{"chain-a"}},
+			wantIDs: []string{"project-router", "go-style", "chain-a", "chain-b", "chain-c"},
+			wantPulled: []DependencyPull{
+				{Skill: "chain-b", RequiredBy: "chain-a"},
+				{Skill: "chain-c", RequiredBy: "chain-b"},
+			},
+		},
+		{
+			name:    "a cycle a->b->a terminates",
+			sel:     Choice{IDs: []string{"cycle-a"}},
+			wantIDs: []string{"project-router", "go-style", "cycle-a", "cycle-b"},
+			wantPulled: []DependencyPull{
+				{Skill: "cycle-b", RequiredBy: "cycle-a"},
+			},
+		},
+		{
+			name:    "project-router's own compose_skills is not a dependency",
+			sel:     Choice{IDs: []string{"chain-c"}},
+			wantIDs: []string{"project-router", "go-style", "chain-c"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			gotIDs, gotPulled := testCase.sel.Resolve(idx)
+			if !slices.Equal(gotIDs, testCase.wantIDs) {
+				t.Errorf("ids = %v, want %v", gotIDs, testCase.wantIDs)
+			}
+			if !slices.Equal(gotPulled, testCase.wantPulled) {
+				t.Errorf("pulled = %v, want %v", gotPulled, testCase.wantPulled)
+			}
+		})
+	}
+}

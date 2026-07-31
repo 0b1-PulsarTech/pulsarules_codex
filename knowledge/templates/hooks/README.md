@@ -50,6 +50,7 @@ truth instead of a copy baked into the shell script. If the binary is absent the
   `PreToolUse` hook can block the edit.
 - The `pre-edit` reminder is cheap because it is gated by a per-session flag
   (`<tmpdir>/skill-route-<event>.<session_id>`), so it fires once per session, not on every edit.
-- The hook lives under `.claude/` (gitignored) and is wired into `.claude/settings.json`.
+- The hook lives under `.claude/` (gitignored) and is wired into `.claude/settings.json` (or
+  `settings.local.json` with `--hooks-scope local`).
 - A freshly installed hook only goes live after `/hooks` is opened once or the
   session restarts (`SessionStart` then fires next session).

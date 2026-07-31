@@ -11,7 +11,7 @@ tasks:
       - task: test
 
   build:
-    desc: build the CLI into build/bin
+    desc: build the installer into build/bin
     cmds:
       - mkdir -p build/bin
       - go build -o {{.BIN}} ./cmd/pulsarules_cli
