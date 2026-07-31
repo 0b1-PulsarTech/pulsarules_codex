@@ -41,12 +41,16 @@ gopls-navigation skill from "gopls mcp -instructions". Use --no-hooks for skills
 only, or --print-hooks to inspect the resolved hooks block without writing.
 
 Choosing which skills to install requires exactly one of --all, --skills, or
---router-only; with none given, install fails naming the fix rather than
-guessing. project-router plus every always_load skill is always installed and
-cannot be deselected. A selected skill whose compose_skills names another skill
-pulls that skill in too (transitively, cycle-safe); install prints each one
-added and which skill required it, e.g. "pulled in by dependency: usecase-layout
-(required by rest-adapter)".
+--router-only. With none given on an interactive terminal, install prompts with
+a numbered list of every skill (id, one-line description, mandatory skills
+shown pre-selected and locked); accepts "1,4,7-9" ranges, "a" for all, or Enter
+for the mandatory-only baseline. With none given and no terminal (e.g. CI), it
+fails naming the fix rather than guessing. project-router plus every
+always_load skill is always installed and cannot be deselected. A selected
+skill whose compose_skills names another skill pulls that skill in too
+(transitively, cycle-safe); install prints each one added and which skill
+required it, e.g. "pulled in by dependency: usecase-layout (required by
+rest-adapter)".
 
 --no-git-hooks skips the commit-msg and pre-commit git hook scripts that
 delegate to the installed binary; the binary is still copied.

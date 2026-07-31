@@ -1,7 +1,6 @@
 package install
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -14,7 +13,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/claude"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/selection"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/githook"
 )
 
@@ -76,7 +74,7 @@ func newTargetContext(
 	cfg installConfig,
 	deps installCollaborators,
 ) (host.Context, error) {
-	selection, err := resolveSelection(opts)
+	selection, err := resolveSelection(opts, deps.idx)
 	if err != nil {
 		return host.Context{}, err
 	}
@@ -161,20 +159,4 @@ func splitCSV(value string) []string {
 		}
 	}
 	return ids
-}
-
-func resolveSelection(opts *version.Options) (selection.Choice, error) {
-	switch {
-	case opts.RouterOnly:
-		return selection.Choice{RouterOnly: true}, nil
-	case opts.All:
-		return selection.Choice{All: true}, nil
-	case opts.Skills != "":
-		return selection.Choice{IDs: splitCSV(opts.Skills)}, nil
-	default:
-		return selection.Choice{}, errors.New(
-			"no --all/--skills/--router-only given: " +
-				"pass --all to install every skill, or --skills a,b,c to choose",
-		)
-	}
 }

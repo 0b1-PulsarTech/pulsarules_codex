@@ -58,8 +58,9 @@ composes_patterns:
    goverter. (rule: [[database]])
 7. **Container build:** multi-stage, distroless, CGO-free `Containerfile` at the repo root; base
    images pinned by digest. (rule: [[build]])
-8. **Install the standards skills** into the project: `pulsarules_cli install --project .` with one
-   of `--all`, `--skills a,b,c` or `--router-only`.
+8. **Install the standards skills** into the project:
+   `pulsarules_cli install --project .` (a terminal prompts for the skills; without one, pass
+   `--all`, `--skills a,b,c` or `--router-only`).
 9. **Initial commit** per [[commits]]: exactly `:ghost: Initial Commit`.
 
 ## References
