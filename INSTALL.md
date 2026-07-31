@@ -1,13 +1,17 @@
 # Installation
 
-The CLI is a single Go binary, `cmd/pulsarules_cli`. It embeds the knowledge base (standards +
-templates) via `//go:embed`, so it is self-contained: `generate`, `list`, `validate`, and `package`
-all read the embedded snapshot by default.
+The installer is a single Go binary, `cmd/pulsarules_cli`. It embeds the knowledge base
+(standards + templates) via `//go:embed`, so it is self-contained: `generate`, `list`, `validate`,
+`install`, and `package` all read the embedded snapshot by default.
 
 ## Prerequisites
 
 - Go 1.26+ (the module pins `go 1.26`).
 - Optional: [Taskfile](https://taskfile.dev/) for the convenience targets.
+- Optional but recommended: `gopls` on PATH (`go install golang.org/x/tools/gopls@latest`). When
+  present, `install` wires the gopls MCP into the target's `.mcp.json` and (re)generates the
+  `gopls-navigation` skill from `gopls mcp -instructions`. If absent, install prints a warning and
+  skips only that step.
 
 ## Build
 
@@ -22,6 +26,7 @@ go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
 pulsarules_cli generate [--root DIR] [--out DIR]
 pulsarules_cli validate [--root DIR]
 pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
+pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--no-git-hooks]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
 pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files]
@@ -57,6 +62,58 @@ pulsarules_cli list            # skills
 pulsarules_cli list rules
 ```
 
+### Install
+
+Render each selected skill in-memory and write it to a Claude skills directory, then install the
+skill-router reminder hook and wire it into the target's `settings.json` (the `--hooks-scope`
+default; pass `--hooks-scope local` to wire `settings.local.json` instead). No pre-generated dir
+needed.
+
+```sh
+# all skills + hook into a project:
+pulsarules_cli install --project /path/to/project --all
+
+# all skills + hook globally:
+pulsarules_cli install --global --all
+
+# only the router:
+pulsarules_cli install --project . --router-only
+
+# a selected subset (plus the mandatory baseline and any compose_skills deps it pulls in):
+pulsarules_cli install --project . --skills go-style,errors-logging,commits
+
+# skills only, no Claude hook (git hooks still install; add --no-git-hooks):
+pulsarules_cli install --project . --all --no-hooks
+
+# inspect the resolved hooks block without writing anything:
+pulsarules_cli install --project . --print-hooks
+```
+
+`--global` -> `~/.claude/`; `--project PATH` -> `PATH/.claude/`. Mutually exclusive. Installing
+skills requires exactly one of `--all`, `--skills a,b,c`, or `--router-only`; with none of them, it
+fails rather than guessing. `project-router` plus every `always_load` skill is always installed and
+cannot be deselected; a selected skill whose `compose_skills` names another skill pulls that skill
+in too (transitively), and `install` prints each one it added and which skill required it. The skill
+render is idempotent (overwrites). The hook wiring is idempotent too: it copies the hook to
+`.claude/hooks/skill-router-reminder.sh` (executable) and merges its `SessionStart`, `PreToolUse`,
+`PostToolUse`, `UserPromptSubmit`, `Stop` and `SessionEnd` entries into the chosen settings file -
+preserving existing permissions / `enabledMcpjsonServers` / unrelated hooks, never duplicating on
+re-run. The wired command resolves the project root at runtime via `$CLAUDE_PROJECT_DIR`, so it
+survives moving the repo. It also stamps `.claude/.gitignore` with `/bin/` and `/hooks/`, so the
+copied binary and hook script stay local while `settings.json` and the rendered skills - which carry
+their own `.gitignore` - remain yours to commit or not.
+
+Additional install flags:
+
+- `--target` (repeatable, default `claude`): pass `--target claude --target opencode` to install
+  both layouts in one run. The **opencode** target renders skills into `<target>/.opencode/skills`,
+  writes `<target>/.opencode/AGENTS.md` (which carries the routing contract, since opencode has no
+  SessionStart hook), and merges `<target>/opencode.json` with the skills as `instructions` plus the
+  gopls `mcp` server.
+- `--hooks-scope project|local` (default `project`): wire the hook into `settings.json` (shared) or
+  `settings.local.json` (per-machine).
+- `--no-mcp`: skip the `.mcp.json` + gopls-navigation generation.
+
 ### Package
 
 Render all skills in-memory and zip them into `build/standards-skills.zip`.
@@ -70,7 +127,7 @@ pulsarules_cli package
 Validate a commit message against the emoji, format, type, scope, and body rules. `--msg` checks a
 literal string; `--file PATH` reads a `COMMIT_EDITMSG` file (the git `commit-msg` hook passes `$1`);
 `--project DIR` enables emoji-variance checks against recent git history. Exits non-zero on
-error-severity findings.
+error-severity findings; this is what the installed `commit-msg` git hook runs.
 
 ```sh
 pulsarules_cli commitlint --file .git/COMMIT_EDITMSG --project .

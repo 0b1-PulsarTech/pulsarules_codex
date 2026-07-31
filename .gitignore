@@ -1,7 +1,9 @@
-# Generated skill output
+# Generated skill output (produced by `pulsarules_cli generate`/`install`)
 /generated/
-# Local agent config (untracked)
+# Locally installed skills + hook (produced by the installer; kept per-target, untracked)
 .claude/
+# Locally wired MCP config (produced by the installer; machine-specific absolute paths)
+.mcp.json
 
 # Build outputs
 build/bin/
@@ -21,3 +23,6 @@ vendor/
 # OS
 .DS_Store
 Thumbs.db
+# Rendered by `install --target opencode`, same as .claude/ and generated/.
+.opencode/
+opencode.json

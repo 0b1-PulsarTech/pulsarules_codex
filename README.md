@@ -1,7 +1,7 @@
 # pulsarules_codex
 
 A knowledge-first repository of reusable engineering standards, rules, patterns, and workflows for
-Go services - plus a small Go CLI that embeds them and renders Claude skills on demand.
+Go services - plus a small Go installer that embeds them and renders Claude skills on demand.
 
 > **Knowledge is the primary asset. Skills are an output artifact.**
 > Markdown (with YAML frontmatter) is the canonical source of truth. The repo stays useful even if
@@ -27,7 +27,7 @@ committed.
 4. Workflows: the order to apply them for a task.
 5. Metadata: frontmatter on each item + `skills.yaml` for composition.
 6. Skills: generated from the above; one consumer of the model.
-7. Tooling: the embedded CLI that does the generation.
+7. Tooling: the embedded installer that does the generation.
 
 ## What lives here vs in application repos
 
@@ -46,6 +46,7 @@ committed.
 go run ./cmd/pulsarules_cli validate   # check the embedded knowledge
 go run ./cmd/pulsarules_cli list        # print the skill catalog
 go run ./cmd/pulsarules_cli generate    # render generated/skills/ (gitignored)
+go run ./cmd/pulsarules_cli install --project /path/to/project
 go run ./cmd/pulsarules_cli package     # zip all skills into build/
 ```
 
@@ -105,6 +106,17 @@ routing contract at `SessionStart` and a pointed reminder at the first `.go`/`.s
 session (non-blocking, always exit 0, fires once per session via a per-session flag). See
 [`knowledge/templates/hooks/README.md`](knowledge/templates/hooks/README.md) for the full rationale
 and design constraints - it is installed alongside the hook.
+
+`install --project PATH` (or `--global`) installs the hook into `PATH/.claude/hooks` and wires it
+into a settings file with an idempotent merge (preserves existing permissions /
+`enabledMcpjsonServers` / unrelated hooks; re-running never duplicates). `--hooks-scope project`
+(the default) targets `settings.json`; `--hooks-scope local` targets `settings.local.json`. The
+wired command resolves the project root at runtime via `$CLAUDE_PROJECT_DIR`, so it survives moving
+the repo. When `gopls` is on PATH, install also wires the gopls MCP into `.mcp.json` and regenerates
+the `gopls-navigation` skill (`--no-mcp` to skip). `--target` is repeatable (`claude`/`opencode`):
+the opencode target writes `.opencode/skills`, `.opencode/AGENTS.md`, and `opencode.json`. Use
+`--no-hooks` to skip the Claude hook script and settings wiring (git hooks: `--no-git-hooks`), or
+`--print-hooks` to print the resolved hooks block.
 
 ## Origin
 

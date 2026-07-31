@@ -9,6 +9,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 )
 
 type ExitError struct {
@@ -24,6 +25,11 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 	switch opts.Command {
 	case "generate":
 		return runGenerate(inj, opts)
+	case "install":
+		if installErr := install.Run(inj, opts); installErr != nil {
+			return fmt.Errorf("install: %w", installErr)
+		}
+		return nil
 	case "list":
 		return runList(inj, opts)
 	case "validate":

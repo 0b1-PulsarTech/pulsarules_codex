@@ -14,6 +14,7 @@ steps:
     - add the docs tree (rules/patterns; domain specs in the app repo); AGENTS stop signs
     - set up the data layer (ent, atlas, sqlc, goverter)
     - container build (multi-stage, distroless, digest-pinned)
+    - install the standards skills (pulsarules_cli install --project .)
     - initial commit
 composes_rules:
     - code-placement
@@ -57,7 +58,9 @@ composes_patterns:
    goverter. (rule: [[database]])
 7. **Container build:** multi-stage, distroless, CGO-free `Containerfile` at the repo root; base
    images pinned by digest. (rule: [[build]])
-8. **Initial commit** per [[commits]]: exactly `:ghost: Initial Commit`.
+8. **Install the standards skills** into the project: `pulsarules_cli install --project .` with one
+   of `--all`, `--skills a,b,c` or `--router-only`. (see INSTALL.md)
+9. **Initial commit** per [[commits]]: exactly `:ghost: Initial Commit`.
 
 ## References
 
