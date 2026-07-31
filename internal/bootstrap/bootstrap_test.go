@@ -8,7 +8,9 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/target"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -49,6 +51,14 @@ func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 		}},
 		{"logger closer", func(inj remy.Injector) error {
 			_, err := remy.Get[io.Closer](inj)
+			return err
+		}},
+		{"install registry", func(inj remy.Injector) error {
+			_, err := remy.Get[*install.Registry](inj)
+			return err
+		}},
+		{"target registry", func(inj remy.Injector) error {
+			_, err := remy.Get[*target.Registry](inj)
 			return err
 		}},
 	}

@@ -12,5 +12,6 @@ func DoInjections(inj remy.Injector, opts Options) error {
 	}
 	registerVCS(inj, opts)
 	registerObs(inj, opts)
+	registerRegistries(inj)
 	return nil
 }
