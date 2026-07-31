@@ -1,0 +1,27 @@
+# keywords	shortcodes
+# One theme per line, most specific first: themeMatches walks the file in
+# order and the first keyword match wins, so a narrower area must precede a
+# broader one. Every shortcode here must also appear in catalog.txt.
+lead,prospect,funnel,segment	seedling,herb,deciduous_tree,four_leaf_clover,tulip
+conversation,message,chat,inbox,mail,email,reply,notify,notification	envelope,mailbox,incoming_envelope,mailbox_with_mail,postal_horn
+agent,bot,llm,prompt,model,inference,ai	honeybee,ant,beetle,snail
+repository,persist,database,migration,storage,cache,query,sql	floppy_disk,file_folder,card_file_box,open_file_folder,minidisc
+auth,authz,permission,token,jwt,login,credential,secret,principal	closed_lock_with_key,lock,key,shield,lock_with_ink_pen
+event,outbox,queue,publish,subscribe,webhook,dispatch,relay	satellite,loudspeaker,mega,postbox,bell
+wire,wiring,inject,bootstrap,registry,container,config,setting,flag	electric_plug,nut_and_bolt,gear,wrench
+type,schema,dto,struct,enum,interface	label,bookmark,triangular_ruler,straight_ruler
+move,rename,relocate,extract,split	open_file_folder,card_file_box,file_cabinet,scissors
+refactor,cleanup,clean,simplify,remove,drop,delete,prune	recycle,wastebasket,scissors
+fix,bug,crash,race,panic,leak,regression,guard,defect	bug,skull,ambulance,beetle
+doc,docs,readme,comment,document,changelog	memo,page_with_curl,books,green_book,pencil2,book
+test,tests,spec,coverage,fixture,mock,assert	tea,microscope,hourglass,white_check_mark,telescope
+perf,performance,speed,fast,optimize,optimise,latency,throughput	zap,rocket,racehorse,motorway
+lint,linter,format,gofmt,style,vet	necktie,art,bathtub
+pipeline,workflow,action,release,deploy	hammer,construction,green_heart,rotating_light
+dependency,deps,bump,upgrade,vendor,module	package,gift
+docker,image,compose	whale,whale2,ship
+log,logging,trace,tracing,observability,metric,span,telemetry	bar_chart,chart_with_upwards_trend,telescope,mag
+cli,command,terminal,console,flagset	computer,keyboard,desktop_computer
+hook,git,commit,rebase,branch	fishing_pole_and_fish,link,paperclip
+parser,parse,grammar,syntax,token,lexer,render,template	scroll,page_facing_up,abc
+http,request,client,endpoint,route,router,api,rest,grpc	twisted_rightwards_arrows,vertical_traffic_light,telephone_receiver,globe_with_meridians
