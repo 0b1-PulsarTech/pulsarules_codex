@@ -8,6 +8,39 @@ import (
 	"testing"
 )
 
+func TestInstallWorkflows(t *testing.T) {
+	t.Parallel()
+
+	idx, rnd := loadFixture(t)
+	dest := t.TempDir()
+
+	installed, skipped, err := InstallWorkflows(
+		idx,
+		rnd,
+		dest,
+		[]string{"refactoring", "ghost-wf"},
+	)
+	if err != nil {
+		t.Fatalf("InstallWorkflows: %v", err)
+	}
+	if len(installed) != 1 || installed[0] != "refactoring" {
+		t.Errorf("installed = %v, want [refactoring]", installed)
+	}
+	if len(skipped) != 1 || skipped[0] != "ghost-wf" {
+		t.Errorf("skipped = %v, want [ghost-wf]", skipped)
+	}
+	if _, err := os.Stat(filepath.Join(dest, "refactoring", "WORKFLOW.md")); err != nil {
+		t.Errorf("WORKFLOW.md not written: %v", err)
+	}
+	data, readErr := os.ReadFile(filepath.Join(dest, "refactoring", ".gitignore"))
+	if readErr != nil {
+		t.Fatalf("read workflow .gitignore: %v", readErr)
+	}
+	if want := "WORKFLOW.md\n.gitignore\n"; string(data) != want {
+		t.Errorf("workflow .gitignore content = %q, want %q", string(data), want)
+	}
+}
+
 func TestInstall_RouterAndUnknown(t *testing.T) {
 	t.Parallel()
 
@@ -141,6 +174,39 @@ func TestInstall_WriteDocFailureLeavesPriorFiles(t *testing.T) {
 	if _, statErr := os.Stat(filepath.Join(dest, "project-router", "SKILL.md")); statErr != nil {
 		t.Errorf(
 			"expected project-router/SKILL.md to remain after a later failure, stat err = %v",
+			statErr,
+		)
+	}
+}
+
+func TestInstallWorkflows_WriteDocFailure(t *testing.T) {
+	t.Parallel()
+
+	idx, rnd := loadFixture(t)
+	dest := t.TempDir()
+	blocked := filepath.Join(dest, "refactoring")
+	if err := os.WriteFile(blocked, []byte("x"), 0o600); err != nil {
+		t.Fatalf("seed blocker: %v", err)
+	}
+
+	installed, skipped, err := InstallWorkflows(
+		idx,
+		rnd,
+		dest,
+		[]string{"code-review", "refactoring"},
+	)
+	if err == nil {
+		t.Fatal("InstallWorkflows: expected an error from the blocked destination")
+	}
+	if len(skipped) != 0 {
+		t.Errorf("skipped = %v, want none", skipped)
+	}
+	if len(installed) != 1 || installed[0] != "code-review" {
+		t.Errorf("installed = %v, want [code-review]", installed)
+	}
+	if _, statErr := os.Stat(filepath.Join(dest, "code-review", "WORKFLOW.md")); statErr != nil {
+		t.Errorf(
+			"expected code-review/WORKFLOW.md to remain after a later failure, stat err = %v",
 			statErr,
 		)
 	}

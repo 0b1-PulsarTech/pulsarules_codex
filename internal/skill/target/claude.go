@@ -23,6 +23,10 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 	if err := installSkills(ctx, dest, &report); err != nil {
 		return report, err
 	}
+	workflowDest := filepath.Join(ctx.Base, ".claude", "workflows")
+	if err := installWorkflows(ctx, workflowDest, &report); err != nil {
+		return report, err
+	}
 	if !ctx.NoMCP {
 		if err := wireClaudeMCP(ctx.Templates, ctx.Base, dest, &report); err != nil {
 			return report, err

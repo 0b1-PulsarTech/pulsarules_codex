@@ -22,3 +22,26 @@ func renderSidecar(body string) (string, error) {
 	}
 	return buf.String(), nil
 }
+
+func wholeBody(body string) (string, error) {
+	parsed, err := template.New("body").Funcs(funcs()).Parse(body)
+	if err != nil {
+		return "", fmt.Errorf("parse body: %w", err)
+	}
+	var preamble bytes.Buffer
+	if execErr := parsed.Execute(&preamble, nil); execErr != nil {
+		return "", fmt.Errorf("render preamble: %w", execErr)
+	}
+	sections, err := bodySections(body)
+	if err != nil {
+		return "", err
+	}
+	var out strings.Builder
+	out.WriteString(strings.TrimSpace(preamble.String()))
+	for _, canonical := range canonicalSections() {
+		if sectionBody := sections[canonical.Key]; sectionBody != "" {
+			out.WriteString("\n\n## " + canonical.Heading + "\n\n" + sectionBody)
+		}
+	}
+	return out.String(), nil
+}

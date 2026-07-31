@@ -28,6 +28,25 @@ func Install(
 	})
 }
 
+func InstallWorkflows(
+	idx *knowledge.Index,
+	rnd *render.Renderer,
+	dest string,
+	wfIDs []string,
+) (installed, skipped []string, err error) {
+	return installDocs(dest, "WORKFLOW.md", wfIDs, func(id string) (string, bool, error) {
+		wf, ok := idx.Workflow(id)
+		if !ok {
+			return "", false, nil
+		}
+		body, renderErr := rnd.RenderWorkflow(idx, wf)
+		if renderErr != nil {
+			return "", true, fmt.Errorf("render workflow %q: %w", id, renderErr)
+		}
+		return body, true, nil
+	})
+}
+
 func installDocs(
 	dest, docName string,
 	ids []string,

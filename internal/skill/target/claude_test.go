@@ -37,7 +37,7 @@ func TestClaudeTargetInstall(t *testing.T) {
 				filepath.Join("project-router", "SKILL.md"),
 				filepath.Join("go-style", "SKILL.md"),
 			},
-			wantNotes: 2,
+			wantNotes: 3,
 		},
 		{
 			name:         "unknown skill is skipped, not fatal",
