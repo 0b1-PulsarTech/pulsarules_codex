@@ -20,7 +20,7 @@ frontmatter; the fourth is generated.
 | Profile  | `knowledge/standards/profiles.yaml`     | Install-time customization that overrides a skill's composition       |
 | Router   | `knowledge/standards/router.yaml`       | The router's baseline, dispatch table, and order as filterable data   |
 
-A **skill** is never authored directly. `knowledge/standards/skills.yaml` declares the 29 skills,
+A **skill** is never authored directly. `knowledge/standards/skills.yaml` declares the 36 skills,
 each naming the rules, patterns, and workflows it composes (`compose_rules`, `compose_patterns`,
 `compose_workflows`), plus triggers, load policy (`always_load`), composition `order`, and
 skill-level dependencies (`compose_skills`). The installer renders a skill by transcluding the
@@ -304,9 +304,9 @@ skills to load, in composition order; the rows live in `knowledge/standards/rout
 `knowledge/templates/skills/router.md.tmpl` renders them. The rows include engineering tasks such as
 new app, bootstrap/DI, use case, REST/gRPC endpoint, entity/migration, sqlc query, multi-write tx,
 outbox event, worker, permission, external provider, test, module boundary, refactoring and
-architecture review. The vertical Dependency Rule (`dependency-rule`) and architecture fitness
-functions (`fitness-functions`) govern layer direction and CI enforcement; an
-`architecture-decision-records` workflow records significant decisions.
+architecture review, and others for the agent-delegation area. The vertical Dependency Rule
+(`dependency-rule`) and architecture fitness functions (`fitness-functions`) govern layer direction
+and CI enforcement; an `architecture-decision-records` workflow records significant decisions.
 
 ## Portability
 
