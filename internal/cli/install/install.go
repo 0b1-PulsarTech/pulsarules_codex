@@ -30,6 +30,10 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 		return printHooksBlock(deps.templates)
 	}
 
+	if err = applySelectedLayout(opts, deps.idx); err != nil {
+		return fmt.Errorf("apply layout: %w", err)
+	}
+
 	ctx, err := newTargetContext(opts, cfg, deps)
 	if err != nil {
 		return err

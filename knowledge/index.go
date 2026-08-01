@@ -2,6 +2,7 @@ package knowledge
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 )
 
@@ -46,6 +47,34 @@ func (idx *Index) Reference(id string) (Reference, bool) {
 }
 
 func (idx *Index) ReferenceExists(id string) bool { _, ok := idx.referenceByID[id]; return ok }
+
+func (idx *Index) ApplyProfiles(ids []string) error {
+	for _, id := range ids {
+		profile, ok := idx.profileByID[id]
+		if !ok {
+			return fmt.Errorf("unknown profile %q", id)
+		}
+		for skillID, override := range profile.Overrides {
+			skill, ok := idx.skillByID[skillID]
+			if !ok {
+				return fmt.Errorf("profile %q overrides unknown skill %q", id, skillID)
+			}
+			if override.ComposeRules != nil {
+				skill.ComposeRules = override.ComposeRules
+			}
+			if override.ComposePatterns != nil {
+				skill.ComposePatterns = override.ComposePatterns
+			}
+			idx.skillByID[skillID] = skill
+			for pos := range idx.Skills {
+				if idx.Skills[pos].ID == skillID {
+					idx.Skills[pos] = skill
+				}
+			}
+		}
+	}
+	return nil
+}
 
 func (idx *Index) RuleExists(id string) bool { _, ok := idx.ruleByID[id]; return ok }
 

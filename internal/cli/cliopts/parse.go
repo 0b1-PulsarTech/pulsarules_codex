@@ -147,6 +147,18 @@ func bindInstallWiringFlags(fs *flag.FlagSet, opts *Options) {
 		"project",
 		"hook settings file: project (settings.json) | local (settings.local.json)",
 	)
+	fs.StringVar(
+		&opts.Layout,
+		"layout",
+		"",
+		"customization profile id to apply (e.g. monorepo | inner-modules)",
+	)
+	fs.BoolVar(
+		&opts.Interactive,
+		"interactive",
+		false,
+		"prompt for unset customizations (e.g. the layout) before installing",
+	)
 	fs.BoolVar(
 		&opts.NoGitHooks,
 		"no-git-hooks",

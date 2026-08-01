@@ -26,7 +26,7 @@ go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
 pulsarules_cli generate [--root DIR] [--out DIR]
 pulsarules_cli validate [--root DIR]
 pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
-pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--no-git-hooks]
+pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--no-git-hooks]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
 pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files]
@@ -116,6 +116,9 @@ Additional install flags:
 - `--hooks-scope project|local` (default `project`): wire the hook into `settings.json` (shared) or
   `settings.local.json` (per-machine).
 - `--no-mcp`: skip the `.mcp.json` + gopls-navigation generation.
+- `--layout PROFILE`: apply a customization profile from `profiles.yaml` (`monorepo` |
+  `inner-modules`) that overrides which rules a skill composes (e.g. the `code-placement` layout
+  variant). `--interactive` prompts for the layout when it is unset.
 
 ### Package
 

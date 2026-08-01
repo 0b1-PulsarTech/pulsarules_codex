@@ -95,6 +95,11 @@ gitignored.
   knowledge.
 - To generalize a project convention, extract the principle into a rule/pattern here; keep the
   product-specific instantiation in the application repo.
+- To add a customization profile, add an entry to `knowledge/standards/profiles.yaml` with an axis
+  and per-skill `compose_rules`/`compose_patterns` overrides (e.g. a `code-layout` variant), and
+  author the variant rule files it references. Install with `--layout <profile>`; the override is
+  applied to a freshly-loaded index before rendering, so one knowledge base serves every project
+  shape.
 
 ## Why hooks?
 
