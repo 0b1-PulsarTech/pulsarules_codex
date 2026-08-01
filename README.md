@@ -53,7 +53,7 @@ go run ./cmd/pulsarules_cli package     # zip all skills into build/
 With no `--root`, the binary reads the embedded snapshot. Pass `--root DIR` to read
 `<DIR>/knowledge` from disk, so you can edit a rule and re-run without rebuilding.
 
-See [INSTALL.md](INSTALL.md).
+See [INSTALL.md](INSTALL.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Repository layout
 
@@ -79,7 +79,7 @@ pulsarules_codex/
 │   ├── output/                      # install / generate / package the rendered skills
 │   └── hookwire/                    # install the hook + idempotently wire the Claude settings file
 ├── cmd/pulsarules_cli/              # CLI entrypoint (main.go; commands live in internal/cli)
-├── README.md  INSTALL.md
+├── README.md  INSTALL.md  ARCHITECTURE.md
 ├── Taskfile.yml  go.mod  go.sum  .gitignore
 ```
 
