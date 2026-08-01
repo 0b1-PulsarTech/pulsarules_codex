@@ -99,6 +99,7 @@ skills:
       - concurrency
     compose_patterns:
       - observer-weakptr
+      - dispatch-pool
   - id: database-persistence
     name: Database persistence
     description: The persistence chain - ent schema, Atlas migrations, sqlc queries, repositories that convert rows to domain DTOs via goverter (no generated types escape), errors mapped by a DB error wrapper.
@@ -194,6 +195,8 @@ skills:
       - imports
       - types
       - flag-arguments
+    compose_patterns:
+      - iterator-seq
   - id: git-history
     name: Git history
     description: Surgical git history rewriting - rebuild a squash into clean one-logical-change commits, fold every fix-up into its file's creation commit, keep moves pure, verify the final-tree invariant, never force-push a shared branch without consent.
@@ -248,6 +251,7 @@ skills:
     compose_patterns:
       - integration-tests
       - colocated-mocks
+      - fixture-builder
   - id: observability
     name: Observability
     description: Tracing via an injected Tracer (never global); spans with defer span.End(); errors recorded on the originating span; logs correlated via WithSpan; the concrete tracer chosen at cmd/infra with OTel confined to the adapter.
@@ -433,3 +437,84 @@ skills:
       - authorization
     compose_patterns:
       - usecase-layout
+  - id: codebase-design
+    name: Codebase design
+    description: Shared vocabulary for designing deep modules - a lot of behavior behind a small interface at a clean seam, testable through that interface; the deletion test, interface-as-test-surface, one-adapter-is-hypothetical. The design language design-patterns and refactoring build on.
+    triggers:
+      - designing or reshaping a module's interface
+      - deciding where a seam goes or whether to introduce one
+      - making code more testable or navigable
+      - another skill needs the deep-module vocabulary
+    always_load: false
+    order: 80
+    compose_patterns:
+      - deep-modules
+  - id: improve-codebase-architecture
+    name: Improve codebase architecture
+    description: Scan a codebase for deepening opportunities - refactors that turn shallow modules into deep ones - scope by recent churn, present candidates as a report, then grill the chosen one before landing it via refactoring.
+    triggers:
+      - reviewing a codebase or subsystem for architectural friction
+      - looking for refactors that improve testability and locality
+      - an area keeps causing bugs or is hard to test through its interface
+    always_load: false
+    order: 81
+  - id: domain-modeling
+    name: Domain modeling
+    description: Actively build and sharpen the domain model - challenge terms against CONTEXT.md, sharpen fuzzy language, cross-check code, and record decisions as ADRs sparingly. Pairs with the architecture-decision-records workflow.
+    triggers:
+      - pinning down domain terminology or a ubiquitous language
+      - a term is overloaded, fuzzy, or conflicts with the glossary
+      - recording an architectural decision as an ADR
+      - another skill needs the domain model kept current
+    always_load: false
+    order: 82
+    compose_workflows:
+      - architecture-decision-records
+  - id: grilling
+    name: Grilling
+    description: Grill the user relentlessly about a plan or decision - one question at a time, always with a recommendation, researching facts via tools instead of asking, until a shared understanding is reached; do not build before that.
+    triggers:
+      - stress-testing a plan, decision, or design before building
+      - the user uses a grill trigger phrase
+      - a task has open decisions with dependencies between them
+    always_load: false
+    order: 85
+    compose_rules:
+      - grilling
+  - id: agent-orchestration
+    name: Agent orchestration
+    description: Split work across agents safely - the main session orchestrates and integrates, scouts are read-only, parallel writers get isolated worktrees verified via git reflog, and git-history operations are never delegated.
+    triggers:
+      - delegating implementation or review to subagents
+      - running agents in parallel against a working tree
+      - deciding what a subagent is allowed to do
+      - about to hand any git operation to an agent
+    always_load: false
+    order: 92
+    compose_rules:
+      - agent-orchestration
+    compose_skills:
+      - git-history
+  - id: verification-before-done
+    name: Verification before done
+    description: Nothing is done on a claim - build, race tests, formatting, linters, and governance must be green on the final tree and seen this session; every behavior change proven by a failing-then-passing test; status reported faithfully.
+    triggers:
+      - about to report a task complete or write a commit
+      - claiming something is fixed, passing, or working
+      - finishing a bug fix or a behavior change
+    always_load: false
+    order: 95
+    compose_rules:
+      - verification
+  - id: skill-authoring
+    name: Skill authoring
+    description: Add or change a skill in this repo - edit the knowledge source not the generated mirrors, body plus skills.yaml entry, compose canonical clauses, wire the router, validate and generate for every target, and back objective rules with an analyzer.
+    triggers:
+      - adding or editing a skill, rule, pattern, or workflow
+      - composing shared clauses into a skill
+      - wiring a new skill into the router
+      - making a skill rule machine-enforced
+    always_load: false
+    order: 99
+    compose_rules:
+      - skill-authoring

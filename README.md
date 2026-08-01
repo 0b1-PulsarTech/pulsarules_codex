@@ -15,7 +15,7 @@ that contract once, independent of any product domain, so projects consume it in
 re-authoring it.
 
 The knowledge lives in `knowledge/standards/` (rules, patterns, workflows as markdown with
-frontmatter, plus a single `skills.yaml` defining the 29 skill compositions). The Go binary embeds
+frontmatter, plus a single `skills.yaml` defining every skill composition). The Go binary embeds
 it via `//go:embed` and renders skills on demand - it never hand-writes them and nothing derived is
 committed.
 
@@ -65,7 +65,7 @@ pulsarules_codex/
 │   │   ├── patterns/<id>.md         # pattern + frontmatter
 │   │   ├── skills/<id>.md           # skill sidecar (the untitled orientation head)
 │   │   ├── workflows/<id>.md        # workflow + frontmatter
-│   │   ├── skills.yaml              # the 29 skill compositions (single file)
+│   │   ├── skills.yaml              # every skill composition (single file)
 │   │   └── router.yaml  profiles.yaml  references.yaml
 │   └── templates/
 │       ├── skills/{SKILL.md.tmpl, router.md.tmpl}

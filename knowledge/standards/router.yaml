@@ -10,6 +10,7 @@ router:
       - { skill: code-placement, note: "where the file/package belongs." }
       - { skill: code-minimalism, note: "the minimum that works at function scope (never trims mandated patterns)." }
     commit_last:
+      - { skill: verification-before-done, note: "definition of done - build, race tests, lint, governance green before you commit." }
       - { skill: commits, note: "load last, before committing." }
     conditional:
       - { skill: concurrency, note: "goroutines, channels, worker loops, context fan-out." }
@@ -70,6 +71,23 @@ router:
     - signal: Architecture review / new external dependency
       skills: [ design-patterns ]
       note: plus the affected area skill
+    - signal: Designing or reshaping a module interface / seam / deepening
+      skills: [ codebase-design, design-patterns ]
+      note: deep modules - small interface, real seam, interface as test surface
+    - signal: Architecture review of a codebase / subsystem for friction
+      skills: [ improve-codebase-architecture, codebase-design, grilling, refactoring ]
+      note: scope by churn; present candidates; grill the pick; land via refactoring
+    - signal: Domain terminology / ubiquitous language / ADR
+      skills: [ domain-modeling ]
+      note: sharpen the glossary; record ADRs sparingly
+    - signal: Planning / stress-testing a decision before building
+      skills: [ grilling ]
+      note: one question at a time; do not build before shared understanding
+    - signal: Delegating to subagents / running agents in parallel
+      skills: [ agent-orchestration, git-history ]
+      note: scouts read-only; isolate writers in worktrees; never delegate git ops
+    - signal: Reporting a task done / finishing a change
+      skills: [ verification-before-done ]
   order:
     - { skills: [ code-placement ], note: "decide where it lives." }
     - { skills: [ app-bootstrap ], note: "wiring/DI (if a new app or new registration)." }
@@ -79,4 +97,5 @@ router:
     - { skills: [ rest-adapter, grpc-adapter, transport-interop, authorization ], note: "transport." }
     - { skills: [ observability ], note: "cross-cutting, plus baseline go-style/errors-logging/concurrency/security throughout." }
     - { skills: [ integration-tests ], note: "prove it." }
+    - { skills: [ verification-before-done ], note: "definition of done - build, race tests, lint, governance green." }
     - { skills: [ commits ], note: "last, before committing." }

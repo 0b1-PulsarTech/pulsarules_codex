@@ -48,11 +48,11 @@ Applies to: any concurrent Go code.
     worker; store the `CancelFunc`, NEVER the `ctx`.
 11. Hand off work without blocking the producer via a coalescing non-blocking signal: a
     buffered-by-one channel with `select { case ch <- struct{}{}: default: }` collapses many wakes
-    into one pending wake and never blocks the caller. A consumer that must not block on a full sink
-    drops or persists (never grows an unbounded buffer). For durable async dispatch use a bounded,
-    key-sharded worker pool: bounded queues are the backpressure, per-key sharding keeps a key
-    ordered while different keys parallelize, and the sole sender closes the queues on cancel so
-    workers drain in-flight items.
+    into one pending wake and never blocks the caller. A consumer that must not block on a full
+    sink drops or persists (never grows an unbounded buffer). For durable async dispatch use a
+    bounded, key-sharded worker pool (see `[[dispatch-pool]]`): bounded queues are the
+    backpressure, per-key sharding keeps a key ordered while different keys parallelize, and the
+    sole sender closes the queues on cancel so workers drain in-flight items.
 {{end}}
 
 {{define "forbidden"}}
