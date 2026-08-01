@@ -1,7 +1,9 @@
 # Architecture
 
-This document describes the knowledge model and skill-rendering pipeline: how a rule becomes a
-`SKILL.md`.
+This document has two halves. The first describes the knowledge model and skill-rendering
+pipeline: how a rule becomes a `SKILL.md`. The second describes the governance pipeline: how the
+built binary analyzes a project's own source tree and commits against that same knowledge, both as
+a git hook and as a standalone `governance` command.
 
 ## Knowledge model
 
@@ -112,6 +114,149 @@ render.NewRenderer(templates)  ──text/template──>  SKILL.md (transcluded
         └── hookwire.{InstallHook,WireSettings} + gitignore.Ensure  -> .claude/hooks + settings.json (settings.local.json with --hooks-scope local)
 ```
 
+This is one of the two things `pulsarules_cli` does. The other, described next, analyzes a target
+repository (Go source, commit messages, git history) instead of rendering the knowledge base.
+
+## Governance pipeline
+
+### Session and scopes
+
+`internal/analysis.Session` (`analysis.go`) is the single orchestrator: discovery, context loading, and
+analysis. `NewSession(repo, commitMsg, index, cfg)` builds a session over a `vcs.Repository` (nilable
+when `vcs.Open` returned `vcs.ErrNoRepository` - the session then runs with no git history and no
+changed-file discovery instead of failing), an optional commit message, the knowledge `*Index` (for
+rule-body injection), and a `*config.GovernanceConfig` (defaulted and preset-applied when nil).
+
+`Session.Analyze(scope, status, files)` runs three steps: `Discover` gathers changed files, git
+history, and staged renames with no AST parsing and returns a `Discovery`; `Load` turns that
+`Discovery` into a full `core.AnalysisContext`, pre-parsing changed Go files into an
+`astcache.Cache`; then a `StageRunner` is built, registered for `scope`, and run. Separating
+`Discover` from `Load` lets a caller inspect or edit the discovered state first; `status` is the
+already-computed `vcs.Status`, so a caller that read it already (a hook) does not pay for a second
+read.
+
+Three scopes (`scope.go`) control which analyzers run and what context is built:
+
+| Scope          | Runs                                                                    | Used by                                  |
+|----------------|-------------------------------------------------------------------------|------------------------------------------|
+| `ScopeFull`    | every registered analyzer, full project context                         | `governance` command (default)           |
+| `ScopeCommit`  | static + AST + commit analyzers, for pre-commit hooks                   | `commitlint` (the git `commit-msg` hook) |
+| `ScopeChanged` | static + AST + arch analyzers over changed files, skipping delegation   | the Claude Code `Stop` hook              |
+
+`ScopeCommit` still gathers staged renames and per-file staged status (`commit-move-purity` needs
+exactly that), even though it skips the wider `SourceProvider`/AST-cache work that `ScopeFull` and
+`ScopeChanged` do.
+
+### Stages and the analyzerSpecs table
+
+`StageRunner` (`pipeline.go`) holds analyzers grouped by `core.StageID` and runs them in stage order
+(`StageContext` through `StageOutput`), skipping an analyzer that is disabled in `AnalysisConfig`.
+`specs.go`'s `analyzerSpecs` is the single ordered list of every analyzer the binary registers, each
+entry pairing an `analyzerBuilder` with the scopes it runs under (`staticScopes` =
+Full+Commit+Changed for static/AST/commit/rule-injection/output work that stays useful with only a
+commit message or only changed files; `archScopes` = Full+Changed for the architecture analyzers,
+which need a source set; `delegationScopes` = Full only, since only a full run pays the cost of
+spawning golangci-lint). Adding an analyzer is one entry in this table. `registerForScope` builds
+the `core.LanguageRegistry` (Go registered via `internal/analyzer/golang`) once and registers only
+the specs whose scopes contain the requested scope.
+
+### internal/analyzer/** families
+
+Every analyzer implements the small `core.Analyzer` interface (`ID`, `Stage`, `Needs`, `Analyze`)
+declared in `internal/analyzer/core`, which also carries the shared `AnalysisContext`, `Finding`,
+`Requirements`, and the `Language`/`LanguageRegistry` Strategy for file-extension-based dispatch.
+The families:
+
+- `static/*` - pure text/structure checks needing no parser: `filesize` (line-count ceiling),
+  `noemdash` (rejects U+2014), `topoffile` and `bigcomment` (comment placement and length, both via
+  the `LanguageRegistry`).
+- `ast/*` - `go/ast`-based checks: `complexity` (cyclomatic complexity, function size, parameter
+  count, flag arguments, magic numbers), `controlflow` (redundant else, deep nesting), `shadowing`
+  (variable/builtin shadowing via a scope stack), `imports` (three-group import order), `naming`
+  (identifier conventions).
+- `arch` - multi-file architecture checks: `PackageBoundaryAnalyzer` (inner-layer packages must not
+  import outer-layer ones) and `ImportCycleAnalyzer` (package import-cycle detection).
+- `commit` - commit-message validation (`CommitAnalyzer`): format, emoji catalog and repetition
+  window, tool-attribution trailers, delegating emoji lookups to `internal/emoji`.
+- `movepurity` - flags a staged rename below the configured git rename-similarity score, or one
+  staged alongside unrelated edits, as not a pure move.
+- `delegation/golangcilint` - shells out to an external tool and translates its output into
+  `core.Finding`s; gated to `delegationScopes` (`ScopeFull`) since spawning a process is only worth
+  the cost on a full run.
+- `core/astcache` - a per-invocation cache of parsed Go ASTs, populated once in `Session.Load` so
+  analyzers call `Get(path)` instead of each re-parsing the same file.
+- `golang` - the one `Language` handler registered today, implementing comment/blank/package-
+  declaration detection for `.go` files.
+
+### internal/vcs
+
+`vcs.Repository` is the typed, read-only git port the whole governance pipeline depends on (`Root`,
+`HeadAuthorEpoch`, `RecentSubjects`, `WorktreeStatus`, `StagedRenames`). `vcs.Open` walks up from a
+directory to the repository root (resolving a linked worktree) and returns `ErrNoRepository` rather
+than a bare error when the directory is not a git repository, so callers can degrade quietly. Every
+git read in the product goes through `gitcmd.go`'s one `runGit` helper, which runs
+`git -C <dir> <args>` under a 2-second timeout with `LC_ALL=C` pinned (so `isEmptyRepoError`'s
+English-message match survives a localized git install). The one deliberate exception is
+`tools/emojigen`, documented in its own source: it shells out directly because it scans an entire
+reference repository's history (`git log --all --max-count=1000000`), which a per-object walk
+through this package would run orders of magnitude slower, and `tools/` is not a runtime dependency
+the vcs port needs to cover.
+
+### internal/hook
+
+`Dispatcher.Dispatch(mode, payload)` is the one decode point for a Claude Code hook payload
+(`decodeHookPayload`, which degrades a malformed payload to its zero value rather than failing,
+since a hook must never block the agent's turn) and routes it to a per-mode handler
+(`session-start`, `pre-edit`, `post-edit`, `pre-search`, `user-prompt`, `stop`, `session-end`). It
+always returns nil; failures surface only through the optional `*slog.Logger`.
+`Router.SkillsForFile` resolves which skills a `post-edit` event should announce from
+`knowledge.Index`'s own `skills.yaml`/`router.yaml` data (the always-load baseline for `.go` files,
+any skill whose trigger names the file's extension, the "Any test work" dispatch row for `_test.go`
+files) instead of a hardcoded per-extension map, so a new skill trigger routes with no Go change.
+`SessionTracker` (`session.go`) writes per-session marker files under the OS temp dir, keyed by
+event and session ID (an ID that is not a plain token is hashed first), so `OncePerSession` and
+content-hashed `FirstEmission` deduplicate repeat emissions within one session; `Cleanup` scans and
+removes them at `session-end`. `checklist.go`'s `TypedChecklist` and `checks.go`'s
+`RunGovernanceCheck` are what the `stop` handler calls into the governance pipeline through: the
+latter opens a `Session` at `analysis.ScopeChanged` and formats findings with `analysis.StyleHook`.
+
+### internal/config
+
+`GovernanceConfig` is the top-level runtime configuration: per-analyzer enable/params
+(`AnalyzerConfig`), emoji rules (`EmojiConfig`), and move-purity thresholds (`MovePurityConfig`).
+`Defaults()` returns the embedded baseline; `presets.go` applies a named preset
+(strict/recommended/minimal) in-memory. `internal/analysis/runner.go`'s `toAnalysisConfig` converts
+a `GovernanceConfig` into the `core.AnalysisConfig` the `StageRunner`'s `enabled()` check reads,
+projecting `EmojiConfig`/`MovePurityConfig` onto the `commit-lint` and `commit-move-purity`
+analyzers' own `Params` maps.
+
+### internal/obs
+
+Hook telemetry is off by default: `obs.New` with an empty `Config.Level` returns a
+`slog.DiscardHandler` logger and a no-op `Closer`, so nothing is created, opened, or read - `--log-level`
+or `PULSARULES_LOG_LEVEL` must set a level (`debug`/`info`/`warn`/`error`) before any file touches disk.
+When enabled, the log is size-capped by keeping its tail: `truncateToTail` rewrites the file to its last
+`MaxBytes/2` (default 256 KiB total) worth of content, cut at the first line boundary, before opening it
+for append, so a long-lived hook log never grows unbounded.
+
+### internal/emoji
+
+The commit emoji vocabulary is data, not code: `catalog.txt`, `types.txt`, and `themes.txt` under
+`internal/emoji/data` back `Catalog` (valid/prohibited/non-rendering shortcodes), the commit-type
+suggestion ranking, and `themes.go`'s keyword-to-emoji-family table. The commits skill's emoji-selection
+guidance renders its area anchors from `themes.txt` via `emoji.Anchors()` and the `emojiAnchors`
+template func (`internal/skill/render/namespace.go`), so that prose cannot drift from the data the
+`commit` analyzer actually matches against.
+
+### internal/gitignore and internal/selfbin
+
+Two small leaf helpers, each factored out because two or three install paths needed the identical body:
+`gitignore.Ensure(dir, entries...)` appends missing lines to `<dir>/.gitignore` (used by the Claude and
+opencode installers, plus `mcpwire` for `.mcp.json`); `selfbin.Copy(dst)` copies the currently running executable to `dst` at `0o755`,
+so `pulsarules_cli` installs itself as the hook/plugin binary a project calls back into. `hookwire`,
+`githook.InstallBinary`, and `opencodehook` all call it rather than each shelling out to copy the
+binary themselves.
+
 ## Packages
 
 | Package                          | Responsibility                                                                                                                |
@@ -130,6 +275,27 @@ render.NewRenderer(templates)  ──text/template──>  SKILL.md (transcluded
 units (most source files carry a name-matched `_test.go`); commands live in `internal/cli`, and
 `cmd/pulsarules_cli` is `main.go` only. Installing skills, the hook, and the settings wiring is one
 `install` command - hook assets are embedded under `knowledge/templates/hooks/`.
+
+The governance pipeline (see above) adds its own package set:
+
+| Package                          | Responsibility                                                                                      |
+|----------------------------------|-----------------------------------------------------------------------------------------------------|
+| `internal/analysis`               | `analysis.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`registerForScope`), `specs.go` (`analyzerSpecs`), `runner.go` (`toAnalysisConfig`), `output.go`, `format.go`, `history.go` |
+| `internal/analyzer/core`          | `Analyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Requirements`, `LanguageRegistry`, `core/astcache` (parsed-AST cache) |
+| `internal/analyzer/static/*`      | `filesize`, `noemdash`, `topoffile`, `bigcomment` - text/structure checks                           |
+| `internal/analyzer/ast/*`         | `complexity`, `controlflow`, `shadowing`, `imports`, `naming` - `go/ast`-based checks                |
+| `internal/analyzer/arch`          | `PackageBoundaryAnalyzer`, `ImportCycleAnalyzer` - multi-file architecture checks                   |
+| `internal/analyzer/commit`        | `CommitAnalyzer` - commit-message format, emoji, and trailer rules                                  |
+| `internal/analyzer/movepurity`    | flags a staged rename that is not a pure move                                                       |
+| `internal/analyzer/delegation/*`  | `golangcilint` - shells out to an external tool, gated to `ScopeFull`                              |
+| `internal/analyzer/golang`        | the `Language` handler for `.go` files                                                              |
+| `internal/vcs`                    | `Repository` port, `Open`, `Status`/`Rename` types, `gitcmd.go`'s `runGit` (the one git-exec point)  |
+| `internal/hook`                   | `hook.go`/`dispatcher_deps.go` (`Dispatcher`), `router.go` (`Router`), `session.go` (`SessionTracker`), `checklist.go`, `checks.go` (`RunGovernanceCheck`), `install/*` (per-target hook installers) |
+| `internal/config`                 | `GovernanceConfig` and its sub-configs, `presets.go`                                                 |
+| `internal/obs`                    | `New` (off-by-default `slog.Logger`), tail-truncating log rotation                                   |
+| `internal/emoji`                  | `Catalog`, `Anchors`/`themes.go`, `data/{catalog,types,themes}.txt`                                  |
+| `internal/gitignore`              | `Ensure` - idempotent `.gitignore` entries                                                           |
+| `internal/selfbin`                | `Copy` - copies the running executable to install it as a hook/plugin binary                         |
 
 ## The router skill
 
