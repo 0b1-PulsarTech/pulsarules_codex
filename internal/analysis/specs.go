@@ -6,6 +6,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/complexity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/controlflow"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/imports"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/namedreturns"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/naming"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/shadowing"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit"
@@ -62,6 +63,7 @@ func analyzerSpecs() []analyzerSpec {
 		staticSpec(controlflow.NewAnalyzer),
 		staticSpec(shadowing.NewAnalyzer),
 		staticSpec(complexity.NewAnalyzer),
+		staticSpec(namedreturns.NewAnalyzer),
 	}, pipelineAnalyzerSpecs()...)
 }
 

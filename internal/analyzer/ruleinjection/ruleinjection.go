@@ -39,9 +39,13 @@ func defaultRuleMap() map[string]string {
 		"control-flow":             "code-smells",
 		"shadowing":                "effective-go",
 		"complexity":               "code-smells",
-		"arch-boundary":            "dependency-rule",
-		"import-cycle":             "module-boundaries",
-		"golangci-lint":            "code-smells",
+		// The short-decl-reuse finding comes from the shadowing analyzer, but the fix it asks
+		// for, a var declaration above the call, is the named-returns rule's territory.
+		"short-decl-reuse": "named-returns",
+		"named-returns":    "named-returns",
+		"arch-boundary":    "dependency-rule",
+		"import-cycle":     "module-boundaries",
+		"golangci-lint":    "code-smells",
 	}
 }
 
