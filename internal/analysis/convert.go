@@ -44,6 +44,19 @@ func toCoreRenames(renames []vcs.Rename) []core.Rename {
 	return out
 }
 
+func markGenerated(files []core.FileChange, sources core.SourceProvider) {
+	if sources == nil {
+		return
+	}
+	for i := range files {
+		src, ok := sources.Read(files[i].Path)
+		if !ok {
+			continue
+		}
+		files[i].Generated = core.IsGeneratedSource(src)
+	}
+}
+
 func populateASTCache(
 	changedFiles []core.FileChange,
 	sources core.SourceProvider,

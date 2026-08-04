@@ -11,6 +11,7 @@ type FileChange struct {
 	Path      string
 	Extension string
 	IsTest    bool
+	Generated bool
 	Staged    bool
 }
 
@@ -57,7 +58,8 @@ func (ctx *AnalysisContext) ChangedGoASTs() iter.Seq2[FileChange, *ast.File] {
 }
 
 type AnalysisConfig struct {
-	Analyzers map[string]AnalyzerConfig
+	Analyzers        map[string]AnalyzerConfig
+	IncludeGenerated bool
 }
 
 type AnalyzerConfig struct {

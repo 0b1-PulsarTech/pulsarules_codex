@@ -20,7 +20,10 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *core.AnalysisConfig {
 	}
 	withEmojiParams(analyzers, cfg.Emoji)
 	withMovePurityParams(analyzers, cfg.MovePurity)
-	return &core.AnalysisConfig{Analyzers: analyzers}
+	return &core.AnalysisConfig{
+		Analyzers:        analyzers,
+		IncludeGenerated: cfg.IncludeGenerated,
+	}
 }
 
 func withEmojiParams(analyzers map[string]core.AnalyzerConfig, emojiCfg config.EmojiConfig) {

@@ -29,7 +29,7 @@ pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
 pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--no-git-hooks]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files]
+pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
 pulsarules_cli version
 ```
 
@@ -147,7 +147,9 @@ analyzes only files `git status` reports as changed; `--all-files` walks the who
 instead (skipping `.git/`, `.claude/`, `.opencode/`, `generated/`, `build/`, and `vendor/`).
 `--scope commit` runs the lightweight static + AST + commit checks only (what the pre-commit hook
 uses); `--scope full` (default) adds architecture and delegation.
-`--preset recommended|strict|minimal` selects analyzer thresholds.
+`--preset recommended|strict|minimal` selects analyzer thresholds. Findings in generated files
+(detected by the `// Code generated ... DO NOT EDIT.` marker) are suppressed by default;
+`--include-generated` turns that off.
 
 ```sh
 pulsarules_cli governance --project . --all-files

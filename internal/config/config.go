@@ -1,10 +1,11 @@
 package config
 
 type GovernanceConfig struct {
-	Preset     string
-	Analyzers  map[string]AnalyzerConfig
-	Emoji      EmojiConfig
-	MovePurity MovePurityConfig
+	Preset           string
+	Analyzers        map[string]AnalyzerConfig
+	Emoji            EmojiConfig
+	MovePurity       MovePurityConfig
+	IncludeGenerated bool
 }
 
 type AnalyzerConfig struct {
