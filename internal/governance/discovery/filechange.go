@@ -42,3 +42,16 @@ func ToCoreRenames(renames []vcs.Rename) []pass.Rename {
 	}
 	return out
 }
+
+func MarkGenerated(files []pass.FileChange, sources pass.SourceProvider) {
+	if sources == nil {
+		return
+	}
+	for i := range files {
+		src, ok := sources.Read(files[i].Path)
+		if !ok {
+			continue
+		}
+		files[i].Generated = pass.IsGeneratedSource(src)
+	}
+}

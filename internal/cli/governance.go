@@ -41,20 +41,25 @@ func runGovernance(inj remy.Injector, opts *version.Options) error {
 		files = governance.FileSetAll
 	}
 
-	findingsItem := governance.NewSession(repo, "", idx, cfg).Analyze(scope, nil, files)
-	if len(findingsItem) == 0 {
-		_, _ = fmt.Fprintln(os.Stderr, "governance: no findings")
+	result := governance.NewSession(repo, "", idx, cfg).Analyze(scope, nil, files)
+	if len(result.Findings) == 0 {
+		_, _ = fmt.Fprintf(
+			os.Stderr,
+			"governance: no findings%s\n",
+			suppressedClause(result.SuppressedGenerated),
+		)
 		return nil
 	}
 
-	errCount, warnings, infos := governance.CountBySeverity(findingsItem)
-	_, _ = fmt.Fprint(os.Stderr, findings.FormatFindings(findingsItem, findings.StyleCLI, ""))
+	errCount, warnings, infos := governance.CountBySeverity(result.Findings)
+	_, _ = fmt.Fprint(os.Stderr, findings.FormatFindings(result.Findings, findings.StyleCLI, ""))
 	_, _ = fmt.Fprintf(
 		os.Stderr,
-		"\n%d error(s), %d warning(s), %d info(s)\n",
+		"\n%d error(s), %d warning(s), %d info(s)%s\n",
 		errCount,
 		warnings,
 		infos,
+		suppressedClause(result.SuppressedGenerated),
 	)
 
 	if errCount > 0 {
@@ -63,12 +68,21 @@ func runGovernance(inj remy.Injector, opts *version.Options) error {
 	return nil
 }
 
+func suppressedClause(suppressed int) string {
+	if suppressed == 0 {
+		// An unfiltered run carries no "0 suppressed" tail.
+		return ""
+	}
+	return fmt.Sprintf(", %d suppressed in generated files", suppressed)
+}
+
 func governanceConfig(opts *version.Options) *config.GovernanceConfig {
 	cfg := config.Defaults()
 	if opts.Preset != "" {
 		cfg.Preset = opts.Preset
 	}
 	cfg.ApplyPreset()
+	cfg.IncludeGenerated = opts.IncludeGenerated
 
 	if opts.GolangciConfig != "" {
 		cfg.SetParam("golangci-lint", "config_path", opts.GolangciConfig)

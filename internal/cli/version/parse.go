@@ -97,6 +97,12 @@ func bindGovernanceFlags(fs *flag.FlagSet, opts *Options) {
 		false,
 		"analyze every source file in the tree instead of only changed ones",
 	)
+	fs.BoolVar(
+		&opts.IncludeGenerated,
+		"include-generated",
+		false,
+		"report findings in generated files too (suppressed by default)",
+	)
 }
 
 func bindInstallFlags(fs *flag.FlagSet, opts *Options) {

@@ -41,7 +41,7 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 		return fmt.Errorf("get knowledge index: %w", err)
 	}
 	sess := governance.NewSession(repo, msg, idx, nil)
-	findingsItem := sess.Analyze(governance.ScopeCommit, nil, governance.FileSetChanged)
+	findingsItem := sess.Analyze(governance.ScopeCommit, nil, governance.FileSetChanged).Findings
 
 	if len(findingsItem) == 0 {
 		_, _ = fmt.Fprintln(os.Stderr, "commit message is valid")

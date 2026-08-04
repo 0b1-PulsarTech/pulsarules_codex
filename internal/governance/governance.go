@@ -1,7 +1,6 @@
 package governance
 
 import (
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
@@ -48,13 +47,18 @@ type Request struct {
 	StagedRenames []pass.Rename
 }
 
-func (s *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) []finding.Finding {
+func (s *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Result {
 	d := s.Discover(scope, status, files)
 	ctx := s.Load(d)
 
 	sr := newPipeline(s.cfgAnalysis)
 	sr.registerForScope(s.index, s.repo, scope)
-	return sr.RunStages(ctx)
+	findings := sr.RunStages(ctx)
+
+	if s.cfgAnalysis != nil && s.cfgAnalysis.IncludeGenerated {
+		return Result{Findings: findings}
+	}
+	return splitGenerated(ctx, findings)
 }
 
 func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Request {
@@ -105,6 +109,7 @@ func (s *Session) Load(d *Request) *pass.Context {
 	}
 
 	if len(d.ChangedFiles) > 0 && d.Sources != nil {
+		discovery.MarkGenerated(ctx.ChangedFiles, d.Sources)
 		ctx.ASTCache = populateASTCache(d.ChangedFiles, d.Sources)
 	}
 	return ctx

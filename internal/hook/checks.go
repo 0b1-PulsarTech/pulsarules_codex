@@ -1,6 +1,8 @@
 package hook
 
 import (
+	"fmt"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -15,11 +17,19 @@ func RunGovernanceCheck(
 ) (string, int) {
 	// The empty commit message is deliberate: only the git commit-msg hook validates one.
 	sess := governance.NewSession(repo, "", index, nil)
-	findingsItem := sess.Analyze(scope, &status, governance.FileSetChanged)
+	result := sess.Analyze(scope, &status, governance.FileSetChanged)
 
-	block := findings.FormatFindings(findingsItem, findings.StyleHook, "Governance checks:")
+	block := findings.FormatFindings(result.Findings, findings.StyleHook, "Governance checks:")
 	if block == "" {
 		return "", 0
 	}
-	return "\n" + block, len(findingsItem)
+	if result.SuppressedGenerated > 0 {
+		// The hook has no footer of its own, so the suppression is stated here
+		// rather than dropped: a filtered block must say it was filtered.
+		block += fmt.Sprintf(
+			"  %d finding(s) suppressed in generated files\n",
+			result.SuppressedGenerated,
+		)
+	}
+	return "\n" + block, len(result.Findings)
 }

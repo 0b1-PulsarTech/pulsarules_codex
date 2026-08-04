@@ -25,10 +25,11 @@ type Options struct {
 	Interactive bool
 	NoGitHooks  bool
 
-	Preset         string
-	Scope          string
-	GolangciConfig string
-	AllFiles       bool
+	Preset           string
+	Scope            string
+	GolangciConfig   string
+	AllFiles         bool
+	IncludeGenerated bool
 
 	Kind string
 
