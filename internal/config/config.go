@@ -16,6 +16,10 @@ type GovernanceConfig struct {
 	MovePurity MovePurityConfig
 	// Hooks holds the hook installation configuration.
 	Hooks HooksConfig
+	// IncludeGenerated keeps findings that fall in files carrying the Go
+	// generated-code marker. Off by default: nobody can act on them, because
+	// the next codegen run overwrites the fix.
+	IncludeGenerated bool
 }
 
 // AnalyzerConfig holds the per-analyzer enable/disable state and parameters.

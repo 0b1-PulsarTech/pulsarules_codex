@@ -41,7 +41,7 @@ func runCommitLint(inj remy.Injector, opts *cliopts.Options) error {
 		return fmt.Errorf("get knowledge index: %w", err)
 	}
 	sess := analysis.NewSession(repo, msg, idx, nil)
-	findings := sess.Analyze(analysis.ScopeCommit, nil, analysis.FileSetChanged)
+	findings := sess.Analyze(analysis.ScopeCommit, nil, analysis.FileSetChanged).Findings
 
 	if len(findings) == 0 {
 		_, _ = fmt.Fprintln(os.Stderr, "commit message is valid")

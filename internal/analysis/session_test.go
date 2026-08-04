@@ -29,7 +29,7 @@ func TestSession_NoChanges(t *testing.T) {
 	// unconditionally against the ambient toolchain regardless of repo/scope
 	// and would leak environment-dependent findings into this assertion.
 	sess := NewSession(nil, "", idx, cfg)
-	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged)
+	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
 	if len(findings) != 0 {
 		t.Fatalf(
 			"expected 0 findings with no repo and no changes, got %d: %+v",
@@ -59,7 +59,7 @@ func TestSession_WithCommitMsg(t *testing.T) {
 	}
 
 	sess := NewSession(repo, "bad commit message", idx, cfg)
-	findings := sess.Analyze(ScopeFull, nil, FileSetChanged)
+	findings := sess.Analyze(ScopeFull, nil, FileSetChanged).Findings
 
 	found := false
 	for _, f := range findings {
@@ -83,7 +83,7 @@ func TestSession_NilConfig(t *testing.T) {
 	// too. ScopeChanged keeps the result deterministic (see NoChanges above
 	// for why ScopeFull's delegation analyzers would make this flaky).
 	sess := NewSession(nil, "", nil, nil)
-	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged)
+	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
 	if len(findings) != 0 {
 		t.Fatalf(
 			"expected 0 findings with nil config and no repo, got %d: %+v",
@@ -102,7 +102,7 @@ func TestSession_ScopeCommit(t *testing.T) {
 	}
 
 	sess := NewSession(nil, "bad commit message", idx, nil)
-	findings := sess.Analyze(ScopeCommit, nil, FileSetChanged)
+	findings := sess.Analyze(ScopeCommit, nil, FileSetChanged).Findings
 	if len(findings) == 0 {
 		t.Fatal("expected findings for invalid commit message")
 	}
@@ -116,7 +116,7 @@ func TestSession_NilKnowledge(t *testing.T) {
 	// changes. ScopeChanged keeps the result deterministic (see NoChanges
 	// above for why ScopeFull's delegation analyzers would make this flaky).
 	sess := NewSession(nil, "", nil, nil)
-	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged)
+	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
 	if len(findings) != 0 {
 		t.Fatalf(
 			"expected 0 findings with nil knowledge index, got %d: %+v",
@@ -149,7 +149,7 @@ func TestSession_ScopeChanged(t *testing.T) {
 	cfg.ApplyPreset()
 
 	sess := NewSession(repo, "", nil, cfg)
-	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged)
+	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
 
 	foundStatic := false
 	for _, f := range findings {
@@ -196,7 +196,7 @@ func TestSession_FileSetAll_CleanTree(t *testing.T) {
 	cfg.ApplyPreset()
 
 	changedFindings := NewSession(repo, "", nil, cfg).
-		Analyze(ScopeChanged, nil, FileSetChanged)
+		Analyze(ScopeChanged, nil, FileSetChanged).Findings
 	for _, f := range changedFindings {
 		if f.AnalyzerID == "no-em-dash" {
 			t.Fatalf(
@@ -207,7 +207,7 @@ func TestSession_FileSetAll_CleanTree(t *testing.T) {
 	}
 
 	allFindings := NewSession(repo, "", nil, cfg).
-		Analyze(ScopeChanged, nil, FileSetAll)
+		Analyze(ScopeChanged, nil, FileSetAll).Findings
 	foundAll := false
 	for _, f := range allFindings {
 		if f.AnalyzerID == "no-em-dash" && f.File == "violation.go" {

@@ -47,6 +47,23 @@ func toCoreRenames(renames []vcs.Rename) []core.Rename {
 	return out
 }
 
+// markGenerated flags every file carrying the Go generated-code marker, in
+// place, so the suppression pass can tell machine-written source from source a
+// human can actually fix. Reads go through the SourceProvider's cache, so the
+// bytes it pulls here are the same ones the analyzers read afterwards.
+func markGenerated(files []core.FileChange, sources core.SourceProvider) {
+	if sources == nil {
+		return
+	}
+	for i := range files {
+		src, ok := sources.Read(files[i].Path)
+		if !ok {
+			continue
+		}
+		files[i].Generated = core.IsGeneratedSource(src)
+	}
+}
+
 // populateASTCache pre-parses all changed Go files into an AST cache so
 // analyzers can call Get(path) without file I/O or parsing.
 func populateASTCache(changedFiles []core.FileChange, sources core.SourceProvider) *astcache.Cache {

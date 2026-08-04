@@ -15,6 +15,10 @@ type FileChange struct {
 	Extension string
 	// IsTest is true for Go test files (ending in _test.go).
 	IsTest bool
+	// Generated is true when the file carries the Go generated-code marker.
+	// Findings in such a file are suppressed by default: the next codegen run
+	// would undo any edit made to satisfy them.
+	Generated bool
 	// Staged is true when the change is present in the index, used by the
 	// move-purity analyzer to tell a staged edit from a mere worktree one.
 	Staged bool
@@ -94,6 +98,9 @@ func (ctx *AnalysisContext) ChangedGoASTs() iter.Seq2[FileChange, *ast.File] {
 type AnalysisConfig struct {
 	// Analyzers maps analyzer ID to its runtime config.
 	Analyzers map[string]AnalyzerConfig
+	// IncludeGenerated keeps findings that fall in generated files instead of
+	// suppressing them, for a caller that wants the raw picture.
+	IncludeGenerated bool
 }
 
 // AnalyzerConfig holds the per-analyzer enable/disable state and parameters.

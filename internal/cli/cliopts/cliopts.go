@@ -33,6 +33,8 @@ type Options struct {
 	Scope          string // --scope: analysis scope (full|commit) (default: full)
 	GolangciConfig string // --golangci-config: path to .golangci.yml
 	AllFiles       bool   // --all-files: analyze every source file in the tree, not just changed ones
+	// --include-generated: report findings in generated files (suppressed by default)
+	IncludeGenerated bool
 
 	// list
 	Kind string

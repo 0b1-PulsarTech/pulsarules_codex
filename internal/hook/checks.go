@@ -1,6 +1,8 @@
 package hook
 
 import (
+	"fmt"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -18,11 +20,19 @@ func RunGovernanceCheck(
 	scope analysis.Scope,
 ) (string, int) {
 	sess := analysis.NewSession(repo, "", index, nil)
-	findings := sess.Analyze(scope, &status, analysis.FileSetChanged)
+	result := sess.Analyze(scope, &status, analysis.FileSetChanged)
 
-	block := analysis.FormatFindings(findings, analysis.StyleHook, "Governance checks:")
+	block := analysis.FormatFindings(result.Findings, analysis.StyleHook, "Governance checks:")
 	if block == "" {
 		return "", 0
 	}
-	return "\n" + block, len(findings)
+	if result.SuppressedGenerated > 0 {
+		// The hook has no footer of its own, so the suppression is stated here
+		// rather than dropped: a filtered block must say it was filtered.
+		block += fmt.Sprintf(
+			"  %d finding(s) suppressed in generated files\n",
+			result.SuppressedGenerated,
+		)
+	}
+	return "\n" + block, len(result.Findings)
 }

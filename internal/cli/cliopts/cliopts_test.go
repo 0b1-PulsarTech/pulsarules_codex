@@ -53,6 +53,16 @@ func TestParseArgs(t *testing.T) {
 			args:  []string{"list"},
 			check: checkListDefaultsToSkills,
 		},
+		{
+			name:  "governance suppresses generated files by default",
+			args:  []string{"governance", "--project", "/tmp/repo"},
+			check: checkGovernanceDefaults,
+		},
+		{
+			name:  "governance with --include-generated",
+			args:  []string{"governance", "--project", "/tmp/repo", "--include-generated"},
+			check: checkGovernanceIncludeGenerated,
+		},
 		{name: "unknown command", args: []string{"frobnicate"}, wantErr: true},
 	}
 	for _, testCase := range testCases {
@@ -120,6 +130,20 @@ func checkListDefaultsToSkills(t *testing.T, opts *Options) {
 	t.Helper()
 	if opts.Kind != "skills" {
 		t.Errorf("Kind = %q, want skills", opts.Kind)
+	}
+}
+
+func checkGovernanceDefaults(t *testing.T, opts *Options) {
+	t.Helper()
+	if opts.IncludeGenerated {
+		t.Error("IncludeGenerated = true, want false without the flag")
+	}
+}
+
+func checkGovernanceIncludeGenerated(t *testing.T, opts *Options) {
+	t.Helper()
+	if !opts.IncludeGenerated {
+		t.Error("IncludeGenerated = false, want true with --include-generated")
 	}
 }
 

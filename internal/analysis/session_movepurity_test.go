@@ -165,7 +165,7 @@ func TestSession_MovePurity(t *testing.T) {
 			}
 
 			sess := NewSession(repo, "", nil, cfg)
-			findings := sess.Analyze(ScopeCommit, nil, FileSetChanged)
+			findings := sess.Analyze(ScopeCommit, nil, FileSetChanged).Findings
 
 			found := false
 			for _, finding := range findings {

@@ -22,7 +22,10 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *core.AnalysisConfig {
 	}
 	withEmojiParams(analyzers, cfg.Emoji)
 	withMovePurityParams(analyzers, cfg.MovePurity)
-	return &core.AnalysisConfig{Analyzers: analyzers}
+	return &core.AnalysisConfig{
+		Analyzers:        analyzers,
+		IncludeGenerated: cfg.IncludeGenerated,
+	}
 }
 
 // withEmojiParams projects the emoji settings onto the commit analyzer's

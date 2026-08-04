@@ -39,26 +39,40 @@ func runGovernance(inj remy.Injector, opts *cliopts.Options) error {
 		files = analysis.FileSetAll
 	}
 
-	findings := analysis.NewSession(repo, "", idx, cfg).Analyze(scope, nil, files)
-	if len(findings) == 0 {
-		_, _ = fmt.Fprintln(os.Stderr, "governance: no findings")
+	result := analysis.NewSession(repo, "", idx, cfg).Analyze(scope, nil, files)
+	if len(result.Findings) == 0 {
+		_, _ = fmt.Fprintf(
+			os.Stderr,
+			"governance: no findings%s\n",
+			suppressedClause(result.SuppressedGenerated),
+		)
 		return nil
 	}
 
-	errCount, warnings, infos := analysis.CountBySeverity(findings)
-	_, _ = fmt.Fprint(os.Stderr, analysis.FormatFindings(findings, analysis.StyleCLI, ""))
+	errCount, warnings, infos := analysis.CountBySeverity(result.Findings)
+	_, _ = fmt.Fprint(os.Stderr, analysis.FormatFindings(result.Findings, analysis.StyleCLI, ""))
 	_, _ = fmt.Fprintf(
 		os.Stderr,
-		"\n%d error(s), %d warning(s), %d info(s)\n",
+		"\n%d error(s), %d warning(s), %d info(s)%s\n",
 		errCount,
 		warnings,
 		infos,
+		suppressedClause(result.SuppressedGenerated),
 	)
 
 	if errCount > 0 {
 		return &ExitError{Code: 1}
 	}
 	return nil
+}
+
+// why: a filtered panel must say so - suppressing in silence is worse than
+// over-counting - but an unfiltered run should not carry a "0 suppressed" tail.
+func suppressedClause(suppressed int) string {
+	if suppressed == 0 {
+		return ""
+	}
+	return fmt.Sprintf(", %d suppressed in generated files", suppressed)
 }
 
 // governanceConfig builds the run config from the preset and the optional
@@ -69,6 +83,7 @@ func governanceConfig(opts *cliopts.Options) *config.GovernanceConfig {
 		cfg.Preset = opts.Preset
 	}
 	cfg.ApplyPreset()
+	cfg.IncludeGenerated = opts.IncludeGenerated
 
 	if opts.GolangciConfig != "" {
 		cfg.SetParam("golangci-lint", "config_path", opts.GolangciConfig)

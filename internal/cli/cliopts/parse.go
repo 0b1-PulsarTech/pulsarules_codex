@@ -82,6 +82,12 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 			false,
 			"analyze every source file in the tree instead of only changed ones",
 		)
+		fs.BoolVar(
+			&opts.IncludeGenerated,
+			"include-generated",
+			false,
+			"report findings in generated files too (suppressed by default)",
+		)
 	default:
 		return fmt.Errorf("unknown command %q", command)
 	}

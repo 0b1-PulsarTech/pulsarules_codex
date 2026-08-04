@@ -72,18 +72,24 @@ type Discovery struct {
 // instead of having git's detector silently drop it beforehand.
 const renameProbeScore = 1
 
-// Analyze runs the analyzers for the given scope and returns findings.
-// status is the already-computed worktree status, avoiding a redundant
+// Analyze runs the analyzers for the given scope and returns the findings a
+// caller should act on, alongside the count suppressed for living in generated
+// files. status is the already-computed worktree status, avoiding a redundant
 // read; pass nil to have Session read it itself when scope is ScopeFull or
 // ScopeChanged and files is FileSetChanged. files selects whether
 // ChangedFiles comes from git status or from walking the whole source tree.
-func (s *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) []core.Finding {
+func (s *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Result {
 	d := s.Discover(scope, status, files)
 	ctx := s.Load(d)
 
 	sr := NewStageRunner(s.cfgAnalysis)
 	sr.registerForScope(s.index, s.repo, scope)
-	return sr.RunStages(ctx)
+	findings := sr.RunStages(ctx)
+
+	if s.cfgAnalysis != nil && s.cfgAnalysis.IncludeGenerated {
+		return Result{Findings: findings}
+	}
+	return splitGenerated(ctx, findings)
 }
 
 // Discover gathers project-state information (changed files, git history,
@@ -145,6 +151,7 @@ func (s *Session) Load(d *Discovery) *core.AnalysisContext {
 	}
 
 	if len(d.ChangedFiles) > 0 && d.Sources != nil {
+		markGenerated(ctx.ChangedFiles, d.Sources)
 		ctx.ASTCache = populateASTCache(d.ChangedFiles, d.Sources)
 	}
 

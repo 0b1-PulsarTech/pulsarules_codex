@@ -7,7 +7,7 @@ Usage:
   pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--git-hooks commit-msg,pre-commit] [--no-git-hooks]
   pulsarules_cli package [--root DIR] [--out FILE]
   pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-  pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files]
+  pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
   pulsarules_cli version
 
 --target is repeatable (default claude); pass it twice (--target claude --target
@@ -76,6 +76,16 @@ in the project tree (skipping .git/, .claude/, .opencode/, generated/, build/,
 and vendor/), so a full audit of the whole repository sees files the
 changed-set never would. Combine with --scope full for a complete governance
 sweep: `pulsarules_cli governance --scope full --all-files`.
+
+Findings in generated files are suppressed by default. A file counts as
+generated when it carries the Go marker line `// Code generated ... DO NOT
+EDIT.` above its package clause - detection is by content, not by path, so no
+consumer repository has to maintain an exclusion list. The suppressed count is
+always reported in the footer, never hidden. --include-generated turns that
+filter off. It does not disable the per-line exemptions individual analyzers
+carry for legitimate machine headers (top-of-file and big-comment still accept
+a `// Code generated` line above the package clause, because that line is
+correct Go, not a defect to report).
 
 With no --root, the binary reads the embedded knowledge snapshot. Pass --root DIR
 to read <DIR>/knowledge from disk (dev edits without rebuild).
