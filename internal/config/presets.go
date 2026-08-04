@@ -22,6 +22,7 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 		"control-flow":  {Enabled: false},
 		"shadowing":     {Enabled: false},
 		"complexity":    {Enabled: false},
+		"named-returns": {Enabled: false},
 		"arch-boundary": {Enabled: false},
 		"import-cycle":  {Enabled: false},
 		"golangci-lint": {Enabled: false},
