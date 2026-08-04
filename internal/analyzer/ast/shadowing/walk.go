@@ -5,10 +5,45 @@ import (
 	"go/token"
 )
 
+// reporter carries the two things the walk can say, so every walk function
+// takes one value instead of growing a second callback parameter.
+type reporter struct {
+	shadow func(pos token.Pos, name, kind string)
+	reuse  func(pos token.Pos, name string)
+}
+
+// declaring reports whether id, being bound here, hides or reassigns something
+// already visible, and emits the matching finding. It returns nothing: the
+// caller declares the name afterwards either way.
+func (r reporter) declaring(id *ast.Ident, scopes *scopeStack) {
+	if origin, ok := scopes.declaredHere(id.Name); ok {
+		// Go reassigns rather than redeclares, so this is legal and silent -
+		// but only worth reporting when the name came from the signature.
+		// An ordinary `a, err := f()` followed by `b, err := g()` is idiomatic
+		// and must stay quiet.
+		if origin == originSignature {
+			r.reuse(id.NamePos, id.Name)
+		}
+		return
+	}
+	if hidden, ok := scopes.lookup(id.Name); ok {
+		r.shadow(id.NamePos, id.Name, shadowKind(hidden))
+	}
+}
+
+// why: originSignature is an internal marker the reuse rule needs; to a reader
+// a parameter or a named result is just a variable.
+func shadowKind(origin string) string {
+	if origin == originSignature {
+		return originVariable
+	}
+	return origin
+}
+
 func (a *Analyzer) walkBlock(
 	block *ast.BlockStmt,
 	scopes *scopeStack,
-	emit func(token.Pos, string, string),
+	report reporter,
 ) {
 	if block == nil {
 		return
@@ -16,52 +51,76 @@ func (a *Analyzer) walkBlock(
 	scopes.push()
 	defer scopes.pop()
 
-	for _, stmt := range block.List {
-		a.walkStmt(stmt, scopes, emit)
+	a.walkStmts(block.List, scopes, report)
+}
+
+// walkStmts walks statements in the CURRENT scope. A function body calls it
+// directly, because the body shares its block with the signature.
+func (a *Analyzer) walkStmts(
+	stmts []ast.Stmt,
+	scopes *scopeStack,
+	report reporter,
+) {
+	for _, stmt := range stmts {
+		a.walkStmt(stmt, scopes, report)
 	}
 }
 
 func (a *Analyzer) walkStmt(
 	stmt ast.Stmt,
 	scopes *scopeStack,
-	emit func(token.Pos, string, string),
+	report reporter,
 ) {
 	switch s := stmt.(type) {
 	case *ast.AssignStmt:
-		a.walkAssign(s, scopes, emit)
+		a.walkAssign(s, scopes, report)
 	case *ast.DeclStmt:
-		a.walkDecl(s.Decl, scopes, emit)
+		a.walkDecl(s.Decl, scopes, report)
 	case *ast.IfStmt:
-		a.walkIf(s, scopes, emit)
+		a.walkIf(s, scopes, report)
 	case *ast.ForStmt:
-		a.walkFor(s, scopes, emit)
+		a.walkFor(s, scopes, report)
 	case *ast.RangeStmt:
-		a.walkRange(s, scopes, emit)
+		a.walkRange(s, scopes, report)
 	case *ast.SwitchStmt:
-		a.walkSwitch(s, scopes, emit)
+		a.walkSwitch(s, scopes, report)
 	case *ast.TypeSwitchStmt:
-		a.walkTypeSwitch(s, scopes, emit)
+		a.walkTypeSwitch(s, scopes, report)
 	case *ast.SelectStmt:
-		a.walkSelect(s, scopes, emit)
+		a.walkSelect(s, scopes, report)
 	case *ast.BlockStmt:
-		a.walkBlock(s, scopes, emit)
+		a.walkBlock(s, scopes, report)
 	case *ast.LabeledStmt:
-		a.walkStmt(s.Stmt, scopes, emit)
+		a.walkStmt(s.Stmt, scopes, report)
 	case *ast.CaseClause:
-		for _, b := range s.Body {
-			a.walkStmt(b, scopes, emit)
-		}
+		// Each clause is its own implicit block, so two clauses declaring the
+		// same name are two declarations, not one plus a reassignment.
+		a.walkClause(nil, s.Body, scopes, report)
 	case *ast.CommClause:
-		for _, b := range s.Body {
-			a.walkStmt(b, scopes, emit)
-		}
+		a.walkClause(s.Comm, s.Body, scopes, report)
 	}
+}
+
+func (a *Analyzer) walkClause(
+	comm ast.Stmt,
+	body []ast.Stmt,
+	scopes *scopeStack,
+	report reporter,
+) {
+	scopes.push()
+	defer scopes.pop()
+
+	if comm != nil {
+		// `case v := <-ch:` binds v in the clause's own block.
+		a.walkStmt(comm, scopes, report)
+	}
+	a.walkStmts(body, scopes, report)
 }
 
 func (a *Analyzer) walkAssign(
 	s *ast.AssignStmt,
 	scopes *scopeStack,
-	emit func(token.Pos, string, string),
+	report reporter,
 ) {
 	if s.Tok != token.DEFINE {
 		return
@@ -71,17 +130,15 @@ func (a *Analyzer) walkAssign(
 		if !ok || id.Name == "_" {
 			continue
 		}
-		if hidden, ok := scopes.lookup(id.Name); ok {
-			emit(id.NamePos, id.Name, hidden)
-		}
-		scopes.declare(id.Name, id.NamePos)
+		report.declaring(id, scopes)
+		scopes.declare(id.Name)
 	}
 }
 
 func (a *Analyzer) walkDecl(
 	decl ast.Decl,
 	scopes *scopeStack,
-	emit func(token.Pos, string, string),
+	report reporter,
 ) {
 	gen, ok := decl.(*ast.GenDecl)
 	if !ok {
@@ -91,22 +148,26 @@ func (a *Analyzer) walkDecl(
 		switch s := spec.(type) {
 		case *ast.ValueSpec:
 			for _, id := range s.Names {
-				if id.Name == "_" {
-					continue
-				}
-				if hidden, ok := scopes.lookup(id.Name); ok {
-					emit(id.NamePos, id.Name, hidden)
-				}
-				scopes.declare(id.Name, id.NamePos)
+				declareIdent(id, scopes, report)
 			}
 		case *ast.TypeSpec:
-			if s.Name == nil || s.Name.Name == "_" {
-				continue
-			}
-			if hidden, ok := scopes.lookup(s.Name.Name); ok {
-				emit(s.Name.NamePos, s.Name.Name, hidden)
-			}
-			scopes.declare(s.Name.Name, s.Name.NamePos)
+			declareIdent(s.Name, scopes, report)
 		}
 	}
+}
+
+// declareIfIdent declares a range key/value, which the AST types as an
+// arbitrary expression even though only an identifier can bind a name.
+func declareIfIdent(expr ast.Expr, scopes *scopeStack, report reporter) {
+	if id, ok := expr.(*ast.Ident); ok {
+		declareIdent(id, scopes, report)
+	}
+}
+
+func declareIdent(id *ast.Ident, scopes *scopeStack, report reporter) {
+	if id == nil || id.Name == "_" {
+		return
+	}
+	report.declaring(id, scopes)
+	scopes.declare(id.Name)
 }

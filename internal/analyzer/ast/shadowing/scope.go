@@ -1,11 +1,19 @@
 package shadowing
 
-import "go/token"
+// origin values recorded on a scope entry. originSignature is what separates a
+// reassignment from a shadow: a name bound by the function signature lives in
+// the SAME block as the body's top-level statements, so a `:=` naming it
+// reassigns rather than declares.
+const (
+	originVariable  = "variable"
+	originBuiltin   = "builtin"
+	originSignature = "signature"
+)
 
 // scopeEntry records one declared name and its origin description.
 type scopeEntry struct {
 	name   string
-	origin string // "variable", "builtin" - combined with "outer" by the caller
+	origin string // combined with "outer" by the caller
 }
 
 // scopeStack maintains nested variable scopes for one function.
@@ -15,7 +23,7 @@ type scopeStack struct {
 
 func newScopeStack() *scopeStack {
 	s := &scopeStack{}
-	// innermost builtins scope
+	// outermost builtins scope
 	s.push()
 	s.stack[0] = builtins()
 	return s
@@ -31,7 +39,11 @@ func (s *scopeStack) pop() {
 	}
 }
 
-func (s *scopeStack) declare(name string, _ token.Pos) {
+func (s *scopeStack) declare(name string) {
+	s.declareAs(name, originVariable)
+}
+
+func (s *scopeStack) declareAs(name, origin string) {
 	if len(s.stack) == 0 {
 		return
 	}
@@ -41,7 +53,7 @@ func (s *scopeStack) declare(name string, _ token.Pos) {
 			return // already declared in this scope
 		}
 	}
-	*cur = append(*cur, scopeEntry{name: name, origin: "variable"})
+	*cur = append(*cur, scopeEntry{name: name, origin: origin})
 }
 
 // lookup searches all scopes from outermost to innermost (excluding the
@@ -54,6 +66,22 @@ func (s *scopeStack) lookup(name string) (string, bool) {
 			if e.name == name {
 				return e.origin, true
 			}
+		}
+	}
+	return "", false
+}
+
+// declaredHere reports the origin of a name already bound in the CURRENT
+// scope. Go rejects a second declaration of the same name in one block, so a
+// hit here means the `:=` reassigns an existing binding instead of creating a
+// new one.
+func (s *scopeStack) declaredHere(name string) (string, bool) {
+	if len(s.stack) == 0 {
+		return "", false
+	}
+	for _, e := range s.stack[len(s.stack)-1] {
+		if e.name == name {
+			return e.origin, true
 		}
 	}
 	return "", false
@@ -78,7 +106,7 @@ func builtins() []scopeEntry {
 	}
 	entries := make([]scopeEntry, len(names))
 	for i, n := range names {
-		entries[i] = scopeEntry{name: n, origin: "builtin"}
+		entries[i] = scopeEntry{name: n, origin: originBuiltin}
 	}
 	return entries
 }

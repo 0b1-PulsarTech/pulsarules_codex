@@ -7,6 +7,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
 )
 
 func TestAnalyze(t *testing.T) {
@@ -49,7 +50,7 @@ func TestCheckFile(t *testing.T) {
 
 	for _, testCase := range checkFileTestCases() {
 		t.Run(testCase.name, func(t *testing.T) {
-			runCheckFile(t, a, testCase.source, testCase.expect)
+			runCheckFile(t, a, testCase)
 		})
 	}
 }
@@ -57,7 +58,11 @@ func TestCheckFile(t *testing.T) {
 type checkFileTestCase struct {
 	name   string
 	source string
-	expect int
+	// expect counts shadowing findings; wantReuse counts short-decl-reuse
+	// ones. Both are asserted so a fix that merely relabels a finding cannot
+	// pass by keeping the total steady.
+	expect    int
+	wantReuse int
 }
 
 func checkFileTestCases() []checkFileTestCase {
@@ -213,7 +218,7 @@ func analyzeMessage(t *testing.T, a *Analyzer, source string) string {
 
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "foo.go")
-	if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(source), fsperm.File); err != nil {
 		t.Fatal(err)
 	}
 
@@ -231,12 +236,24 @@ func analyzeMessage(t *testing.T, a *Analyzer, source string) string {
 	return got[0].Message
 }
 
-func runCheckFile(t *testing.T, a *Analyzer, source string, expect int) {
+func runCheckFile(t *testing.T, a *Analyzer, testCase checkFileTestCase) {
+	t.Helper()
+
+	shadows, reuses := countByRule(t, a, testCase.source)
+	if shadows != testCase.expect {
+		t.Errorf("got %d shadowing findings, want %d", shadows, testCase.expect)
+	}
+	if reuses != testCase.wantReuse {
+		t.Errorf("got %d short-decl-reuse findings, want %d", reuses, testCase.wantReuse)
+	}
+}
+
+func countByRule(t *testing.T, a *Analyzer, source string) (shadows, reuses int) {
 	t.Helper()
 
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "foo.go")
-	if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(source), fsperm.File); err != nil {
 		t.Fatal(err)
 	}
 	src, err := os.ReadFile(path)
@@ -251,8 +268,15 @@ func runCheckFile(t *testing.T, a *Analyzer, source string, expect int) {
 	}
 
 	fc := core.FileChange{Path: "foo.go", Extension: ".go"}
-	got := a.checkFile(cache.FileSet(), fc, f)
-	if len(got) != expect {
-		t.Fatalf("got %d findings, want %d: %v", len(got), expect, got)
+	for _, finding := range a.checkFile(cache.FileSet(), fc, f) {
+		switch finding.AnalyzerID {
+		case "shadowing":
+			shadows++
+		case "short-decl-reuse":
+			reuses++
+		default:
+			t.Fatalf("unexpected analyzer id %q", finding.AnalyzerID)
+		}
 	}
+	return shadows, reuses
 }

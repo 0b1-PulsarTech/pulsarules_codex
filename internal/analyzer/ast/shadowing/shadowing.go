@@ -10,10 +10,25 @@ import (
 
 // Analyzer detects variable and builtin shadowing in Go functions.
 // It walks each function body with a scope stack and flags any declaration
-// whose name is already visible from an enclosing scope.
+// whose name is already visible from an enclosing scope. It also reports the
+// narrower case Go allows silently: a `:=` that reassigns a name bound by the
+// function signature rather than declaring a new one.
+//
+// Known limit: function literals are not descended into, so a closure that
+// re-binds an outer name is not reported. Walking them is a one-line change
+// (a FuncLit branch in walkStmt) but it surfaces the idiomatic
+// `if err := f(); err != nil` inside a closure, which is not worth reporting
+// until `err` in an if-init is allowlisted.
 type Analyzer struct{}
 
-var shadowingReporter = core.NewReporter("shadowing", core.SeverityWarning, core.CatAST)
+var (
+	shadowingReporter = core.NewReporter("shadowing", core.SeverityWarning, core.CatAST)
+	// Same walk, second identity: the two findings share every bit of scope
+	// machinery but say opposite things, and a reader who cannot tell them
+	// apart cannot act on either. The commit analyzer splits its sub-rules the
+	// same way.
+	reuseReporter = core.NewReporter("short-decl-reuse", core.SeverityWarning, core.CatAST)
+)
 
 // NewAnalyzer creates a shadowing analyzer.
 func NewAnalyzer() *Analyzer {
@@ -45,8 +60,9 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 }
 
 // shadowAllowlist are names that are conventionally shadowed in idiomatic
-// Go: ok/err in type assertions, found in range loops. Flagging these
-// produces false positives on standard Go patterns.
+// Go: ok in type assertions. Flagging these produces false positives on
+// standard Go patterns. It gates shadowing only: a signature name reused by
+// `:=` is never a coincidence, so short-decl-reuse reports it regardless.
 var shadowAllowlist = map[string]bool{
 	"ok": true,
 }
@@ -57,17 +73,39 @@ func (a *Analyzer) checkFile(
 	f *ast.File,
 ) []core.Finding {
 	var findings []core.Finding
+	// One report per name per function. The mandated `(out T, err error)` plus
+	// a commit/rollback defer makes reusing err routine, and repeating the
+	// same advice at every `:=` in the body buries the other findings.
+	reported := make(map[string]bool)
 
-	emit := func(pos token.Pos, name, kind string) {
-		if shadowAllowlist[name] {
-			return
-		}
-		findings = append(findings, shadowingReporter.At(
-			fc.Path,
-			fset.Position(pos).Line,
-			fmt.Sprintf("%q shadows an outer %s", name, kind),
-			fmt.Sprintf("rename the inner %q to avoid shadowing", name),
-		))
+	report := reporter{
+		shadow: func(pos token.Pos, name, kind string) {
+			if shadowAllowlist[name] {
+				return
+			}
+			findings = append(findings, shadowingReporter.At(
+				fc.Path,
+				fset.Position(pos).Line,
+				fmt.Sprintf("%q shadows an outer %s", name, kind),
+				fmt.Sprintf("rename the inner %q to avoid shadowing", name),
+			))
+		},
+		reuse: func(pos token.Pos, name string) {
+			if reported[name] {
+				return
+			}
+			reported[name] = true
+			findings = append(findings, reuseReporter.At(
+				fc.Path,
+				fset.Position(pos).Line,
+				fmt.Sprintf("%q is reassigned by := in the block that declares it", name),
+				fmt.Sprintf(
+					"declare the new variables with var above and assign with =, "+
+						"so reusing %q reads as the reassignment it is",
+					name,
+				),
+			))
+		},
 	}
 
 	for _, decl := range f.Decls {
@@ -76,27 +114,39 @@ func (a *Analyzer) checkFile(
 			continue
 		}
 		scopes := newScopeStack()
-		scopes.push() // function-level scope
+		clear(reported)
 
+		// Package scope: the function's own name is not part of its block.
+		scopes.push()
 		if fn.Name != nil {
-			scopes.declare(fn.Name.Name, fn.Name.NamePos)
+			scopes.declare(fn.Name.Name)
 		}
-		if fn.Type.Params != nil {
-			for _, p := range fn.Type.Params.List {
-				for _, id := range p.Names {
-					scopes.declare(id.Name, id.NamePos)
-				}
-			}
-		}
-		if fn.Type.Results != nil {
-			for _, r := range fn.Type.Results.List {
-				for _, id := range r.Names {
-					scopes.declare(id.Name, id.NamePos)
-				}
-			}
-		}
-		a.walkBlock(fn.Body, scopes, emit)
+
+		// The function block. Go puts the receiver, the parameters, the named
+		// results AND the body's top-level statements in this one block, so
+		// walkStmts runs the body here instead of pushing a block of its own.
+		scopes.push()
+		declareFields(scopes, fn.Recv, fn.Type.Params, fn.Type.Results)
+		a.walkStmts(fn.Body.List, scopes, report)
 	}
 
 	return findings
+}
+
+// declareFields binds a signature's names into the CURRENT scope, which for a
+// function or a closure is the same block its body statements live in.
+func declareFields(scopes *scopeStack, lists ...*ast.FieldList) {
+	for _, list := range lists {
+		if list == nil {
+			continue
+		}
+		for _, field := range list.List {
+			for _, id := range field.Names {
+				if id.Name == "_" {
+					continue
+				}
+				scopes.declareAs(id.Name, originSignature)
+			}
+		}
+	}
 }
