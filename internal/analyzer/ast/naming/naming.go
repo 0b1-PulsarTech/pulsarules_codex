@@ -8,16 +8,14 @@ import (
 )
 
 // Analyzer reports identifiers that violate project naming conventions:
-// numbered names, Hungarian notation, noise words, and disinformation patterns.
-type Analyzer struct {
-	allowlist map[string]bool
-}
+// sequential numbered names, Hungarian notation, and noise words.
+type Analyzer struct{}
 
 var namingReporter = core.NewReporter("naming", core.SeverityWarning, core.CatSyntax)
 
 // NewAnalyzer creates a naming-convention analyzer.
 func NewAnalyzer() *Analyzer {
-	return &Analyzer{allowlist: make(map[string]bool)}
+	return &Analyzer{}
 }
 
 func (a *Analyzer) ID() string   { return "naming" }
@@ -50,24 +48,30 @@ func (a *Analyzer) checkFile(
 	f *ast.File,
 ) []core.Finding {
 	var findings []core.Finding
-	emit := func(pos token.Pos, msg, suggestion string) {
-		findings = append(
-			findings,
-			namingReporter.At(fc.Path, fset.Position(pos).Line, msg, suggestion),
-		)
+	// Two passes: the sequential-name and noise rules both need the whole
+	// file (siblings, and the types names are built from), which no single
+	// identifier can answer for itself.
+	checker := fileChecker{
+		index: newFileIndex(f),
+		emit: func(pos token.Pos, msg, suggestion string) {
+			findings = append(
+				findings,
+				namingReporter.At(fc.Path, fset.Position(pos).Line, msg, suggestion),
+			)
+		},
 	}
 
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch v := n.(type) {
 		case *ast.FuncDecl:
-			checkFuncDecl(v, emit)
+			checker.funcDecl(v)
 		case *ast.GenDecl:
-			checkGenDecl(v, emit)
+			checker.genDecl(v)
 		case *ast.AssignStmt:
 			if v.Tok == token.DEFINE {
 				for _, lhs := range v.Lhs {
 					if id, ok := lhs.(*ast.Ident); ok && id.Name != "_" {
-						checkName(id.Name, id.NamePos, emit)
+						checker.check(id.Name, id.NamePos)
 					}
 				}
 			}

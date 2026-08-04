@@ -6,51 +6,61 @@ import (
 	"go/token"
 )
 
-func checkFuncDecl(v *ast.FuncDecl, emit func(token.Pos, string, string)) {
+// fileChecker runs the naming rules over one file. It holds the file index and
+// the emit callback as fields so each rule reads one identifier plus the
+// context it genuinely needs, instead of growing the call signature.
+type fileChecker struct {
+	index *fileIndex
+	emit  func(pos token.Pos, msg, suggestion string)
+}
+
+func (c fileChecker) funcDecl(v *ast.FuncDecl) {
 	if v.Name != nil {
-		checkName(v.Name.Name, v.Name.NamePos, emit)
+		c.check(v.Name.Name, v.Name.NamePos)
 	}
-	for _, p := range v.Type.Params.List {
-		for _, id := range p.Names {
-			checkName(id.Name, id.NamePos, emit)
-		}
+	if v.Type.Params != nil {
+		c.checkFields(v.Type.Params)
 	}
 	if v.Type.Results != nil {
-		for _, r := range v.Type.Results.List {
-			for _, id := range r.Names {
-				checkName(id.Name, id.NamePos, emit)
-			}
+		c.checkFields(v.Type.Results)
+	}
+}
+
+func (c fileChecker) checkFields(list *ast.FieldList) {
+	for _, field := range list.List {
+		for _, id := range field.Names {
+			c.check(id.Name, id.NamePos)
 		}
 	}
 }
 
-func checkGenDecl(v *ast.GenDecl, emit func(token.Pos, string, string)) {
+func (c fileChecker) genDecl(v *ast.GenDecl) {
 	for _, spec := range v.Specs {
 		switch s := spec.(type) {
 		case *ast.ValueSpec:
 			for _, id := range s.Names {
-				checkName(id.Name, id.NamePos, emit)
+				c.check(id.Name, id.NamePos)
 			}
 		case *ast.TypeSpec:
 			if s.Name != nil {
-				checkName(s.Name.Name, s.Name.NamePos, emit)
+				c.check(s.Name.Name, s.Name.NamePos)
 			}
 		}
 	}
 }
 
-// checkName runs all naming rules against one identifier.
-func checkName(name string, pos token.Pos, emit func(token.Pos, string, string)) {
+// check runs all naming rules against one identifier.
+func (c fileChecker) check(name string, pos token.Pos) {
 	if name == "_" || name == "" {
 		return
 	}
 
 	if isExported(name) && len(name) == 1 {
-		emit(pos, fmt.Sprintf("single-letter exported name %q", name), "use a descriptive name")
+		c.emit(pos, fmt.Sprintf("single-letter exported name %q", name), "use a descriptive name")
 	}
 
-	if checkNumbered(name) {
-		emit(
+	if c.isSequential(name) {
+		c.emit(
 			pos,
 			fmt.Sprintf("numbered name %q suggests sequential naming", name),
 			"use a descriptive name instead of a number suffix",
@@ -58,20 +68,38 @@ func checkName(name string, pos token.Pos, emit func(token.Pos, string, string))
 	}
 
 	if checkHungarian(name) {
-		emit(
+		c.emit(
 			pos,
 			fmt.Sprintf("name %q appears to use Hungarian notation", name),
 			"use plain descriptive names without type prefixes",
 		)
 	}
 
-	if checkNoiseWord(name) {
-		emit(
+	if c.isNoise(name, pos) {
+		c.emit(
 			pos,
 			fmt.Sprintf("name %q contains a noise word", name),
 			"use a more specific descriptive name",
 		)
 	}
+}
 
-	checkDisinformation(name)
+// isSequential reports the copy-paste-siblings smell: a LOW counter suffix
+// that some other name in the file actually counts against. A lone digit
+// proves nothing - sha256, limit32 and oauth2 all carry a number that IS the
+// concept - so the sibling is what turns a digit into a sequence.
+func (c fileChecker) isSequential(name string) bool {
+	stem, value, ok := numberedStem(name)
+	if !ok || !isCounterValue(value) {
+		return false
+	}
+	return c.index.hasNumberedSibling(name, stem)
+}
+
+// isNoise reports a bare noise word, unless THIS binding repeats the type it
+// was built from: `manager := NewManager()` names its value after exactly what
+// it is, which is the opposite of vague. The exemption is per binding site, so
+// a `manager := find()` elsewhere in the file still fires.
+func (c fileChecker) isNoise(name string, pos token.Pos) bool {
+	return checkNoiseWord(name) && !c.index.typeDerived[pos]
 }
