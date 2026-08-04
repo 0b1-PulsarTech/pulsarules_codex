@@ -45,6 +45,11 @@ var defaultRuleMap = map[string]string{
 	"control-flow": "code-smells",
 	"shadowing":    "effective-go",
 	"complexity":   "code-smells",
+	// short-decl-reuse is emitted by the shadowing analyzer but points at the
+	// named-returns rule: the fix it asks for is a var declaration above the
+	// call, which is that rule's territory, not the shadowing one's.
+	"short-decl-reuse": "named-returns",
+	"named-returns":    "named-returns",
 	// architecture analyzers
 	"arch-boundary": "dependency-rule",
 	"import-cycle":  "module-boundaries",

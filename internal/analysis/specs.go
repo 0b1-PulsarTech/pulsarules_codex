@@ -7,6 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/complexity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/controlflow"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/imports"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/namedreturns"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/naming"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/shadowing"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit"
@@ -111,6 +112,12 @@ var analyzerSpecs = []analyzerSpec{
 	{
 		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
 			return complexity.NewAnalyzer()
+		},
+		scopes: staticScopes,
+	},
+	{
+		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
+			return namedreturns.NewAnalyzer()
 		},
 		scopes: staticScopes,
 	},
