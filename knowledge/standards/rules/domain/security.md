@@ -39,7 +39,7 @@ Applies to: any code touching secrets, input, SQL, auth, or containers.
    payload) using typed binding/validation before calling the use case. Use cases assume valid input
    and enforce business invariants, returning a domain invalid/conflict error.
 4. Never log Authorization headers, JWTs, raw request/response bodies, or customer PII. IDs are
-   fine.
+   fine; log a redacted summary (`slog.Int("body_size", n)`) when unsure.
 5. All DB access goes through generated queries (sqlc); never string-concatenate SQL (gosec G201).
    Migrations with `DROP`/irreversible `ALTER` need explicit reviewer sign-off.
 6. JWT/identity: keys generated once by a config-gen tool; middleware verifies the signed identity
