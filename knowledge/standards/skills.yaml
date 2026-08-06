@@ -211,6 +211,7 @@ skills:
     order: 91
     compose_rules:
       - commits
+      - git-history
   - id: grpc-adapter
     name: gRPC adapter
     description: Consuming/serving gRPC against a proto module; proto aliased <service>v<n>; consumer port wraps the client; server is a thin shell; proto never leaks into the domain.
@@ -459,6 +460,8 @@ skills:
       - an area keeps causing bugs or is hard to test through its interface
     always_load: false
     order: 81
+    compose_rules:
+      - architecture-review
   - id: domain-modeling
     name: Domain modeling
     description: Actively build and sharpen the domain model - challenge terms against CONTEXT.md, sharpen fuzzy language, cross-check code, and record decisions as ADRs sparingly. Pairs with the architecture-decision-records workflow.
@@ -469,6 +472,8 @@ skills:
       - another skill needs the domain model kept current
     always_load: false
     order: 82
+    compose_rules:
+      - domain-modeling
     compose_workflows:
       - architecture-decision-records
   - id: grilling

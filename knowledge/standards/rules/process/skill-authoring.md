@@ -32,7 +32,7 @@ Applies to: adding or editing any skill, rule, pattern, or workflow in this repo
 3. Put the normative clauses in composable pieces - `rules/**` and `patterns/**` - and compose them,
    so rules/patterns generate the skill. A rule/pattern body may only define the canonical section
    keys (`when`, `catalog`, `must`, `recipe`, `approved`, `rejected`, `examples`, `forbidden`,
-   `validation`); any other key fails `clauselint`.
+   `validation`, `outputs`); any other key fails `clauselint`.
 4. Wire `router.yaml` (baseline, a dispatch row, and/or an order step) when the skill dispatches on a
    task signal; an unrouted skill renders but never auto-loads.
 5. Keep the writing constraints: ASCII only, hyphen `-` never em dash (U+2014), one concept per

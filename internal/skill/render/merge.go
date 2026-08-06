@@ -22,6 +22,8 @@ func canonicalSections() []sectionSpec {
 		{"examples", "Examples"},
 		{"forbidden", "Forbidden"},
 		{"validation", "Validation checklist"},
+		// Outputs render last: they summarize the payoff of everything above.
+		{"outputs", "Expected outputs"},
 	}
 }
 
