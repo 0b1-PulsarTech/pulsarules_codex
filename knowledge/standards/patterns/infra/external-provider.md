@@ -124,12 +124,14 @@ language = "en"
 - Hardcoded URLs or language outside `url.go`/config.
 - Exported DTOs; mapping outside `mapper.go`.
 - A `switch code` inside the fetcher package (bootstrap owns it).
-- HTTP calls outside the gateway.
+- HTTP calls outside the gateway; retries hidden inside the gateway/fetcher.
+- Leaking provider DTOs into the domain.
 {{end}}
 
 {{define "validation"}}
 - [ ] Fixed file set; DTOs unexported; mapping in `mapper.go`; endpoints are named builders in `url.go`.
 - [ ] DI registers concrete + Strategy bindings; bootstrap switches on code.
 - [ ] `mapper.go` has table-driven tests (happy path + one edge case).
-- [ ] No hardcoded URL/language; HTTP only via the gateway.
+- [ ] No hardcoded URL/language; HTTP only via the gateway; cache consulted at the call site.
+- [ ] Transient failures handled by a retry Decorator over the port, not inside the fetcher.
 {{end}}

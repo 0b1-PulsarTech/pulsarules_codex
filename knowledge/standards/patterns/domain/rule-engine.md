@@ -107,5 +107,6 @@ matched, err := tree.Evaluate(ctx, evaluator, rules.WithObserver(auditor))
   no `reflect`).
 - [ ] Stored trees decoded at author/save time; unknown type anywhere returns `ErrUnknownRuleType`.
 - [ ] Action rules call a use case/facade and emit events; they do not mutate state directly.
-- [ ] Rule-run audit via an injected `RunObserver` (no global).
+- [ ] Rule-run audit via an injected `RunObserver` (no global); bursts coalesced via an injected
+  `Debouncer`.
 {{end}}
