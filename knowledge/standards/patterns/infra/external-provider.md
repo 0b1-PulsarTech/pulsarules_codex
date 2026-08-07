@@ -26,6 +26,22 @@ Reference tools: the HTTP gateway pattern ([[http-clients]]); `remy` DI; an ID g
 - Onboarding a Strategy implementation behind a port.
 {{end}}
 
+{{define "must"}}
+1. Implement the external integration as a `Strategy` port: the concrete HTTP implementation
+   satisfies `domain.Strategy`, the only integration point the use case depends on.
+2. Place the provider package under `internal/infra/fetchers/<name>fetch/` (or
+   `internal/infra/providers/<name>/`) with the fixed file set: `fetcher.go`, `client.go`, `url.go`,
+   `dto.go`, `mapper.go`, `di.go`.
+3. Keep the provider's API DTOs (`dto.go`) package-local; never export them.
+4. Isolate DTO-to-domain conversion in `mapper.go`.
+5. Register both the concrete `*Fetcher` and the `domain.Strategy` binding it satisfies in `di.go`.
+6. Declare each provider through a `[[providers]]` config table (`code`, `enabled`, `base_url`,
+   `language`) instead of wiring it in code.
+7. Keep the provider's endpoint list in `url.go` as named builders; no `doc.go`.
+8. Wrap the provider's calls with a retry/backoff Decorator over the port when it can fail transiently
+   (see [[retry-backoff]]); keep the use case unaware of retry.
+{{end}}
+
 {{define "recipe"}}
 Package layout (or `internal/infra/providers/<name>/` in a single-module repo):
 

@@ -24,6 +24,21 @@ Reference tools: a tracer abstraction package; OpenTelemetry wired only at the i
 - Correlating logs with spans.
 {{end}}
 
+{{define "must"}}
+1. Inject the `Tracer` (never a global); start spans in use cases with
+   `ctx, span := uc.tracer.Start(ctx, "name", attrs)` and always `defer span.End()`.
+2. Record errors on the originating span (`span.RecordError(err)`; `span.SetStatus(false, "action")`)
+   and return the wrapped error.
+3. Correlate logs with the span: `slog.InfoContext(tracing.WithSpan(ctx, logger), "msg", ...)`. Record
+   an error once, not at every layer (see [[errors-logging]]).
+4. Choose the concrete tracer at `cmd/infra` bootstrap (`"noop"`, `"basic"` slog-backed, or `"otel"`),
+   and confine OTel imports to the adapter: `oteladapter.NewTracer(...)` only there.
+5. Register the chosen tracer as a singleton; pass it through constructors.
+6. For OTel-only features (span links, baggage), `Unwrap()` the span in the `cmd/infra` layer only -
+   never in domain code.
+7. Propagate context across goroutines so no span is lost.
+{{end}}
+
 {{define "recipe"}}
 Inject the tracer; start a span; `defer span.End()`:
 
