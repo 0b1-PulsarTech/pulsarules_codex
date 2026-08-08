@@ -22,6 +22,24 @@ func TestRouterPresent_Required(t *testing.T) {
 	}
 }
 
+func TestRuleSummaries(t *testing.T) {
+	t.Parallel()
+
+	problems := ruleSummaries(&knowledge.Index{Rules: []knowledge.Rule{{ID: "no-summary"}}})
+	want := `rule "no-summary" has no blockquote summary`
+	if len(problems) != 1 || !strings.Contains(problems[0], want) {
+		t.Fatalf("expected one missing-summary problem, got %v", problems)
+	}
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if problems := ruleSummaries(idx); len(problems) != 0 {
+		t.Errorf("embedded rules should all carry a summary, got %v", problems)
+	}
+}
+
 func embeddedIndex(tb testing.TB) *knowledge.Index {
 	tb.Helper()
 
