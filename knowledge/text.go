@@ -1,6 +1,9 @@
 package knowledge
 
-import "unicode"
+import (
+	"strings"
+	"unicode"
+)
 
 func FirstSentence(text string) string {
 	dot := -1
@@ -20,4 +23,24 @@ func FirstSentence(text string) string {
 		return text[:dot+1]
 	}
 	return text
+}
+
+func firstBlockquote(body string) string {
+	var quote []string
+	for line := range strings.SplitSeq(body, "\n") {
+		trimmed := strings.TrimSpace(line)
+		// The summary is the blockquote before any define; one inside a section is content.
+		if strings.HasPrefix(trimmed, "{{define") {
+			break
+		}
+		rest, ok := strings.CutPrefix(trimmed, ">")
+		if !ok {
+			if quote == nil {
+				continue
+			}
+			break
+		}
+		quote = append(quote, strings.TrimSpace(rest))
+	}
+	return strings.Join(quote, " ")
 }

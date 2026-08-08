@@ -55,3 +55,52 @@ func TestFirstSentence(t *testing.T) {
 		})
 	}
 }
+
+func TestFirstBlockquote_Edges(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"no blockquote", "\n# Title\n\nSome prose with no quote.\n", ""},
+		{"only an H1", "\n# Title\n", ""},
+		{
+			"single line",
+			"\n# Title\n\n> One-line summary.\n\nRest of body.\n",
+			"One-line summary.",
+		},
+		{
+			"multi line",
+			"\n# Title\n\n> First line of the\n> summary continues here.\n\nRest of body.\n",
+			"First line of the summary continues here.",
+		},
+		{
+			"blockquote not at the top",
+			"\n# Title\n\nSome lead-in prose.\n\n> Summary comes after prose.\n",
+			"Summary comes after prose.",
+		},
+		{
+			"blockquote only inside a section is not the summary",
+			"\n# Title\n\nNo top-level summary here.\n\n" +
+				"{{define \"forbidden\"}}\n> STRAY NOTE, NOT A SUMMARY\n" +
+				"- Do not do the thing.\n{{end}}\n",
+			"",
+		},
+		{
+			"top-level summary survives a later section blockquote",
+			"\n# Title\n\n> The real summary.\n\n" +
+				"{{define \"forbidden\"}}\n> Not the summary.\n{{end}}\n",
+			"The real summary.",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := firstBlockquote(testCase.input); got != testCase.want {
+				t.Errorf("got %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}

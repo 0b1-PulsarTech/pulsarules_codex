@@ -22,6 +22,7 @@ type Index struct {
 	profileByID   map[string]Profile
 	referenceByID map[string]Reference
 	bodies        map[string]string
+	summaries     map[string]string
 }
 
 func (idx *Index) Rule(id string) (Rule, bool) { rule, ok := idx.ruleByID[id]; return rule, ok }
@@ -85,6 +86,8 @@ func (idx *Index) WorkflowExists(id string) bool { _, ok := idx.workflowByID[id]
 func (idx *Index) SkillExists(id string) bool { _, ok := idx.skillByID[id]; return ok }
 
 func (idx *Index) Body(kind, id string) string { return idx.bodies[kind+":"+id] }
+
+func (idx *Index) Summary(kind, id string) string { return idx.summaries[kind+":"+id] }
 
 func (idx *Index) SkillsOrdered() []Skill {
 	ordered := make([]Skill, len(idx.Skills))
