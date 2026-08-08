@@ -12,6 +12,7 @@ type Check func(*knowledge.Index) []string
 
 func Validate(idx *knowledge.Index, extra ...Check) Result {
 	pipeline := []Check{
+		ruleSummaries,
 		ruleDependencies,
 		patternDependencies,
 		patternComposes,
