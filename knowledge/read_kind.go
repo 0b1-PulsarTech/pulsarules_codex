@@ -14,10 +14,11 @@ func patternID(pattern Pattern) string    { return pattern.ID }
 func workflowID(workflow Workflow) string { return workflow.ID }
 
 type kindSink[Item any] struct {
-	items  *[]Item
-	byID   map[string]Item
-	bodies map[string]string
-	idOf   func(Item) string
+	items     *[]Item
+	byID      map[string]Item
+	bodies    map[string]string
+	summaries map[string]string
+	idOf      func(Item) string
 }
 
 func readKind[Item any](standards fs.FS, kind string, sink kindSink[Item]) error {
@@ -39,7 +40,10 @@ func readKind[Item any](standards fs.FS, kind string, sink kindSink[Item]) error
 		}
 		*sink.items = append(*sink.items, item)
 		sink.byID[id] = item
-		sink.bodies[kind+":"+id] = body
+		// The key format is "<kind>:<id>", the one Index.Body and Index.Summary look up.
+		key := kind + ":" + id
+		sink.bodies[key] = body
+		sink.summaries[key] = firstBlockquote(body)
 	}
 	return nil
 }
