@@ -31,6 +31,15 @@ func TestRenderSkill_NormativeSection(t *testing.T) {
 		if skill.ID == "project-router" {
 			continue
 		}
+		has, normErr := HasNormativeSection(idx, skill)
+		if normErr != nil {
+			t.Errorf("%q: HasNormativeSection: %v", skill.ID, normErr)
+		} else if !has {
+			t.Errorf(
+				"%q: rendered skill carries no composed must/forbidden/validation section",
+				skill.ID,
+			)
+		}
 		if strings.Contains(body, "Apply every applicable rule") {
 			t.Errorf("%q: rendered skill still carries the generic checklist footer", skill.ID)
 		}
