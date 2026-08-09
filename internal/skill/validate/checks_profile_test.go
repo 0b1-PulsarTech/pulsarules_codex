@@ -115,3 +115,88 @@ description: fixture rule carrying an empty body
 	}
 	return idx
 }
+
+func TestOrientationProse(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "pointer only leaves nothing",
+			body: "The rules below are the composed commits rule.",
+			want: "",
+		},
+		{
+			name: "orientation survives, pointer does not",
+			body: "Wire an app together.\n\nThe steps are the composed bootstrap rule.",
+			want: "Wire an app together.",
+		},
+		{
+			name: "blank lines are dropped",
+			body: "First line.\n\n\nSecond line.",
+			want: "First line.Second line.",
+		},
+		{name: "empty body", body: "", want: ""},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := orientationProse(testCase.body); got != testCase.want {
+				t.Errorf("orientationProse = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestSkillSidecars_Orientation(t *testing.T) {
+	t.Parallel()
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if problems := skillSidecars(idx); len(problems) != 0 {
+		t.Errorf("every sidecar should carry orientation, got %d problems: %v",
+			len(problems), problems)
+	}
+}
+
+func TestMinOrientationChars_ShortestSidecar(t *testing.T) {
+	t.Parallel()
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	shortest, shortestID := 0, ""
+	for _, skill := range idx.Skills {
+		if skill.ID == "project-router" {
+			continue
+		}
+		chars := len(orientationProse(idx.Body("skills", skill.ID)))
+		if shortestID == "" || chars < shortest {
+			shortest, shortestID = chars, skill.ID
+		}
+	}
+	if shortest < minOrientationChars {
+		t.Errorf("skill %q carries %d chars of orientation, below the %d bar",
+			shortestID, shortest, minOrientationChars)
+	}
+	t.Logf("shortest orientation: %q at %d chars (bar %d)",
+		shortestID, shortest, minOrientationChars)
+}
+
+func TestSkillSidecars_MessageNamesTheSkill(t *testing.T) {
+	t.Parallel()
+
+	problems := skillSidecars(&knowledge.Index{
+		Skills: []knowledge.Skill{{ID: "lonely", Name: "Lonely"}},
+	})
+	if len(problems) != 1 || !strings.Contains(problems[0], "lonely") {
+		t.Errorf("a sidecar-less skill should be reported by name, got %v", problems)
+	}
+}
