@@ -2,6 +2,7 @@ package validate
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -54,24 +55,43 @@ func routerPresent(idx *knowledge.Index) []string {
 	return []string{"missing mandatory project-router skill"}
 }
 
+const minOrientationChars = 120
+
 func skillSidecars(idx *knowledge.Index) []string {
 	var problems []string
 	for _, skill := range idx.Skills {
 		if skill.ID == "project-router" {
 			continue
 		}
-		if idx.Body("skills", skill.ID) == "" {
-			problems = append(
-				problems,
-				fmt.Sprintf(
-					"skill %q has no curated sidecar under standards/skills/%s.md",
-					skill.ID,
-					skill.ID,
-				),
-			)
+		body := idx.Body("skills", skill.ID)
+		if body == "" {
+			problems = append(problems, fmt.Sprintf(
+				"skill %q has no curated sidecar under standards/skills/%s.md", skill.ID, skill.ID,
+			))
+			continue
+		}
+		// A body slimmed to the pointer leaves no prose; hand-written sidecars clear the bound.
+		if len(orientationProse(body)) < minOrientationChars {
+			problems = append(problems, fmt.Sprintf(
+				"skill %q sidecar states no orientation, only a pointer to its composed rule",
+				skill.ID,
+			))
 		}
 	}
 	return problems
+}
+
+func orientationProse(body string) string {
+	var prose strings.Builder
+	for line := range strings.SplitSeq(body, "\n") {
+		trimmed := strings.TrimSpace(line)
+		// The pointer to the composed rule says nothing about when to use the skill.
+		if trimmed == "" || strings.Contains(trimmed, "the composed") {
+			continue
+		}
+		prose.WriteString(trimmed)
+	}
+	return prose.String()
 }
 
 func missingRef(ownerID, kind string) func(string) string {
