@@ -115,10 +115,3 @@ description: fixture rule carrying an empty body
 	}
 	return idx
 }
-
-func writeFixtureFile(tb testing.TB, path, content string) {
-	tb.Helper()
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		tb.Fatalf("write %s: %v", path, err)
-	}
-}

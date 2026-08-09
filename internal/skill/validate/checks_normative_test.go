@@ -1,0 +1,302 @@
+package validate
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
+)
+
+func TestSkillNormativeSections_Embedded(t *testing.T) {
+	t.Parallel()
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if problems := skillNormativeSections(idx); len(problems) != 0 {
+		t.Errorf("embedded skills should all render a normative section, got %v", problems)
+	}
+}
+
+func TestSkillNormativeSections_Fixture(t *testing.T) {
+	t.Parallel()
+
+	idx := newNormativeFixture(t)
+	problems := skillNormativeSections(idx)
+
+	testCases := []struct {
+		name     string
+		skillID  string
+		wantFail bool
+	}{
+		{"composes a rule with a must section", "has-must", false},
+		{"composes only a recipe-only pattern", "recipe-only", true},
+		{"composes nothing", "composes-nothing", true},
+		{"project-router is exempt though it composes nothing", "project-router", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := reportsSkill(problems, testCase.skillID)
+			if got != testCase.wantFail {
+				t.Errorf("skill %q reported = %v, want %v (problems: %v)",
+					testCase.skillID, got, testCase.wantFail, problems)
+			}
+		})
+	}
+}
+
+func TestSkillNormativeSections_ProfileOverride(t *testing.T) {
+	t.Parallel()
+
+	idx := newProfileNormativeFixture(t)
+	problems := skillNormativeSections(idx)
+	joined := strings.Join(problems, "\n")
+
+	testCases := []struct {
+		name     string
+		want     string
+		wantFail bool
+	}{
+		{
+			"base composition still has a must section",
+			`skill "overridable" renders no normative section`,
+			false,
+		},
+		{
+			"degrading profile override is reported",
+			`profile "degrade" overrides skill "overridable" to render no normative section`,
+			true,
+		},
+		{
+			"non-degrading profile override is silent",
+			`profile "keep" overrides skill "overridable" to render no normative section`,
+			false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := strings.Contains(joined, testCase.want)
+			if got != testCase.wantFail {
+				t.Errorf("problem containing %q reported = %v, want %v (problems: %v)",
+					testCase.want, got, testCase.wantFail, problems)
+			}
+		})
+	}
+}
+
+func newProfileNormativeFixture(tb testing.TB) *knowledge.Index {
+	tb.Helper()
+
+	root := tb.TempDir()
+	standards := filepath.Join(root, "knowledge", "standards")
+	for _, dir := range []string{"rules", "patterns", "workflows"} {
+		if err := os.MkdirAll(filepath.Join(standards, dir), 0o755); err != nil {
+			tb.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+
+	writeProfileRules(tb, standards)
+	writeProfileSkills(tb, standards)
+
+	idx, _, err := knowledge.Load(root)
+	if err != nil {
+		tb.Fatalf("Load fixture: %v", err)
+	}
+	return idx
+}
+
+func writeProfileRules(tb testing.TB, standards string) {
+	tb.Helper()
+
+	writeFixtureFile(tb, filepath.Join(standards, "rules", "must-rule.md"), `---
+id: must-rule
+name: Must Rule
+description: fixture rule carrying a must section
+---
+
+# Must Rule
+
+{{define "must"}}
+Do the fixture thing.
+{{end}}
+`)
+	writeFixtureFile(tb, filepath.Join(standards, "rules", "other-must-rule.md"), `---
+id: other-must-rule
+name: Other Must Rule
+description: a second fixture rule carrying a must section
+---
+
+# Other Must Rule
+
+{{define "must"}}
+Do the other fixture thing.
+{{end}}
+`)
+	writeFixtureFile(tb, filepath.Join(standards, "rules", "when-only-rule.md"), `---
+id: when-only-rule
+name: When Only Rule
+description: fixture rule carrying no obligation, only a when section
+---
+
+# When Only Rule
+
+{{define "when"}}
+Whenever the fixture applies.
+{{end}}
+`)
+}
+
+func writeProfileSkills(tb testing.TB, standards string) {
+	tb.Helper()
+
+	writeFixtureFile(tb, filepath.Join(standards, "skills.yaml"), `skills:
+  - id: overridable
+    name: Overridable
+    description: fixture skill whose composition a profile can override
+    compose_rules: [must-rule]
+  - id: project-router
+    name: Project Router
+    description: fixture router
+`)
+	writeFixtureFile(tb, filepath.Join(standards, "profiles.yaml"), `profiles:
+  - id: degrade
+    axis: fixture-axis
+    description: overrides overridable down to a rule with no obligation
+    overrides:
+      overridable:
+        compose_rules: [when-only-rule]
+  - id: keep
+    axis: fixture-axis
+    description: overrides overridable to a different still-normative rule
+    overrides:
+      overridable:
+        compose_rules: [other-must-rule]
+`)
+}
+
+func reportsSkill(problems []string, skillID string) bool {
+	for _, problem := range problems {
+		if strings.Contains(problem, `"`+skillID+`"`) {
+			return true
+		}
+	}
+	return false
+}
+
+func newNormativeFixture(tb testing.TB) *knowledge.Index {
+	tb.Helper()
+
+	root := tb.TempDir()
+	standards := filepath.Join(root, "knowledge", "standards")
+	for _, dir := range []string{"rules", "patterns", "workflows"} {
+		if err := os.MkdirAll(filepath.Join(standards, dir), 0o755); err != nil {
+			tb.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+
+	writeFixtureFile(tb, filepath.Join(standards, "rules", "must-rule.md"), `---
+id: must-rule
+name: Must Rule
+description: fixture rule carrying a must section
+---
+
+# Must Rule
+
+{{define "must"}}
+Do the fixture thing.
+{{end}}
+`)
+	writeFixtureFile(tb, filepath.Join(standards, "patterns", "recipe-pattern.md"), `---
+id: recipe-pattern
+name: Recipe Pattern
+description: fixture pattern carrying only a recipe section
+---
+
+# Recipe Pattern
+
+{{define "recipe"}}
+Follow the fixture recipe.
+{{end}}
+`)
+	writeFixtureFile(tb, filepath.Join(standards, "skills.yaml"), `skills:
+  - id: has-must
+    name: Has Must
+    description: fixture skill
+    compose_rules: [must-rule]
+  - id: recipe-only
+    name: Recipe Only
+    description: fixture skill
+    compose_patterns: [recipe-pattern]
+  - id: composes-nothing
+    name: Composes Nothing
+    description: fixture skill
+  - id: project-router
+    name: Project Router
+    description: fixture router
+`)
+
+	idx, _, err := knowledge.Load(root)
+	if err != nil {
+		tb.Fatalf("Load fixture: %v", err)
+	}
+	return idx
+}
+
+func writeFixtureFile(tb testing.TB, path, content string) {
+	tb.Helper()
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		tb.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func TestSkillNormativeSections_BrokenTemplate(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	standards := filepath.Join(root, "knowledge", "standards")
+	for _, dir := range []string{"rules", "patterns", "workflows"} {
+		if err := os.MkdirAll(filepath.Join(standards, dir), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+	writeFixtureFile(t, filepath.Join(standards, "rules", "broken-rule.md"), `---
+id: broken-rule
+name: Broken Rule
+description: fixture rule whose must block does not parse
+---
+
+# Broken Rule
+
+{{define "must"}}
+Do the thing {{ .Unclosed
+{{end}}
+`)
+	writeFixtureFile(t, filepath.Join(standards, "skills.yaml"), `skills:
+  - id: composes-broken
+    name: Composes Broken
+    description: fixture skill
+    compose_rules: [broken-rule]
+  - id: project-router
+    name: Project Router
+    description: fixture router
+`)
+
+	idx, _, err := knowledge.Load(root)
+	if err != nil {
+		t.Fatalf("Load fixture: %v", err)
+	}
+	problems := skillNormativeSections(idx)
+	if len(problems) == 0 {
+		t.Fatal("an unparseable must block was accepted silently")
+	}
+	if !strings.Contains(strings.Join(problems, "\n"), "broken-rule") {
+		t.Errorf("problems = %v, want them to name the rule that does not parse", problems)
+	}
+}

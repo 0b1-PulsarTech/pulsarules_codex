@@ -2,6 +2,7 @@ package render
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 	"text/template"
@@ -72,7 +73,9 @@ func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error)
 		id := entryID(entry)
 		rule, ok := idx.Rule(id)
 		if !ok {
-			return nil, fmt.Errorf("skill %q composes unknown rule %q", skill.ID, id)
+			return nil, fmt.Errorf(
+				"%w: skill %q composes unknown rule %q", ErrUnknownComposition, skill.ID, id,
+			)
 		}
 		if err := add("rules", entry, rule.Name); err != nil {
 			return nil, err
@@ -82,13 +85,36 @@ func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error)
 		id := entryID(entry)
 		pattern, ok := idx.Pattern(id)
 		if !ok {
-			return nil, fmt.Errorf("skill %q composes unknown pattern %q", skill.ID, id)
+			return nil, fmt.Errorf(
+				"%w: skill %q composes unknown pattern %q", ErrUnknownComposition, skill.ID, id,
+			)
 		}
 		if err := add("patterns", entry, pattern.Name); err != nil {
 			return nil, err
 		}
 	}
 	return sources, nil
+}
+
+func normativeSectionKeys() []string {
+	return []string{"must", "forbidden", "validation"}
+}
+
+var ErrUnknownComposition = errors.New("unknown composition")
+
+func HasNormativeSection(idx *knowledge.Index, skill knowledge.Skill) (bool, error) {
+	sources, err := mergeSources(idx, skill)
+	if err != nil {
+		return false, fmt.Errorf("skill %q: %w", skill.ID, err)
+	}
+	for _, key := range normativeSectionKeys() {
+		for _, src := range sources {
+			if src.sections[key] != "" {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 type source struct {

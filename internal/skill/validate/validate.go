@@ -20,6 +20,7 @@ func Validate(idx *knowledge.Index, extra ...Check) Result {
 		skillCompositions,
 		skillBodies,
 		skillSidecars,
+		skillNormativeSections,
 		profileOverrides,
 		routerPresent,
 		emojiThemeShortcodes,
