@@ -1,6 +1,8 @@
 package hook
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io/fs"
 	"path/filepath"
@@ -9,15 +11,24 @@ import (
 )
 
 func (d *Dispatcher) emitPreEdit(session *SessionTracker, in hookPayload) error {
-	switch strings.ToLower(filepath.Ext(in.ToolInput.FilePath)) {
-	case ".go", ".sql":
-	default:
+	filePath := in.ToolInput.FilePath
+	if len(d.router.SkillsForFile(filePath)) == 0 {
 		return nil
 	}
-	if !session.OncePerSession("pre-edit") {
+	// Gate per file path, not per session: the failure this hook guards
+	// against recurs at each routed file's first write, so muting after file 1
+	// would leave files 2..N unguarded. A re-edit of the same file stays silent.
+	if !session.FirstEmission(preEditFileEvent(filePath), filePath) {
 		return nil
 	}
 	return d.emitContext("hooks/pre-edit.txt", "PreToolUse")
+}
+
+func preEditFileEvent(filePath string) string {
+	const eventKeyBytes = 16
+	sum := sha256.Sum256([]byte(filePath))
+	// Half the sha256 sum; plenty to avoid collisions among edited files.
+	return "pre-edit-file-" + hex.EncodeToString(sum[:eventKeyBytes])
 }
 
 func (d *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) error {

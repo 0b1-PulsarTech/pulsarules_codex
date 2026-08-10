@@ -23,6 +23,15 @@ func TestDispatchSessionStart(t *testing.T) {
 	}
 }
 
+func preEditIndex(t *testing.T) *knowledge.Index {
+	t.Helper()
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	return idx
+}
+
 func TestPreEditAsset_ByteBudget(t *testing.T) {
 	t.Parallel()
 
@@ -91,12 +100,14 @@ func TestDispatchPreEdit(t *testing.T) {
 	}{
 		{"go file fires", "a.go", true},
 		{"sql file fires", "q.sql", true},
+		{"proto file fires", "a.proto", true},
 		{"markdown skipped", "r.md", false},
 	}
+	idx := preEditIndex(t)
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			disp, out := dispatchCapture(Deps{})
+			disp, out := dispatchCapture(Deps{Index: idx})
 			payload := fmt.Sprintf(
 				`{"tool_input":{"file_path":%q},"session_id":%q}`,
 				testCase.filePath, uniqueSessionID(t),
@@ -113,24 +124,6 @@ func TestDispatchPreEdit(t *testing.T) {
 				t.Errorf("missing reminder text:\n%s", ctx)
 			}
 		})
-	}
-}
-
-func TestDispatchPreEditOncePerSession(t *testing.T) {
-	t.Parallel()
-
-	id := uniqueSessionID(t)
-	payload := fmt.Appendf(nil, `{"tool_input":{"file_path":"a.go"},"session_id":%q}`, id)
-	disp, out := dispatchCapture(Deps{})
-
-	_ = disp.Dispatch("pre-edit", payload)
-	if !strings.Contains(extractContext(t, out.String()), "pre-edit reminder text") {
-		t.Fatalf("first call did not fire: %q", out.String())
-	}
-	out.Reset()
-	_ = disp.Dispatch("pre-edit", payload)
-	if strings.Contains(out.String(), "pre-edit reminder text") {
-		t.Errorf("second call fired again: %q", out.String())
 	}
 }
 
@@ -151,12 +144,50 @@ func TestDispatchUserPrompt(t *testing.T) {
 	}
 }
 
+func TestDispatchPreEditPerFile_OncePerFile(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name      string
+		filePaths []string
+		wantFires []bool
+	}{
+		{"same file twice fires once", []string{"a.go", "a.go"}, []bool{true, false}},
+		{"different files both fire", []string{"a.go", "b.go"}, []bool{true, true}},
+	}
+	idx := preEditIndex(t)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			id := uniqueSessionID(t)
+			disp, out := dispatchCapture(Deps{Index: idx})
+			for i, filePath := range testCase.filePaths {
+				out.Reset()
+				payload := fmt.Appendf(
+					nil, `{"tool_input":{"file_path":%q},"session_id":%q}`, filePath, id,
+				)
+				_ = disp.Dispatch("pre-edit", payload)
+				fired := strings.Contains(out.String(), "pre-edit reminder text")
+				if fired != testCase.wantFires[i] {
+					t.Errorf(
+						"dispatch %d (%s): fired = %v, want %v",
+						i,
+						filePath,
+						fired,
+						testCase.wantFires[i],
+					)
+				}
+			}
+		})
+	}
+}
+
 func TestDispatchSessionEnd_Markers(t *testing.T) {
 	t.Parallel()
 
 	id := uniqueSessionID(t)
 	session := fmt.Appendf(nil, `{"session_id":%q}`, id)
-	disp, _ := dispatchCapture(Deps{})
+	disp, _ := dispatchCapture(Deps{Index: preEditIndex(t)})
 
 	_ = disp.Dispatch("session-start", session)
 	_ = disp.Dispatch(
@@ -167,7 +198,7 @@ func TestDispatchSessionEnd_Markers(t *testing.T) {
 
 	markers := []string{
 		"skill-route-session-start." + id,
-		"skill-route-pre-edit." + id,
+		"skill-hook-" + preEditFileEvent("a.go") + "." + id,
 		"skill-route-prompt." + id,
 	}
 	for _, name := range markers {

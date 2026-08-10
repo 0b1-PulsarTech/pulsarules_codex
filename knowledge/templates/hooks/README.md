@@ -28,7 +28,7 @@ to self-route, we inject the contract at each relevant lifecycle moment:
 |------------------------------------------------------|------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
 | `SessionStart` (`session-start`)                     | once per session                                                                                           | The routing contract: invoke `project-router`, load every matched skill, apply while writing; test conventions; verify-before-commit.  |
 | `UserPromptSubmit` (`user-prompt`)                   | first prompt of a session (per-session flag, then silent)                                                  | A one-shot "did you route through `project-router`?" nudge before any Go/SQL/config work.                                              |
-| `PreToolUse` `Write\|Edit\|MultiEdit` (`pre-edit`)   | first `.go`/`.sql` write of a session (per-session flag, then silent)                                      | A prominent "confirm `project-router` ran and the matched skills are loaded and active" reminder (they still carry the full contract), plus the minimalism decision ladder, the newest-stdlib names, the named-domain-type rule, the two-call-site rule, and the scope guard (the clauses no analyzer catches later, carried in substance rather than named as a bare pointer), at the exact write moment. |
+| `PreToolUse` `Write\|Edit\|MultiEdit` (`pre-edit`)   | first write to each file the router matches to a skill (per-file-path flag, then silent for that file; asks the same `Router.SkillsForFile` post-edit uses, not a separate hardcoded extension list) | A prominent "confirm `project-router` ran and the matched skills are loaded and active" reminder (they still carry the full contract), plus the minimalism decision ladder, the newest-stdlib names, the named-domain-type rule, the two-call-site rule, and the scope guard (the clauses no analyzer catches later, carried in substance rather than named as a bare pointer), at the exact write moment, once per distinct file.                      |
 | `PreToolUse` `Grep\|Glob\|Bash` (`pre-search`)       | first Go-targeted search of a session (per-session flag, then silent); only when the project has a `go.mod` and `gopls-navigation` is installed | A nudge to use the gopls MCP (`go_search`, `go_symbol_references`, `go_file_context`) instead of textual grep for Go code.              |
 | `PostToolUse` `Write\|Edit\|MultiEdit` (`post-edit`) | after each Write/Edit (deduped per session by content)                                                     | A file-type-aware checklist of the skills to re-validate against the edited file's extension (only those actually installed).          |
 | `Stop` (`stop`)                                      | end of every turn, only when a `ScopeChanged` governance run over the dirty tree produces findings (deduped by content) | The findings block, a checklist grouped by the changed file types, and the uncommitted change list. Silent otherwise - it never asks for a commit; that is the operator's call. |
@@ -48,8 +48,10 @@ truth instead of a copy baked into the shell script. If the binary is absent the
 
 - The script and the binary always exit `0`, so the hook only nudges: a non-zero exit from a
   `PreToolUse` hook can block the edit.
-- The `pre-edit` reminder is cheap because it is gated by a per-session flag
-  (`<tmpdir>/skill-route-<event>.<session_id>`), so it fires once per session, not on every edit.
+- The `pre-edit` reminder is cheap because it is gated per file path (a hashed marker under
+  `<tmpdir>/skill-hook-pre-edit-file-<hash>.<session_id>`), so a re-edit of a file already reminded
+  about stays silent, but each newly touched file still gets one reminder. It does not fire on
+  every edit, and it is not muted after the session's first file either.
 - The hook lives under `.claude/` (gitignored) and is wired into `.claude/settings.json` (or
   `settings.local.json` with `--hooks-scope local`).
 - A freshly installed hook only goes live after `/hooks` is opened once or the
