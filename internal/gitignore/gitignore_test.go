@@ -101,6 +101,21 @@ func readFile(tb testing.TB, path string) string {
 	return string(data)
 }
 
+func TestEnsure_StampsTheMarkerOnce(t *testing.T) {
+	t.Parallel()
+
+	dir := filepath.Join(t.TempDir(), "target")
+	for _, entry := range []string{"/bin/", "/hooks/"} {
+		if err := Ensure(dir, entry); err != nil {
+			t.Fatalf("Ensure %q: %v", entry, err)
+		}
+	}
+	want := markerLine + "\n/bin/\n/hooks/\n"
+	if got := readFile(t, filepath.Join(dir, ".gitignore")); got != want {
+		t.Errorf("content = %q, want %q", got, want)
+	}
+}
+
 func TestEnsure_ReportsIOErrors(t *testing.T) {
 	t.Parallel()
 

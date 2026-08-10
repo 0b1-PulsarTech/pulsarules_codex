@@ -102,9 +102,9 @@ and `install` prints each one it added and which skill required it. The skill re
 `PostToolUse`, `UserPromptSubmit`, `Stop` and `SessionEnd` entries into the chosen settings file -
 preserving existing permissions / `enabledMcpjsonServers` / unrelated hooks, never duplicating on
 re-run. The wired command resolves the project root at runtime via `$CLAUDE_PROJECT_DIR`, so it
-survives moving the repo. It also stamps `.claude/.gitignore` with `/bin/` and `/hooks/`, so the
-copied binary and hook script stay local while `settings.json` and the rendered skills - which carry
-their own `.gitignore` - remain yours to commit or not.
+survives moving the repo. It also stamps `.claude/.gitignore` with `/bin/` and `/hooks/` (plus an
+ownership marker), so the copied binary and hook script stay local while `settings.json` and the
+rendered skills - which carry their own `.gitignore` - remain yours to commit or not.
 
 Additional install flags:
 
