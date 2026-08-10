@@ -10,7 +10,10 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 )
+
+const markerLine = "# " + ownedfile.Marker
 
 func Ensure(dir string, entries ...string) error {
 	if err := os.MkdirAll(dir, disk.DirPrivate); err != nil {
@@ -26,7 +29,7 @@ func Ensure(dir string, entries ...string) error {
 	if len(missing) == 0 {
 		return nil
 	}
-	content := appendEntries(string(existing), missing)
+	content := appendEntries(string(existing), lines, missing)
 	//nolint:gosec // path is under the caller's dir.
 	if err = os.WriteFile(path, []byte(content), disk.FilePrivate); err != nil {
 		return fmt.Errorf("write %q: %w", path, err)
@@ -44,9 +47,13 @@ func missingEntries(lines, entries []string) []string {
 	return missing
 }
 
-func appendEntries(content string, missing []string) string {
+func appendEntries(content string, lines, missing []string) string {
 	if content != "" && !strings.HasSuffix(content, "\n") {
 		content += "\n"
+	}
+	// The marker is stamped only when this writes, never claiming ownership it did not add.
+	if !slices.Contains(lines, markerLine) {
+		content += markerLine + "\n"
 	}
 	for _, entry := range missing {
 		content += entry + "\n"
