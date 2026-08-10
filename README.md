@@ -105,8 +105,9 @@ Claude Code's autonomous skill activation is unreliable: the agent invokes `proj
 the dispatch table, then skips to implementation without actually loading and applying every matched
 skill when it writes code. A skill description is a suggestion the model can ignore; a hook fires
 deterministically. The embedded `knowledge/templates/hooks/skill-router-reminder.sh` injects the
-routing contract at `SessionStart` and a pointed reminder at the first `.go`/`.sql` write of a
-session (non-blocking, always exit 0, fires once per session via a per-session flag). See
+routing contract at `SessionStart` and a pointed reminder at the first write to each file the router
+matches to a skill via `Router.SkillsForFile` (non-blocking, always exit 0; gated per file path, not
+once per session, so a session touching several routed files gets reminded once per file). See
 [`knowledge/templates/hooks/README.md`](knowledge/templates/hooks/README.md) for the full rationale
 and design constraints - it is installed alongside the hook.
 
