@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
@@ -25,12 +26,22 @@ func Install(dir string, hooks []string) error {
 			return fmt.Errorf("unknown git hook %q", name)
 		}
 		path := filepath.Join(hooksDir, name)
-		// An existing script is removed so mode always applies, even over a
-		// read-only prior install; the error adds nothing the write would not say.
-		_ = os.Remove(path)
+		exists, ours, checkErr := ownedfile.Check(path)
+		if checkErr != nil {
+			return fmt.Errorf("check %q: %w", path, checkErr)
+		}
+		if exists && !ours {
+			if _, backupErr := ownedfile.Backup(path); backupErr != nil {
+				return fmt.Errorf("back up %q: %w", path, backupErr)
+			}
+		} else {
+			// An owned or absent file is removed so mode always applies, even over a
+			// read-only prior install; the error adds nothing the write would not say.
+			_ = os.Remove(path)
+		}
 		const hookMode = 0o500
-		if err := os.WriteFile(path, []byte(script), hookMode); err != nil {
-			return fmt.Errorf("write .git/hooks/%s: %w", name, err)
+		if writeErr := os.WriteFile(path, []byte(script), hookMode); writeErr != nil {
+			return fmt.Errorf("write .git/hooks/%s: %w", name, writeErr)
 		}
 	}
 	return nil
@@ -40,7 +51,7 @@ func hookScripts() map[string]string {
 	return map[string]string{
 		"commit-msg": `#!/bin/sh
 # pulsarules_codex commit-msg hook - validates commit message format.
-# Installed by pulsarules_cli; remove or edit this file to disable.
+# ` + ownedfile.Marker + `; remove or edit this file to disable.
 PROJECT_DIR=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 BINARY="$PROJECT_DIR/` + binaryRel + `"
 [ -x "$BINARY" ] || exit 0
@@ -49,7 +60,7 @@ exec "$BINARY" commitlint --project "$PROJECT_DIR" --file "$1"
 
 		"pre-commit": `#!/bin/sh
 # pulsarules_codex pre-commit hook - runs governance checks on staged changes.
-# Installed by pulsarules_cli; remove or edit this file to disable.
+# ` + ownedfile.Marker + `; remove or edit this file to disable.
 PROJECT_DIR=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 BINARY="$PROJECT_DIR/` + binaryRel + `"
 [ -x "$BINARY" ] || exit 0
