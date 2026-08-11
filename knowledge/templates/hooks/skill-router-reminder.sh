@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Installed by pulsarules_cli; remove or edit this file to disable.
+#
 # Thin orchestrator for the skill-router reminder hook.
 #
 # It forwards the hook mode ($1) and the stdin payload to the installed
