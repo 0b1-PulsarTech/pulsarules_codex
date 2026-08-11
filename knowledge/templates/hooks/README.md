@@ -1,3 +1,5 @@
+<!-- Installed by pulsarules_cli; remove or edit this file to disable. -->
+
 # Skill-router reminder hook: why it exists
 
 > Keep this file with the hook. It explains a non-obvious mechanism; without the

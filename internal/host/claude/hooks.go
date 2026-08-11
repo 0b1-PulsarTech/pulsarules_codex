@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
@@ -35,6 +36,15 @@ func InstallHook(templates fs.FS, claudeDir string) error {
 			return fmt.Errorf("read template hooks/%s: %w", asset.name, readErr)
 		}
 		dst := filepath.Join(hooksDir, asset.name)
+		exists, ours, checkErr := ownedfile.Check(dst)
+		if checkErr != nil {
+			return fmt.Errorf("check %q: %w", dst, checkErr)
+		}
+		if exists && !ours {
+			if _, backupErr := ownedfile.Backup(dst); backupErr != nil {
+				return fmt.Errorf("back up %q: %w", dst, backupErr)
+			}
+		}
 		if writeErr := os.WriteFile(dst, assetBytes, asset.mode); writeErr != nil {
 			return fmt.Errorf("write %q: %w", dst, writeErr)
 		}
