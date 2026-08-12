@@ -14,7 +14,7 @@ func TestInstallWorkflows(t *testing.T) {
 	idx, rnd := loadFixture(t)
 	dest := t.TempDir()
 
-	installed, skipped, err := InstallWorkflows(
+	installed, skipped, backedUp, err := InstallWorkflows(
 		idx,
 		rnd,
 		dest,
@@ -22,6 +22,9 @@ func TestInstallWorkflows(t *testing.T) {
 	)
 	if err != nil {
 		t.Fatalf("InstallWorkflows: %v", err)
+	}
+	if len(backedUp) != 0 {
+		t.Errorf("backedUp = %v, want none (fresh dest)", backedUp)
 	}
 	if len(installed) != 1 || installed[0] != "refactoring" {
 		t.Errorf("installed = %v, want [refactoring]", installed)
@@ -47,9 +50,18 @@ func TestInstall_RouterAndUnknown(t *testing.T) {
 	idx, rnd := loadFixture(t)
 	dest := t.TempDir()
 
-	installed, skipped, err := Install(idx, rnd, dest, []string{"project-router", "ghost"}, nil)
+	installed, skipped, backedUp, err := Install(
+		idx,
+		rnd,
+		dest,
+		[]string{"project-router", "ghost"},
+		nil,
+	)
 	if err != nil {
 		t.Fatalf("Install: %v", err)
+	}
+	if len(backedUp) != 0 {
+		t.Errorf("backedUp = %v, want none (fresh dest)", backedUp)
 	}
 	if len(installed) != 1 || installed[0] != "project-router" {
 		t.Errorf("installed = %v, want [project-router]", installed)
@@ -87,7 +99,7 @@ func TestInstallDocs_RenderFailureLeavesPriorFiles(t *testing.T) {
 		return "body for " + id, true, nil
 	}
 
-	installed, skipped, err := installDocs(
+	installed, skipped, _, err := installDocs(
 		dest,
 		"SKILL.md",
 		[]string{"good", "broken", "unreached"},
@@ -130,7 +142,12 @@ func TestInstallDocs_WriteDocFailure(t *testing.T) {
 		return "body for " + id, true, nil
 	}
 
-	installed, skipped, err := installDocs(dest, "SKILL.md", []string{"good", "blocked"}, render)
+	installed, skipped, _, err := installDocs(
+		dest,
+		"SKILL.md",
+		[]string{"good", "blocked"},
+		render,
+	)
 	if err == nil {
 		t.Fatal("installDocs: expected an error from the blocked destination")
 	}
@@ -155,7 +172,7 @@ func TestInstall_WriteDocFailureLeavesPriorFiles(t *testing.T) {
 		t.Fatalf("seed blocker: %v", err)
 	}
 
-	installed, skipped, err := Install(
+	installed, skipped, _, err := Install(
 		idx,
 		rnd,
 		dest,
@@ -189,7 +206,7 @@ func TestInstallWorkflows_WriteDocFailure(t *testing.T) {
 		t.Fatalf("seed blocker: %v", err)
 	}
 
-	installed, skipped, err := InstallWorkflows(
+	installed, skipped, _, err := InstallWorkflows(
 		idx,
 		rnd,
 		dest,

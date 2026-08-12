@@ -14,7 +14,7 @@ func Install(
 	dest string,
 	ids []string,
 	routerFilter []string,
-) (installed, skipped []string, err error) {
+) (installed, skipped, backedUp []string, err error) {
 	return installDocs(dest, "SKILL.md", ids, func(id string) (string, bool, error) {
 		skill, ok := idx.Skill(id)
 		if !ok {
@@ -33,7 +33,7 @@ func InstallWorkflows(
 	rnd *render.Renderer,
 	dest string,
 	wfIDs []string,
-) (installed, skipped []string, err error) {
+) (installed, skipped, backedUp []string, err error) {
 	return installDocs(dest, "WORKFLOW.md", wfIDs, func(id string) (string, bool, error) {
 		wf, ok := idx.Workflow(id)
 		if !ok {
@@ -51,21 +51,23 @@ func installDocs(
 	dest, docName string,
 	ids []string,
 	render func(id string) (body string, ok bool, err error),
-) (installed, skipped []string, err error) {
+) (installed, skipped, backedUp []string, err error) {
 	for _, id := range ids {
 		body, ok, renderErr := render(id)
 		if renderErr != nil {
 			// The render callbacks already wrap their errors with the id; do not wrap again.
-			return installed, skipped, renderErr
+			return installed, skipped, backedUp, renderErr
 		}
 		if !ok {
 			skipped = append(skipped, id)
 			continue
 		}
-		if writeErr := WriteDoc(filepath.Join(dest, id), docName, body); writeErr != nil {
-			return installed, skipped, fmt.Errorf("install %q: %w", id, writeErr)
+		docBackups, writeErr := WriteDoc(filepath.Join(dest, id), docName, body)
+		if writeErr != nil {
+			return installed, skipped, backedUp, fmt.Errorf("install %q: %w", id, writeErr)
 		}
+		backedUp = append(backedUp, docBackups...)
 		installed = append(installed, id)
 	}
-	return installed, skipped, nil
+	return installed, skipped, backedUp, nil
 }
