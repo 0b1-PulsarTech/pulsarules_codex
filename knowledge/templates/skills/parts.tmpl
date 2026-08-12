@@ -35,3 +35,10 @@
 - [{{.Title}}]({{.URL}}){{if .Note}} - {{.Note}}{{end}}
 {{- end}}
 {{- end}}{{end}}
+{{define "mdcFrontmatter"}}---
+description: {{.}}
+globs:
+alwaysApply: false
+---
+<!-- Installed by pulsarules_cli -->
+{{end}}

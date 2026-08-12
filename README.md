@@ -124,12 +124,16 @@ empty project dir and the `stop`/`pre-search`/`post-edit` checks go quiet; it no
 stderr naming the fix (`pulsarules_cli install`) - re-run `install` to pick up the new script. When
 `gopls` is on PATH, install also wires the gopls MCP into `.mcp.json` and regenerates the
 `gopls-navigation` skill (`--no-mcp` to skip). `--target` is repeatable
-(`claude`/`opencode`/`agents`): the opencode target writes `.opencode/skills` and `opencode.json`;
-both opencode and the thin `agents` target write a single `AGENTS.md` at the project root (carrying
-the routing contract) from the same builder, so the file can never diverge between them - `agents`
-writes nothing else, covering the AI coding agents that read only a repo-root `AGENTS.md`. Use
-`--no-hooks` to skip the Claude hook script and settings wiring (git hooks: `--no-git-hooks`), or
-`--print-hooks` to print the resolved hooks block.
+(`claude`/`opencode`/`agents`/`cursor`): the opencode target writes `.opencode/skills` and
+`opencode.json`; both opencode and the thin `agents` target write a single `AGENTS.md` at the
+project root (carrying the routing contract) from the same builder, so the file can never diverge
+between them - `agents` writes nothing else, covering the AI coding agents that read only a
+repo-root `AGENTS.md`. The `cursor` target writes `.cursor/rules/<id>.mdc`, one file per skill, each
+`alwaysApply: false` so Cursor pulls it in on demand from its `description`; only a small pointer
+rule carrying the routing contract is `alwaysApply: true`, since Cursor injects every
+`alwaysApply: true` rule into every request rather than firing once per session like the Claude
+hook. Use `--no-hooks` to skip the Claude hook script and settings wiring (git hooks:
+`--no-git-hooks`), or `--print-hooks` to print the resolved hooks block.
 
 ## Origin
 

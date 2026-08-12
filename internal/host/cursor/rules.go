@@ -11,6 +11,8 @@ import (
 
 const RulesDir = ".cursor/rules"
 
+const PointerID = "pulsarules-contract"
+
 func WriteRule(projectDir, id, body string) (wrote bool, err error) {
 	path := filepath.Join(projectDir, RulesDir, id+".mdc")
 	var ours bool
