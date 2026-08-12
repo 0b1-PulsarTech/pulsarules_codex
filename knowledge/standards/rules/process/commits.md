@@ -58,10 +58,12 @@ Applies to: every commit in every project.
    `Refs: #42`, `Closes: #99`.
 10. Breaking change: add a `BREAKING CHANGE:` footer with migration notes.
 11. Each commit must compile and pass tests standalone (docs-only commits are exempt from the test
-    bar). EXCEPTION - history rebuild: during a deliberate history rewrite (see `[[git-history]]`) the
-    per-commit build/test bar is RELAXED (intermediate commits need not compile); the gate becomes the
-    final-tree invariant plus one full build+lint+test sweep on the final HEAD. This relaxation is
-    scoped to rebuilds and never licenses a broken commit in normal work.
+    bar). A commit that cannot - a deliberate step in a series, or a history rebuild where a file
+    would be born referencing a package that does not exist yet - DECLARES it by marking the
+    description `[wip]`: `:<emoji>: <type>(<scope>): [wip] <Subject>`. The marker IS the exemption,
+    so the log says which steps are partial and `git bisect` can skip them. An unmarked commit is
+    always held to the bar; `[wip]` never appears on a commit meant to stand alone, and a series
+    ends with an unmarked commit that restores green.
 12. Do NOT append `Co-Authored-By`, `Claude-Session`, or any other tool-attribution trailer, even
     for AI-assisted commits.
 {{end}}
@@ -87,6 +89,7 @@ Applies to: every commit in every project.
 - [ ] A move/rename is its own commit, staged first, with no edits beyond the mechanical consequences
   of relocating.
 - [ ] Subject-only unless a body was strictly necessary; any body names what the subject and diff cannot.
-- [ ] Commit compiles and passes tests standalone (unless docs-only).
+- [ ] Commit compiles and passes tests standalone, or declares `[wip]` (unless docs-only).
+- [ ] Every `[wip]` series ends with an unmarked commit that restores green.
 - [ ] No tool-attribution trailer.
 {{end}}

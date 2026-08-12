@@ -31,12 +31,16 @@ Applies to: rebuilding a squash or temp history into clean incremental commits.
 2. DECOMPOSE, don't re-package. As you split a squash, run the matched skills (start with
    `project-router`) over the implementation and apply the genuine improvements you detect (bugs,
    missing tests, idiom drift). The rewrite is a review, not a repackage.
-3. INTRODUCE EVERY FILE IN ITS FINAL FORM. Any later change that only brings a pre-existing file to
-   the shape it should have had at creation - hygiene (blank lines, package-doc removal), DI
-   inversion, `RegisterSingleton`->`RegisterConstructor`, generic type-param removal, an added
-   port/method, a conformance refactor (e.g. `regexp`->`strutils`), a serialization/tag fix, AND
-   config edits (`go.mod`/`go.work`/`Taskfile`) - FOLDS into that file's creation commit; drop the
-   standalone fix-up commit.
+3. FOLD EVERY FIX-UP INTO THE COMMIT THAT CREATED THE FILE. Any later change that only brings a
+   pre-existing file to the shape it should have had at creation - hygiene (blank lines, package-doc
+   removal), DI inversion, `RegisterSingleton`->`RegisterConstructor`, generic type-param removal, an
+   added port/method, a conformance refactor (e.g. `regexp`->`strutils`), a serialization/tag fix,
+   AND config edits (`go.mod`/`go.work`/`Taskfile`) - FOLDS into that file's creation commit; drop
+   the standalone fix-up commit. Fold only as far back as dependency order allows: a file cannot be
+   born referencing a package that does not exist yet, so a fold that would break the build either
+   stops at the earliest commit where it compiles, or the step declares itself `[wip]`
+   (see `[[commits]]`). "Final form" is the goal, not an absolute - the dependency graph decides how
+   much of it any one commit can carry.
 4. Genuinely-new functionality stays its own commit (folding it would be anachronistic - it depends
    on things that do not exist yet). A MIXED commit is hunk-split: the fix-up part folds, the new
    part stays.
@@ -57,9 +61,12 @@ Applies to: rebuilding a squash or temp history into clean incremental commits.
    `git show --no-renames --name-status` so moves classify as add+delete (checkout the new path,
    then `git rm -q --ignore-unmatch` the old). Resolve any conflict by checking out the `foldsrc`
    version. A commit emptied by folding is dropped.
-2. Per-commit build is RELAXED during this mechanism: intermediate commits need not compile (a port
-   may reference a type added in a later commit). The FINAL tree plus a full build+lint+test sweep
-   is the gate, not each commit (see `[[commits]]`).
+2. A step that cannot compile MARKS itself `[wip]` (see `[[commits]]`) rather than the rewrite
+   silently exempting every commit: the log then names which steps are partial. The FINAL tree plus
+   a full build+lint+test sweep is still the gate. Run the per-commit sweep in a THROWAWAY WORKTREE
+   - a killed sweep in the main checkout strands it on a detached HEAD.
+3. Never `cherry-pick -x` while rebuilding: it appends a `(cherry picked from commit ...)` line,
+   which is a tool-attribution trailer and blows the body cap. Lint every rewritten message.
 {{end}}
 
 {{define "forbidden"}}
@@ -79,4 +86,6 @@ Applies to: rebuilding a squash or temp history into clean incremental commits.
 - [ ] Each `:open_file_folder:` move shows only renames (`git show --name-status`); new code is separate
   commits.
 - [ ] Full sweep green on the final HEAD (build + lint + tests).
+- [ ] Every commit that does not build declares `[wip]`; the series ends unmarked and green.
+- [ ] Every rewritten message linted; no `(cherry picked from commit ...)` line survives.
 {{end}}
