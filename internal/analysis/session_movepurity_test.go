@@ -69,6 +69,7 @@ var movePurityFixtures = []movePurityFixture{
 	{
 		name: "pure rename alone",
 		setup: func(t *testing.T, dir string) {
+			t.Helper()
 			body := "line one\nline two\nline three\nline four\n"
 			writeCommittedFile(t, dir, "old.go", body)
 			stageRename(t, dir, body)
@@ -78,6 +79,7 @@ var movePurityFixtures = []movePurityFixture{
 	{
 		name: "partial rename below the default threshold",
 		setup: func(t *testing.T, dir string) {
+			t.Helper()
 			// 4 lines, 3 shared with the original: 3/4 = 75%, below the
 			// default 90% minimum similarity.
 			writeCommittedFile(t, dir, "old.go", "a\nb\nc\nd\n")
@@ -89,6 +91,7 @@ var movePurityFixtures = []movePurityFixture{
 	{
 		name: "pure rename staged alongside an unrelated edit",
 		setup: func(t *testing.T, dir string) {
+			t.Helper()
 			body := "line one\nline two\nline three\nline four\n"
 			writeCommittedFile(t, dir, "old.go", body)
 			writeCommittedFile(t, dir, "other.go", "package other\n")
@@ -101,6 +104,7 @@ var movePurityFixtures = []movePurityFixture{
 	{
 		name: "no staged renames",
 		setup: func(t *testing.T, dir string) {
+			t.Helper()
 			writeCommittedFile(t, dir, "plain.go", "package plain\n")
 		},
 		wantFinding: false,
@@ -111,6 +115,7 @@ var movePurityFixtures = []movePurityFixture{
 		// is not an "edit" for the mixed-changeset check.
 		name: "pure rename staged alongside a pure import-path edit",
 		setup: func(t *testing.T, dir string) {
+			t.Helper()
 			body := "line one\nline two\nline three\nline four\n"
 			writeCommittedFile(t, dir, "old.go", body)
 			writeCommittedFile(
@@ -132,6 +137,7 @@ var movePurityFixtures = []movePurityFixture{
 	{
 		name: "rename whose own file also gained a statement",
 		setup: func(t *testing.T, dir string) {
+			t.Helper()
 			// 20 identical lines keep the similarity score comfortably above
 			// the default 90% minimum despite the one added statement, so
 			// this exercises the new-content check rather than the

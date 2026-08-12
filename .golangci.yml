@@ -27,6 +27,18 @@ linters:
     - unparam
     - whitespace
     - wrapcheck
+    # The dogfood check for the baseline internal/analyzer/delegation/golangcilint forces on
+    # every consumer project (knowledge/standards/rules/infra/build.md #9): the same six run
+    # here via normal config enablement rather than -E, plus the two linters that rule
+    # documents as recommended-but-not-forced because they can flood a legacy project.
+    - nolintlint
+    - paralleltest
+    - tparallel
+    - thelper
+    - forcetypeassert
+    - nilerr
+    - bodyclose
+    - sqlclosecheck
     # knowledge/standards/rules/process/code-smells.md also names dupl, goconst, and
     # gochecknoglobals as the linters that catch the smells it catalogs; the gap below is
     # deliberate, not an oversight. goconst is measured at ~50 findings, almost all emoji/theme
@@ -61,8 +73,22 @@ linters:
             - gopkg.in/yaml.v3
             - github.com/wrapped-owls/goremy-di/remy
     wrapcheck:
-      ignorePackageGlobs:
+      ignore-package-globs:
         - github.com/0b1-PulsarTech/pulsarules_codex/**
+    # require-explanation/require-specific make nolintlint enforce this repo's own rule
+    # (knowledge/standards/rules/infra/build.md #9): every //nolint must name its linter and
+    # carry a reason. -E alone (the forced-baseline mechanism for consumer projects) cannot set
+    # this - it only enables the linter at its permissive defaults - so a consumer project must
+    # opt into the same strictness itself if it wants it.
+    # allow-unused is forced true (overriding gosec's own truthful non-test findings, which we
+    # fixed by hand) because nolintlint's "is this //nolint still needed" check reruns gosec's
+    # whole-program taint analysis and, verified by repeated `golangci-lint run` invocations
+    # against this exact tree (including with -j 1), which *_test.go nolint:gosec directives it
+    # calls unused is non-deterministic run to run - a CI gate built on it would flake.
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: true
   exclusions:
     generated: strict
     warn-unused: true
@@ -84,3 +110,12 @@ formatters:
 run:
   timeout: 5m
   modules-download-mode: readonly
+
+# Both capped by default (max-same-issues: 3, max-issues-per-linter: 50). A pervasive smell
+# (e.g. many identically-worded thelper/nolintlint findings) would otherwise be silently
+# truncated - some findings hidden run to run depending on internal ordering - so a "0 findings"
+# governance run could pass while real violations remain unfixed. Disabled so the dogfood check
+# in this repo's own tree is exhaustive and deterministic.
+issues:
+  max-same-issues: 0
+  max-issues-per-linter: 0

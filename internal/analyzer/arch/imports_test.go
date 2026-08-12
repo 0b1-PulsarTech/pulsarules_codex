@@ -161,6 +161,7 @@ func TestCheckBoundaries(t *testing.T) {
 }
 
 func TestDiscoverRealProject(t *testing.T) {
+	t.Parallel()
 	// simplification: real-project discovery skips walking past test boundaries; it
 	// relies on the unit tests above. Upgrade path: use go/packages for
 	// accurate multi-module import resolution.

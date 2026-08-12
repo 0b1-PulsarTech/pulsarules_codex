@@ -21,6 +21,7 @@ type resolveEveryBinding struct {
 	lookup func(remy.Injector) error
 }
 
+//nolint:tparallel // subtests deliberately run sequentially; see the comment below.
 func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 	t.Parallel()
 
@@ -66,7 +67,7 @@ func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 	// why: subtests share the one injector built above, and remy's own docs
 	// call concurrent access to a shared Injector unsupported, so these run
 	// sequentially rather than with the usual inner t.Parallel().
-	for _, testCase := range testCases {
+	for _, testCase := range testCases { //nolint:paralleltest // see comment above.
 		t.Run(testCase.name, func(t *testing.T) {
 			if err := testCase.lookup(inj); err != nil {
 				t.Fatalf("resolve %s: %v", testCase.name, err)

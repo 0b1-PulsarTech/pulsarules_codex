@@ -25,7 +25,7 @@ func writeFile(filePath, content string) error {
 // as a ready-to-print message (empty when nothing was there to back up).
 func backupIfPresent(filePath string) (backedUp string, err error) {
 	if _, statErr := os.Lstat(filePath); statErr != nil {
-		return "", nil
+		return "", nil //nolint:nilerr // absent is the expected "nothing to back up" case.
 	}
 	backupPath, backupErr := marker.Backup(filePath)
 	if backupErr != nil {
@@ -35,15 +35,10 @@ func backupIfPresent(filePath string) (backedUp string, err error) {
 }
 
 // WriteDoc writes body to <dir>/<docName> plus a sibling .gitignore that
-// ignores both docName and itself, so generated skill/workflow output is
-// untracked by default; delete that .gitignore to commit the doc to a
-// branch (the rendered doc itself carries marker.Installed, so ownership no
-// longer depends on the .gitignore surviving that). A dir isOwnedDoc does
-// not already recognize as this tool's own is backed up file-by-file (see
-// backupIfPresent) before docName and .gitignore are written, so a
-// same-named directory a user already owns (e.g. a hand-written "security"
-// skill) is preserved rather than destroyed; backedUp reports each such
-// rename as a ready-to-print message.
+// ignores both, so generated output is untracked by default; delete the
+// .gitignore to commit it (docName carries marker.Installed, so ownership
+// no longer depends on the .gitignore). A dir isOwnedDoc does not recognize
+// is backed up file-by-file first, preserving a user-owned same-named dir.
 func WriteDoc(dir, docName, body string) (backedUp []string, err error) {
 	docPath := filepath.Join(dir, docName)
 	gitignorePath := filepath.Join(dir, ".gitignore")

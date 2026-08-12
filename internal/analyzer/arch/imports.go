@@ -23,7 +23,7 @@ func discoverPackages(projectDir, modulePath string) map[string]*pkgImports {
 
 	_ = filepath.WalkDir(projectDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // WalkDir callback: skip the bad entry, keep walking.
 		}
 		if d.IsDir() {
 			if strings.HasPrefix(d.Name(), ".") || d.Name() == "vendor" ||
@@ -48,7 +48,7 @@ func discoverPackages(projectDir, modulePath string) map[string]*pkgImports {
 
 		imports, err := parseFileImports(path)
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // one malformed file must not halt discovery of the rest.
 		}
 
 		if _, exists := pkgMap[pkgImport]; !exists {

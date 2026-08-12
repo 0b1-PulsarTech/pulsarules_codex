@@ -18,9 +18,9 @@ func (d *Dispatcher) emitPreSearch(session *SessionTracker, in hookPayload) erro
 	if projectDir == "" {
 		return nil
 	}
-	//nolint:gosec // path is under PULSARULES_PROJECT_DIR, a hook-provided project root.
+	// why: projectDir is under PULSARULES_PROJECT_DIR, a hook-provided project root.
 	if _, err := os.Stat(filepath.Join(projectDir, "go.mod")); err != nil {
-		return nil
+		return nil //nolint:nilerr // no go.mod means "not a Go project", not a failure.
 	}
 	skillsDir := d.resolveSkillsDir()
 	if skillsDir == "" || len(filterInstalled([]string{"gopls-navigation"}, skillsDir)) == 0 {
@@ -72,7 +72,7 @@ func (d *Dispatcher) emitStop(event string, session *SessionTracker) (int, error
 	if err != nil {
 		// Not a repository, or a real git failure: either way the hook
 		// stays quiet rather than nagging on every turn.
-		return 0, nil
+		return 0, nil //nolint:nilerr // deliberate: see comment above.
 	}
 	status, err := repo.WorktreeStatus()
 	if err != nil {

@@ -97,21 +97,21 @@ type mcpServer struct {
 	Cwd     string `json:"cwd"`
 }
 
-func readServer(t testing.TB, repoDir, name string) mcpServer {
-	t.Helper()
+func readServer(tb testing.TB, repoDir, name string) mcpServer {
+	tb.Helper()
 	raw, err := os.ReadFile(filepath.Join(repoDir, ".mcp.json")) //nolint:gosec // temp dir.
 	if err != nil {
-		t.Fatalf("read .mcp.json: %v", err)
+		tb.Fatalf("read .mcp.json: %v", err)
 	}
 	var config struct {
 		MCPServers map[string]mcpServer `json:"mcpServers"`
 	}
 	if err := json.Unmarshal(raw, &config); err != nil {
-		t.Fatalf("parse .mcp.json: %v", err)
+		tb.Fatalf("parse .mcp.json: %v", err)
 	}
 	server, ok := config.MCPServers[name]
 	if !ok {
-		t.Fatalf("missing server %q in %+v", name, config.MCPServers)
+		tb.Fatalf("missing server %q in %+v", name, config.MCPServers)
 	}
 	return server
 }

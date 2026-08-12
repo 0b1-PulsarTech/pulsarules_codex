@@ -61,11 +61,9 @@ func (p *fileSourceProvider) Read(path string) ([]byte, bool) {
 
 // walkSkipDirs is the set of directory basenames Walk never descends into:
 // git internals, installed skill mirrors, and generated/vendored trees that
-// would otherwise drown a whole-tree scan in duplicated content (there are
-// ~37 generated skill copies alone). "testdata" follows the same convention
-// the go tool itself applies to "./..." package patterns: fixtures under it
-// are deliberately non-conforming and must never surface as findings on a
-// whole-repo run.
+// would drown a whole-tree scan (~37 generated skill copies alone).
+// "testdata" follows the go tool's own "./..." convention: fixtures under
+// it are deliberately non-conforming and must never surface as findings.
 var walkSkipDirs = map[string]bool{
 	".git":      true,
 	".claude":   true,
@@ -79,7 +77,7 @@ var walkSkipDirs = map[string]bool{
 func (p *fileSourceProvider) Walk(fn func(path string, ext string) bool) {
 	_ = filepath.WalkDir(p.projectDir, func(full string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // WalkDir callback: skip the bad entry, keep walking.
 		}
 		if d.IsDir() {
 			if full != p.projectDir && walkSkipDirs[d.Name()] {
@@ -89,7 +87,7 @@ func (p *fileSourceProvider) Walk(fn func(path string, ext string) bool) {
 		}
 		rel, relErr := filepath.Rel(p.projectDir, full)
 		if relErr != nil {
-			return nil
+			return nil //nolint:nilerr // unrelatable entry: skip it, keep walking.
 		}
 		ext := strings.ToLower(filepath.Ext(full))
 		if !fn(rel, ext) {

@@ -37,11 +37,12 @@ func (s *SessionTracker) OncePerSession(event string) bool {
 	if _, err := os.Stat(marker); err == nil {
 		return false
 	}
+	// why: marker is a deterministic per-session path, not sensitive.
 	_ = os.WriteFile(
 		marker,
 		nil,
 		fsperm.FilePrivate,
-	) //nolint:gosec // per-session marker, not sensitive.
+	)
 	return true
 }
 
@@ -57,7 +58,8 @@ func (s *SessionTracker) FirstEmission(event, content string) bool {
 	if prev, err := os.ReadFile(marker); err == nil && string(prev) == hash {
 		return false
 	}
-	_ = os.WriteFile(marker, []byte(hash), fsperm.FilePrivate) //nolint:gosec // per-session marker.
+	// why: marker is a deterministic per-session path, not sensitive.
+	_ = os.WriteFile(marker, []byte(hash), fsperm.FilePrivate)
 	return true
 }
 

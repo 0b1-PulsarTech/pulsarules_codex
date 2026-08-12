@@ -113,18 +113,18 @@ func TestSkillNormativeSections_ProfileOverride(t *testing.T) {
 // second "must"-carrying rule, a "when"-only rule with no obligation, and two
 // profiles: "degrade" overrides the skill to the "when"-only rule, "keep"
 // overrides it to the other "must"-carrying rule.
-func newProfileNormativeFixture(t testing.TB) *knowledge.Index {
-	t.Helper()
+func newProfileNormativeFixture(tb testing.TB) *knowledge.Index {
+	tb.Helper()
 
-	root := t.TempDir()
+	root := tb.TempDir()
 	standards := filepath.Join(root, "knowledge", "standards")
 	for _, dir := range []string{"rules", "patterns", "workflows"} {
 		if err := os.MkdirAll(filepath.Join(standards, dir), 0o755); err != nil {
-			t.Fatalf("mkdir %s: %v", dir, err)
+			tb.Fatalf("mkdir %s: %v", dir, err)
 		}
 	}
 
-	writeFixtureFile(t, filepath.Join(standards, "rules", "must-rule.md"), `---
+	writeFixtureFile(tb, filepath.Join(standards, "rules", "must-rule.md"), `---
 id: must-rule
 name: Must Rule
 description: fixture rule carrying a must section
@@ -136,7 +136,7 @@ description: fixture rule carrying a must section
 Do the fixture thing.
 {{end}}
 `)
-	writeFixtureFile(t, filepath.Join(standards, "rules", "other-must-rule.md"), `---
+	writeFixtureFile(tb, filepath.Join(standards, "rules", "other-must-rule.md"), `---
 id: other-must-rule
 name: Other Must Rule
 description: a second fixture rule carrying a must section
@@ -148,7 +148,7 @@ description: a second fixture rule carrying a must section
 Do the other fixture thing.
 {{end}}
 `)
-	writeFixtureFile(t, filepath.Join(standards, "rules", "when-only-rule.md"), `---
+	writeFixtureFile(tb, filepath.Join(standards, "rules", "when-only-rule.md"), `---
 id: when-only-rule
 name: When Only Rule
 description: fixture rule carrying no obligation, only a when section
@@ -160,7 +160,7 @@ description: fixture rule carrying no obligation, only a when section
 Whenever the fixture applies.
 {{end}}
 `)
-	writeFixtureFile(t, filepath.Join(standards, "skills.yaml"), `skills:
+	writeFixtureFile(tb, filepath.Join(standards, "skills.yaml"), `skills:
   - id: overridable
     name: Overridable
     description: fixture skill whose composition a profile can override
@@ -169,7 +169,7 @@ Whenever the fixture applies.
     name: Project Router
     description: fixture router
 `)
-	writeFixtureFile(t, filepath.Join(standards, "profiles.yaml"), `profiles:
+	writeFixtureFile(tb, filepath.Join(standards, "profiles.yaml"), `profiles:
   - id: degrade
     axis: fixture-axis
     description: overrides overridable down to a rule with no obligation
@@ -186,7 +186,7 @@ Whenever the fixture applies.
 
 	idx, _, err := knowledge.Load(root)
 	if err != nil {
-		t.Fatalf("Load fixture: %v", err)
+		tb.Fatalf("Load fixture: %v", err)
 	}
 	return idx
 }
@@ -205,18 +205,18 @@ func reportsSkill(problems []string, skillID string) bool {
 // t.TempDir() and loads it: one rule carrying a "must" section, one pattern
 // carrying only a "recipe" section, and four skills exercising every
 // normative-content outcome skillNormativeSections must distinguish.
-func newNormativeFixture(t testing.TB) *knowledge.Index {
-	t.Helper()
+func newNormativeFixture(tb testing.TB) *knowledge.Index {
+	tb.Helper()
 
-	root := t.TempDir()
+	root := tb.TempDir()
 	standards := filepath.Join(root, "knowledge", "standards")
 	for _, dir := range []string{"rules", "patterns", "workflows"} {
 		if err := os.MkdirAll(filepath.Join(standards, dir), 0o755); err != nil {
-			t.Fatalf("mkdir %s: %v", dir, err)
+			tb.Fatalf("mkdir %s: %v", dir, err)
 		}
 	}
 
-	writeFixtureFile(t, filepath.Join(standards, "rules", "must-rule.md"), `---
+	writeFixtureFile(tb, filepath.Join(standards, "rules", "must-rule.md"), `---
 id: must-rule
 name: Must Rule
 description: fixture rule carrying a must section
@@ -228,7 +228,7 @@ description: fixture rule carrying a must section
 Do the fixture thing.
 {{end}}
 `)
-	writeFixtureFile(t, filepath.Join(standards, "patterns", "recipe-pattern.md"), `---
+	writeFixtureFile(tb, filepath.Join(standards, "patterns", "recipe-pattern.md"), `---
 id: recipe-pattern
 name: Recipe Pattern
 description: fixture pattern carrying only a recipe section
@@ -240,7 +240,7 @@ description: fixture pattern carrying only a recipe section
 Follow the fixture recipe.
 {{end}}
 `)
-	writeFixtureFile(t, filepath.Join(standards, "skills.yaml"), `skills:
+	writeFixtureFile(tb, filepath.Join(standards, "skills.yaml"), `skills:
   - id: has-must
     name: Has Must
     description: fixture skill
@@ -259,14 +259,14 @@ Follow the fixture recipe.
 
 	idx, _, err := knowledge.Load(root)
 	if err != nil {
-		t.Fatalf("Load fixture: %v", err)
+		tb.Fatalf("Load fixture: %v", err)
 	}
 	return idx
 }
 
-func writeFixtureFile(t testing.TB, path, content string) {
-	t.Helper()
+func writeFixtureFile(tb testing.TB, path, content string) {
+	tb.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write %s: %v", path, err)
+		tb.Fatalf("write %s: %v", path, err)
 	}
 }

@@ -19,12 +19,11 @@ const binaryRel = ".git/hooks/pulsarules_cli"
 // hookMode is the tightest mode that still lets git execute the hook script.
 const hookMode = 0o500
 
-// Install writes the selected git hook scripts into dir/.git/hooks/. A hook
-// script already at one of those paths that was NOT written by an earlier
-// Install (no marker.Installed) is renamed to a numbered
-// ".pulsarules-backup" slot rather than destroyed, since a git hook is not
-// tracked by git - its content is otherwise unrecoverable. backedUp reports
-// each such rename as a ready-to-print message.
+// Install writes the selected git hook scripts into dir/.git/hooks/. A
+// script already there that Install didn't write (no marker.Installed) is
+// renamed to a numbered ".pulsarules-backup" slot rather than destroyed,
+// since a git hook isn't tracked by git - its content would otherwise be
+// unrecoverable. backedUp reports each rename as a ready-to-print message.
 func Install(dir string, hooks []string) (backedUp []string, err error) {
 	if len(hooks) == 0 {
 		return nil, nil
@@ -56,12 +55,11 @@ func Install(dir string, hooks []string) (backedUp []string, err error) {
 			// O_TRUNC fails on read-only files left by a previous install
 			// (0o500). A foreign file above was already moved out of the
 			// way by Backup, so this branch never touches one.
-			//nolint:gosec // trusted project hooks dir.
+			// why: path is the trusted project hooks dir this installer maintains.
 			_ = os.Remove(path)
 		}
 		// A git hook must stay executable, so 0o500 is deliberate; it is
 		// already the tightest mode that still lets git run the script.
-		//nolint:gosec // G306: executable bit is required for a git hook.
 		if writeErr := os.WriteFile(path, []byte(script), hookMode); writeErr != nil {
 			return backedUp, fmt.Errorf("write .git/hooks/%s: %w", name, writeErr)
 		}
@@ -122,17 +120,10 @@ func HookNames() []string {
 }
 
 // Uninstall removes every git hook script Install could have written from
-// dir/.git/hooks/, plus the installer binary. A hook file is only removed
-// when its content carries marker.Installed - the marker Install always
-// writes into every script - since a git hook is a single, un-mergeable
-// file: this stops Uninstall from deleting a hook a user hand-authored (or
-// hand-edited away from ours) that never came from Install. When removing an
-// owned hook uncovers a backup Install left behind (see marker.Backup), that
-// backup is restored to the hook's path, completing the reversal instead of
-// leaving the user's original hook stranded under its backup name; restored
-// reports each such restore as a ready-to-print message. It returns the
-// names of the hooks it actually removed, and is idempotent: an absent or
-// foreign hook is simply skipped, never an error.
+// dir/.git/hooks/, plus the installer binary. Only a hook carrying
+// marker.Installed is removed - a git hook is un-mergeable, so this never
+// deletes a hand-authored one. Removing an owned hook restores any backup
+// Install left behind (see marker.Backup); absent/foreign hooks are skipped.
 func Uninstall(dir string) (removed, restored []string, err error) {
 	hooksDir := filepath.Join(dir, ".git", "hooks")
 	for name := range hookScripts {

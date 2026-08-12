@@ -7,11 +7,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 )
 
-func newTestAnalyzer(t testing.TB) *Analyzer {
-	t.Helper()
+func newTestAnalyzer(tb testing.TB) *Analyzer {
+	tb.Helper()
 	catalog, err := emoji.NewCatalog()
 	if err != nil {
-		t.Fatalf("NewCatalog: %v", err)
+		tb.Fatalf("NewCatalog: %v", err)
 	}
 	return NewAnalyzer(catalog)
 }

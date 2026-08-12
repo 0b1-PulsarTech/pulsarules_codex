@@ -11,15 +11,15 @@ import (
 // newTestContext builds a Context from the embedded knowledge snapshot with MCP
 // and hook wiring gated off, so a Strategy's skill-rendering path is exercised
 // deterministically without depending on gopls or copying a binary.
-func newTestContext(t testing.TB, base string, ids []string) Context {
-	t.Helper()
+func newTestContext(tb testing.TB, base string, ids []string) Context {
+	tb.Helper()
 	idx, templates, err := knowledge.Load("")
 	if err != nil {
-		t.Fatalf("load knowledge: %v", err)
+		tb.Fatalf("load knowledge: %v", err)
 	}
 	rnd, err := render.NewRenderer(templates)
 	if err != nil {
-		t.Fatalf("new renderer: %v", err)
+		tb.Fatalf("new renderer: %v", err)
 	}
 	return Context{
 		Templates:      templates,
