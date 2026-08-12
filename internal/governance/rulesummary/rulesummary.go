@@ -64,24 +64,24 @@ func (a *Analyzer) Stage() finding.StageID      { return finding.StageRuleInject
 func (a *Analyzer) Needs() finding.Requirements { return finding.Requirements{} }
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	injectRuleBodies(ctx.Findings, a.index)
+	injectRuleSummaries(ctx.Findings, a.index)
 	return nil
 }
 
-func injectRuleBodies(findings []finding.Finding, index *knowledge.Index) {
+func injectRuleSummaries(findings []finding.Finding, index *knowledge.Index) {
 	if index == nil {
 		return
 	}
 	rules := defaultRuleMap()
 	for idx := range findings {
-		if findings[idx].RuleBody != "" {
+		if findings[idx].RuleSummary != "" {
 			continue
 		}
 		if findings[idx].RuleID == "" {
 			findings[idx].RuleID = lookupRule(rules, findings[idx].AnalyzerID)
 		}
 		if findings[idx].RuleID != "" {
-			findings[idx].RuleBody = index.Body("rules", findings[idx].RuleID)
+			findings[idx].RuleSummary = index.Summary("rules", findings[idx].RuleID)
 		}
 	}
 }

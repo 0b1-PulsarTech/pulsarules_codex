@@ -58,8 +58,8 @@ func TestSession_WithCommitMsg(t *testing.T) {
 	for _, f := range findings {
 		if f.AnalyzerID == "commit-emoji-required" || f.AnalyzerID == "commit-type-required" {
 			found = true
-			if f.RuleBody == "" {
-				t.Error("expected RuleBody to be populated for commit finding")
+			if f.RuleSummary == "" {
+				t.Error("expected RuleSummary to be populated for commit finding")
 			}
 		}
 	}

@@ -27,6 +27,7 @@ func runCompositions(comps []composition) []string {
 func ruleSummaries(idx *knowledge.Index) []string {
 	problems := make([]string, 0, len(idx.Rules))
 	for _, rule := range idx.Rules {
+		// StageRuleInjection attaches this summary; the CLI prints its first sentence as rule:.
 		if idx.Summary("rules", rule.ID) == "" {
 			problems = append(problems, fmt.Sprintf("rule %q has no blockquote summary", rule.ID))
 		}

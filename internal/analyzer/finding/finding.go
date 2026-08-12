@@ -1,15 +1,15 @@
 package finding
 
 type Finding struct {
-	AnalyzerID string
-	Severity   Severity
-	Category   Category
-	File       string
-	Line       int
-	Message    string
-	Suggestion string
-	RuleID     string
-	RuleBody   string
+	AnalyzerID  string
+	Severity    Severity
+	Category    Category
+	File        string
+	Line        int
+	Message     string
+	Suggestion  string
+	RuleID      string
+	RuleSummary string
 }
 
 type Reporter struct {

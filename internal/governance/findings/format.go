@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 type FindingStyle string
@@ -67,8 +68,9 @@ func writeFinding(out *strings.Builder, finding finding.Finding, form layout) {
 		out.WriteString(form.arrow + "\u2192 " + finding.Suggestion + "\n")
 	}
 	if form.withRule {
-		if headline := firstFilledLine(finding.RuleBody); headline != "" {
-			out.WriteString(form.arrow + "rule: " + headline + "\n")
+		// The full summary is a ~400 char paragraph that drowns the finding.
+		if summary := strings.TrimSpace(finding.RuleSummary); summary != "" {
+			out.WriteString(form.arrow + "rule: " + knowledge.FirstSentence(summary) + "\n")
 		}
 	}
 }
@@ -81,15 +83,6 @@ func location(finding finding.Finding) string {
 		return fmt.Sprintf("%s:%d", finding.File, finding.Line)
 	}
 	return finding.File
-}
-
-func firstFilledLine(text string) string {
-	for line := range strings.SplitSeq(text, "\n") {
-		if trimmed := strings.TrimSpace(line); trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
 }
 
 func severityLabel(severity finding.Severity) string {
