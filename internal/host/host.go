@@ -22,9 +22,18 @@ type Context struct {
 	SettingsFile   string
 }
 
+type UninstallContext struct {
+	Base             string
+	HookUninstallers *install.Registry
+	SettingsFiles    []string
+	KeepSkills       bool
+}
+
 type Target interface {
 	Name() string
+	Present(base string) bool
 	Install(ctx Context) (Report, error)
+	Uninstall(ctx UninstallContext) (Report, error)
 }
 
 type Report struct {

@@ -1,17 +1,56 @@
 package host
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 )
 
 func TestOpencodeTargetName(t *testing.T) {
 	t.Parallel()
 	if got := (opencodeTarget{}).Name(); got != "opencode" {
 		t.Fatalf("Name() = %q, want opencode", got)
+	}
+}
+
+func TestOpencodeTargetPresent(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		makeOpencode bool
+		makeConfig   bool
+		want         bool
+	}{
+		{name: "opencode dir present", makeOpencode: true, want: true},
+		{name: "bare opencode.json", makeConfig: true, want: true},
+		{name: "untouched project", want: false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			base := t.TempDir()
+			if testCase.makeOpencode {
+				if err := os.MkdirAll(filepath.Join(base, ".opencode"), 0o750); err != nil {
+					t.Fatalf("mkdir .opencode: %v", err)
+				}
+			}
+			if testCase.makeConfig {
+				path := filepath.Join(base, "opencode.json")
+				if err := os.WriteFile(path, []byte("{}"), 0o600); err != nil {
+					t.Fatalf("seed opencode.json: %v", err)
+				}
+			}
+			if got := (opencodeTarget{}).Present(base); got != testCase.want {
+				t.Errorf("Present(%q) = %v, want %v", base, got, testCase.want)
+			}
+		})
 	}
 }
 
@@ -39,5 +78,149 @@ func TestOpencodeTargetInstall(t *testing.T) {
 		return strings.Contains(note, "wired opencode")
 	}) {
 		t.Errorf("Notes missing 'wired opencode': %v", report.Notes)
+	}
+}
+
+func TestOpencodeTargetUninstall(t *testing.T) {
+	t.Parallel()
+
+	base := t.TempDir()
+	ctx := newTestContext(t, base, []string{"go-style"})
+	ctx.NoHooks = false
+	if _, err := (opencodeTarget{}).Install(ctx); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	skillDoc := filepath.Join(base, ".opencode", "skills", "go-style", "SKILL.md")
+	if _, statErr := os.Stat(skillDoc); statErr != nil {
+		t.Fatalf("Install did not write %q: %v", skillDoc, statErr)
+	}
+	agentsDoc := filepath.Join(base, "AGENTS.md")
+	if _, statErr := os.Stat(agentsDoc); statErr != nil {
+		t.Fatalf("Install did not write %q: %v", agentsDoc, statErr)
+	}
+
+	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	report, err := (opencodeTarget{}).Uninstall(uctx)
+	if err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if _, statErr := os.Stat(skillDoc); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("expected %q to be removed, stat err = %v", skillDoc, statErr)
+	}
+	if _, statErr := os.Stat(agentsDoc); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("expected %q to be removed, stat err = %v", agentsDoc, statErr)
+	}
+	if _, statErr := os.Stat(
+		filepath.Join(base, ".opencode", "plugins"),
+	); !errors.Is(
+		statErr,
+		fs.ErrNotExist,
+	) {
+		t.Errorf("expected the plugin dir to be removed, stat err = %v", statErr)
+	}
+	if !slices.ContainsFunc(report.Notes, func(note string) bool {
+		return strings.Contains(note, "unwired")
+	}) {
+		t.Errorf("Notes missing an 'unwired' entry: %v", report.Notes)
+	}
+	if !slices.ContainsFunc(report.Notes, func(note string) bool {
+		return strings.Contains(note, "removed opencode governance plugin")
+	}) {
+		t.Errorf("Notes missing the plugin removal note: %v", report.Notes)
+	}
+	opencodeDir := filepath.Join(base, ".opencode")
+	if _, statErr := os.Stat(opencodeDir); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("expected %q to be reaped once empty, stat err = %v", opencodeDir, statErr)
+	}
+
+	if _, err = (opencodeTarget{}).Uninstall(uctx); err != nil {
+		t.Fatalf("second Uninstall: %v", err)
+	}
+}
+
+func TestOpencodeUninstall_UserFile(t *testing.T) {
+	t.Parallel()
+
+	base := t.TempDir()
+	ctx := newTestContext(t, base, []string{"go-style"})
+	ctx.NoHooks = false
+	if _, err := (opencodeTarget{}).Install(ctx); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	userFile := filepath.Join(base, ".opencode", "notes.txt")
+	if err := os.WriteFile(userFile, []byte("keep me"), 0o600); err != nil {
+		t.Fatalf("seed user file: %v", err)
+	}
+
+	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	if _, err := (opencodeTarget{}).Uninstall(uctx); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+
+	if _, statErr := os.Stat(userFile); statErr != nil {
+		t.Errorf("expected %q to survive, stat err = %v", userFile, statErr)
+	}
+	opencodeDir := filepath.Join(base, ".opencode")
+	if _, statErr := os.Stat(opencodeDir); statErr != nil {
+		t.Errorf("expected %q to survive (holds a user file), stat err = %v", opencodeDir, statErr)
+	}
+}
+
+func TestOpencodeUninstall_NoPluginNote(t *testing.T) {
+	t.Parallel()
+
+	base := t.TempDir()
+	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	report, err := (opencodeTarget{}).Uninstall(uctx)
+	if err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if slices.ContainsFunc(report.Notes, func(note string) bool {
+		return strings.Contains(note, "removed opencode governance plugin")
+	}) {
+		t.Errorf("Notes falsely claims a plugin removal: %v", report.Notes)
+	}
+}
+
+func TestOpencodeUninstall_KeepSkills(t *testing.T) {
+	t.Parallel()
+
+	base := t.TempDir()
+	ctx := newTestContext(t, base, []string{"go-style"})
+	if _, err := (opencodeTarget{}).Install(ctx); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	agentsDoc := filepath.Join(base, "AGENTS.md")
+
+	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry(), KeepSkills: true}
+	if _, err := (opencodeTarget{}).Uninstall(uctx); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if _, statErr := os.Stat(agentsDoc); statErr != nil {
+		t.Errorf("--keep-skills should have kept %q, stat err = %v", agentsDoc, statErr)
+	}
+}
+
+func TestOpencodeUninstall_UserAuthored(t *testing.T) {
+	t.Parallel()
+
+	base := t.TempDir()
+	agentsDoc := filepath.Join(base, "AGENTS.md")
+	foreign := "# My own AGENTS.md\nDo not touch.\n"
+	if err := os.WriteFile(agentsDoc, []byte(foreign), 0o600); err != nil {
+		t.Fatalf("seed user-authored AGENTS.md: %v", err)
+	}
+
+	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	if _, err := (opencodeTarget{}).Uninstall(uctx); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+
+	got, err := os.ReadFile(agentsDoc) //nolint:gosec // test fixture.
+	if err != nil {
+		t.Fatalf("expected user-authored AGENTS.md to survive, read err = %v", err)
+	}
+	if string(got) != foreign {
+		t.Errorf("AGENTS.md content changed, got %q want %q", got, foreign)
 	}
 }

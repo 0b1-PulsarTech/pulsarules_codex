@@ -75,6 +75,34 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 	return nil
 }
 
+func removeSkills(dest string, report *Report) error {
+	removed, restored, err := docs.Remove(dest, "SKILL.md")
+	if err != nil {
+		return fmt.Errorf("remove skills from %q: %w", dest, err)
+	}
+	for _, id := range removed {
+		report.note("removed: %s", filepath.Join(dest, id))
+	}
+	for _, msg := range restored {
+		report.note("%s", msg)
+	}
+	return nil
+}
+
+func removeWorkflows(dest string, report *Report) error {
+	removed, restored, err := docs.Remove(dest, "WORKFLOW.md")
+	if err != nil {
+		return fmt.Errorf("remove workflows from %q: %w", dest, err)
+	}
+	for _, id := range removed {
+		report.note("removed workflow: %s", filepath.Join(dest, id))
+	}
+	for _, msg := range restored {
+		report.note("%s", msg)
+	}
+	return nil
+}
+
 func writeAgents(ctx Context, report *Report) error {
 	path := filepath.Join(ctx.Base, "AGENTS.md")
 	wrote, err := agents.Write(ctx.Templates, ctx.Base, ctx.Index, ctx.IDs)
@@ -85,6 +113,18 @@ func writeAgents(ctx Context, report *Report) error {
 		report.note("wrote %s", path)
 	} else {
 		report.warn("kept existing user-authored %s (not overwritten)", path)
+	}
+	return nil
+}
+
+func removeAgents(base string, report *Report) error {
+	path := filepath.Join(base, "AGENTS.md")
+	removed, err := agents.RemoveAgents(base)
+	if err != nil {
+		return fmt.Errorf("remove agents: %w", err)
+	}
+	if removed {
+		report.note("removed %s", path)
 	}
 	return nil
 }

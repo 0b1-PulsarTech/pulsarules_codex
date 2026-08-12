@@ -2,12 +2,15 @@ package host
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 func wireClaudeMCP(templates fs.FS, repoDir, skillsDir string, report *Report) error {
@@ -25,6 +28,22 @@ func wireClaudeMCP(templates fs.FS, repoDir, skillsDir string, report *Report) e
 		"wired gopls MCP into %s; generated gopls-navigation skill",
 		filepath.Join(repoDir, ".mcp.json"),
 	)
+	return nil
+}
+
+func unwireClaudeMCP(repoDir string, report *Report) error {
+	mcpPath := filepath.Join(repoDir, ".mcp.json")
+	if _, statErr := os.Stat(mcpPath); errors.Is(statErr, fs.ErrNotExist) {
+		return nil
+	}
+	if err := mcp.Remove(repoDir); err != nil {
+		if errors.Is(err, jsondoc.ErrUnparseableJSON) {
+			report.warn("%v", err)
+			return nil
+		}
+		return fmt.Errorf("remove mcp: %w", err)
+	}
+	report.note("unwired gopls from %s", mcpPath)
 	return nil
 }
 
