@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 // FindingStyle selects the layout FormatFindings renders.
@@ -78,8 +79,10 @@ func writeFinding(out *strings.Builder, finding core.Finding, form layout) {
 		out.WriteString(form.arrow + "→ " + finding.Suggestion + "\n")
 	}
 	if form.withRule {
-		if headline := firstFilledLine(finding.RuleBody); headline != "" {
-			out.WriteString(form.arrow + "rule: " + headline + "\n")
+		// why: a rule's blockquote summary is a whole paragraph joined into one
+		// line - up to ~400 chars - which drowns the finding it annotates.
+		if summary := strings.TrimSpace(finding.RuleSummary); summary != "" {
+			out.WriteString(form.arrow + "rule: " + knowledge.FirstSentence(summary) + "\n")
 		}
 	}
 }
@@ -92,17 +95,6 @@ func location(finding core.Finding) string {
 		return fmt.Sprintf("%s:%d", finding.File, finding.Line)
 	}
 	return finding.File
-}
-
-// firstFilledLine is the rule body's headline. A body starts with a blank line
-// after its frontmatter, so taking line one verbatim prints an empty "rule:".
-func firstFilledLine(text string) string {
-	for line := range strings.SplitSeq(text, "\n") {
-		if trimmed := strings.TrimSpace(line); trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
 }
 
 // severityLabel returns the lowercase label for severity; the caller

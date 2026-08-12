@@ -37,7 +37,7 @@ func withEmojiParams(analyzers map[string]core.AnalyzerConfig, emojiCfg config.E
 	if !found {
 		entry = core.AnalyzerConfig{Enabled: true}
 	}
-	params := make(map[string]any, len(entry.Params)+3)
+	params := make(map[string]any, len(entry.Params))
 	maps.Copy(params, entry.Params)
 	params["emoji_hard_window"] = emojiCfg.WindowSize
 	params["emoji_soft_window"] = emojiCfg.SoftWindowSize

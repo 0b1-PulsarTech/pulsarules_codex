@@ -23,6 +23,17 @@ import (
 //   ":volcano: Merge ..."             → IsMerge = true (no type)
 //   "[wip]" / "[WIP]" prefix in desc  → IsWIP = true
 
+// MaxLeadingEmojis is the most leading :shortcode: emoji a commit message may
+// carry. The parser consumes every leading emoji token, however many there
+// are; the commit rules (see internal/analyzer/commit) reject a message
+// whose Emojis exceeds this count.
+const MaxLeadingEmojis = 3
+
+// maxEmojiNameLength bounds how long a single :shortcode: name may run
+// before tryEmoji gives up on it as unterminated punctuation rather than an
+// emoji (the longest real shortcode is nowhere near this).
+const maxEmojiNameLength = 32
+
 // parser is the internal state machine.
 type parser struct {
 	runes []rune
@@ -62,8 +73,12 @@ func (p *parser) parse(msg *Message) {
 	p.parseBodyAndFooters(msg)
 }
 
+// why: uncapped on purpose - MaxLeadingEmojis is a validation rule the commit
+// analyzer enforces on the resulting count, not a token-count the parser
+// truncates at, so an over-long run reports commit-emoji-count instead of
+// the extras being misread as the type.
 func (p *parser) parseEmojis(msg *Message) {
-	for range 3 {
+	for {
 		name, ok := p.tryEmoji()
 		if !ok {
 			break
@@ -88,7 +103,7 @@ func (p *parser) tryEmoji() (string, bool) {
 		if r == ':' {
 			break
 		}
-		if r == ' ' || r == '\n' || p.pos-nameStart > 32 {
+		if r == ' ' || r == '\n' || p.pos-nameStart > maxEmojiNameLength {
 			p.pos = start
 			return "", false
 		}

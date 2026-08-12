@@ -1,5 +1,5 @@
-# Generated skill output (produced by `pulsarules_codex-installer generate`/`install`)
-generated/
+# Generated skill output (produced by `pulsarules_cli generate`/`install`)
+/generated/
 # Locally installed skills + hook (produced by the installer; kept per-target, untracked)
 .claude/
 # Locally wired MCP config (produced by the installer; machine-specific absolute paths)

@@ -174,6 +174,20 @@ func parseCasesExtended() []parseTestCase {
 				Description: "The Gate",
 			},
 		},
+		{
+			// why: the parser must consume every leading emoji token, however
+			// many there are - MaxLeadingEmojis is a downstream validation
+			// rule (internal/analyzer/commit), not a token count the parser
+			// truncates at. Truncating here would misread the 4th emoji as
+			// the type and hide the real over-count from validation.
+			name:  "four leading emojis over the max",
+			input: ":sparkles: :bug: :wrench: :zap: feat: Add a thing",
+			want: Message{
+				Emojis:      []string{"sparkles", "bug", "wrench", "zap"},
+				Type:        "feat",
+				Description: "Add a thing",
+			},
+		},
 	}
 }
 

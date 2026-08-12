@@ -9,19 +9,19 @@ import (
 
 var (
 	locatedFinding = core.Finding{
-		AnalyzerID: "file-size",
-		Severity:   core.SeverityWarning,
-		Message:    "file is too long",
-		File:       "internal/a.go",
-		Line:       42,
-		Suggestion: "split it",
-		RuleBody:   "\n\n# Effective Go\nrest of the body",
+		AnalyzerID:  "file-size",
+		Severity:    core.SeverityWarning,
+		Message:     "file is too long",
+		File:        "internal/a.go",
+		Line:        42,
+		Suggestion:  "split it",
+		RuleSummary: "Keep functions short and files under one concept.",
 	}
 	blankRuleFinding = core.Finding{
-		AnalyzerID: "naming",
-		Severity:   core.SeverityWarning,
-		Message:    "bad name",
-		RuleBody:   "\n   \n\n",
+		AnalyzerID:  "naming",
+		Severity:    core.SeverityWarning,
+		Message:     "bad name",
+		RuleSummary: "\n   \n\n",
 	}
 	unlocatedFinding = core.Finding{
 		AnalyzerID: "commit-lint",
@@ -59,7 +59,7 @@ func TestFormatFindings(t *testing.T) {
 			style:    StyleCLI,
 			want: "[WARN] file-size: file is too long (internal/a.go:42)\n" +
 				"  → split it\n" +
-				"  rule: # Effective Go\n",
+				"  rule: Keep functions short and files under one concept.\n",
 		},
 		{
 			name:     "hook indents, downcases and drops the rule",

@@ -1,0 +1,11 @@
+{
+  "findings": [
+    {
+      "analyzerId": "no-em-dash",
+      "file": "note/note.go",
+      "line": 13,
+      "messageSubstring": "em-dash"
+    }
+  ],
+  "suppressedGenerated": 0
+}

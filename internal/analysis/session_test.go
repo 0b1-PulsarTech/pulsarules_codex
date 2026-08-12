@@ -21,13 +21,11 @@ func TestSession_NoChanges(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.ApplyPreset()
 
-	// A nil repo means every analyzer's own guard (empty CommitMsg, nil
-	// Sources, empty ProjectDir, no StagedRenames) trips, so a run over "no
-	// repo, no changes" must come back with zero findings. ScopeChanged
-	// (rather than ScopeFull) keeps this deterministic: ScopeFull also
-	// registers the golangci-lint/gopls delegation analyzers, which run
-	// unconditionally against the ambient toolchain regardless of repo/scope
-	// and would leak environment-dependent findings into this assertion.
+	// A nil repo trips every analyzer's own guard (empty CommitMsg, nil
+	// Sources, no StagedRenames), so this must return zero findings.
+	// ScopeChanged, not ScopeFull, keeps it deterministic - ScopeFull also
+	// runs the golangci-lint/gopls delegation analyzers against the ambient
+	// toolchain, leaking environment-dependent findings.
 	sess := NewSession(nil, "", idx, cfg)
 	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
 	if len(findings) != 0 {
@@ -65,8 +63,8 @@ func TestSession_WithCommitMsg(t *testing.T) {
 	for _, f := range findings {
 		if f.AnalyzerID == "commit-emoji-required" || f.AnalyzerID == "commit-type-required" {
 			found = true
-			if f.RuleBody == "" {
-				t.Error("expected RuleBody to be populated for commit finding")
+			if f.RuleSummary == "" {
+				t.Error("expected RuleSummary to be populated for commit finding")
 			}
 		}
 	}
@@ -111,7 +109,7 @@ func TestSession_ScopeCommit(t *testing.T) {
 func TestSession_NilKnowledge(t *testing.T) {
 	t.Parallel()
 
-	// A nil index only disables RuleBody injection; it never manufactures a
+	// A nil index only disables RuleSummary injection; it never manufactures a
 	// finding on its own, so this is still empty with no repo and no
 	// changes. ScopeChanged keeps the result deterministic (see NoChanges
 	// above for why ScopeFull's delegation analyzers would make this flaky).
