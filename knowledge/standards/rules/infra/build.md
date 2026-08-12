@@ -60,6 +60,22 @@ Applies to: build, tooling, and code generation.
    root; base images pinned by digest.
 8. Tool dependencies come from a `tools/go.mod` (or `//go:build tools` file); no build-time
    `curl | sh` downloads.
+9. A rule this knowledge base ships is a suggestion, not a guardrail, until an analyzer enforces it
+   (see [[skill-authoring]]). `internal/analyzer/delegation/golangcilint` runs golangci-lint against
+   a TARGET project using THAT project's own discovered config, so a linter enabled only in this
+   repo's `.golangci.yml` never governs a consumer. The delegation runner forces a small,
+   non-negotiable baseline via `-E` on every delegated run - `nolintlint`, `paralleltest`,
+   `tparallel`, `thelper`, `forcetypeassert`, `nilerr` - on top of whatever the target's own config
+   already enables (`golangci-lint run -E foo` adds `foo`, it does not replace the config's enabled
+   set; verified against golangci-lint v2.12.2). This is how `nolintlint` enforces "every `//nolint`
+   names its linter and carries a reason" (this rule, above) and how the testing rule's
+   `t.Parallel()`/`t.Helper()` obligations become machine-checked in every consumer, not just here.
+   `nolintlint`'s own `require-explanation`/`require-specific` settings cannot be forced through
+   `-E` - it only enables the linter at its permissive defaults - so a consumer wanting that
+   stricter enforcement sets those two settings itself; without them, the forced `nolintlint` still
+   catches unused and malformed `//nolint` directives, just not a bare unqualified one.
+   `bodyclose` and `sqlclosecheck` are RECOMMENDED, not forced: forcing them can flood a legacy
+   project that never ran them, and a gate that floods is a gate people switch off.
 {{end}}
 
 {{define "forbidden"}}
@@ -85,4 +101,7 @@ Applies to: build, tooling, and code generation.
 - [ ] `go.work` declares no out-of-repo packages (private via `GOPRIVATE`); GOWORK-on; one grouped
   `replace ( ... )` block per `go.mod` with tab-indented clean `../` paths.
 - [ ] Container multi-stage, distroless, digest-pinned; tools in `tools/go.mod`.
+- [ ] The golangci-lint delegation runner forces `nolintlint`, `paralleltest`, `tparallel`,
+  `thelper`, `forcetypeassert`, `nilerr` via `-E` on every target project; `bodyclose` and
+  `sqlclosecheck` are documented as recommended, not forced.
 {{end}}
