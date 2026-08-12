@@ -18,6 +18,12 @@ const (
 	shortcodeURL = "https://api.github.com/emojis"
 	unicodeURL   = "https://unicode.org/Public/emoji/latest/emoji-test.txt"
 	fetchTimeout = 60 * time.Second
+
+	// scannerStartBufferBytes and scannerMaxBufferBytes size the line
+	// scanner's buffer well above emoji-test.txt's longest line, so
+	// bufio.Scanner never needs to report ErrTooLong.
+	scannerStartBufferBytes = 64 * 1024
+	scannerMaxBufferBytes   = 1024 * 1024
 )
 
 // unicodeMeta is the Unicode registry's view of one emoji sequence.
@@ -55,16 +61,20 @@ func fetchShortcodes() (map[string]string, error) {
 	return codepoints, nil
 }
 
+// estimatedSequenceCount sizes the meta map to roughly how many sequences
+// emoji-test.txt lists, so loading it doesn't rehash as it grows.
+const estimatedSequenceCount = 4096
+
 func fetchUnicodeMeta() (map[string]unicodeMeta, error) {
 	body, err := get(unicodeURL)
 	if err != nil {
 		return nil, err
 	}
 
-	meta := make(map[string]unicodeMeta, 4096)
+	meta := make(map[string]unicodeMeta, estimatedSequenceCount)
 	var group, subgroup string
 	scanner := bufio.NewScanner(bytes.NewReader(body))
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	scanner.Buffer(make([]byte, 0, scannerStartBufferBytes), scannerMaxBufferBytes)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if after, ok := strings.CutPrefix(line, "# group:"); ok {
@@ -79,14 +89,14 @@ func fetchUnicodeMeta() (map[string]unicodeMeta, error) {
 		if !ok {
 			continue
 		}
-		info := unicodeMeta{Version: version, Group: group, Subgroup: subgroup}
-		meta[key] = info
+		sequenceMeta := unicodeMeta{Version: version, Group: group, Subgroup: subgroup}
+		meta[key] = sequenceMeta
 		// GitHub's icon URLs drop the zero-width joiner and the variation
 		// selector, so a joined sequence like pirate_flag only matches on a
 		// key with both stripped. First spelling wins.
 		if joinless := stripJoiners(key); joinless != key {
 			if _, taken := meta[joinless]; !taken {
-				meta[joinless] = info
+				meta[joinless] = sequenceMeta
 			}
 		}
 	}

@@ -2,6 +2,10 @@ version: "3"
 
 vars:
   BIN: build/bin/pulsarules_cli
+  # pinned per knowledge/standards/rules/infra/build.md #8: no curl|sh downloads,
+  # tool versions must be pinned. govulncheck has no tools/go.mod entry point in
+  # this single-module repo, so it is pinned via `go run <module>@<version>`.
+  GOVULNCHECK_VERSION: v1.6.0
 
 tasks:
   default:
@@ -10,55 +14,75 @@ tasks:
       - task: vet
       - task: test
 
-  build:
+  vet:
+    desc: go vet (internal, used by default)
+    cmds:
+      - CGO_ENABLED=0 go vet ./...
+
+  test:
+    desc: go test (internal, used by default; CGO-free, no -race)
+    cmds:
+      - CGO_ENABLED=0 go test ./...
+
+  test:race:
+    desc: go test -race (requires CGO; the default build/test stays CGO-free)
+    cmds:
+      - CGO_ENABLED=1 go test -race ./...
+
+  tools:fmt:
+    desc: format with the project formatter (gofumpt + golines + goimports)
+    cmds:
+      - golangci-lint fmt ./...
+
+  tools:lint:
+    desc: golangci-lint
+    cmds:
+      - golangci-lint run ./...
+
+  tools:vuln:
+    desc: govulncheck (pinned version, no build-time binary download)
+    cmds:
+      - go run golang.org/x/vuln/cmd/govulncheck@{{.GOVULNCHECK_VERSION}} ./...
+
+  tools:mocks:
+    desc: regenerate colocated mocks (no-op until a go:generate mockgen directive exists)
+    cmds:
+      - go generate ./...
+
+  build:bin:
     desc: build the installer into build/bin
     cmds:
       - mkdir -p build/bin
-      - go build -o {{.BIN}} ./cmd/pulsarules_cli
+      - CGO_ENABLED=0 go build -o {{.BIN}} ./cmd/pulsarules_cli
 
-  vet:
-    desc: go vet
-    cmds:
-      - go vet ./...
-
-  test:
-    desc: go test
-    cmds:
-      - go test ./...
-
-  fmt:
-    desc: gofmt (use gofumpt+golines+goimports in projects that have them)
-    cmds:
-      - gofmt -w knowledge internal cmd
-
-  generate:
-    desc: render generated/skills from the embedded knowledge (gitignored)
-    cmds:
-      - go run ./cmd/pulsarules_cli generate
-
-  validate:
-    desc: validate the embedded knowledge base
-    cmds:
-      - go run ./cmd/pulsarules_cli validate
-
-  list:
-    desc: list the skill catalog
-    cmds:
-      - go run ./cmd/pulsarules_cli list
-
-  package:
+  build:package:
     desc: zip all skills into build/
     cmds:
       - go run ./cmd/pulsarules_cli package
 
-  lint:
-    desc: golangci-lint (if installed)
+  gen:skills:
+    desc: render generated/skills from the embedded knowledge (gitignored)
     cmds:
-      - golangci-lint run ./...
+      - go run ./cmd/pulsarules_cli generate
 
-  emoji:
+  gen:validate:
+    desc: validate the embedded knowledge base
+    cmds:
+      - go run ./cmd/pulsarules_cli validate
+
+  tools:governance:
+    desc: run this repo's own analyzers (internal/analysis) against the full tree
+    cmds:
+      - go run ./cmd/pulsarules_cli governance --project . --all-files
+
+  gen:emoji:
     desc: regenerate the commit emoji catalog (needs network + a jane clone)
     vars:
       JANE: '{{.JANE | default "../../inspiration/jane"}}'
     cmds:
       - go run ./tools/emojigen --jane {{.JANE}} --out internal/emoji/data
+
+  list:
+    desc: list the skill catalog
+    cmds:
+      - go run ./cmd/pulsarules_cli list

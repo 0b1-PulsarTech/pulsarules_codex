@@ -48,18 +48,18 @@ func buildCatalog(
 ) []catalogEntry {
 	entries := make([]catalogEntry, 0, len(shortcodes))
 	for name, codepoints := range shortcodes {
-		info, ok := lookupMeta(meta, codepoints)
+		sequenceMeta, ok := lookupMeta(meta, codepoints)
 		if !ok {
 			continue
 		}
-		if !admits(name, info) {
+		if !admits(name, sequenceMeta) {
 			continue
 		}
 		entries = append(entries, catalogEntry{
 			Name:      name,
-			Version:   info.Version,
-			Group:     info.Group,
-			Subgroup:  info.Subgroup,
+			Version:   sequenceMeta.Version,
+			Group:     sequenceMeta.Group,
+			Subgroup:  sequenceMeta.Subgroup,
 			JaneCount: janeCounts[name],
 		})
 	}
@@ -67,14 +67,14 @@ func buildCatalog(
 	return entries
 }
 
-func admits(name string, info unicodeMeta) bool {
+func admits(name string, sequenceMeta unicodeMeta) bool {
 	if emoji.IsProhibited(name) || emoji.IsNonRendering(name) {
 		return false
 	}
-	if slices.Contains(excludedSubgroups, info.Subgroup) {
+	if slices.Contains(excludedSubgroups, sequenceMeta.Subgroup) {
 		return false
 	}
-	return info.Version <= maxEmojiVersion || slices.Contains(janeExceptions, name)
+	return sequenceMeta.Version <= maxEmojiVersion || slices.Contains(janeExceptions, name)
 }
 
 // lookupMeta tolerates the spelling differences between GitHub's codepoint
@@ -86,8 +86,8 @@ func lookupMeta(meta map[string]unicodeMeta, codepoints string) (unicodeMeta, bo
 		stripJoiners(codepoints),
 		codepoints + "-fe0f",
 	} {
-		if info, ok := meta[candidate]; ok {
-			return info, true
+		if sequenceMeta, ok := meta[candidate]; ok {
+			return sequenceMeta, true
 		}
 	}
 	return unicodeMeta{}, false
