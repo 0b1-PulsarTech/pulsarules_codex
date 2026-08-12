@@ -218,10 +218,13 @@ the embedded snapshot (the shipped behavior).
 
 ```sh
 task                    # vet + test
-task vet                # go vet
-task test               # go test
-task tools:fmt          # gofmt knowledge internal cmd
-task tools:lint         # golangci-lint (if installed)
+task vet                # go vet (CGO-free)
+task test               # go test (CGO-free, no -race)
+task test:race          # tests under the race detector (needs CGO)
+task tools:fmt          # format with the project formatter (gofumpt + golines + goimports)
+task tools:lint         # golangci-lint
+task tools:governance   # this repo's own analyzers against the full tree
+task tools:mocks        # regenerate colocated mocks
 task build:bin          # build the binary
 task build:package      # zip skills
 task gen:skills         # render skills (gitignored)
