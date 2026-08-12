@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 const configFile = "opencode.json"
@@ -55,13 +55,8 @@ func WireConfig(projectDir string, gopls GoplsWiring) error {
 		}
 	}
 
-	out, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal opencode.json: %w", err)
-	}
-	//nolint:gosec // path is under the caller's project dir.
-	if err = os.WriteFile(path, append(out, '\n'), disk.FilePrivate); err != nil {
-		return fmt.Errorf("write %q: %w", path, err)
+	if err = jsondoc.Save(path, config); err != nil {
+		return fmt.Errorf("save %q: %w", path, err)
 	}
 	return nil
 }
