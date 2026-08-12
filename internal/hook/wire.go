@@ -3,7 +3,6 @@ package hook
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 )
 
 type Output struct {
@@ -43,7 +42,7 @@ func (d *Dispatcher) emitOutput(event, context string) {
 		AdditionalContext: context,
 	}})
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "hook: marshal:", err)
+		_, _ = fmt.Fprintln(d.errOut, "hook: marshal:", err)
 		return
 	}
 	_, _ = fmt.Fprintln(d.out, string(out))

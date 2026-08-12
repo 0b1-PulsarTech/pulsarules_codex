@@ -109,6 +109,12 @@ repo without hardcoding a host's own variable name or a host's own skills layout
 hook script stay local while `settings.json` and the rendered skills - which carry their own
 `.gitignore` - remain yours to commit or not.
 
+If the install predates `PULSARULES_PROJECT_DIR`/`PULSARULES_SKILLS_DIR`, an older
+`skill-router-reminder.sh` exports neither, so the binary resolves an empty project dir: the
+`stop` and `pre-search` checks go silently quiet and `post-edit` falls back to its generic
+reminder. The binary now prints a one-time stderr warning naming the fix: re-run `install` (this
+command) to regenerate the hook script.
+
 Additional install flags:
 
 - `--target` (repeatable, default `claude`): pass `--target claude --target opencode` to install

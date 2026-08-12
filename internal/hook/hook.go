@@ -13,6 +13,7 @@ import (
 func (d *Dispatcher) Dispatch(mode string, payload []byte) error {
 	in := decodeHookPayload(payload)
 	session := NewSessionTrackerFromID(in.SessionID)
+	d.warnMissingProjectDir(session)
 	start := time.Now()
 
 	var (
