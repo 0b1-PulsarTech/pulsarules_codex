@@ -1,6 +1,7 @@
 package opencode
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -77,6 +78,49 @@ func TestInstall_GitignoreIgnoresBin(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "/bin/") {
 		t.Error(".gitignore missing /bin/ entry")
+	}
+}
+
+func TestUninstall_RemovesPluginAndGitignore(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if err := Install(dir, testTemplates(t)); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	removed, err := Uninstall(dir)
+	if err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if !removed {
+		t.Error("expected Uninstall to report the plugin as removed")
+	}
+
+	for _, rel := range []string{
+		filepath.Join(".opencode", "plugins"),
+		filepath.Join(".opencode", "bin"),
+	} {
+		if _, statErr := os.Stat(filepath.Join(dir, rel)); !errors.Is(statErr, fs.ErrNotExist) {
+			t.Errorf("expected %q to be removed, stat err = %v", rel, statErr)
+		}
+	}
+	if _, statErr := os.Stat(
+		filepath.Join(dir, ".opencode", ".gitignore"),
+	); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("expected .gitignore to be removed once empty, stat err = %v", statErr)
+	}
+}
+
+func TestUninstall_UntouchedDir(t *testing.T) {
+	t.Parallel()
+
+	removed, err := Uninstall(t.TempDir())
+	if err != nil {
+		t.Fatalf("Uninstall on untouched dir: %v", err)
+	}
+	if removed {
+		t.Error("expected Uninstall on an untouched dir to report nothing removed")
 	}
 }
 

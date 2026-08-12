@@ -78,3 +78,32 @@ func InstallBinary(dir string) error {
 	}
 	return nil
 }
+
+func Uninstall(dir string) (removed, restored []string, err error) {
+	hooksDir := filepath.Join(dir, ".git", "hooks")
+	for name := range hookScripts() {
+		path := filepath.Join(hooksDir, name)
+		_, ours, checkErr := ownedfile.Check(path)
+		if checkErr != nil {
+			return removed, restored, fmt.Errorf("check %q: %w", path, checkErr)
+		}
+		if !ours {
+			continue
+		}
+		if err = os.Remove(path); err != nil {
+			return removed, restored, fmt.Errorf("remove %q: %w", path, err)
+		}
+		removed = append(removed, name)
+		restoredOK, restoreErr := ownedfile.Restore(path)
+		if restoreErr != nil {
+			return removed, restored, fmt.Errorf("restore %q: %w", path, restoreErr)
+		}
+		if restoredOK {
+			restored = append(restored, ownedfile.RestoreMessage(path))
+		}
+	}
+	if err = os.RemoveAll(filepath.Join(hooksDir, "pulsarules_cli")); err != nil {
+		return removed, restored, fmt.Errorf("remove installer binary: %w", err)
+	}
+	return removed, restored, nil
+}

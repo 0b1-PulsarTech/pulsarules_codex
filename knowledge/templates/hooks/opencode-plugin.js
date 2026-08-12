@@ -1,4 +1,5 @@
 // pulsarules_codex governance plugin for opencode.
+// Installed by pulsarules_cli; remove this file to disable.
 import { accessSync, constants as fsConstants } from "node:fs";
 
 // simplification: pre-edit stays unwired. tool.execute.before's output object is only
