@@ -196,6 +196,7 @@ uses); `--scope full` (default) adds architecture and delegation.
 `--include-generated` turns that off.
 
 ```sh
+# the exact governance gate task tools:governance / CI run:
 pulsarules_cli governance --project . --all-files
 
 # full sweep, explicit scope:
@@ -224,7 +225,7 @@ task test:race          # tests under the race detector (needs CGO)
 task tools:fmt          # format with the project formatter (gofumpt + golines + goimports)
 task tools:lint         # golangci-lint
 task tools:vuln         # govulncheck (pinned version)
-task tools:governance   # this repo's own analyzers against the full tree
+task tools:governance   # this repo's own analyzers against the full tree - the CI governance gate
 task tools:mocks        # regenerate colocated mocks
 task build:bin          # build the binary
 task build:package      # zip skills
