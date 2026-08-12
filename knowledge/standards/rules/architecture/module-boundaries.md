@@ -8,6 +8,8 @@ tags:
     - modularity
 linters:
     - depguard
+analyzers:
+    - import-cycle
 ---
 
 # Module boundaries - cohesion, coupling, connascence

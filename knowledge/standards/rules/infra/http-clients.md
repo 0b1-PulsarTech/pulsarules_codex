@@ -10,6 +10,8 @@ dependencies:
 linters:
     - depguard
     - gosec
+analyzers:
+    - golangci-lint
 ---
 
 # HTTP clients

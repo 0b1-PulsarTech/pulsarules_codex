@@ -13,6 +13,8 @@ linters:
     - nestif
     - unused
     - unparam
+analyzers:
+    - simplification-path
 ---
 
 # Code minimalism (function scope)

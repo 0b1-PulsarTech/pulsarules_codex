@@ -8,6 +8,9 @@ tags:
     - modules
 linters:
     - depguard
+analyzers:
+    - arch-boundary
+    - import-cycle
 ---
 
 # Code placement - single repo with inner modules

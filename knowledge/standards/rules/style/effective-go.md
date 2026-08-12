@@ -22,6 +22,12 @@ linters:
     - predeclared
     - godoclint
     - forbidigo
+analyzers:
+    - file-size
+    - no-em-dash
+    - top-of-file
+    - big-comment
+    - shadowing
 ---
 
 # Effective Go subset

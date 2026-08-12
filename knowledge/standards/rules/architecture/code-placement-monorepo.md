@@ -8,6 +8,9 @@ tags:
     - monorepo
 linters:
     - depguard
+analyzers:
+    - arch-boundary
+    - import-cycle
 ---
 
 # Code placement - monorepo layout
