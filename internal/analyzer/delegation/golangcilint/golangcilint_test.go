@@ -30,8 +30,14 @@ func TestRun_MissingBinary(t *testing.T) {
 	if got.AnalyzerID != "golangci-lint" {
 		t.Errorf("AnalyzerID = %q, want %q", got.AnalyzerID, "golangci-lint")
 	}
-	if !strings.Contains(got.Message, "failed to parse golangci-lint output") {
-		t.Errorf("Message = %q, want it to mention a parse failure", got.Message)
+	if strings.Contains(got.Message, "failed to parse golangci-lint output") {
+		t.Errorf("Message = %q, must not claim a JSON parse failure", got.Message)
+	}
+	if !strings.Contains(got.Message, "/nonexistent/golangci-lint") {
+		t.Errorf(
+			"Message = %q, want it to name the real exec failure (missing binary path)",
+			got.Message,
+		)
 	}
 }
 
