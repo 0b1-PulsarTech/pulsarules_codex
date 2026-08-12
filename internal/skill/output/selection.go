@@ -19,11 +19,9 @@ type DependencyPull struct {
 
 // Resolve returns the concrete skill id list for the selection against idx,
 // in composition order, plus every skill pulled in transitively through a
-// compose_skills reference. Every mode except RouterOnly always carries the
-// mandatory baseline (project-router plus every always_load skill); an empty
-// selection (no All, no IDs) resolves to that baseline alone. RouterOnly is a
-// minimal router-doc-only mode that intentionally skips the rest of the
-// baseline.
+// compose_skills reference. Every mode except RouterOnly carries the
+// mandatory baseline (project-router plus every always_load skill), so an
+// empty selection resolves to that baseline alone; RouterOnly skips it.
 func (sel Selection) Resolve(idx *knowledge.Index) (ids []string, pulled []DependencyPull) {
 	if sel.RouterOnly {
 		return []string{"project-router"}, nil
@@ -75,15 +73,11 @@ func wantedInOrder(idx *knowledge.Index, want map[string]bool) []string {
 	return ids
 }
 
-// why: project-router's compose_skills field lists the full catalog for the
-// rendered router doc, not an install dependency, so walking it would drag in
-// nearly every skill; it is exempt here. A visited set stops a hand-authored
-// dependency cycle from recursing forever.
-//
-// simplification: only the explicit selection's own deps are walked, not the
-// mandatory baseline's; today no mandatory skill besides project-router
-// (exempt above) declares compose_skills. If one later does, it would need
-// adding to roots too.
+// why: compose_skills on project-router lists the full router-doc catalog,
+// not a dependency, so it's exempt; a visited set stops a hand-authored cycle.
+// simplification: only the selection's own deps are walked, since only
+// project-router uses compose_skills today. Upgrade path: revisit if a
+// mandatory skill adds one, and add it to roots.
 func pullDependencies(
 	byID map[string]knowledge.Skill,
 	want map[string]bool,
