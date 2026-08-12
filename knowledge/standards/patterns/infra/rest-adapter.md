@@ -24,6 +24,7 @@ Reference tools: `Fuego` (OpenAPI-first web framework) via a thin web adapter.
 - Exposing a use case over REST.
 - Building request/response DTOs for OpenAPI.
 - Registering routes with a per-route permission guard.
+- Wiring the HTTP server's middleware chain.
 {{end}}
 
 {{define "must"}}
@@ -37,6 +38,10 @@ Reference tools: `Fuego` (OpenAPI-first web framework) via a thin web adapter.
 5. Register routes through a typed router contract, asserting `var _ web.RouterContract = Handlers{}`.
 6. Apply a permission guard middleware to each route as a coarse fail-fast pre-check ahead of the
    call-site access gate.
+7. Register a panic-recovery middleware ahead of every handler as a NAMED EXCEPTION to the general
+   no-`recover()` rule (see [[errors]], [[concurrency]]): recover, log with `debug.Stack()` (the
+   `bootstrap/scheduler.go` template), respond `500`, and let the request die alone. The framework
+   is not assumed to recover handler panics on its own.
 {{end}}
 
 {{define "recipe"}}
@@ -113,6 +118,8 @@ the route guard is only a coarse fail-fast pre-check.
 - Permission decisions made only in the handler (the access gate at the call site is the authority).
 - Hand-writing HTTP statuses for domain errors (return the domain-error type).
 - Global routers/middleware; untyped route registration that loses OpenAPI generics.
+- Serving requests with no panic-recovery middleware ahead of the handler chain.
+- A `recover()` anywhere in the REST stack outside that middleware.
 {{end}}
 
 {{define "validation"}}
@@ -122,4 +129,6 @@ the route guard is only a coarse fail-fast pre-check.
 - [ ] Errors returned as the domain-error type; no status codes hand-written.
 - [ ] Routes registered typed; `RouterContract` asserted; permission guard applied.
 - [ ] Authorization enforced by the access gate at the call site; the route guard is only fail-fast.
+- [ ] Panic-recovery middleware is registered ahead of handlers, logs with `debug.Stack()`, and
+  responds `500`.
 {{end}}
