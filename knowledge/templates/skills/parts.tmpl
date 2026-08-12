@@ -42,3 +42,10 @@ alwaysApply: false
 ---
 <!-- Installed by pulsarules_cli -->
 {{end}}
+{{define "mdFrontmatter"}}---
+name: {{.ID}}
+description: {{.Description}}
+---
+{{end}}
+{{define "installedComment"}}<!-- Installed by pulsarules_cli; re-run install to update, do not hand-edit. -->
+{{end}}
