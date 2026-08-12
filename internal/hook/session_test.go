@@ -1,6 +1,8 @@
 package hook
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -82,7 +84,7 @@ func TestCleanupRemovesMarkers(t *testing.T) {
 		"skill-hook-Stopcleanup-test",
 	} {
 		path := filepath.Join(os.TempDir(), marker)
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
+		if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("marker %q not removed (stat err = %v)", marker, err)
 		}
 	}

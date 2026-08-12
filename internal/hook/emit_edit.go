@@ -1,6 +1,8 @@
 package hook
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io/fs"
 	"path/filepath"
@@ -8,16 +10,36 @@ import (
 	"text/template"
 )
 
+// why: ask the router instead of carrying a second hardcoded extension list.
+// post-edit already asks Router.SkillsForFile for the same filePath; a
+// second hand-maintained list can silently drift from it (it had: .proto
+// matches grpc-adapter's trigger and got the post-edit checklist, but this
+// switch never included ".proto" so pre-edit stayed silent for it).
 func (d *Dispatcher) emitPreEdit(session *SessionTracker, in hookPayload) error {
-	switch strings.ToLower(filepath.Ext(in.ToolInput.FilePath)) {
-	case ".go", ".sql":
-	default:
+	filePath := in.ToolInput.FilePath
+	if len(d.router.SkillsForFile(filePath)) == 0 {
 		return nil
 	}
-	if !session.OncePerSession("pre-edit") {
+	// why: gate per file path, not once per session - the measured failure
+	// this hook exists for (router runs, then skips loading matched skills
+	// at write time) recurs at EACH routed file's first write, so muting
+	// after file 1 leaves files 2..N unguarded. FirstEmission's content-hash
+	// then keeps a re-edit of the SAME file silent (the marker key is file-specific).
+	if !session.FirstEmission(preEditFileEvent(filePath), filePath) {
 		return nil
 	}
 	return d.emitContext("hooks/pre-edit.txt", "PreToolUse")
+}
+
+// why: a raw file path contains "/", which markerPath cannot embed as a
+// single marker filename component (os.WriteFile would try to create it as a
+// nested path with no parent directory and fail). Hashing produces a stable,
+// filesystem-safe token instead; it need not be reversible, only distinct
+// per distinct path and stable across repeat calls for the same path.
+func preEditFileEvent(filePath string) string {
+	const eventKeyBytes = 16 // half the sha256 sum; plenty to avoid collisions among edited files
+	sum := sha256.Sum256([]byte(filePath))
+	return "pre-edit-file-" + hex.EncodeToString(sum[:eventKeyBytes])
 }
 
 func (d *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) error {
@@ -27,10 +49,13 @@ func (d *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) error
 		return nil
 	}
 
-	projectDir := d.resolveProjectDir()
-	if projectDir != "" {
-		skillsDir := filepath.Join(projectDir, ".claude", "skills")
+	if skillsDir := d.resolveSkillsDir(); skillsDir != "" {
 		relevant = filterInstalled(relevant, skillsDir)
+	} else {
+		// Without a skills dir we cannot tell which of the matched skills
+		// are actually installed here, and naming un-installed skills is
+		// wrong output - degrade to the generic reminder instead.
+		relevant = nil
 	}
 	if len(relevant) == 0 {
 		return d.emitContext("hooks/post-edit.txt", "PostToolUse")

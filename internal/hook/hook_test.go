@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -17,7 +20,8 @@ import (
 // copy under templates/hooks changed wording.
 func hookTemplates() fstest.MapFS {
 	return fstest.MapFS{
-		"hooks/session-start.txt": {Data: []byte("session contract text\n")},
+		"hooks/contract.txt":      {Data: []byte("contract text\n")},
+		"hooks/contract-tail.txt": {Data: []byte("commit tail text\n")},
 		"hooks/pre-edit.txt":      {Data: []byte("pre-edit reminder text\n")},
 		"hooks/post-edit.txt":     {Data: []byte("post-edit generic reminder\n")},
 		"hooks/post-edit-checklist.txt.tmpl": {Data: []byte(
@@ -42,6 +46,11 @@ func dispatchCapture(deps Deps) (*Dispatcher, *bytes.Buffer) {
 	deps.Out = &out
 	if deps.Templates == nil {
 		deps.Templates = hookTemplates()
+	}
+	// why: without a sink, a Deps that resolves no project dir writes the
+	// reinstall warning to the real stderr and spams the test run.
+	if deps.ErrOut == nil {
+		deps.ErrOut = io.Discard
 	}
 	return NewDispatcher(deps), &out
 }
@@ -70,10 +79,23 @@ func uniqueSessionID(t *testing.T) string {
 	return id
 }
 
-// newSessionPayload returns a minimal hook payload carrying a unique session id.
 func newSessionPayload(t *testing.T) []byte {
 	t.Helper()
 	return fmt.Appendf(nil, `{"session_id":%q}`, uniqueSessionID(t))
+}
+
+// installSkillFixture writes a stub SKILL.md under skillsDir/id - the shape
+// filterInstalled checks for - so a dispatcher test can mark a skill
+// "installed" without touching a real skills directory.
+func installSkillFixture(t *testing.T, skillsDir, id string) {
+	t.Helper()
+	dir := filepath.Join(skillsDir, id)
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		t.Fatalf("mkdir skill dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("stub\n"), 0o600); err != nil {
+		t.Fatalf("write SKILL.md: %v", err)
+	}
 }
 
 // gitInit makes dir a git repository so git status --porcelain works in tests.

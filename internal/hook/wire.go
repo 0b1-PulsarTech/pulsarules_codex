@@ -3,7 +3,6 @@ package hook
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 )
 
 // Output is the non-blocking JSON Claude Code reads from a hook's stdout.
@@ -18,7 +17,10 @@ type Specific struct {
 }
 
 // hookPayload is decoded once per Dispatch call so handlers share one parse
-// of the stdin bytes instead of each re-unmarshalling them.
+// of the stdin bytes instead of each re-unmarshalling them. Its JSON shape
+// (session_id, tool_input.file_path) must match the payload
+// knowledge/templates/hooks/opencode-plugin.js's runHook builds - see the
+// comment there pointing back here.
 type hookPayload struct {
 	SessionID string `json:"session_id"`
 	ToolName  string `json:"tool_name"`
@@ -31,10 +33,11 @@ type hookPayload struct {
 	} `json:"tool_input"`
 }
 
-// simplification: a malformed payload degrades to the zero value (every field
-// empty) instead of surfacing a decode error, because a hook must never block
-// the agent's turn over a parse failure; every handler already treats its
-// fields' zero values as "nothing to do".
+// simplification: a malformed payload degrades to the zero value instead
+// of a decode error, since a hook must never block the turn over a parse
+// failure; handlers already treat zero values as "nothing to do". Upgrade
+// path: return the decode error alongside the zero value if a handler ever
+// needs to distinguish "malformed" from "intentionally empty".
 func decodeHookPayload(payload []byte) hookPayload {
 	var in hookPayload
 	_ = json.Unmarshal(payload, &in)
@@ -47,7 +50,7 @@ func (d *Dispatcher) emitOutput(event, context string) {
 		AdditionalContext: context,
 	}})
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "hook: marshal:", err)
+		_, _ = fmt.Fprintln(d.errOut, "hook: marshal:", err)
 		return
 	}
 	_, _ = fmt.Fprintln(d.out, string(out))
