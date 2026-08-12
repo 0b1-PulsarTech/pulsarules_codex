@@ -7,6 +7,8 @@ tags:
     - style
 linters:
     - revive
+analyzers:
+    - complexity
 ---
 
 # Function arguments - no flags, no output args, small arity

@@ -10,6 +10,8 @@ dependencies:
     - database
 linters:
     - gosec
+analyzers:
+    - golangci-lint
 ---
 
 # Security

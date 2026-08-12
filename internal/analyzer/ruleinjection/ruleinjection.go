@@ -51,6 +51,7 @@ var defaultRuleMap = map[string]string{
 	// call, which is that rule's territory, not the shadowing one's.
 	"short-decl-reuse": "named-returns",
 	"named-returns":    "named-returns",
+	"time-discipline":  "concurrency",
 	// architecture analyzers
 	"arch-boundary": "dependency-rule",
 	"import-cycle":  "module-boundaries",
@@ -81,8 +82,6 @@ func (a *Analyzer) Stage() core.StageID      { return core.StageRuleInjection }
 func (a *Analyzer) Category() core.Category  { return core.CatCommit }
 func (a *Analyzer) Needs() core.Requirements { return core.Requirements{} }
 
-// Analyze delegates to injectRuleSummaries, which operates on the full set of
-// findings accumulated by earlier pipeline stages.
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	injectRuleSummaries(ctx.Findings, a.index)
 	return nil
