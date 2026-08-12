@@ -95,3 +95,12 @@ formatters:
 run:
   timeout: 5m
   modules-download-mode: readonly
+
+# Both capped by default (max-same-issues: 3, max-issues-per-linter: 50). A pervasive smell
+# (e.g. many identically-worded thelper/nolintlint findings) would otherwise be silently
+# truncated - some findings hidden run to run depending on internal ordering - so a "0 findings"
+# governance run could pass while real violations remain unfixed. Disabled so the dogfood check
+# in this repo's own tree is exhaustive and deterministic.
+issues:
+  max-same-issues: 0
+  max-issues-per-linter: 0
