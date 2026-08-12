@@ -34,6 +34,25 @@ func nextBackupSlot(path string) (string, error) {
 	}
 }
 
+func Restore(path string) (restored bool, err error) {
+	// Restores only the base slot, leaving numbered overflow slots for the user.
+	backupPath := path + BackupSuffix
+	if _, statErr := os.Lstat(backupPath); statErr != nil {
+		if errors.Is(statErr, fs.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("stat %q: %w", backupPath, statErr)
+	}
+	if err = os.Rename(backupPath, path); err != nil {
+		return false, fmt.Errorf("restore %q: %w", backupPath, err)
+	}
+	return true, nil
+}
+
 func BackupMessage(original, backup string) string {
 	return fmt.Sprintf("backed up existing %s to %s", original, backup)
+}
+
+func RestoreMessage(path string) string {
+	return fmt.Sprintf("restored backup to %s", path)
 }
