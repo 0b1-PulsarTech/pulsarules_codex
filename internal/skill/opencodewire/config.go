@@ -3,23 +3,40 @@ package opencodewire
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
 )
 
 // configFile is the opencode project config merged by WireConfig.
 const configFile = "opencode.json"
 
+// SkillsSubdir is where rendered skills live in an opencode project, relative
+// to the project root. It is also the glob root wired into opencode.json
+// instructions.
+const SkillsSubdir = ".opencode/skills"
+
 // schemaURL is opencode's config schema, set when the file is created.
 const schemaURL = "https://opencode.ai/config.json"
 
-// instructionGlobs point opencode at the AGENTS.md and the rendered skills so it
-// loads them as instructions.
-var instructionGlobs = []string{".opencode/AGENTS.md", SkillsSubdir + "/*/SKILL.md"}
+// instructionGlobs point opencode at the root AGENTS.md and the rendered
+// skills so it loads them as instructions. AGENTS.md lives at the project
+// root (agentswire.WriteAgents), not under .opencode, so every AI-coding
+// host that reads only a repo-root AGENTS.md finds the same file opencode
+// does.
+var instructionGlobs = []string{"AGENTS.md", SkillsSubdir + "/*/SKILL.md"}
+
+// legacyAgentsInstructionGlob is the pre-migration instructions entry for
+// the old .opencode/AGENTS.md location, before AGENTS.md moved to the
+// project root. mergeInstructions drops it on every install so a reinstall
+// converges on "AGENTS.md" instead of carrying both, and unwireInstructions
+// matches it too so uninstall clears it even if RetireLegacyAgents never ran.
+const legacyAgentsInstructionGlob = ".opencode/AGENTS.md"
 
 // GoplsWiring selects whether WireConfig also merges the gopls MCP server
 // entry into opencode.json, replacing a withGopls bool flag argument.
@@ -39,7 +56,7 @@ const (
 func WireConfig(projectDir string, gopls GoplsWiring) error {
 	path := filepath.Join(projectDir, configFile)
 	existing, err := os.ReadFile(path) //nolint:gosec // path is under the caller's project dir.
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("read %q: %w", path, err)
 	}
 
@@ -61,19 +78,17 @@ func WireConfig(projectDir string, gopls GoplsWiring) error {
 		}
 	}
 
-	out, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal opencode.json: %w", err)
-	}
-	//nolint:gosec // path is under the caller's project dir.
-	if err = os.WriteFile(path, append(out, '\n'), fsperm.FilePrivate); err != nil {
-		return fmt.Errorf("write %q: %w", path, err)
+	if err = fsx.Save(path, config); err != nil {
+		return fmt.Errorf("save %q: %w", path, err)
 	}
 	return nil
 }
 
 // mergeInstructions unions the standards instruction globs into the existing
-// instructions array without duplicating.
+// instructions array without duplicating, and retires the legacy
+// .opencode/AGENTS.md entry a pre-migration install may have left behind
+// (see legacyAgentsInstructionGlob) so a reinstall converges on one AGENTS.md
+// entry instead of leaving both.
 func mergeInstructions(config map[string]json.RawMessage) error {
 	var instructions []string
 	if raw, ok := config["instructions"]; ok {
@@ -81,6 +96,9 @@ func mergeInstructions(config map[string]json.RawMessage) error {
 			return fmt.Errorf("parse existing instructions: %w", err)
 		}
 	}
+	instructions = slices.DeleteFunc(instructions, func(entry string) bool {
+		return entry == legacyAgentsInstructionGlob
+	})
 	for _, glob := range instructionGlobs {
 		if !slices.Contains(instructions, glob) {
 			instructions = append(instructions, glob)

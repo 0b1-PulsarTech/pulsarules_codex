@@ -84,6 +84,42 @@ func TestWireConfig_PreservesExisting(t *testing.T) {
 	}
 }
 
+// TestWireConfig_RetiresLegacyInstructionEntry asserts a reinstall over an
+// opencode.json still carrying the pre-migration ".opencode/AGENTS.md"
+// instructions entry (from before AGENTS.md moved to the project root)
+// converges on a single "AGENTS.md" entry instead of leaving both.
+func TestWireConfig_RetiresLegacyInstructionEntry(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	seed := `{"instructions": ["` + legacyAgentsInstructionGlob + `"]}`
+	path := filepath.Join(projectDir, "opencode.json")
+	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	if err := WireConfig(projectDir, WithoutGopls); err != nil {
+		t.Fatalf("WireConfig: %v", err)
+	}
+
+	config := readConfig(t, projectDir)
+	if slices.Contains(config.Instructions, legacyAgentsInstructionGlob) {
+		t.Errorf("legacy entry %q survived: %v", legacyAgentsInstructionGlob, config.Instructions)
+	}
+	if !slices.Contains(config.Instructions, "AGENTS.md") {
+		t.Errorf("missing current AGENTS.md entry: %v", config.Instructions)
+	}
+	count := 0
+	for _, entry := range config.Instructions {
+		if entry == "AGENTS.md" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("AGENTS.md appears %d times, want exactly 1: %v", count, config.Instructions)
+	}
+}
+
 // TestWireConfig_NoGopls asserts the gopls server is omitted when gopls is absent.
 func TestWireConfig_NoGopls(t *testing.T) {
 	t.Parallel()
