@@ -48,9 +48,9 @@ a host's own skills layout. The binary emits the `hookSpecificOutput` JSON from 
 reminder templates (`contract.txt`, `pre-edit.txt`), so the contract text has a single source of
 truth instead of a copy baked into the shell script. `contract.txt` and `contract-tail.txt` are
 rendered through `internal/skill/contract` for both `session-start` (contract plus tail) and
-`subagent-start` (contract only - a subagent never commits), so the two hook variants derive from
-the same asset instead of two hand-maintained copies. If the binary is absent the script exits `0`
-(no-op).
+`subagent-start` (contract only - a subagent never commits), so the two hook variants and the
+AGENTS.md routing contract section all derive from the same asset instead of three hand-maintained
+copies. If the binary is absent the script exits `0` (no-op).
 
 Generic Go never hardcodes `.claude/skills` or `.opencode/skills`: `internal/hook` reads
 `PULSARULES_SKILLS_DIR` at dispatch time (falling back to an unset/empty value, which degrades the

@@ -27,7 +27,7 @@ func TestOpencodeTargetInstall(t *testing.T) {
 
 	wantPaths := []string{
 		filepath.Join(base, ".opencode", "skills", "go-style", "SKILL.md"),
-		filepath.Join(base, ".opencode", "AGENTS.md"),
+		filepath.Join(base, "AGENTS.md"),
 		filepath.Join(base, "opencode.json"),
 	}
 	for _, path := range wantPaths {

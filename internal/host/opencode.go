@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/agents"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
@@ -33,8 +32,8 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 			report.warn(noGoplsWarning)
 		}
 	}
-	if err := agents.Write(ctx.Templates, ctx.Base, ctx.Index); err != nil {
-		return report, fmt.Errorf("write agents: %w", err)
+	if err := writeAgents(ctx, &report); err != nil {
+		return report, err
 	}
 	if err := opencode.WireConfig(ctx.Base, gopls); err != nil {
 		return report, fmt.Errorf("wire opencode config: %w", err)
@@ -53,10 +52,6 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 			)
 		}
 	}
-	report.note(
-		"wired opencode: %s, %s",
-		filepath.Join(ctx.Base, ".opencode", "AGENTS.md"),
-		filepath.Join(ctx.Base, "opencode.json"),
-	)
+	report.note("wired opencode: %s", filepath.Join(ctx.Base, "opencode.json"))
 	return report, nil
 }

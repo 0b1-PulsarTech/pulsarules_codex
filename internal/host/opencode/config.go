@@ -20,7 +20,7 @@ const SkillsSubdir = ".opencode/skills"
 const schemaURL = "https://opencode.ai/config.json"
 
 func instructionGlobs() []string {
-	return []string{".opencode/AGENTS.md", SkillsSubdir + "/*/SKILL.md"}
+	return []string{"AGENTS.md", SkillsSubdir + "/*/SKILL.md"}
 }
 
 type GoplsWiring string
