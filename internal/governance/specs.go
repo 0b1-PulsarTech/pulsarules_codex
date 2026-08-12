@@ -5,6 +5,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/banner"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/blocksize"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/simplification"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/message"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/complexity"
@@ -36,6 +37,7 @@ func analyzerSpecs() []analyzerSpec {
 		staticSpec(identifier.NewAnalyzer),
 		langSpec(banner.NewAnalyzer),
 		langSpec(blocksize.NewAnalyzer),
+		staticSpec(simplification.NewAnalyzer),
 		{
 			build: func(
 				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
