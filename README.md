@@ -123,10 +123,13 @@ predating this rename has a hook script with no such exports, so the binary sile
 empty project dir and the `stop`/`pre-search`/`post-edit` checks go quiet; it now warns once on
 stderr naming the fix (`pulsarules_cli install`) - re-run `install` to pick up the new script. When
 `gopls` is on PATH, install also wires the gopls MCP into `.mcp.json` and regenerates the
-`gopls-navigation` skill (`--no-mcp` to skip). `--target` is repeatable (`claude`/`opencode`): the
-opencode target writes `.opencode/skills`, a root `AGENTS.md`, and `opencode.json`. Use `--no-hooks`
-to skip the Claude hook script and settings wiring (git hooks: `--no-git-hooks`), or `--print-hooks`
-to print the resolved hooks block.
+`gopls-navigation` skill (`--no-mcp` to skip). `--target` is repeatable
+(`claude`/`opencode`/`agents`): the opencode target writes `.opencode/skills` and `opencode.json`;
+both opencode and the thin `agents` target write a single `AGENTS.md` at the project root (carrying
+the routing contract) from the same builder, so the file can never diverge between them - `agents`
+writes nothing else, covering the AI coding agents that read only a repo-root `AGENTS.md`. Use
+`--no-hooks` to skip the Claude hook script and settings wiring (git hooks: `--no-git-hooks`), or
+`--print-hooks` to print the resolved hooks block.
 
 ## Origin
 
