@@ -23,6 +23,8 @@ func instructionGlobs() []string {
 	return []string{"AGENTS.md", SkillsSubdir + "/*/SKILL.md"}
 }
 
+const legacyAgentsInstructionGlob = ".opencode/AGENTS.md"
+
 type GoplsWiring string
 
 const (
