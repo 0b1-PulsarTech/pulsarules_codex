@@ -4,7 +4,7 @@ Usage:
   pulsarules_cli generate [--root DIR] [--out DIR]
   pulsarules_cli validate [--root DIR]
   pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
-  pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--no-git-hooks]
+  pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--no-git-hooks]
   pulsarules_cli package [--root DIR] [--out FILE]
   pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
   pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
@@ -12,10 +12,13 @@ Usage:
   pulsarules_cli version
 
 --target is repeatable (default claude); pass it twice (--target claude --target
-opencode) to install both layouts in one run. The opencode target renders skills
-into <target>/.opencode/skills, writes <target>/AGENTS.md at the project root
-(carrying the routing contract), and wires <target>/opencode.json (skills as
-instructions + the gopls MCP server).
+opencode) to install more than one layout in one run. The opencode target renders
+skills into <target>/.opencode/skills and wires <target>/opencode.json (skills as
+instructions + the gopls MCP server). Both opencode and the agents target write
+<target>/AGENTS.md at the project root (carrying the routing contract) from the
+same builder, so the file never diverges between them; agents writes nothing
+else, for the AI coding agents (Codex, Gemini CLI, Zed, Amp, JetBrains Junie,
+Jules, and others) that read a repo-root AGENTS.md and nothing else.
 
 --layout applies a customization profile (e.g. monorepo | inner-modules) that
 overrides which rules a skill composes; --interactive prompts for it when unset.

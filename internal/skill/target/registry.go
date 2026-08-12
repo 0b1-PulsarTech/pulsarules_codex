@@ -11,7 +11,7 @@ type Registry struct {
 
 func NewRegistry() *Registry {
 	reg := &Registry{byName: map[string]Target{}}
-	for _, tgt := range []Target{claudeTarget{}, opencodeTarget{}} {
+	for _, tgt := range []Target{claudeTarget{}, opencodeTarget{}, agentsTarget{}} {
 		reg.byName[tgt.Name()] = tgt
 	}
 	return reg

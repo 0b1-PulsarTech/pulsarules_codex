@@ -20,6 +20,7 @@ func TestRegistryHas(t *testing.T) {
 	}{
 		{"claude registered", "claude", true},
 		{"opencode registered", "opencode", true},
+		{"agents registered", "agents", true},
 		{"unknown not registered", "bogus", false},
 		{"empty not registered", "", false},
 	}
@@ -35,8 +36,9 @@ func TestRegistryHas(t *testing.T) {
 
 func TestRegistryNames(t *testing.T) {
 	t.Parallel()
-	if got := NewRegistry().Names(); !slices.Equal(got, []string{"claude", "opencode"}) {
-		t.Fatalf("Names() = %v, want [claude opencode]", got)
+	want := []string{"agents", "claude", "opencode"}
+	if got := NewRegistry().Names(); !slices.Equal(got, want) {
+		t.Fatalf("Names() = %v, want %v", got, want)
 	}
 }
 
@@ -56,6 +58,7 @@ func TestRegistryInstall(t *testing.T) {
 			filepath.Join(".claude", "skills", "go-style", "SKILL.md"),
 		},
 		{"opencode dispatch", "opencode", false, "opencode.json"},
+		{"agents dispatch", "agents", false, "AGENTS.md"},
 		{"unknown target errors", "bogus", true, ""},
 	}
 	for _, testCase := range testCases {
@@ -96,6 +99,7 @@ func TestRegistryUninstall(t *testing.T) {
 	}{
 		{"claude dispatch", "claude", false},
 		{"opencode dispatch", "opencode", false},
+		{"agents dispatch", "agents", false},
 		{"unknown target errors", "bogus", true},
 	}
 	for _, testCase := range testCases {
@@ -143,6 +147,11 @@ func TestRegistryDetectTargets(t *testing.T) {
 			name:  "opencode.json without .opencode dir",
 			files: []string{"opencode.json"},
 			want:  []string{"opencode"},
+		},
+		{
+			name:  "root AGENTS.md only",
+			files: []string{"AGENTS.md"},
+			want:  []string{"agents"},
 		},
 		{
 			name: "untouched project",

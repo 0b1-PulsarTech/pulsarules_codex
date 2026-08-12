@@ -39,9 +39,12 @@ selection's `compose_skills` pulls in transitively - the installer prints what i
 
 ## 4. Wire the project's AGENTS.md to the standards
 
-Copy `templates/docs/AGENTS.md.tmpl` into the project as `AGENTS.md`, fill in `{{.ProjectName}}` and
-`{{.ProjectDescription}}`, and adjust the "Engineering standards" section to point at this repo. The
-stop-signs block is already generalized.
+Re-run install with `--target agents` (or `--target opencode`, which writes the same file) to render
+`AGENTS.md` at the project root automatically - both targets call the same builder, so the file is
+identical either way and covers every AI coding agent that reads a repo-root `AGENTS.md` and nothing
+else. To do it by hand instead, copy `templates/docs/AGENTS.md.tmpl` into the project as `AGENTS.md`,
+fill in `{{.ProjectName}}` and `{{.ProjectDescription}}`, and adjust the "Engineering standards"
+section to point at this repo. The stop-signs block is already generalized.
 
 ## 5. Verify
 

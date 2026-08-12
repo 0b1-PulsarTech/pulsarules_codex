@@ -123,7 +123,7 @@ func bindInstallSelectionFlags(fs *flag.FlagSet, opts *Options) {
 	fs.Var(
 		(*stringSliceFlag)(&opts.Target),
 		"target",
-		"install target (repeatable): claude | opencode (default claude)",
+		"install target (repeatable): claude | opencode | agents (default claude)",
 	)
 	fs.BoolVar(
 		&opts.RouterOnly,

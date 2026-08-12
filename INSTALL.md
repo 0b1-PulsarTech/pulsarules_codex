@@ -26,7 +26,7 @@ go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
 pulsarules_cli generate [--root DIR] [--out DIR]
 pulsarules_cli validate [--root DIR]
 pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
-pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--no-git-hooks]
+pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--no-git-hooks]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
 pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
@@ -117,11 +117,14 @@ command) to regenerate the hook script.
 
 Additional install flags:
 
-- `--target` (repeatable, default `claude`): pass `--target claude --target opencode` to install
-  both layouts in one run. The **opencode** target renders skills into `<target>/.opencode/skills`,
-  writes `<target>/AGENTS.md` at the project root (which carries the routing contract, since
-  opencode has no SessionStart hook), and merges `<target>/opencode.json` with the skills as
-  `instructions` plus the gopls `mcp` server.
+- `--target` (repeatable, default `claude`): pass `--target claude --target opencode` to install more
+  than one layout in one run. The **opencode** target renders skills into `<target>/.opencode/skills`
+  and merges `<target>/opencode.json` with the skills as `instructions` plus the gopls `mcp` server.
+  Both **opencode** and the thin **agents** target write a single `<target>/AGENTS.md` at the project
+  root (carrying the mandatory routing contract, since a host AI agent may read nothing else) from the
+  same builder, so the file can never diverge between them. `agents` writes nothing else - it exists
+  for the AI coding agents (Codex, Gemini CLI, Zed, Amp, JetBrains Junie, Jules, and others) that read
+  only a repo-root `AGENTS.md`.
 - `--hooks-scope project|local` (default `project`): wire the hook into `settings.json` (shared) or
   `settings.local.json` (per-machine).
 - `--no-mcp`: skip the `.mcp.json` + gopls-navigation generation.
