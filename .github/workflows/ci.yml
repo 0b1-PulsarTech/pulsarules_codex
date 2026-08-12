@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Pinned tool versions. No curl | sh: `task` and `govulncheck` are installed
+  # through `go install`/`go run` against the Go module proxy (checksum
+  # verified via go.sum-equivalent hashing), and golangci-lint is installed by
+  # its official action. See knowledge/standards/rules/infra/build.md #8.
+  TASK_VERSION: v3.50.0
+  GOLANGCI_LINT_VERSION: v2.12.2
+
+jobs:
+  build-test:
+    name: Build, vet, race test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Install task
+        run: go install github.com/go-task/task/v3/cmd/task@${{ env.TASK_VERSION }}
+      # go.mod pins `go 1.26` with no toolchain directive on purpose; there is
+      # no `task` target that runs a full-module CGO-free build, so this
+      # mirrors the Taskfile's own CGO_ENABLED=0 convention directly.
+      - name: go build ./...
+        run: CGO_ENABLED=0 go build ./...
+      - name: task vet
+        run: task vet
+      # -race requires cgo, so this target alone runs with CGO_ENABLED=1; the
+      # default build/vet/test path above stays CGO-free.
+      - name: task test:race
+        run: task test:race
+
+  lint-format:
+    name: Format and lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Install task
+        run: go install github.com/go-task/task/v3/cmd/task@${{ env.TASK_VERSION }}
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          install-only: true
+      # task tools:fmt rewrites files in place (golangci-lint fmt ./...); CI
+      # needs a check that fails on drift instead, so this runs the same
+      # formatters (gofumpt + golines + goimports, per .golangci.yml) with
+      # --diff rather than duplicating a Taskfile target that mutates files.
+      - name: Formatter check (gofumpt + golines + goimports)
+        run: golangci-lint fmt --diff ./...
+      - name: task tools:lint
+        run: task tools:lint
+
+  vuln-governance:
+    name: Vulnerabilities, knowledge base, and governance gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Install task
+        run: go install github.com/go-task/task/v3/cmd/task@${{ env.TASK_VERSION }}
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          install-only: true
+      - name: task tools:vuln
+        run: task tools:vuln
+      - name: task gen:validate
+        run: task gen:validate
+      # `governance --project .` alone (analysis.FileSetChanged) reads git's
+      # worktree status: on a fresh actions/checkout that is always clean, so
+      # it would find zero changed files and trivially report 0 findings.
+      # --all-files (analysis.FileSetAll) walks the whole source tree instead,
+      # and the default scope (analysis.ScopeFull, no --scope flag) is the
+      # only one that also delegates to golangci-lint/gopls (boot.go's
+      # delegationScopes) - this is this repo's own ~20 analyzers
+      # (internal/analysis/specs.go, specs_pipeline.go) run for real, not the
+      # scope that only makes sense against a dirty local worktree.
+      - name: task tools:governance
+        run: task tools:governance
