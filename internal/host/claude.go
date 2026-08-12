@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/claude"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
@@ -18,18 +19,18 @@ var _ Target = claudeTarget{}
 func (claudeTarget) Name() string { return "claude" }
 
 func (claudeTarget) Present(base string) bool {
-	_, err := os.Stat(filepath.Join(base, ".claude"))
+	_, err := os.Stat(filepath.Join(base, claude.RootDir))
 	return err == nil
 }
 
 func (claudeTarget) Install(ctx Context) (Report, error) {
 	var report Report
-	dest := filepath.Join(ctx.Base, ".claude", "skills")
-	claudeDir := filepath.Join(ctx.Base, ".claude")
+	claudeDir := filepath.Join(ctx.Base, claude.RootDir)
+	dest := filepath.Join(claudeDir, claude.SkillsSubdir)
 	if err := installSkills(ctx, dest, &report); err != nil {
 		return report, err
 	}
-	workflowDest := filepath.Join(ctx.Base, ".claude", "workflows")
+	workflowDest := filepath.Join(claudeDir, "workflows")
 	if err := installWorkflows(ctx, workflowDest, &report); err != nil {
 		return report, err
 	}
@@ -55,9 +56,12 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 
 func (claudeTarget) Uninstall(ctx UninstallContext) (Report, error) {
 	var report Report
-	claudeDir := filepath.Join(ctx.Base, ".claude")
+	claudeDir := filepath.Join(ctx.Base, claude.RootDir)
 	if !ctx.KeepSkills {
-		if err := removeSkills(filepath.Join(claudeDir, "skills"), &report); err != nil {
+		if err := removeSkills(
+			filepath.Join(claudeDir, claude.SkillsSubdir),
+			&report,
+		); err != nil {
 			return report, err
 		}
 		if err := removeWorkflows(filepath.Join(claudeDir, "workflows"), &report); err != nil {

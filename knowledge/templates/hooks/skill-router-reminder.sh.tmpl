@@ -10,7 +10,7 @@
 #
 # Non-blocking by design: if the binary is not present (or not executable) it
 # exits 0 so a missing tool never blocks an edit. See README.md for the rationale.
-bin="$CLAUDE_PROJECT_DIR/.claude/bin/pulsarules_cli"
+bin="$CLAUDE_PROJECT_DIR/{{.BinaryRelPath}}"
 [ -x "$bin" ] || exit 0
 
 # Generic Go reads only the host-neutral PULSARULES_PROJECT_DIR and
@@ -18,5 +18,5 @@ bin="$CLAUDE_PROJECT_DIR/.claude/bin/pulsarules_cli"
 # Claude-specific script is where that translation - and the Claude skills
 # layout - happens.
 export PULSARULES_PROJECT_DIR="$CLAUDE_PROJECT_DIR"
-export PULSARULES_SKILLS_DIR="$CLAUDE_PROJECT_DIR/.claude/skills"
+export PULSARULES_SKILLS_DIR="$CLAUDE_PROJECT_DIR/{{.SkillsRelPath}}"
 exec "$bin" hook "$1"
