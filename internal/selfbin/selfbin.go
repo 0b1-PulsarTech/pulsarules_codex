@@ -20,12 +20,12 @@ func Copy(dst string) error {
 	if err = os.MkdirAll(filepath.Dir(dst), fsperm.DirPrivate); err != nil {
 		return fmt.Errorf("mkdir %q: %w", filepath.Dir(dst), err)
 	}
-	data, err := os.ReadFile(exe) //nolint:gosec // copying our own executable.
+	exeBytes, err := os.ReadFile(exe) //nolint:gosec // copying our own executable.
 	if err != nil {
 		return fmt.Errorf("read running binary: %w", err)
 	}
 	//nolint:gosec // must be runnable; dst is the caller-chosen hook/plugin path.
-	if err = os.WriteFile(dst, data, fsperm.FileExec); err != nil {
+	if err = os.WriteFile(dst, exeBytes, fsperm.FileExec); err != nil {
 		return fmt.Errorf("write %q: %w", dst, err)
 	}
 	return nil

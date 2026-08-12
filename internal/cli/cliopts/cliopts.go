@@ -5,7 +5,7 @@ import (
 )
 
 type Options struct {
-	Command  string // generate | install | list | validate | package
+	Command  string // generate | install | uninstall | list | validate | package | hook | commitlint | governance
 	Root     string // --root: repository root for dev mode (empty = embedded)
 	LogLevel string // --log-level: hook execution log level (empty disables logging)
 
@@ -17,9 +17,9 @@ type Options struct {
 	Project     string
 	All         bool // --all: install every skill (explicit; there is no implicit default)
 	Skills      string
-	Target      []string // --target (repeatable): claude | opencode (default claude)
+	Target      []string // --target (repeatable): claude | opencode | agents | cursor (default claude)
 	RouterOnly  bool
-	NoHooks     bool   // --no-hooks: install skills only, skip the hook + settings wiring
+	NoHooks     bool   // --no-hooks: skip the Claude hook script + settings wiring (git hooks: --no-git-hooks)
 	NoMCP       bool   // --no-mcp: skip writing .mcp.json + generating the gopls-navigation skill
 	PrintHooks  bool   // --print-hooks: print the resolved hooks block and exit (no writes)
 	HooksScope  string // --hooks-scope: project (settings.json) | local (settings.local.json)
@@ -27,6 +27,9 @@ type Options struct {
 	Interactive bool   // --interactive: prompt for unset customizations (e.g. the layout)
 	GitHooks    string // --git-hooks: comma-separated git hooks to install (commit-msg,pre-commit,pre-push) (default: commit-msg,pre-commit)
 	NoGitHooks  bool   // --no-git-hooks: skip git hooks installation
+
+	// uninstall (also reuses --root, --project, --global, --target, --hooks-scope)
+	KeepSkills bool // --keep-skills: uninstall keeps the rendered skill/workflow docs; hook wiring is still removed
 
 	// governance
 	Preset         string // --preset: analyzer preset (recommended|strict|minimal)
@@ -40,7 +43,7 @@ type Options struct {
 	Kind string
 
 	// hook
-	Mode string // session-start|pre-edit|post-edit|pre-search|user-prompt|stop|subagent-stop|session-end
+	Mode string // session-start|pre-edit|post-edit|pre-search|user-prompt|stop|subagent-start|subagent-stop|session-end
 
 	// commitlint
 	CommitMsg  string // --msg: commit message to validate
@@ -57,7 +60,7 @@ const (
 )
 
 // defaultTarget is the install layout used when --target is omitted. The set of
-// valid targets is owned by the target.Registry, which runInstall validates
+// valid targets is owned by the target.Registry, which install.Run validates
 // against, so this default and the allow-list cannot drift.
 const defaultTarget = "claude"
 
@@ -71,6 +74,26 @@ func (opts *Options) SettingsFileName() (string, error) {
 		return settingsLocal, nil
 	default:
 		return "", fmt.Errorf("invalid --hooks-scope %q (want project|local)", opts.HooksScope)
+	}
+}
+
+// SettingsFiles resolves the settings files uninstall should unwire hook
+// wiring from. With no --hooks-scope it targets both settings.json and
+// settings.local.json: install's default writes into settings.json, but
+// --hooks-scope local at install time leaves live wiring in
+// settings.local.json that uninstall must still find, and uninstall has no
+// record of which scope install used - so its default is "check both",
+// narrowed to just the named scope only when --hooks-scope is passed.
+func (opts *Options) SettingsFiles() ([]string, error) {
+	switch opts.HooksScope {
+	case "":
+		return []string{settingsProject, settingsLocal}, nil
+	case "project":
+		return []string{settingsProject}, nil
+	case "local":
+		return []string{settingsLocal}, nil
+	default:
+		return nil, fmt.Errorf("invalid --hooks-scope %q (want project|local)", opts.HooksScope)
 	}
 }
 

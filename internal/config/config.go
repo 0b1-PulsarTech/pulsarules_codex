@@ -14,8 +14,6 @@ type GovernanceConfig struct {
 	Emoji EmojiConfig
 	// MovePurity holds the commit-move-purity analyzer's configuration.
 	MovePurity MovePurityConfig
-	// Hooks holds the hook installation configuration.
-	Hooks HooksConfig
 	// IncludeGenerated keeps findings that fall in files carrying the Go
 	// generated-code marker. Off by default: nobody can act on them, because
 	// the next codegen run overwrites the fix.
@@ -23,13 +21,10 @@ type GovernanceConfig struct {
 }
 
 // AnalyzerConfig holds the per-analyzer enable/disable state and parameters.
-//
-// It is field-for-field identical to core.AnalyzerConfig today, and that is
-// deliberate rather than duplication left unnoticed: this is the shape a
-// preset writes, core's is the shape the stage runner reads, and keeping them
-// apart is what lets internal/analyzer/core stay stdlib-only (see
-// analysis.toAnalysisConfig, which has to project the emoji and move-purity
-// settings into Params anyway, so the conversion is not a bare copy).
+// It is field-for-field identical to core.AnalyzerConfig today, deliberately:
+// this is the shape a preset writes, core's is what the stage runner reads,
+// and keeping them apart lets internal/analyzer/core stay stdlib-only (see
+// analysis.toAnalysisConfig, which projects emoji/move-purity into Params).
 type AnalyzerConfig struct {
 	// Enabled controls whether the analyzer runs. Defaults to true when
 	// absent from the map.
@@ -63,15 +58,12 @@ type MovePurityConfig struct {
 	Severity string
 }
 
-// HooksConfig holds the git hooks installation configuration.
-type HooksConfig struct {
-	// InstallCommitMsg controls whether the commit-msg git hook is installed.
-	InstallCommitMsg bool
-	// InstallPreCommit controls whether the pre-commit git hook is installed.
-	InstallPreCommit bool
-	// InstallPrePush controls whether the pre-push git hook is installed.
-	InstallPrePush bool
-}
+const (
+	defaultEmojiWindowSize      = 5
+	defaultEmojiSoftWindowSize  = 20
+	defaultEmojiSuggestionCount = 7
+	defaultMoveMinSimilarity    = 90
+)
 
 // Defaults returns the default governance configuration embedded in the
 // binary. All analyzers are enabled by default; an emoji repeating within five
@@ -81,18 +73,13 @@ func Defaults() *GovernanceConfig {
 		Preset:    PresetRecommended,
 		Analyzers: map[string]AnalyzerConfig{},
 		Emoji: EmojiConfig{
-			WindowSize:      5,
-			SoftWindowSize:  20,
-			SuggestionCount: 7,
+			WindowSize:      defaultEmojiWindowSize,
+			SoftWindowSize:  defaultEmojiSoftWindowSize,
+			SuggestionCount: defaultEmojiSuggestionCount,
 		},
 		MovePurity: MovePurityConfig{
-			MinSimilarity: 90,
+			MinSimilarity: defaultMoveMinSimilarity,
 			Severity:      "warning",
-		},
-		Hooks: HooksConfig{
-			InstallCommitMsg: true,
-			InstallPreCommit: true,
-			InstallPrePush:   false,
 		},
 	}
 }

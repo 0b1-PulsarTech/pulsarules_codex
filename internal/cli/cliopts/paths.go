@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 )
 
 // BaseDir resolves the install base directory (the project root, or the home dir
@@ -37,14 +38,42 @@ func (opts *Options) InstallDest() (string, error) {
 }
 
 // Targets resolves the requested install targets, defaulting to claude. Order is
-// preserved and duplicates are dropped; runInstall validates each name against
+// preserved and duplicates are dropped; install.Run validates each name against
 // the target.Registry.
 func (opts *Options) Targets() []string {
 	if len(opts.Target) == 0 {
 		return []string{defaultTarget}
 	}
-	targets := make([]string, 0, len(opts.Target))
-	for _, name := range opts.Target {
+	return dedupeStrings(opts.Target)
+}
+
+// ExplicitTargets returns the --target values the user actually passed,
+// deduped and order-preserved, with no default applied. Uninstall must tell
+// "nothing passed" apart from "claude explicitly asked for": its contract is
+// to act on every target it can detect on disk (see target.Registry.
+// DetectTargets), never to silently narrow to install's "claude only"
+// default the way Targets does.
+func (opts *Options) ExplicitTargets() []string {
+	return dedupeStrings(opts.Target)
+}
+
+// GitHookNames parses --git-hooks into the ordered, deduped hook names to
+// install.
+func (opts *Options) GitHookNames() []string {
+	raw := strings.Split(opts.GitHooks, ",")
+	names := make([]string, 0, len(raw))
+	for _, name := range raw {
+		if trimmed := strings.TrimSpace(name); trimmed != "" {
+			names = append(names, trimmed)
+		}
+	}
+	return dedupeStrings(names)
+}
+
+// dedupeStrings drops duplicate names while preserving order.
+func dedupeStrings(raw []string) []string {
+	targets := make([]string, 0, len(raw))
+	for _, name := range raw {
 		if !slices.Contains(targets, name) {
 			targets = append(targets, name)
 		}

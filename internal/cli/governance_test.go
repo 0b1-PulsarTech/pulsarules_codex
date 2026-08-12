@@ -1,11 +1,29 @@
 package cli
 
 import (
+	"errors"
+	"strings"
 	"testing"
+
+	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 )
+
+// TestRunGovernance_RequiresProjectDir pins the host-neutral env var check:
+// generic Go reads PULSARULES_PROJECT_DIR, never a host's own variable, so a
+// missing project dir must return errProjectDirRequired. It sets an
+// environment variable, so it cannot run in parallel.
+func TestRunGovernance_RequiresProjectDir(t *testing.T) {
+	t.Setenv("PULSARULES_PROJECT_DIR", "")
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	err := runGovernance(inj, &cliopts.Options{})
+	if !errors.Is(err, errProjectDirRequired) {
+		t.Errorf("err = %v, want %v", err, errProjectDirRequired)
+	}
+}
 
 func TestGovernanceConfig(t *testing.T) {
 	t.Parallel()
@@ -45,7 +63,10 @@ func TestGovernanceConfig(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg := governanceConfig(testCase.opts)
+			cfg, err := governanceConfig(testCase.opts)
+			if err != nil {
+				t.Fatalf("governanceConfig: %v", err)
+			}
 			if cfg.Preset != testCase.wantPreset {
 				t.Errorf("Preset = %q, want %q", cfg.Preset, testCase.wantPreset)
 			}
@@ -54,6 +75,24 @@ func TestGovernanceConfig(t *testing.T) {
 				t.Errorf("config_path = %v, want %v", got, testCase.wantPath)
 			}
 		})
+	}
+}
+
+// TestGovernanceConfig_InvalidPreset pins the fix for --preset accepting any
+// string and silently falling back to recommended: an unrecognized name must
+// fail, naming the valid set, instead of ApplyPreset's silent no-op letting
+// the run continue on the default preset.
+func TestGovernanceConfig_InvalidPreset(t *testing.T) {
+	t.Parallel()
+
+	_, err := governanceConfig(&cliopts.Options{Preset: "stict"})
+	if err == nil {
+		t.Fatal("governanceConfig: expected an error for an unknown preset")
+	}
+	for _, want := range []string{config.PresetRecommended, config.PresetStrict, config.PresetMinimal} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not name valid preset %q", err, want)
+		}
 	}
 }
 
@@ -76,7 +115,11 @@ func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := governanceConfig(testCase.opts).IncludeGenerated; got != testCase.want {
+			cfg, err := governanceConfig(testCase.opts)
+			if err != nil {
+				t.Fatalf("governanceConfig: %v", err)
+			}
+			if got := cfg.IncludeGenerated; got != testCase.want {
 				t.Errorf("IncludeGenerated = %v, want %v", got, testCase.want)
 			}
 		})
@@ -125,7 +168,10 @@ func TestSuppressedClause(t *testing.T) {
 func TestGovernanceConfig_StrictLowersFileSize(t *testing.T) {
 	t.Parallel()
 
-	cfg := governanceConfig(&cliopts.Options{Preset: config.PresetStrict})
+	cfg, err := governanceConfig(&cliopts.Options{Preset: config.PresetStrict})
+	if err != nil {
+		t.Fatalf("governanceConfig: %v", err)
+	}
 	if got := cfg.Param("file-size", "max_lines", 999); got != 180 {
 		t.Errorf("strict max_lines = %v, want 180", got)
 	}

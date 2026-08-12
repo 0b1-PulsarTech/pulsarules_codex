@@ -10,6 +10,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/uninstall"
 )
 
 // ExitError signals that main must exit the process with Code instead of the
@@ -37,6 +38,11 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 	case "install":
 		if installErr := install.Run(inj, opts); installErr != nil {
 			return fmt.Errorf("install: %w", installErr)
+		}
+		return nil
+	case "uninstall":
+		if uninstallErr := uninstall.Run(inj, opts); uninstallErr != nil {
+			return fmt.Errorf("uninstall: %w", uninstallErr)
 		}
 		return nil
 	case "list":
@@ -84,22 +90,22 @@ func BootstrapOptions(opts *cliopts.Options) bootstrap.Options {
 // resolveProjectDir mirrors each command's pre-DI project-directory fallback,
 // so moving vcs.Repository behind the injector does not change behavior:
 // governance requires an explicit project dir (--project or
-// CLAUDE_PROJECT_DIR) and reports that itself; every other command tolerates
-// a missing repository and defaults to ".".
+// PULSARULES_PROJECT_DIR) and reports that itself; every other command
+// tolerates a missing repository and defaults to ".".
 func resolveProjectDir(opts *cliopts.Options) string {
 	if opts.ProjectDir != "" {
 		return opts.ProjectDir
 	}
 	if opts.Command == "governance" {
-		return os.Getenv("CLAUDE_PROJECT_DIR")
+		return os.Getenv("PULSARULES_PROJECT_DIR")
 	}
 	return "."
 }
 
-// resolveLogPath mirrors the hook command's prior CLAUDE_PROJECT_DIR-based
+// resolveLogPath mirrors the hook command's prior PULSARULES_PROJECT_DIR-based
 // log path, leaving obs to pick its own default when the env var is unset.
 func resolveLogPath() string {
-	dir := os.Getenv("CLAUDE_PROJECT_DIR")
+	dir := os.Getenv("PULSARULES_PROJECT_DIR")
 	if dir == "" {
 		return ""
 	}
