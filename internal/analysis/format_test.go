@@ -9,22 +9,22 @@ import (
 
 func locatedFinding() core.Finding {
 	return core.Finding{
-		AnalyzerID: "file-size",
-		Severity:   core.SeverityWarning,
-		Message:    "file is too long",
-		File:       "internal/a.go",
-		Line:       42,
-		Suggestion: "split it",
-		RuleBody:   "\n\n# Effective Go\nrest of the body",
+		AnalyzerID:  "file-size",
+		Severity:    core.SeverityWarning,
+		Message:     "file is too long",
+		File:        "internal/a.go",
+		Line:        42,
+		Suggestion:  "split it",
+		RuleSummary: "Keep functions short and files under one concept.",
 	}
 }
 
 func blankRuleFinding() core.Finding {
 	return core.Finding{
-		AnalyzerID: "naming",
-		Severity:   core.SeverityWarning,
-		Message:    "bad name",
-		RuleBody:   "\n   \n\n",
+		AnalyzerID:  "naming",
+		Severity:    core.SeverityWarning,
+		Message:     "bad name",
+		RuleSummary: "\n   \n\n",
 	}
 }
 
@@ -68,7 +68,7 @@ func TestFormatFindings(t *testing.T) {
 			style:    StyleCLI,
 			want: "[WARN] file-size: file is too long (internal/a.go:42)\n" +
 				"  \u2192 split it\n" +
-				"  rule: # Effective Go\n",
+				"  rule: Keep functions short and files under one concept.\n",
 		},
 		{
 			name:     "hook indents, downcases and drops the rule",
