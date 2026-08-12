@@ -4,6 +4,8 @@ import (
 	"strings"
 )
 
+const MaxLeadingEmojis = 3
+
 type parser struct {
 	runes []rune
 	pos   int
@@ -46,7 +48,8 @@ func (cursor *parser) parseEmojis(msg *Message) {
 		if !ok {
 			break
 		}
-		// Uncapped: truncating here would misread extras as the type.
+		// Uncapped: the commit analyzer enforces MaxLeadingEmojis, and
+		// truncating here would misread extras as the type.
 		msg.Emojis = append(msg.Emojis, name)
 		cursor.skipSpaces()
 	}

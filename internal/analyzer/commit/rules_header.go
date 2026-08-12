@@ -41,7 +41,7 @@ func validateEmojis(
 		)
 	}
 
-	if len(msg.Emojis) > 3 {
+	if len(msg.Emojis) > commitmsg.MaxLeadingEmojis {
 		findings = append(findings, reporters.emojiCount.New("too many leading emojis (max 3)"))
 	}
 

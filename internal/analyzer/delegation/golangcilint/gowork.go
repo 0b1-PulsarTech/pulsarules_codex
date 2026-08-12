@@ -13,6 +13,8 @@ func hasGoWork(projectDir string) bool {
 }
 
 func parseGoWorkModules(projectDir string) []string {
+	const goWorkUsePrefix = "use "
+
 	//nolint:gosec // G304: projectDir is the analyzed project root, not user input.
 	file, err := os.Open(filepath.Join(projectDir, "go.work"))
 	if err != nil {
@@ -24,9 +26,8 @@ func parseGoWorkModules(projectDir string) []string {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, "use ") {
-			mod := strings.TrimSpace(line[4:])
-			mod = strings.Trim(mod, "\"")
+		if rest, ok := strings.CutPrefix(line, goWorkUsePrefix); ok {
+			mod := strings.Trim(strings.TrimSpace(rest), "\"")
 			if mod != "" {
 				modules = append(modules, mod)
 			}

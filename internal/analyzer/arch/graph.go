@@ -78,13 +78,21 @@ func classifyLayer(pkgPath string) string {
 }
 
 func checkBoundaries(g depGraph, modulePath string) []string {
+	const (
+		layerRankCmd = iota
+		layerRankTransport
+		layerRankInfra
+		layerRankDomain
+		layerRankOther
+	)
+
 	var violations []string
 	layerOrder := map[string]int{
-		"cmd":       0,
-		"transport": 1,
-		"infra":     2,
-		"domain":    3,
-		"other":     4,
+		"cmd":       layerRankCmd,
+		"transport": layerRankTransport,
+		"infra":     layerRankInfra,
+		"domain":    layerRankDomain,
+		"other":     layerRankOther,
 	}
 
 	for pkg, deps := range g {
