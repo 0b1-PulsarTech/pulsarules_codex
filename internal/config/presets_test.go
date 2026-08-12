@@ -76,3 +76,34 @@ func TestApplyPreset_StrictOverridesMaxLinesParam(t *testing.T) {
 		t.Errorf("expected max_lines=180 in strict preset, got %v", maxLines)
 	}
 }
+
+func TestValidPreset(t *testing.T) {
+	t.Parallel()
+
+	if !ValidPreset(PresetRecommended) {
+		t.Error("recommended should be valid")
+	}
+	if !ValidPreset(PresetStrict) {
+		t.Error("strict should be valid")
+	}
+	if !ValidPreset(PresetMinimal) {
+		t.Error("minimal should be valid")
+	}
+	if ValidPreset("unknown") {
+		t.Error("unknown should not be valid")
+	}
+}
+
+func TestPresets(t *testing.T) {
+	t.Parallel()
+
+	const wantPresetCount = 3
+
+	list := Presets()
+	if len(list) != wantPresetCount {
+		t.Fatalf("expected %d presets, got %d: %v", wantPresetCount, len(list), list)
+	}
+	if list[0] != PresetRecommended {
+		t.Errorf("first preset should be recommended, got %q", list[0])
+	}
+}

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -58,7 +59,10 @@ func TestGovernanceConfig(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg := governanceConfig(testCase.opts)
+			cfg, err := governanceConfig(testCase.opts)
+			if err != nil {
+				t.Fatalf("governanceConfig: %v", err)
+			}
 			if cfg.Preset != testCase.wantPreset {
 				t.Errorf("Preset = %q, want %q", cfg.Preset, testCase.wantPreset)
 			}
@@ -67,6 +71,24 @@ func TestGovernanceConfig(t *testing.T) {
 				t.Errorf("config_path = %v, want %v", got, testCase.wantPath)
 			}
 		})
+	}
+}
+
+func TestGovernanceConfig_InvalidPreset(t *testing.T) {
+	t.Parallel()
+
+	_, err := governanceConfig(&version.Options{Preset: "stict"})
+	if err == nil {
+		t.Fatal("governanceConfig: expected an error for an unknown preset")
+	}
+	for _, want := range []string{
+		config.PresetRecommended,
+		config.PresetStrict,
+		config.PresetMinimal,
+	} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not name valid preset %q", err, want)
+		}
 	}
 }
 
@@ -89,7 +111,11 @@ func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := governanceConfig(testCase.opts).IncludeGenerated; got != testCase.want {
+			cfg, err := governanceConfig(testCase.opts)
+			if err != nil {
+				t.Fatalf("governanceConfig: %v", err)
+			}
+			if got := cfg.IncludeGenerated; got != testCase.want {
 				t.Errorf("IncludeGenerated = %v, want %v", got, testCase.want)
 			}
 		})
@@ -131,7 +157,10 @@ func TestSuppressedClause(t *testing.T) {
 func TestGovernanceConfig_StrictLowersFileSize(t *testing.T) {
 	t.Parallel()
 
-	cfg := governanceConfig(&version.Options{Preset: config.PresetStrict})
+	cfg, err := governanceConfig(&version.Options{Preset: config.PresetStrict})
+	if err != nil {
+		t.Fatalf("governanceConfig: %v", err)
+	}
 	if got := cfg.Analyzers["file-size"].Params["max_lines"]; got != 180 {
 		t.Errorf("strict max_lines = %v, want 180", got)
 	}
