@@ -17,7 +17,7 @@ The installer is a single Go binary, `cmd/pulsarules_cli`. It embeds the knowled
 
 ```sh
 go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
-# or: task build
+# or: task build:bin
 ```
 
 ## Commands
@@ -217,12 +217,15 @@ the embedded snapshot (the shipped behavior).
 ## Taskfile targets
 
 ```sh
-task            # vet + test
-task build      # build the binary
-task generate   # render skills (gitignored)
-task validate   # validate the embedded knowledge
-task list       # list skills
-task package    # zip skills
-task fmt        # gofmt knowledge internal cmd
-task lint       # golangci-lint (if installed)
+task                    # vet + test
+task vet                # go vet
+task test               # go test
+task tools:fmt          # gofmt knowledge internal cmd
+task tools:lint         # golangci-lint (if installed)
+task build:bin          # build the binary
+task build:package      # zip skills
+task gen:skills         # render skills (gitignored)
+task gen:validate       # validate the embedded knowledge
+task gen:emoji          # regenerate the commit emoji catalog
+task list               # list skills
 ```

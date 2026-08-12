@@ -10,12 +10,6 @@ tasks:
       - task: vet
       - task: test
 
-  build:
-    desc: build the installer into build/bin
-    cmds:
-      - mkdir -p build/bin
-      - go build -o {{.BIN}} ./cmd/pulsarules_cli
-
   vet:
     desc: go vet
     cmds:
@@ -26,39 +20,45 @@ tasks:
     cmds:
       - go test ./...
 
-  fmt:
+  tools:fmt:
     desc: gofmt (use gofumpt+golines+goimports in projects that have them)
     cmds:
       - gofmt -w knowledge internal cmd
 
-  generate:
-    desc: render generated/skills from the embedded knowledge (gitignored)
-    cmds:
-      - go run ./cmd/pulsarules_cli generate
-
-  validate:
-    desc: validate the embedded knowledge base
-    cmds:
-      - go run ./cmd/pulsarules_cli validate
-
-  list:
-    desc: list the skill catalog
-    cmds:
-      - go run ./cmd/pulsarules_cli list
-
-  package:
-    desc: zip all skills into build/
-    cmds:
-      - go run ./cmd/pulsarules_cli package
-
-  lint:
+  tools:lint:
     desc: golangci-lint (if installed)
     cmds:
       - golangci-lint run ./...
 
-  emoji:
+  build:bin:
+    desc: build the installer into build/bin
+    cmds:
+      - mkdir -p build/bin
+      - go build -o {{.BIN}} ./cmd/pulsarules_cli
+
+  build:package:
+    desc: zip all skills into build/
+    cmds:
+      - go run ./cmd/pulsarules_cli package
+
+  gen:skills:
+    desc: render generated/skills from the embedded knowledge (gitignored)
+    cmds:
+      - go run ./cmd/pulsarules_cli generate
+
+  gen:validate:
+    desc: validate the embedded knowledge base
+    cmds:
+      - go run ./cmd/pulsarules_cli validate
+
+  gen:emoji:
     desc: regenerate the commit emoji catalog (needs network + a jane clone)
     vars:
       JANE: '{{.JANE | default "../../inspiration/jane"}}'
     cmds:
       - go run ./tools/emojigen --jane {{.JANE}} --out internal/emoji/data
+
+  list:
+    desc: list the skill catalog
+    cmds:
+      - go run ./cmd/pulsarules_cli list
