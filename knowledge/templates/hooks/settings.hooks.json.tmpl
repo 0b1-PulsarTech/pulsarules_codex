@@ -1,85 +1,23 @@
 {
   "hooks": {
-    "SessionStart": [
+    {{- range $i, $event := . }}
+    {{- if $i }},{{ end }}
+    "{{ $event.Name }}": [
+      {{- range $j, $row := $event.Rows }}
+      {{- if $j }},{{ end }}
       {
+        {{- if $row.Matcher }}
+        "matcher": "{{ $row.Matcher }}",
+        {{- end }}
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh\" session-start"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh\" {{ $row.Mode }}"
           }
         ]
       }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh\" pre-edit"
-          }
-        ]
-      },
-      {
-        "matcher": "Grep|Glob|Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh\" pre-search"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh\" post-edit"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh\" user-prompt"
-          }
-        ]
-      }
-    ],
-    "SubagentStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh\" subagent-start"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh\" stop"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh\" session-end"
-          }
-        ]
-      }
+      {{- end }}
     ]
+    {{- end }}
   }
 }
