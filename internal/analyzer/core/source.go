@@ -55,6 +55,7 @@ func (p *fileSourceProvider) Walk(fn func(path string, ext string) bool) {
 		"generated": true,
 		"build":     true,
 		"vendor":    true,
+		"testdata":  true,
 	}
 	_ = filepath.WalkDir(p.projectDir, func(full string, d os.DirEntry, err error) error {
 		if err != nil {
