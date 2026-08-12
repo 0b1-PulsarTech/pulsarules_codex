@@ -70,7 +70,7 @@ func (r *Runner) runSingle(projectDir, configPath string) []core.Finding {
 }
 
 func (r *Runner) run(projectDir string, args []string) ([]byte, error) {
-	//nolint:gosec,noctx
+	//nolint:gosec,noctx // r.path is the configured golangci-lint binary, and Run has no context.
 	cmd := exec.Command(r.path, args...)
 	cmd.Dir = projectDir
 	return cmd.Output()

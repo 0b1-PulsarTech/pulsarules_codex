@@ -27,6 +27,15 @@ linters:
     - unparam
     - whitespace
     - wrapcheck
+    # The baseline golangcilint forces on consumers (build.md #9), plus two recommended extras.
+    - nolintlint
+    - paralleltest
+    - tparallel
+    - thelper
+    - forcetypeassert
+    - nilerr
+    - bodyclose
+    - sqlclosecheck
   settings:
     govet:
       enable:
@@ -55,6 +64,16 @@ linters:
     wrapcheck:
       ignorePackageGlobs:
         - github.com/0b1-PulsarTech/pulsarules_codex/**
+    # require-explanation/require-specific make nolintlint enforce this repo's own rule
+    # (knowledge/standards/rules/infra/build.md #9): every //nolint must name its linter and
+    # carry a reason. -E alone (the forced-baseline mechanism for consumer projects) cannot set
+    # this - it only enables the linter at its permissive defaults - so a consumer project must
+    # opt into the same strictness itself if it wants it.
+    # allow-unused stays true: nolintlint's unused check is nondeterministic under gosec.
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: true
   exclusions:
     generated: strict
     warn-unused: true

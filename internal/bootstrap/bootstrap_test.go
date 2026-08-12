@@ -20,6 +20,7 @@ type resolveEveryBinding struct {
 	lookup func(remy.Injector) error
 }
 
+//nolint:tparallel // Subtests share one injector, which remy does not support concurrently.
 func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 	t.Parallel()
 
@@ -62,7 +63,7 @@ func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 			return err
 		}},
 	}
-	for _, testCase := range testCases {
+	for _, testCase := range testCases { //nolint:paralleltest // Shared injector.
 		t.Run(testCase.name, func(t *testing.T) {
 			if err := testCase.lookup(inj); err != nil {
 				t.Fatalf("resolve %s: %v", testCase.name, err)
