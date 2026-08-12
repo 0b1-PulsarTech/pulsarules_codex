@@ -223,6 +223,7 @@ task test               # go test (CGO-free, no -race)
 task test:race          # tests under the race detector (needs CGO)
 task tools:fmt          # format with the project formatter (gofumpt + golines + goimports)
 task tools:lint         # golangci-lint
+task tools:vuln         # govulncheck (pinned version)
 task tools:governance   # this repo's own analyzers against the full tree
 task tools:mocks        # regenerate colocated mocks
 task build:bin          # build the binary
