@@ -1,6 +1,10 @@
 package hook
 
 import (
+	"bytes"
+	"fmt"
+	"log/slog"
+	"strings"
 	"testing"
 )
 
@@ -57,5 +61,69 @@ func TestDispatcher_SkillsDirEnvFallback(t *testing.T) {
 				t.Errorf("resolveSkillsDir() = %q, want %q", got, testCase.want)
 			}
 		})
+	}
+}
+
+func TestDispatcher_MissingProjectDirOnce(t *testing.T) {
+	t.Setenv("PULSARULES_PROJECT_DIR", "")
+
+	var logBuf, errBuf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
+	disp, _ := dispatchCapture(Deps{Logger: logger, ErrOut: &errBuf})
+	id := uniqueSessionID(t)
+	payload := fmt.Appendf(nil, `{"session_id":%q}`, id)
+
+	_ = disp.Dispatch("session-start", payload)
+	_ = disp.Dispatch("user-prompt", payload)
+
+	if got := strings.Count(errBuf.String(), "reinstall"); got != 1 {
+		t.Errorf(
+			"expected exactly one stderr reinstall warning across two dispatches, got %d in:\n%s",
+			got, errBuf.String(),
+		)
+	}
+	if got := strings.Count(logBuf.String(), "reinstall"); got != 1 {
+		t.Errorf(
+			"expected exactly one logged reinstall warning across two dispatches, got %d in:\n%s",
+			got, logBuf.String(),
+		)
+	}
+}
+
+func TestDispatcher_MissingProjectDirWarning(t *testing.T) {
+	t.Parallel()
+
+	var logBuf, errBuf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
+	disp, _ := dispatchCapture(
+		Deps{Logger: logger, ErrOut: &errBuf, ProjectDir: t.TempDir()},
+	)
+
+	_ = disp.Dispatch("session-start", newSessionPayload(t))
+
+	if strings.Contains(errBuf.String(), "reinstall") {
+		t.Errorf(
+			"unexpected stderr reinstall warning with a resolved project dir:\n%s",
+			errBuf.String(),
+		)
+	}
+	if strings.Contains(logBuf.String(), "reinstall") {
+		t.Errorf(
+			"unexpected logged reinstall warning with a resolved project dir:\n%s",
+			logBuf.String(),
+		)
+	}
+}
+
+func TestDispatcher_WarnsToStderr(t *testing.T) {
+	t.Setenv("PULSARULES_PROJECT_DIR", "")
+
+	var errBuf bytes.Buffer
+	disp, _ := dispatchCapture(Deps{ErrOut: &errBuf})
+
+	_ = disp.Dispatch("session-start", newSessionPayload(t))
+
+	if !strings.Contains(errBuf.String(), "reinstall") {
+		t.Errorf("expected a stderr reinstall warning with no logger, got:\n%s", errBuf.String())
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,6 +35,9 @@ func dispatchCapture(deps Deps) (*Dispatcher, *bytes.Buffer) {
 	deps.Out = &out
 	if deps.Templates == nil {
 		deps.Templates = hookTemplates()
+	}
+	if deps.ErrOut == nil {
+		deps.ErrOut = io.Discard
 	}
 	return NewDispatcher(deps), &out
 }
