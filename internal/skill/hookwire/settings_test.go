@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 // TestRenderHooksBlock asserts the portable $CLAUDE_PROJECT_DIR hook command is
@@ -25,6 +27,37 @@ func TestRenderHooksBlock(t *testing.T) {
 	want := `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh" session-start`
 	if got != want {
 		t.Errorf("session-start command = %q, want %q", got, want)
+	}
+}
+
+// TestRenderHooksBlock_SubagentStart renders the REAL embedded settings
+// template (not the fakeTemplates fixture, which is a deliberately minimal
+// stand-in), so a future edit to settings.hooks.json.tmpl that drops
+// SubagentStart fails this test instead of silently regressing every
+// spawned subagent back to zero injected contract.
+func TestRenderHooksBlock_SubagentStart(t *testing.T) {
+	t.Parallel()
+
+	_, templates, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("knowledge.Load: %v", err)
+	}
+	block, err := RenderHooksBlock(templates)
+	if err != nil {
+		t.Fatalf("RenderHooksBlock: %v", err)
+	}
+	var parsed hooksBlock
+	if err := json.Unmarshal(block, &parsed); err != nil {
+		t.Fatalf("rendered block is not valid JSON: %v", err)
+	}
+	groups := parsed.Hooks["SubagentStart"]
+	if len(groups) != 1 || len(groups[0].Hooks) != 1 {
+		t.Fatalf("expected exactly one SubagentStart hook group, got %+v", groups)
+	}
+	got := groups[0].Hooks[0].Command
+	want := `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh" subagent-start`
+	if got != want {
+		t.Errorf("subagent-start command = %q, want %q", got, want)
 	}
 }
 

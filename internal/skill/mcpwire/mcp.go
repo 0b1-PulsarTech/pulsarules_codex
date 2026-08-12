@@ -3,6 +3,7 @@ package mcpwire
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"maps"
@@ -10,12 +11,12 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/gitignore"
 )
 
-// server is one MCP server the installer wires in. Add another (e.g. souschef)
-// by appending to managedServers - the template ranges over them.
+// server is one MCP server the installer wires in. Add another by appending
+// to managedServers - the template ranges over them.
 type server struct {
 	Name    string
 	Command string
@@ -49,16 +50,15 @@ func WriteMCP(templates fs.FS, repoDir string) error {
 	}
 	path := filepath.Join(repoDir, ".mcp.json")
 	existing, err := os.ReadFile(path) //nolint:gosec // path is the caller's project root.
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("read %q: %w", path, err)
 	}
 	merged, err := mergeServers(existing, servers)
 	if err != nil {
 		return fmt.Errorf("merge servers: %w", err)
 	}
-	//nolint:gosec // path is the caller's project root.
-	if err = os.WriteFile(path, merged, fsperm.FilePrivate); err != nil {
-		return fmt.Errorf("write %q: %w", path, err)
+	if err = fsx.Save(path, merged); err != nil {
+		return fmt.Errorf("save %q: %w", path, err)
 	}
 	if err = gitignore.Ensure(repoDir, ".mcp.json"); err != nil {
 		return fmt.Errorf("ensure mcp gitignore: %w", err)
@@ -74,8 +74,8 @@ func renderServers(templates fs.FS, repoDir string) (map[string]json.RawMessage,
 		return nil, fmt.Errorf("parse mcp template: %w", err)
 	}
 	var buf bytes.Buffer
-	data := templateData{RepoDir: repoDir, Servers: managedServers}
-	if err = tmpl.Execute(&buf, data); err != nil {
+	vars := templateData{RepoDir: repoDir, Servers: managedServers}
+	if err = tmpl.Execute(&buf, vars); err != nil {
 		return nil, fmt.Errorf("render mcp config (repo dir %q): %w", repoDir, err)
 	}
 	var cfg mcpConfig
@@ -88,7 +88,10 @@ func renderServers(templates fs.FS, repoDir string) (map[string]json.RawMessage,
 // mergeServers folds the managed servers into the existing .mcp.json, preserving
 // every other top-level key and every unmanaged server. existing is empty for a
 // fresh file.
-func mergeServers(existing []byte, servers map[string]json.RawMessage) ([]byte, error) {
+func mergeServers(
+	existing []byte,
+	servers map[string]json.RawMessage,
+) (map[string]json.RawMessage, error) {
 	config := map[string]json.RawMessage{}
 	if len(bytes.TrimSpace(existing)) > 0 {
 		if err := json.Unmarshal(existing, &config); err != nil {
@@ -109,10 +112,5 @@ func mergeServers(existing []byte, servers map[string]json.RawMessage) ([]byte, 
 		return nil, fmt.Errorf("marshal mcpServers: %w", err)
 	}
 	config["mcpServers"] = rawServers
-
-	out, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal .mcp.json: %w", err)
-	}
-	return append(out, '\n'), nil
+	return config, nil
 }

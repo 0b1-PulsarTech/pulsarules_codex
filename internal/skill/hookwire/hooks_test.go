@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
 )
 
 // TestInstallHook copies the script (executable) and README into <claudeDir>/hooks.
@@ -11,7 +13,7 @@ func TestInstallHook(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := filepath.Join(t.TempDir(), ".claude")
-	if err := InstallHook(fakeTemplates(), claudeDir); err != nil {
+	if _, err := InstallHook(fakeTemplates(), claudeDir); err != nil {
 		t.Fatalf("InstallHook: %v", err)
 	}
 
@@ -25,5 +27,101 @@ func TestInstallHook(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(claudeDir, "hooks", "README.md")); err != nil {
 		t.Errorf("README not installed: %v", err)
+	}
+}
+
+// TestInstallHook_BacksUpForeignReadme is the regression test for the
+// data-loss defect: a user-authored README.md already at
+// <claudeDir>/hooks/README.md (no marker.Installed) is renamed to a
+// ".pulsarules-backup" slot rather than destroyed, and InstallHook reports
+// the rename through backedUp; a second call against ITS OWN previously
+// installed README overwrites in place with no backup at all.
+func TestInstallHook_BacksUpForeignReadme(t *testing.T) {
+	t.Parallel()
+
+	claudeDir := filepath.Join(t.TempDir(), ".claude")
+	hooksDir := filepath.Join(claudeDir, "hooks")
+	if err := os.MkdirAll(hooksDir, 0o750); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	readme := filepath.Join(hooksDir, "README.md")
+	foreign := "# My own notes about this hooks dir\n"
+	if err := os.WriteFile(readme, []byte(foreign), 0o600); err != nil {
+		t.Fatalf("seed foreign readme: %v", err)
+	}
+
+	backedUp, err := InstallHook(fakeTemplates(), claudeDir)
+	if err != nil {
+		t.Fatalf("InstallHook: %v", err)
+	}
+	backupPath := readme + marker.BackupSuffix
+	wantMsg := marker.BackupMessage(readme, backupPath)
+	if len(backedUp) != 1 || backedUp[0] != wantMsg {
+		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
+	}
+	got, readErr := os.ReadFile(backupPath) //nolint:gosec // test fixture.
+	if readErr != nil {
+		t.Fatalf("read backup: %v", readErr)
+	}
+	if string(got) != foreign {
+		t.Errorf("backup content = %q, want %q", got, foreign)
+	}
+
+	// A second call finds its own README (marker.Installed) and overwrites
+	// it in place, with no further backup.
+	backedUp2, err := InstallHook(fakeTemplates(), claudeDir)
+	if err != nil {
+		t.Fatalf("second InstallHook: %v", err)
+	}
+	if len(backedUp2) != 0 {
+		t.Errorf("second InstallHook backedUp = %v, want none (it owns the file now)", backedUp2)
+	}
+}
+
+// TestInstallHook_NeverOverwritesExistingBackup asserts a foreign README
+// backed up when a ".pulsarules-backup" slot is already occupied (by an
+// earlier, unresolved backup) falls back to the next free numbered slot
+// instead of clobbering it.
+func TestInstallHook_NeverOverwritesExistingBackup(t *testing.T) {
+	t.Parallel()
+
+	claudeDir := filepath.Join(t.TempDir(), ".claude")
+	hooksDir := filepath.Join(claudeDir, "hooks")
+	if err := os.MkdirAll(hooksDir, 0o750); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	readme := filepath.Join(hooksDir, "README.md")
+	current := "# current notes\n"
+	if err := os.WriteFile(readme, []byte(current), 0o600); err != nil {
+		t.Fatalf("seed foreign readme: %v", err)
+	}
+	priorBackup := readme + marker.BackupSuffix
+	priorContent := "# an even earlier version of the user's notes\n"
+	if err := os.WriteFile(priorBackup, []byte(priorContent), 0o600); err != nil {
+		t.Fatalf("seed prior backup: %v", err)
+	}
+
+	backedUp, err := InstallHook(fakeTemplates(), claudeDir)
+	if err != nil {
+		t.Fatalf("InstallHook: %v", err)
+	}
+	newBackup := readme + marker.BackupSuffix + ".1"
+	wantMsg := marker.BackupMessage(readme, newBackup)
+	if len(backedUp) != 1 || backedUp[0] != wantMsg {
+		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
+	}
+	got, readErr := os.ReadFile(priorBackup) //nolint:gosec // test fixture.
+	if readErr != nil {
+		t.Fatalf("read prior backup: %v", readErr)
+	}
+	if string(got) != priorContent {
+		t.Errorf("prior backup content = %q, want %q (clobbered)", got, priorContent)
+	}
+	got, readErr = os.ReadFile(newBackup) //nolint:gosec // test fixture.
+	if readErr != nil {
+		t.Fatalf("read new backup: %v", readErr)
+	}
+	if string(got) != current {
+		t.Errorf("new backup content = %q, want %q", got, current)
 	}
 }
