@@ -16,6 +16,7 @@ type analyzerBuilder func(
 ) pass.Analyzer
 
 type analyzerSpec struct {
+	id     string
 	build  analyzerBuilder
 	scopes []Scope
 }
@@ -44,4 +45,13 @@ func (r *StageRunner) registerForScope(index *knowledge.Index, repo vcs.Reposito
 			r.Register(a)
 		}
 	}
+}
+
+func RegisteredAnalyzerIDs() []string {
+	specs := analyzerSpecs()
+	ids := make([]string, len(specs))
+	for i, spec := range specs {
+		ids[i] = spec.id
+	}
+	return ids
 }

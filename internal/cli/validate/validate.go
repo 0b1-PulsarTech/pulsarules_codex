@@ -8,6 +8,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/validate"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -18,7 +19,7 @@ func RunValidate(inj remy.Injector, _ *version.Options) error {
 	if err != nil {
 		return fmt.Errorf("get knowledge index: %w", err)
 	}
-	result := validate.Validate(idx, render.LintSections)
+	result := validate.Validate(idx, render.LintSections, governance.RuleAnalyzersCheck)
 	if !result.OK() {
 		_, _ = fmt.Fprintln(os.Stderr, "validation failed:")
 		for _, problem := range result.Errors {

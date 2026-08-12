@@ -13,6 +13,7 @@ import (
 func pipelineAnalyzerSpecs() []analyzerSpec {
 	return []analyzerSpec{
 		{
+			id: "arch-boundary",
 			build: func(
 				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
 			) pass.Analyzer {
@@ -21,6 +22,7 @@ func pipelineAnalyzerSpecs() []analyzerSpec {
 			scopes: archScopes(),
 		},
 		{
+			id: "import-cycle",
 			build: func(
 				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
 			) pass.Analyzer {
@@ -29,6 +31,7 @@ func pipelineAnalyzerSpecs() []analyzerSpec {
 			scopes: archScopes(),
 		},
 		{
+			id: "golangci-lint",
 			build: func(
 				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
 			) pass.Analyzer {
@@ -37,6 +40,7 @@ func pipelineAnalyzerSpecs() []analyzerSpec {
 			scopes: delegationScopes(),
 		},
 		{
+			id: "rule-injection",
 			build: func(
 				index *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
 			) pass.Analyzer {
@@ -44,6 +48,6 @@ func pipelineAnalyzerSpecs() []analyzerSpec {
 			},
 			scopes: staticScopes(),
 		},
-		staticSpec(output.NewAnalyzer),
+		staticSpec("output", output.NewAnalyzer),
 	}
 }

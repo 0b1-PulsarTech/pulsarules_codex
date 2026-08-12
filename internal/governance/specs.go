@@ -24,9 +24,10 @@ import (
 
 func analyzerSpecs() []analyzerSpec {
 	return append([]analyzerSpec{
-		staticSpec(filesize.NewAnalyzer),
-		staticSpec(noemdash.NewAnalyzer),
+		staticSpec("file-size", filesize.NewAnalyzer),
+		staticSpec("no-em-dash", noemdash.NewAnalyzer),
 		{
+			id: "import-groups",
 			build: func(
 				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
 			) pass.Analyzer {
@@ -34,11 +35,12 @@ func analyzerSpecs() []analyzerSpec {
 			},
 			scopes: staticScopes(),
 		},
-		staticSpec(identifier.NewAnalyzer),
-		langSpec(banner.NewAnalyzer),
-		langSpec(blocksize.NewAnalyzer),
-		staticSpec(simplification.NewAnalyzer),
+		staticSpec("naming", identifier.NewAnalyzer),
+		langSpec("top-of-file", banner.NewAnalyzer),
+		langSpec("big-comment", blocksize.NewAnalyzer),
+		staticSpec("simplification-path", simplification.NewAnalyzer),
 		{
+			id: "commit-lint",
 			build: func(
 				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
 			) pass.Analyzer {
@@ -55,6 +57,7 @@ func analyzerSpecs() []analyzerSpec {
 			scopes: staticScopes(),
 		},
 		{
+			id: "commit-move-purity",
 			build: func(
 				_ *knowledge.Index, _ *pass.LanguageRegistry, repo vcs.Repository,
 			) pass.Analyzer {
@@ -62,15 +65,16 @@ func analyzerSpecs() []analyzerSpec {
 			},
 			scopes: staticScopes(),
 		},
-		staticSpec(controlflow.NewAnalyzer),
-		staticSpec(shadowing.NewAnalyzer),
-		staticSpec(complexity.NewAnalyzer),
-		staticSpec(namedreturns.NewAnalyzer),
+		staticSpec("control-flow", controlflow.NewAnalyzer),
+		staticSpec("shadowing", shadowing.NewAnalyzer),
+		staticSpec("complexity", complexity.NewAnalyzer),
+		staticSpec("named-returns", namedreturns.NewAnalyzer),
 	}, pipelineAnalyzerSpecs()...)
 }
 
-func staticSpec[Built pass.Analyzer](ctor func() Built) analyzerSpec {
+func staticSpec[Built pass.Analyzer](id string, ctor func() Built) analyzerSpec {
 	return analyzerSpec{
+		id: id,
 		build: func(_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository) pass.Analyzer {
 			return ctor()
 		},
@@ -78,8 +82,11 @@ func staticSpec[Built pass.Analyzer](ctor func() Built) analyzerSpec {
 	}
 }
 
-func langSpec[Built pass.Analyzer](ctor func(*pass.LanguageRegistry) Built) analyzerSpec {
+func langSpec[Built pass.Analyzer](
+	id string, ctor func(*pass.LanguageRegistry) Built,
+) analyzerSpec {
 	return analyzerSpec{
+		id: id,
 		build: func(
 			_ *knowledge.Index, langs *pass.LanguageRegistry, _ vcs.Repository,
 		) pass.Analyzer {
