@@ -26,7 +26,7 @@ go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
 pulsarules_cli generate [--root DIR] [--out DIR]
 pulsarules_cli validate [--root DIR]
 pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
-pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--no-git-hooks]
+pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--git-hooks commit-msg,pre-commit] [--no-git-hooks]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
 pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
@@ -137,6 +137,11 @@ Additional install flags:
 - `--layout PROFILE`: apply a customization profile from `profiles.yaml` (`monorepo` |
   `inner-modules`) that overrides which rules a skill composes (e.g. the `code-placement` layout
   variant). `--interactive` prompts for the layout when it is unset.
+- `--git-hooks commit-msg,pre-commit` (default `commit-msg,pre-commit`): comma-separated git hook
+  scripts to install into `<target>/.git/hooks/` that delegate to the installed binary. Valid names
+  are `commit-msg`, `pre-commit`, and `pre-push`; an unrecognized name fails the whole `install`
+  command before anything is written, naming the valid set. `--no-git-hooks` skips installing git
+  hooks entirely.
 
 ### Package
 

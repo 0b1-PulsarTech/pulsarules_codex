@@ -3,6 +3,7 @@ package cliopts
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -21,9 +22,25 @@ func TestParseArgs(t *testing.T) {
 			check: checkInstallProjectWithHooks,
 		},
 		{
+			name: "install with git-hooks flags",
+			args: []string{
+				"install",
+				"--project",
+				"/tmp/repo",
+				"--git-hooks",
+				"commit-msg,pre-push",
+			},
+			check: checkInstallGitHooks,
+		},
+		{
 			name:  "install with --no-git-hooks",
 			args:  []string{"install", "--project", "/tmp/repo", "--no-git-hooks"},
 			check: checkInstallNoGitHooks,
+		},
+		{
+			name:  "install default git-hooks",
+			args:  []string{"install", "--project", "/tmp/repo"},
+			check: checkInstallDefaultGitHooks,
 		},
 		{
 			name:  "generate default out",
@@ -77,10 +94,27 @@ func checkInstallProjectWithHooks(t *testing.T, opts *Options) {
 	}
 }
 
+func checkInstallGitHooks(t *testing.T, opts *Options) {
+	t.Helper()
+	if opts.GitHooks != "commit-msg,pre-push" {
+		t.Errorf("GitHooks = %q, want commit-msg,pre-push", opts.GitHooks)
+	}
+	if opts.NoGitHooks {
+		t.Error("NoGitHooks should be false")
+	}
+}
+
 func checkInstallNoGitHooks(t *testing.T, opts *Options) {
 	t.Helper()
 	if !opts.NoGitHooks {
 		t.Error("NoGitHooks should be true")
+	}
+}
+
+func checkInstallDefaultGitHooks(t *testing.T, opts *Options) {
+	t.Helper()
+	if opts.GitHooks != "commit-msg,pre-commit" {
+		t.Errorf("default GitHooks = %q, want commit-msg,pre-commit", opts.GitHooks)
 	}
 }
 
@@ -159,5 +193,46 @@ func TestBaseDir_Global(t *testing.T) {
 	}
 	if base != home {
 		t.Errorf("base = %q, want %q", base, home)
+	}
+}
+
+func TestGitHookNames(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		gitHooks string
+		want     []string
+	}{
+		{
+			name:     "default pair",
+			gitHooks: "commit-msg,pre-commit",
+			want:     []string{"commit-msg", "pre-commit"},
+		},
+		{
+			name:     "custom list with pre-push",
+			gitHooks: "commit-msg,pre-push",
+			want:     []string{"commit-msg", "pre-push"},
+		},
+		{
+			name:     "tolerates spaces and blank entries",
+			gitHooks: " commit-msg , , pre-push ",
+			want:     []string{"commit-msg", "pre-push"},
+		},
+		{
+			name:     "deduplicates preserving order",
+			gitHooks: "pre-push,commit-msg,pre-push",
+			want:     []string{"pre-push", "commit-msg"},
+		},
+		{name: "empty string yields no hooks", gitHooks: "", want: nil},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			opts := Options{GitHooks: testCase.gitHooks}
+			if got := opts.GitHookNames(); !slices.Equal(got, testCase.want) {
+				t.Errorf("GitHookNames() = %v, want %v", got, testCase.want)
+			}
+		})
 	}
 }

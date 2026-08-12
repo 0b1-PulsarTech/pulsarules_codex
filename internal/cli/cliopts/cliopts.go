@@ -23,6 +23,7 @@ type Options struct {
 	HooksScope  string
 	Layout      string
 	Interactive bool
+	GitHooks    string
 	NoGitHooks  bool
 
 	Preset           string

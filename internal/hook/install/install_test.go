@@ -116,8 +116,8 @@ func TestInstall_Git_ContextHooks(
 	}{
 		{
 			name:     "custom list installs only what was asked",
-			gitHooks: []string{"commit-msg"},
-			want:     []string{"commit-msg"},
+			gitHooks: []string{"pre-push"},
+			want:     []string{"pre-push"},
 		},
 		{
 			name: "zero value installs nothing",

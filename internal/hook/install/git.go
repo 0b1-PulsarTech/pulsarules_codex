@@ -11,6 +11,7 @@ type gitInstaller struct{}
 func (gitInstaller) Name() string { return "git" }
 
 func (gitInstaller) Install(ctx Context) error {
+	// Pass ctx.GitHooks verbatim: the default lives only on --git-hooks.
 	backedUp, err := githook.Install(ctx.Dir, ctx.GitHooks)
 	if err != nil {
 		return fmt.Errorf("install git hooks: %w", err)

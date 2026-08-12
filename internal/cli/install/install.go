@@ -50,7 +50,7 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 		}
 	}
 
-	return installPostTargets(opts, cfg.absBase, deps.templates, deps.hooks)
+	return installPostTargets(opts, cfg.absBase, deps.templates, deps.hooks, cfg.gitHooks)
 }
 
 func printHooksBlock(templates fs.FS) error {
@@ -108,6 +108,7 @@ func newTargetContext(
 type installConfig struct {
 	absBase      string
 	settingsFile string
+	gitHooks     []string
 }
 
 func resolveInstallConfig(opts *cliopts.Options) (installConfig, error) {
@@ -123,7 +124,11 @@ func resolveInstallConfig(opts *cliopts.Options) (installConfig, error) {
 	if err != nil {
 		return installConfig{}, fmt.Errorf("settings file: %w", err)
 	}
-	return installConfig{absBase: absBase, settingsFile: settingsFile}, nil
+	gitHooks, err := resolveGitHooks(opts)
+	if err != nil {
+		return installConfig{}, err
+	}
+	return installConfig{absBase: absBase, settingsFile: settingsFile, gitHooks: gitHooks}, nil
 }
 
 func installPostTargets(
@@ -131,12 +136,13 @@ func installPostTargets(
 	projectDir string,
 	templates fs.FS,
 	hookReg *install.Registry,
+	gitHooks []string,
 ) error {
 	if !opts.NoGitHooks {
 		hookErr := hookReg.Install("git", install.Context{
 			Dir:       projectDir,
 			Templates: templates,
-			GitHooks:  []string{"commit-msg", "pre-commit"},
+			GitHooks:  gitHooks,
 			Warn: func(format string, args ...any) {
 				_, _ = fmt.Fprintf(os.Stderr, "warning: "+format+"\n", args...)
 			},
@@ -144,7 +150,7 @@ func installPostTargets(
 		if hookErr != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "warning: git hooks: %v\n", hookErr)
 		} else {
-			_, _ = fmt.Println("installed git hooks")
+			_, _ = fmt.Printf("installed git hooks: %s\n", strings.Join(gitHooks, ","))
 		}
 	}
 
