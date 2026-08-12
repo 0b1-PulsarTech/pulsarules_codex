@@ -1,8 +1,6 @@
 package claude
 
 import (
-	"errors"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +12,7 @@ func TestInstallHook(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := filepath.Join(t.TempDir(), ".claude")
-	if err := InstallHook(fakeTemplates(), claudeDir); err != nil {
+	if _, err := InstallHook(fakeTemplates(), claudeDir); err != nil {
 		t.Fatalf("InstallHook: %v", err)
 	}
 
@@ -45,10 +43,15 @@ func TestInstallHook_BacksUpForeignReadme(t *testing.T) {
 		t.Fatalf("seed foreign readme: %v", err)
 	}
 
-	if err := InstallHook(fakeTemplates(), claudeDir); err != nil {
+	backedUp, err := InstallHook(fakeTemplates(), claudeDir)
+	if err != nil {
 		t.Fatalf("InstallHook: %v", err)
 	}
 	backupPath := readme + ownedfile.BackupSuffix
+	wantMsg := ownedfile.BackupMessage(readme, backupPath)
+	if len(backedUp) != 1 || backedUp[0] != wantMsg {
+		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
+	}
 	got, readErr := os.ReadFile(backupPath) //nolint:gosec // test fixture.
 	if readErr != nil {
 		t.Fatalf("read backup: %v", readErr)
@@ -57,11 +60,12 @@ func TestInstallHook_BacksUpForeignReadme(t *testing.T) {
 		t.Errorf("backup content = %q, want %q", got, foreign)
 	}
 
-	if err := InstallHook(fakeTemplates(), claudeDir); err != nil {
+	backedUp2, err := InstallHook(fakeTemplates(), claudeDir)
+	if err != nil {
 		t.Fatalf("second InstallHook: %v", err)
 	}
-	if _, statErr := os.Stat(backupPath + ".1"); !errors.Is(statErr, fs.ErrNotExist) {
-		t.Errorf("second InstallHook made a backup (it owns the file now), stat err = %v", statErr)
+	if len(backedUp2) != 0 {
+		t.Errorf("second InstallHook backedUp = %v, want none (it owns the file now)", backedUp2)
 	}
 }
 
@@ -84,10 +88,15 @@ func TestInstallHook_NextNumberedSlot(t *testing.T) {
 		t.Fatalf("seed prior backup: %v", err)
 	}
 
-	if err := InstallHook(fakeTemplates(), claudeDir); err != nil {
+	backedUp, err := InstallHook(fakeTemplates(), claudeDir)
+	if err != nil {
 		t.Fatalf("InstallHook: %v", err)
 	}
 	newBackup := readme + ownedfile.BackupSuffix + ".1"
+	wantMsg := ownedfile.BackupMessage(readme, newBackup)
+	if len(backedUp) != 1 || backedUp[0] != wantMsg {
+		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
+	}
 	got, readErr := os.ReadFile(priorBackup) //nolint:gosec // test fixture.
 	if readErr != nil {
 		t.Fatalf("read prior backup: %v", readErr)

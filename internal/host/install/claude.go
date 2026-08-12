@@ -17,13 +17,19 @@ func (claudeInstaller) Install(ctx Context) error {
 	if settingsFile == "" {
 		settingsFile = "settings.json"
 	}
-	if err := claude.InstallHook(ctx.Templates, claudeDir); err != nil {
+	backedUp, err := claude.InstallHook(ctx.Templates, claudeDir)
+	if err != nil {
 		return fmt.Errorf("install claude hook: %w", err)
 	}
-	if err := claude.WireSettings(ctx.Templates, claudeDir, settingsFile); err != nil {
+	if ctx.Warn != nil {
+		for _, msg := range backedUp {
+			ctx.Warn("%s", msg)
+		}
+	}
+	if err = claude.WireSettings(ctx.Templates, claudeDir, settingsFile); err != nil {
 		return fmt.Errorf("wire claude settings: %w", err)
 	}
-	if err := gitignore.Ensure(claudeDir, "/bin/", "/hooks/"); err != nil {
+	if err = gitignore.Ensure(claudeDir, "/bin/", "/hooks/"); err != nil {
 		return fmt.Errorf("ensure claude gitignore: %w", err)
 	}
 	return nil

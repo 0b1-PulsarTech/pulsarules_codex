@@ -11,6 +11,7 @@ type Context struct {
 	Templates    fs.FS
 	SettingsFile string
 	GitHooks     []string
+	Warn         func(format string, args ...any)
 }
 
 type Installer interface {

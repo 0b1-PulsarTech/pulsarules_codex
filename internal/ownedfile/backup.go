@@ -33,3 +33,7 @@ func nextBackupSlot(path string) (string, error) {
 		candidate = fmt.Sprintf("%s.%d", path+BackupSuffix, attempt)
 	}
 }
+
+func BackupMessage(original, backup string) string {
+	return fmt.Sprintf("backed up existing %s to %s", original, backup)
+}

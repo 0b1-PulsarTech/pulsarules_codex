@@ -1,8 +1,6 @@
 package githook
 
 import (
-	"errors"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +19,7 @@ func TestInstall(t *testing.T) {
 	}
 
 	hooks := []string{"commit-msg", "pre-commit"}
-	if err := Install(dir, hooks); err != nil {
+	if _, err := Install(dir, hooks); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
@@ -47,7 +45,7 @@ func TestInstall(t *testing.T) {
 func TestInstall_NoHooks(t *testing.T) {
 	t.Parallel()
 
-	if err := Install(t.TempDir(), nil); err != nil {
+	if _, err := Install(t.TempDir(), nil); err != nil {
 		t.Fatalf("Install with nil should succeed: %v", err)
 	}
 }
@@ -55,7 +53,7 @@ func TestInstall_NoHooks(t *testing.T) {
 func TestInstall_UnknownHook(t *testing.T) {
 	t.Parallel()
 
-	err := Install(t.TempDir(), []string{"nonexistent"})
+	_, err := Install(t.TempDir(), []string{"nonexistent"})
 	if err == nil {
 		t.Fatal("expected error for unknown hook")
 	}
@@ -64,7 +62,7 @@ func TestInstall_UnknownHook(t *testing.T) {
 func TestInstall_NoGitDir(t *testing.T) {
 	t.Parallel()
 
-	err := Install(t.TempDir(), []string{"commit-msg"})
+	_, err := Install(t.TempDir(), []string{"commit-msg"})
 	if err != nil {
 		t.Fatalf("expected dir to be created: %v", err)
 	}
@@ -85,13 +83,12 @@ func TestInstall_OwnReadOnlyHook(t *testing.T) {
 		t.Fatalf("write old hook: %v", err)
 	}
 
-	if err := Install(dir, []string{"pre-commit"}); err != nil {
+	backedUp, err := Install(dir, []string{"pre-commit"})
+	if err != nil {
 		t.Fatalf("Install over read-only hook: %v", err)
 	}
-	if _, statErr := os.Stat(
-		preCommit + ownedfile.BackupSuffix,
-	); !errors.Is(statErr, fs.ErrNotExist) {
-		t.Errorf("expected no backup (the old hook was ours), stat err = %v", statErr)
+	if len(backedUp) != 0 {
+		t.Errorf("backedUp = %v, want none (the old hook was ours)", backedUp)
 	}
 
 	data, err := os.ReadFile(preCommit)
@@ -118,10 +115,15 @@ func TestInstall_ForeignHookBackup(t *testing.T) {
 		t.Fatalf("seed foreign hook: %v", err)
 	}
 
-	if err := Install(dir, []string{"pre-commit"}); err != nil {
+	backedUp, err := Install(dir, []string{"pre-commit"})
+	if err != nil {
 		t.Fatalf("Install over foreign hook: %v", err)
 	}
 	backupPath := preCommit + ownedfile.BackupSuffix
+	wantMsg := ownedfile.BackupMessage(preCommit, backupPath)
+	if len(backedUp) != 1 || backedUp[0] != wantMsg {
+		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
+	}
 
 	gotBackup, err := os.ReadFile(backupPath) //nolint:gosec // test fixture.
 	if err != nil {
@@ -160,10 +162,15 @@ func TestInstall_ExistingBackupNextSlot(t *testing.T) {
 		t.Fatalf("seed prior backup: %v", err)
 	}
 
-	if err := Install(dir, []string{"pre-commit"}); err != nil {
+	backedUp, err := Install(dir, []string{"pre-commit"})
+	if err != nil {
 		t.Fatalf("Install over foreign hook: %v", err)
 	}
 	newBackup := preCommit + ownedfile.BackupSuffix + ".1"
+	wantMsg := ownedfile.BackupMessage(preCommit, newBackup)
+	if len(backedUp) != 1 || backedUp[0] != wantMsg {
+		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
+	}
 	got, readErr := os.ReadFile(priorBackup) //nolint:gosec // test fixture.
 	if readErr != nil {
 		t.Fatalf("read prior backup: %v", readErr)

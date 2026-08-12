@@ -25,31 +25,36 @@ func hookAssets() []hookAsset {
 
 const binaryName = "pulsarules_cli"
 
-func InstallHook(templates fs.FS, claudeDir string) error {
+func InstallHook(templates fs.FS, claudeDir string) (backedUp []string, err error) {
 	hooksDir := filepath.Join(claudeDir, "hooks")
-	if err := os.MkdirAll(hooksDir, disk.DirPrivate); err != nil {
-		return fmt.Errorf("mkdir %q: %w", hooksDir, err)
+	if err = os.MkdirAll(hooksDir, disk.DirPrivate); err != nil {
+		return nil, fmt.Errorf("mkdir %q: %w", hooksDir, err)
 	}
 	for _, asset := range hookAssets() {
 		assetBytes, readErr := fs.ReadFile(templates, "hooks/"+asset.name)
 		if readErr != nil {
-			return fmt.Errorf("read template hooks/%s: %w", asset.name, readErr)
+			return backedUp, fmt.Errorf("read template hooks/%s: %w", asset.name, readErr)
 		}
 		dst := filepath.Join(hooksDir, asset.name)
 		exists, ours, checkErr := ownedfile.Check(dst)
 		if checkErr != nil {
-			return fmt.Errorf("check %q: %w", dst, checkErr)
+			return backedUp, fmt.Errorf("check %q: %w", dst, checkErr)
 		}
 		if exists && !ours {
-			if _, backupErr := ownedfile.Backup(dst); backupErr != nil {
-				return fmt.Errorf("back up %q: %w", dst, backupErr)
+			backupPath, backupErr := ownedfile.Backup(dst)
+			if backupErr != nil {
+				return backedUp, fmt.Errorf("back up %q: %w", dst, backupErr)
 			}
+			backedUp = append(backedUp, ownedfile.BackupMessage(dst, backupPath))
 		}
 		if writeErr := os.WriteFile(dst, assetBytes, asset.mode); writeErr != nil {
-			return fmt.Errorf("write %q: %w", dst, writeErr)
+			return backedUp, fmt.Errorf("write %q: %w", dst, writeErr)
 		}
 	}
-	return installBinary(claudeDir)
+	if err = installBinary(claudeDir); err != nil {
+		return backedUp, err
+	}
+	return backedUp, nil
 }
 
 func installBinary(claudeDir string) error {
