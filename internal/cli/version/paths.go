@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 )
 
 func (opts *Options) BaseDir() (string, error) {
@@ -31,8 +32,23 @@ func (opts *Options) Targets() []string {
 		const defaultTarget = "claude"
 		return []string{defaultTarget}
 	}
-	targets := make([]string, 0, len(opts.Target))
-	for _, name := range opts.Target {
+	return dedupeStrings(opts.Target)
+}
+
+func (opts *Options) GitHookNames() []string {
+	raw := strings.Split(opts.GitHooks, ",")
+	names := make([]string, 0, len(raw))
+	for _, name := range raw {
+		if trimmed := strings.TrimSpace(name); trimmed != "" {
+			names = append(names, trimmed)
+		}
+	}
+	return dedupeStrings(names)
+}
+
+func dedupeStrings(raw []string) []string {
+	targets := make([]string, 0, len(raw))
+	for _, name := range raw {
 		if !slices.Contains(targets, name) {
 			targets = append(targets, name)
 		}

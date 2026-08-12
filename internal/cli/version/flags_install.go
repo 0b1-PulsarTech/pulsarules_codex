@@ -28,7 +28,12 @@ func bindInstallSelectionFlags(fs *flag.FlagSet, opts *Options) {
 		false,
 		"install only project-router, its workflows, and gopls-navigation unless --no-mcp",
 	)
-	fs.BoolVar(&opts.NoHooks, "no-hooks", false, "install skills only; skip the hook wiring")
+	fs.BoolVar(
+		&opts.NoHooks,
+		"no-hooks",
+		false,
+		"skip the Claude hook script and settings wiring; git hooks use --no-git-hooks",
+	)
 	fs.BoolVar(
 		&opts.PrintHooks,
 		"print-hooks",
@@ -61,6 +66,12 @@ func bindInstallWiringFlags(fs *flag.FlagSet, opts *Options) {
 		"interactive",
 		false,
 		"prompt for unset customizations (e.g. the layout) before installing",
+	)
+	fs.StringVar(
+		&opts.GitHooks,
+		"git-hooks",
+		"commit-msg,pre-commit",
+		"comma-separated git hooks to install (commit-msg,pre-commit,pre-push)",
 	)
 	fs.BoolVar(
 		&opts.NoGitHooks,

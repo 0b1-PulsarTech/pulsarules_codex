@@ -4,7 +4,7 @@ Usage:
   pulsarules_cli generate [--root DIR] [--out DIR]
   pulsarules_cli validate [--root DIR]
   pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
-  pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--no-git-hooks]
+  pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--git-hooks commit-msg,pre-commit] [--no-git-hooks]
   pulsarules_cli package [--root DIR] [--out FILE]
   pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
   pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
@@ -46,13 +46,14 @@ skill-router reminder hook into <target>/.claude/hooks, and idempotently wires i
 into the chosen settings file. --hooks-scope project (the default) wires into
 <target>/.claude/settings.json; --hooks-scope local wires into
 settings.local.json. The wired hook command locates the installed hook script
-via $CLAUDE_PROJECT_DIR (a Claude Code variable, legitimately named there); the
-script then exports PULSARULES_PROJECT_DIR and PULSARULES_SKILLS_DIR, the only
-variables the binary itself reads, so generic Go stays host-neutral. Unless
---no-mcp is given and when gopls is on PATH, it also merges the gopls server
-into <target>/.mcp.json and regenerates the gopls-navigation skill from "gopls
-mcp -instructions". Use --no-hooks for skills only, or --print-hooks to inspect
-the resolved hooks block without writing.
+via $CLAUDE_PROJECT_DIR (a Claude Code variable, legitimately named there);
+the script then exports PULSARULES_PROJECT_DIR and PULSARULES_SKILLS_DIR, the
+only variables the binary itself reads, so generic Go stays host-neutral.
+Unless --no-mcp is given and when gopls is on PATH, it also merges the gopls
+server into <target>/.mcp.json and regenerates the gopls-navigation skill from
+"gopls mcp -instructions". Use --no-hooks to skip the Claude hook script and
+settings wiring (git hooks have their own --no-git-hooks), or --print-hooks to
+inspect the resolved hooks block without writing.
 
 Choosing which skills to install requires exactly one of --all, --skills, or
 --router-only. With none given on an interactive terminal, install prompts with
@@ -66,8 +67,12 @@ skill whose compose_skills names another skill pulls that skill in too
 required it, e.g. "pulled in by dependency: usecase-layout (required by
 rest-adapter)".
 
---no-git-hooks skips the commit-msg and pre-commit git hook scripts that
-delegate to the installed binary; the binary is still copied.
+--git-hooks installs git hook scripts into <target>/.git/hooks/ that delegate
+to the installed binary; valid names are commit-msg, pre-commit, and
+pre-push. Default: commit-msg,pre-commit. An unrecognized name fails the
+whole install command before anything is written, naming the valid set. Use
+--no-git-hooks to skip the git hook scripts; the binary is still copied to
+.git/hooks/ so a hook added later works.
 
 commitlint validates a commit message against the emoji, format, type, scope, and
 body rules. Use --msg "..." for a direct string, --file PATH to read from a

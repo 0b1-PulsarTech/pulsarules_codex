@@ -288,3 +288,21 @@ func TestUninstall_RestoresBackup(
 		t.Errorf("expected backup slot to be gone after restore, stat err = %v", statErr)
 	}
 }
+
+func TestHookNames(t *testing.T) {
+	t.Parallel()
+
+	names := HookNames()
+	if len(names) == 0 {
+		t.Fatal("expected at least one hook name")
+	}
+	hasCommitMsg := false
+	for _, name := range names {
+		if name == "commit-msg" {
+			hasCommitMsg = true
+		}
+	}
+	if !hasCommitMsg {
+		t.Error("expected commit-msg in hook names")
+	}
+}

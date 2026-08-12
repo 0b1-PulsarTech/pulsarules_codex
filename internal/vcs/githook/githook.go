@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
@@ -23,7 +25,9 @@ func Install(dir string, hooks []string) (backedUp []string, err error) {
 	for _, name := range hooks {
 		script, ok := hookScripts()[name]
 		if !ok {
-			return backedUp, fmt.Errorf("unknown git hook %q", name)
+			return backedUp, fmt.Errorf(
+				"unknown git hook %q (want %s)", name, strings.Join(HookNames(), "|"),
+			)
 		}
 		path := filepath.Join(hooksDir, name)
 		exists, ours, checkErr := ownedfile.Check(path)
@@ -68,6 +72,15 @@ BINARY="$PROJECT_DIR/` + binaryRel + `"
 [ -x "$BINARY" ] || exit 0
 exec "$BINARY" governance --project "$PROJECT_DIR" --scope commit
 `,
+
+		"pre-push": `#!/bin/sh
+# pulsarules_codex pre-push hook - runs governance checks before pushing.
+# ` + ownedfile.Marker + `; remove or edit this file to disable.
+PROJECT_DIR=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+BINARY="$PROJECT_DIR/` + binaryRel + `"
+[ -x "$BINARY" ] || exit 0
+exec "$BINARY" governance --project "$PROJECT_DIR"
+`,
 	}
 }
 
@@ -77,6 +90,15 @@ func InstallBinary(dir string) error {
 		return fmt.Errorf("copy installer binary: %w", err)
 	}
 	return nil
+}
+
+func HookNames() []string {
+	names := make([]string, 0, len(hookScripts()))
+	for name := range hookScripts() {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	return names
 }
 
 func Uninstall(dir string) (removed, restored []string, err error) {
