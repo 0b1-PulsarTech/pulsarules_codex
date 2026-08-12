@@ -12,28 +12,30 @@ import (
 
 const binaryRel = ".git/hooks/pulsarules_cli"
 
-func Install(dir string, hooks []string) error {
+func Install(dir string, hooks []string) (backedUp []string, err error) {
 	if len(hooks) == 0 {
-		return nil
+		return nil, nil
 	}
 	hooksDir := filepath.Join(dir, ".git", "hooks")
-	if err := os.MkdirAll(hooksDir, fsperm.DirPrivate); err != nil {
-		return fmt.Errorf("mkdir .git/hooks: %w", err)
+	if err = os.MkdirAll(hooksDir, fsperm.DirPrivate); err != nil {
+		return nil, fmt.Errorf("mkdir .git/hooks: %w", err)
 	}
 	for _, name := range hooks {
 		script, ok := hookScripts()[name]
 		if !ok {
-			return fmt.Errorf("unknown git hook %q", name)
+			return backedUp, fmt.Errorf("unknown git hook %q", name)
 		}
 		path := filepath.Join(hooksDir, name)
 		exists, ours, checkErr := marker.Check(path)
 		if checkErr != nil {
-			return fmt.Errorf("check %q: %w", path, checkErr)
+			return backedUp, fmt.Errorf("check %q: %w", path, checkErr)
 		}
 		if exists && !ours {
-			if _, backupErr := marker.Backup(path); backupErr != nil {
-				return fmt.Errorf("back up %q: %w", path, backupErr)
+			backupPath, backupErr := marker.Backup(path)
+			if backupErr != nil {
+				return backedUp, fmt.Errorf("back up %q: %w", path, backupErr)
 			}
+			backedUp = append(backedUp, marker.BackupMessage(path, backupPath))
 		} else {
 			// An owned or absent file is removed so mode always applies, even over a
 			// read-only prior install; the error adds nothing the write would not say.
@@ -41,10 +43,10 @@ func Install(dir string, hooks []string) error {
 		}
 		const hookMode = 0o500
 		if writeErr := os.WriteFile(path, []byte(script), hookMode); writeErr != nil {
-			return fmt.Errorf("write .git/hooks/%s: %w", name, writeErr)
+			return backedUp, fmt.Errorf("write .git/hooks/%s: %w", name, writeErr)
 		}
 	}
-	return nil
+	return backedUp, nil
 }
 
 func hookScripts() map[string]string {

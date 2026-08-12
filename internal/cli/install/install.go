@@ -133,11 +133,15 @@ func installPostTargets(
 	hookReg *install.Registry,
 ) error {
 	if !opts.NoGitHooks {
-		if hookErr := hookReg.Install("git", install.Context{
+		hookErr := hookReg.Install("git", install.Context{
 			Dir:       projectDir,
 			Templates: templates,
 			GitHooks:  []string{"commit-msg", "pre-commit"},
-		}); hookErr != nil {
+			Warn: func(format string, args ...any) {
+				_, _ = fmt.Fprintf(os.Stderr, "warning: "+format+"\n", args...)
+			},
+		})
+		if hookErr != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "warning: git hooks: %v\n", hookErr)
 		} else {
 			_, _ = fmt.Println("installed git hooks")

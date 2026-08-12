@@ -40,6 +40,7 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 		Dir:          claudeDir,
 		Templates:    ctx.Templates,
 		SettingsFile: ctx.SettingsFile,
+		Warn:         report.warn,
 	}); err != nil {
 		return report, fmt.Errorf("install hooks: %w", err)
 	}
