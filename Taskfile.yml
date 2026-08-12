@@ -11,30 +11,40 @@ tasks:
       - task: test
 
   vet:
-    desc: go vet
+    desc: go vet (internal, used by default)
     cmds:
-      - go vet ./...
+      - CGO_ENABLED=0 go vet ./...
 
   test:
-    desc: go test
+    desc: go test (internal, used by default; CGO-free, no -race)
     cmds:
-      - go test ./...
+      - CGO_ENABLED=0 go test ./...
+
+  test:race:
+    desc: go test -race (requires CGO; the default build/test stays CGO-free)
+    cmds:
+      - CGO_ENABLED=1 go test -race ./...
 
   tools:fmt:
-    desc: gofmt (use gofumpt+golines+goimports in projects that have them)
+    desc: format with the project formatter (gofumpt + golines + goimports)
     cmds:
-      - gofmt -w knowledge internal cmd
+      - golangci-lint fmt ./...
 
   tools:lint:
-    desc: golangci-lint (if installed)
+    desc: golangci-lint
     cmds:
       - golangci-lint run ./...
+
+  tools:mocks:
+    desc: regenerate colocated mocks (no-op until a go:generate mockgen directive exists)
+    cmds:
+      - go generate ./...
 
   build:bin:
     desc: build the installer into build/bin
     cmds:
       - mkdir -p build/bin
-      - go build -o {{.BIN}} ./cmd/pulsarules_cli
+      - CGO_ENABLED=0 go build -o {{.BIN}} ./cmd/pulsarules_cli
 
   build:package:
     desc: zip all skills into build/
@@ -50,6 +60,11 @@ tasks:
     desc: validate the embedded knowledge base
     cmds:
       - go run ./cmd/pulsarules_cli validate
+
+  tools:governance:
+    desc: run this repo's own analyzers (internal/governance) against the full tree
+    cmds:
+      - go run ./cmd/pulsarules_cli governance --project . --all-files
 
   gen:emoji:
     desc: regenerate the commit emoji catalog from this repo's history (needs network)
