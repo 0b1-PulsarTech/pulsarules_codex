@@ -2,6 +2,7 @@ package obs
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -27,6 +28,22 @@ func TestNewDisabled(t *testing.T) {
 	}
 	if _, err = os.Stat(path); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected no log file to be created, stat err = %v", err)
+	}
+}
+
+func TestNewDisabled_EmptyPath(t *testing.T) {
+	t.Parallel()
+
+	logger, closer, err := New(Config{Level: "debug"})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if logger.Enabled(context.Background(), slog.LevelError) {
+		t.Error("logger with no path is enabled, want every level discarded")
+	}
+	logger.Debug("should be discarded", slog.Int("n", 1))
+	if err = closer.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
 	}
 }
 
