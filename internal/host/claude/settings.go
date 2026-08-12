@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 const hookScript = "skill-router-reminder.sh"
@@ -63,9 +64,8 @@ func WireSettings(templates fs.FS, claudeDir, settingsFile string) error {
 	if err != nil {
 		return fmt.Errorf("merge settings: %w", err)
 	}
-	//nolint:gosec // path is under the caller's .claude dir.
-	if err = os.WriteFile(path, merged, disk.FilePrivate); err != nil {
-		return fmt.Errorf("write %q: %w", path, err)
+	if err = jsondoc.Save(path, merged); err != nil {
+		return fmt.Errorf("save %q: %w", path, err)
 	}
 	return nil
 }
@@ -82,7 +82,7 @@ func renderBlock(templates fs.FS) (hooksBlock, error) {
 	return block, nil
 }
 
-func mergeSettings(existing []byte, block hooksBlock) ([]byte, error) {
+func mergeSettings(existing []byte, block hooksBlock) (map[string]json.RawMessage, error) {
 	settings := map[string]json.RawMessage{}
 	if len(bytes.TrimSpace(existing)) > 0 {
 		if err := json.Unmarshal(existing, &settings); err != nil {
@@ -108,12 +108,7 @@ func mergeSettings(existing []byte, block hooksBlock) ([]byte, error) {
 		return nil, fmt.Errorf("marshal hooks: %w", err)
 	}
 	settings["hooks"] = rawHooks
-
-	out, err := json.MarshalIndent(settings, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal settings: %w", err)
-	}
-	return append(out, '\n'), nil
+	return settings, nil
 }
 
 func withoutHookScript(groups []hookGroup) []hookGroup {
