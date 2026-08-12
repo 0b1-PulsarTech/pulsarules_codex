@@ -53,6 +53,7 @@ Deep modules in the house vocabulary:
 {{end}}
 
 {{define "forbidden"}}
+- Drifting into "component", "service", "API", or "boundary" instead of the glossary terms.
 - A shallow pass-through module whose interface is nearly as complex as its body - inline it.
 - An interface or seam added for a single, hypothetical implementation.
 - Measuring depth as implementation-lines over interface-lines (it rewards padding the body).

@@ -26,6 +26,19 @@ Reference tools: `Fuego` (OpenAPI-first web framework) via a thin web adapter.
 - Registering routes with a per-route permission guard.
 {{end}}
 
+{{define "must"}}
+1. Define typed `Input`/`Output` DTOs per route, tagged for validation, that drive OpenAPI
+   generation.
+2. Map domain entities to and from those DTOs in `mappers.go`.
+3. Have the handler follow parse -> call the use case -> map -> respond, as the only package
+   importing the REST framework adapter.
+4. Give the handler a service CONSTRUCTOR field, not the use case's dependencies, resolving the
+   request-scoped service from the request context so the use case carries the caller's principal.
+5. Register routes through a typed router contract, asserting `var _ web.RouterContract = Handlers{}`.
+6. Apply a permission guard middleware to each route as a coarse fail-fast pre-check ahead of the
+   call-site access gate.
+{{end}}
+
 {{define "recipe"}}
 The handler holds a service CONSTRUCTOR field, not the use case's dependencies. It resolves the
 request-scoped service from the context (so the use case carries the caller's principal) - this keeps the
@@ -108,4 +121,5 @@ the route guard is only a coarse fail-fast pre-check.
 - [ ] Handler only parses, calls the use case, maps, and responds.
 - [ ] Errors returned as the domain-error type; no status codes hand-written.
 - [ ] Routes registered typed; `RouterContract` asserted; permission guard applied.
+- [ ] Authorization enforced by the access gate at the call site; the route guard is only fail-fast.
 {{end}}
