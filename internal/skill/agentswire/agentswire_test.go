@@ -1,4 +1,4 @@
-package opencodewire
+package agentswire
 
 import (
 	"testing/fstest"

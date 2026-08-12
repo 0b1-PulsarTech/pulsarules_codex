@@ -267,7 +267,8 @@ binary themselves.
 | `internal/skill/output`          | `install.go`, `selection.go` (Selection), `generate.go`, `package.go`, `write.go`                                             |
 | `internal/skill/hookwire`        | `hooks.go` (install hook), `settings.go` (idempotent settings.json/.local merge, `$CLAUDE_PROJECT_DIR`)             |
 | `internal/skill/mcpwire`         | `mcp.go` (merge gopls into `.mcp.json`), `gopls.go` (PATH check + generate gopls-navigation from `gopls mcp -instructions`)   |
-| `internal/skill/opencodewire`    | `agents.go` (render `.opencode/AGENTS.md`), `config.go` (merge `opencode.json`: instructions + gopls mcp)                     |
+| `internal/skill/opencodewire`    | `config.go` (merge `opencode.json`: instructions + gopls mcp)                                                                 |
+| `internal/skill/agentswire`      | `agents.go` (render `.opencode/AGENTS.md`)                                                                                    |
 | `internal/skill/target`          | `target.go` (`Target`/`Context`/`Report`), `registry.go` (`Registry`), `claude.go`, `opencode.go` - one Strategy per install layout |
 | `cmd/pulsarules_cli`             | `main.go` only: parse args, run `bootstrap.DoInjections`, dispatch to `internal/cli`, the one place that calls `os.Exit` |
 

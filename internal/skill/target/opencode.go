@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/agentswire"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpwire"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/opencodewire"
 )
@@ -32,7 +33,7 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 			report.warn(noGoplsWarning)
 		}
 	}
-	if err := opencodewire.WriteAgents(ctx.Templates, ctx.Base, ctx.Index); err != nil {
+	if err := agentswire.WriteAgents(ctx.Templates, ctx.Base, ctx.Index); err != nil {
 		return report, fmt.Errorf("write agents: %w", err)
 	}
 	if err := opencodewire.WireConfig(ctx.Base, gopls); err != nil {

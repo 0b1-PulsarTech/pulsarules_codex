@@ -1,4 +1,4 @@
-package opencodewire
+package agentswire
 
 import (
 	"os"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/opencodewire"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -29,7 +30,7 @@ func TestWriteAgents(t *testing.T) {
 	got := string(raw)
 	for _, want := range []string{
 		filepath.Base(projectDir),
-		SkillsSubdir,
+		opencodewire.SkillsSubdir,
 		"`project-router`",
 		"`git-history`",
 	} {

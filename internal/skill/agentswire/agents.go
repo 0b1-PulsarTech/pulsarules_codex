@@ -1,4 +1,4 @@
-package opencodewire
+package agentswire
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/opencodewire"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -36,7 +37,7 @@ func WriteAgents(templates fs.FS, projectDir string, idx *knowledge.Index) error
 	doc := agentsDoc{
 		ProjectName:        filepath.Base(projectDir),
 		ProjectDescription: defaultProjectDescription,
-		SkillsDir:          SkillsSubdir,
+		SkillsDir:          opencodewire.SkillsSubdir,
 		Skills:             skillRefs(idx),
 	}
 	var buf bytes.Buffer
