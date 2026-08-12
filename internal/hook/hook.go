@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/contract"
 )
 
 func (d *Dispatcher) Dispatch(mode string, payload []byte) error {
@@ -46,7 +48,12 @@ func (d *Dispatcher) emitSessionStart(session *SessionTracker) error {
 	if !session.OncePerSession("session-start") {
 		return nil
 	}
-	return d.emitContext("hooks/contract.txt", "SessionStart")
+	text, err := contract.Session(d.templates)
+	if err != nil {
+		return fmt.Errorf("session contract: %w", err)
+	}
+	d.emitOutput("SessionStart", text)
+	return nil
 }
 
 func (d *Dispatcher) emitContext(asset, event string) error {

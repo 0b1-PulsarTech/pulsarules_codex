@@ -11,6 +11,9 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/contract"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func hookTemplates() fstest.MapFS {
@@ -81,5 +84,24 @@ func gitInit(t *testing.T, dir string) {
 	if out, err := exec.CommandContext(t.Context(), "git", "-C", dir, "init").
 		CombinedOutput(); err != nil {
 		t.Fatalf("git init: %v\n%s", err, out)
+	}
+}
+
+func TestDispatchContract_SessionStart(t *testing.T) {
+	t.Parallel()
+
+	_, templates, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load embedded knowledge: %v", err)
+	}
+
+	want, err := contract.Session(templates)
+	if err != nil {
+		t.Fatalf("contract.Session: %v", err)
+	}
+	disp, out := dispatchCapture(Deps{Templates: templates})
+	_ = disp.Dispatch("session-start", newSessionPayload(t))
+	if got := extractContext(t, out.String()); got != want {
+		t.Errorf("session-start emitted %q, want %q", got, want)
 	}
 }
