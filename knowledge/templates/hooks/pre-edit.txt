@@ -1,1 +1,9 @@
-Writing Go/SQL: confirm project-router ran and the matched skills are LOADED and being applied right now - integration-tests (testCases/testCase + testing/synctest, every failure path), errors-logging (%w, sentinels, domain-error contract), security (secrets/path-traversal), code-minimalism. Run each loaded skill Validation checklist + the verify suite before commit.
+Check project-router ran and its skills are loaded - if so do NOT reload, just apply them to this Go/SQL/proto write. They carry the full contract; what follows is only what nothing else catches later, not a replacement.
+
+Minimalism ladder, stop at the first fit: necessity (must this exist) -> stdlib (slices/maps/cmp, errors.Join, min/max/clear, iter.Seq) -> language/platform feature -> reuse an in-package helper, or one reachable via a facade port (no new deep cross-module import) -> an already-imported dep -> one line -> only then implement.
+New abstraction/interface/option/generic needs >=2 real call sites today or it does not go in.
+Domain scalars get named types (UserID string, not bare string/int); money is minor-unit int64; a recurring field group is a named struct.
+Minimalism stops at the package boundary: never skip a mandated facade/outbox/transaction/DI, never trim validation, error handling, security, or observability.
+Errors: wrap with %w, use sentinels, keep the domain-error contract.
+Tests: testCases/testCase table, testing/synctest for time, cover every failure path.
+Before commit: run every loaded skill's Validation checklist plus the verify suite.

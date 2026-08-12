@@ -9,9 +9,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// TestReadSkillSidecars_Loaded asserts every non-router skill ships a curated
-// sidecar body that leads with the Mandatory workflow section, and that the
-// router (which renders from its own template) is exempt.
+// TestReadSkillSidecars_Loaded asserts every non-router skill ships a
+// non-empty, slim sidecar body (frontmatter, intro prose, orientation only)
+// that no longer hand-duplicates the composed Mandatory workflow / Validation
+// checklist sections, and that the router (which renders from its own
+// template) is exempt.
 func TestReadSkillSidecars_Loaded(t *testing.T) {
 	t.Parallel()
 
@@ -32,11 +34,14 @@ func TestReadSkillSidecars_Loaded(t *testing.T) {
 			t.Errorf("skill %q has no sidecar body", skill.ID)
 			continue
 		}
-		if !strings.Contains(body, "## Mandatory workflow") {
-			t.Errorf("skill %q sidecar missing ## Mandatory workflow", skill.ID)
+		if strings.Contains(body, "## Mandatory workflow") {
+			t.Errorf("skill %q sidecar still hand-duplicates ## Mandatory workflow", skill.ID)
 		}
-		if !strings.Contains(body, "## Validation checklist") {
-			t.Errorf("skill %q sidecar missing ## Validation checklist", skill.ID)
+		if strings.Contains(body, "## Validation checklist") {
+			t.Errorf("skill %q sidecar still hand-duplicates ## Validation checklist", skill.ID)
+		}
+		if strings.Contains(body, "## Forbidden actions") && skill.ID != "git-history" {
+			t.Errorf("skill %q sidecar still hand-duplicates ## Forbidden actions", skill.ID)
 		}
 	}
 }
