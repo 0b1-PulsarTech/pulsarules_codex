@@ -29,6 +29,18 @@ func (reg *Registry) Install(name string, ctx Context) (Report, error) {
 	return report, nil
 }
 
+func (reg *Registry) Uninstall(name string, ctx UninstallContext) (Report, error) {
+	tgt, ok := reg.byName[name]
+	if !ok {
+		return Report{}, fmt.Errorf("unknown target %q", name)
+	}
+	report, err := tgt.Uninstall(ctx)
+	if err != nil {
+		return report, fmt.Errorf("uninstall target %q: %w", name, err)
+	}
+	return report, nil
+}
+
 func (reg *Registry) Has(name string) bool {
 	_, ok := reg.byName[name]
 	return ok
@@ -41,4 +53,14 @@ func (reg *Registry) Names() []string {
 	}
 	slices.Sort(names)
 	return names
+}
+
+func (reg *Registry) DetectTargets(base string) []string {
+	var found []string
+	for _, name := range reg.Names() {
+		if reg.byName[name].Present(base) {
+			found = append(found, name)
+		}
+	}
+	return found
 }
