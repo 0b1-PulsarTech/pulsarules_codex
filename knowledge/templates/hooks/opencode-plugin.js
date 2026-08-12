@@ -1,40 +1,68 @@
 // pulsarules_codex governance plugin for opencode.
+import { accessSync, constants as fsConstants } from "node:fs";
+
+// simplification: pre-edit stays unwired. tool.execute.before's output object is only
+// {args}: no field the model reads back, so calling pre-edit there would be the same
+// silently-inert bug this plugin exists to kill; register no handler until it has one.
+// stop has no opencode hook either (a bus event never fires here).
+// Ceiling: no pre-edit reminder, no dirty-worktree nag.
+// Revisit when opencode adds a hook whose output the model reads back.
 export const PulsarulesGovernance = async ({ directory, worktree, $ }) => {
   const root = worktree || directory;
-  const bin = root + "/.opencode/bin/pulsarules_cli";
+  // Must match internal/hook/install/opencodehook/opencodehook.go's binaryRel constant.
+  const bin = `${root}/.opencode/bin/pulsarules_cli`;
 
-  async function runHook(mode) {
+  // .opencode/bin/ is gitignored, so a fresh clone has no binary yet; stay
+  // silent instead of shelling out to a path that may not exist.
+  try {
+    accessSync(bin, fsConstants.X_OK);
+  } catch {
+    return {};
+  }
+
+  async function runHook(mode, sessionId, filePath) {
+    // The JSON payload shape (session_id, tool_input.file_path) must match
+    // hookPayload in internal/hook/wire.go's decodeHookPayload.
+    const payload = JSON.stringify({
+      session_id: sessionId,
+      tool_input: { file_path: filePath ?? "" },
+    });
     try {
-      const result = await $([bin, "hook", mode]);
+      const result = await $`${bin} hook ${mode} < ${Buffer.from(payload)}`.quiet();
       const text = result.stdout?.toString().trim();
       if (!text) return;
       const parsed = JSON.parse(text);
-      const ctx = parsed?.hookSpecificOutput?.additionalContext;
-      if (ctx) return ctx;
-    } catch (e) {}
+      return parsed?.hookSpecificOutput?.additionalContext;
+    } catch (e) {
+      // A hook must never break the user's turn, so a failed invocation is
+      // logged and swallowed here - never rethrown.
+      console.error("pulsarules_codex: hook", mode, "failed:", e);
+    }
   }
 
   return {
-    "session.created": async () => {
-      const ctx = await runHook("session-start");
-      if (ctx) console.log(ctx);
+    // "session-start" is OncePerSession-gated in the binary despite firing
+    // every turn here.
+    "experimental.chat.system.transform": async (input, output) => {
+      // Some opencode call sites invoke this hook with no sessionID; without
+      // this guard it falls into the shared "nosession" tracker key globally.
+      if (!input.sessionID) return;
+      const contract = await runHook("session-start", input.sessionID);
+      if (contract) output.system.push(contract);
     },
 
-    "tool.execute.before": async (input) => {
+    // output here is the tool result ({title, metadata, output}), not args;
+    // filePath comes from input.args. output.output is what the model reads
+    // back - console.log would only reach the server log.
+    "tool.execute.after": async (input, output) => {
       if (input.tool !== "write" && input.tool !== "edit") return;
-      const ctx = await runHook("pre-edit");
-      if (ctx) console.log(ctx);
-    },
-
-    "tool.execute.after": async (input) => {
-      if (input.tool !== "write" && input.tool !== "edit") return;
-      const ctx = await runHook("post-edit");
-      if (ctx) console.log(ctx);
-    },
-
-    "session.idle": async () => {
-      const ctx = await runHook("stop");
-      if (ctx) console.log(ctx);
+      const ctx = await runHook("post-edit", input.sessionID, input.args?.filePath ?? "");
+      if (!ctx) return;
+      if (typeof output.output === "string") {
+        output.output += `\n\n${ctx}`;
+      } else {
+        output.output = ctx;
+      }
     },
   };
 };

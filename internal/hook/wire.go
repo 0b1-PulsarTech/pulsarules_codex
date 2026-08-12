@@ -32,6 +32,7 @@ type hookPayload struct {
 // path: return the error too if a handler needs "malformed" vs "empty".
 func decodeHookPayload(payload []byte) hookPayload {
 	var in hookPayload
+	// The JSON shape must match knowledge/templates/hooks/opencode-plugin.js runHook payload.
 	_ = json.Unmarshal(payload, &in)
 	return in
 }
