@@ -48,6 +48,8 @@ newest stable the module pins (source repos use `go 1.26`).
 {{define "must"}}
 1. Format with the project formatter (gofumpt + goimports + golines) before finishing; never hand-format.
 2. Use early returns over deep nesting; keep functions under ~80 lines and cyclomatic complexity under ~15.
+   `else` is fine when both branches do genuinely different work; when one branch only holds a default
+   that a condition overrides, assign the default value directly and drop the `else`.
 3. Doc-comment every exported symbol, starting with its name, describing behaviour not signature.
    No `// Package foo` package docstrings. No doc comments on unexported symbols; add a single-line
    `// why` only when non-obvious (hidden constraint, workaround, non-obvious invariant).

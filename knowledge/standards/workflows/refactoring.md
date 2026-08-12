@@ -12,6 +12,7 @@ steps:
     - make one small behavior-preserving change
     - run go test ./... -race; it must stay green before the next step
     - repeat until the smell is gone; squash the micro-steps into one reviewable refactor commit
+    - zoom out and sweep every touched file/function for the same naming, error-wrapping, and guard-clause shape
     - land the refactor as its own commit, separate from any feature change
 composes_rules:
     - code-smells
@@ -44,7 +45,9 @@ composes_rules:
 4. **Stay green.** Run `go test ./... -race`; it must pass before the next step. A red bar means the
    step changed behavior - back it out (see [[testing]]).
 5. **Repeat**, then squash the local micro-steps into one reviewable commit.
-6. **Commit separately.** Land the refactor as its own emoji-prefixed commit, never folded into a
+6. **Zoom out.** Sweep every file/function the change touched for the same shape - naming, error
+   wrapping, guard-clause style - so the diff reads as one hand (see [[code-smells]]).
+7. **Commit separately.** Land the refactor as its own emoji-prefixed commit, never folded into a
    feature change (see [[commits]]).
 
 ## Conflict resolution
