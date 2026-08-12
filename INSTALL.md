@@ -27,6 +27,7 @@ pulsarules_cli generate [--root DIR] [--out DIR]
 pulsarules_cli validate [--root DIR]
 pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
 pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--git-hooks commit-msg,pre-commit] [--no-git-hooks]
+pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
 pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
@@ -105,9 +106,9 @@ duplicating on re-run. The wired command locates the installed hook script via `
 (a Claude Code variable, legitimately named there); the script then exports `PULSARULES_PROJECT_DIR`
 and `PULSARULES_SKILLS_DIR` - the only two variables the binary itself reads - so it survives moving
 the repo without hardcoding a host's own variable name or a host's own skills layout. It also stamps
-`.claude/.gitignore` with `/bin/` and `/hooks/` (plus an ownership marker), so the copied binary and
-hook script stay local while `settings.json` and the rendered skills - which carry their own
-`.gitignore` - remain yours to commit or not.
+`.claude/.gitignore` with `/bin/` and `/hooks/` (plus the ownership marker `uninstall` needs), so
+the copied binary and hook script stay local while `settings.json` and the rendered skills - which
+carry their own `.gitignore` - remain yours to commit or not.
 
 If the install predates `PULSARULES_PROJECT_DIR`/`PULSARULES_SKILLS_DIR`, an older
 `skill-router-reminder.sh` exports neither, so the binary resolves an empty project dir: the
@@ -142,6 +143,26 @@ Additional install flags:
   are `commit-msg`, `pre-commit`, and `pre-push`; an unrecognized name fails the whole `install`
   command before anything is written, naming the valid set. `--no-git-hooks` skips installing git
   hooks entirely.
+
+### Uninstall
+
+Reverse `install`. Unlike `install`, it does not default to the `claude` target: with no `--target`
+it probes the project for every layout it can detect on disk (a `.claude` dir, a `.opencode` dir /
+`opencode.json`, a root `AGENTS.md`, or a `.cursor/rules` dir) and reverses all of them; pass
+`--target` to narrow it to one layout. It unwires the hook from both `settings.json` and
+`settings.local.json` by default (it cannot recover which `--hooks-scope` install used); pass
+`--hooks-scope` to narrow to one file. It also removes the gopls entry from `.mcp.json`, the
+opencode plugin plus its `opencode.json` wiring, and the git hooks `install` wrote into
+`.git/hooks/`. A root `AGENTS.md` is removed only when its content still carries the marker
+`install` wrote it with, so a hand-authored one is never touched. Unless `--keep-skills` is given,
+it also removes every rendered skill and workflow doc `install` wrote (a user's own files placed
+inside a rendered skill's directory are never touched). Every step is idempotent, so running it
+against an install that was never made, or running it twice, is not an error.
+
+```sh
+pulsarules_cli uninstall --project /path/to/project --target claude
+pulsarules_cli uninstall --global --keep-skills
+```
 
 ### Package
 

@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -75,6 +76,22 @@ func TestRunCommitLint_NoRepository(t *testing.T) {
 	)
 	if _, ok := errors.AsType[*ExitError](err); !ok {
 		t.Fatalf("expected *ExitError from analysis findings, got %v (%T)", err, err)
+	}
+}
+
+func TestRun_UninstallDispatch(t *testing.T) {
+	t.Parallel()
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+	err := Run(inj, &cliopts.Options{Command: "uninstall"})
+	if err == nil {
+		t.Fatal("expected an error: uninstall requires --global or --project")
+	}
+	if !strings.HasPrefix(err.Error(), "uninstall:") {
+		t.Errorf("error should carry the uninstall: prefix, got %v", err)
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/uninstall"
 )
 
 type ExitError struct {
@@ -28,6 +29,11 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 	case "install":
 		if installErr := install.Run(inj, opts); installErr != nil {
 			return fmt.Errorf("install: %w", installErr)
+		}
+		return nil
+	case "uninstall":
+		if uninstallErr := uninstall.Run(inj, opts); uninstallErr != nil {
+			return fmt.Errorf("uninstall: %w", uninstallErr)
 		}
 		return nil
 	case "list":
