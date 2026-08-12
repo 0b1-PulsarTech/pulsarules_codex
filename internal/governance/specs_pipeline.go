@@ -2,6 +2,7 @@ package governance
 
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/arch"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/concurrency/clock"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -12,6 +13,7 @@ import (
 
 func pipelineAnalyzerSpecs() []analyzerSpec {
 	return []analyzerSpec{
+		staticSpec("time-discipline", clock.NewAnalyzer),
 		{
 			id: "arch-boundary",
 			build: func(
