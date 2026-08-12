@@ -29,7 +29,7 @@ to self-route, we inject the contract at each relevant lifecycle moment:
 | Hook                                                 | When                                                                                                      | What it injects                                                                                                                        |
 |------------------------------------------------------|------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
 | `SessionStart` (`session-start`)                     | once per session                                                                                           | The routing contract: invoke `project-router`, load every matched skill, apply while writing; test conventions; verify-before-commit.  |
-| `UserPromptSubmit` (`user-prompt`)                   | first prompt of a session (per-session flag, then silent)                                                  | A one-shot "did you route through `project-router`?" nudge before any Go/SQL/config work.                                              |
+| `UserPromptSubmit` (`user-prompt`)                   | every turn, no dedup flag                                                                                  | A short routing question (`user-prompt.txt`, capped at 300 bytes, enforced by `TestUserPromptNudge_ShortAndKeepsPhrases`): asks whether `project-router` has run for this task, and states that skipping the router skips the rules for any Go/SQL/config write. Fires on every turn (no once-per-session gate), unlike `session-start`'s one-shot contract, because mid-session drift off the router happens well past turn one, and the cost of firing every turn is why the text stays this short and does not repeat what `contract.txt`/`pre-edit.txt` already say. |
 | `PreToolUse` `Write\|Edit\|MultiEdit` (`pre-edit`)   | first write to each file the router matches to a skill (per-file-path flag, then silent for that file; asks the same `Router.SkillsForFile` post-edit uses, not a separate hardcoded extension list) | A prominent "confirm `project-router` ran and the matched skills are loaded and active" reminder (they still carry the full contract), plus the minimalism decision ladder, the newest-stdlib names, the named-domain-type rule, the two-call-site rule, and the scope guard (the clauses no analyzer catches later, carried in substance rather than named as a bare pointer), at the exact write moment, once per distinct file.                      |
 | `PreToolUse` `Grep\|Glob\|Bash` (`pre-search`)       | first Go-targeted search of a session (per-session flag, then silent); only when the project has a `go.mod` and `gopls-navigation` is installed | A nudge to use the gopls MCP (`go_search`, `go_symbol_references`, `go_file_context`) instead of textual grep for Go code.              |
 | `PostToolUse` `Write\|Edit\|MultiEdit` (`post-edit`) | after each Write/Edit (deduped per session by content)                                                     | A file-type-aware checklist of the skills to re-validate against the edited file's extension (only those actually installed).          |
@@ -60,16 +60,19 @@ The plugin appends the `session-start` contract text to `output.system` (a mutab
 text is not re-injected every turn: the underlying `session-start` mode this calls is still gated
 once-per-session by the binary itself (`internal/hook/hook.go`'s `emitSessionStart`, behind
 `OncePerSession("session-start")`), so the contract is actually injected only on a session's first
-request - matching Claude Code's once-per-session `SessionStart` hook. `tool.execute.after` forwards
-to the binary's `post-edit` mode exactly like its Claude Code counterpart, appending the result to
-`output.output` (the field the model reads back - never `console.log`, which only reaches opencode's
-server log). `tool.execute.before` is deliberately not registered: its output object is only
-`{args}`, with no field the model reads back, so there is no channel to deliver a pre-edit nudge
-through. The governance/stop check (the dirty-worktree nag) has no opencode hook to attach to either
-and is not wired; see the script's `// simplification:` comment for both ceilings and the upgrade
-path. Before shelling out, the plugin guards on the binary's existence via a plain `accessSync`
-syscall (mirroring `skill-router-reminder.sh`'s `[ -x "$bin" ] || exit 0`), since `.opencode/bin/`
-is gitignored and a fresh clone has the plugin installed with no binary yet.
+request - matching Claude Code's once-per-session `SessionStart` hook. The same handler also calls
+the binary's `user-prompt` mode on every invocation (no once-per-session gate there - see
+`emitUserPrompt`) and appends its result too, so opencode gets the routing question
+(`user-prompt.txt`) every turn even though the full contract only lands once. `tool.execute.after`
+forwards to the binary's `post-edit` mode exactly like its Claude Code counterpart, appending the
+result to `output.output` (the field the model reads back - never `console.log`, which only reaches
+opencode's server log). `tool.execute.before` is deliberately not registered: its output object is
+only `{args}`, with no field the model reads back, so there is no channel to deliver a pre-edit
+nudge through. The governance/stop check (the dirty-worktree nag) has no opencode hook to attach to
+either and is not wired; see the script's `// simplification:` comment for both ceilings and the
+upgrade path. Before shelling out, the plugin guards on the binary's existence via a plain
+`accessSync` syscall (mirroring `skill-router-reminder.sh`'s `[ -x "$bin" ] || exit 0`), since
+`.opencode/bin/` is gitignored and a fresh clone has the plugin installed with no binary yet.
 
 ## Design constraints (don't regress these)
 

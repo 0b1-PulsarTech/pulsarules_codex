@@ -126,6 +126,11 @@ func TestPluginScript(t *testing.T) {
 		{"transform bails out with no sessionID", "if (!input.sessionID) return;", true},
 		{"transform pushes onto output.system", "output.system.push", true},
 		{
+			"transform calls the per-turn nudge mode every invocation",
+			`runHook("user-prompt", input.sessionID)`,
+			true,
+		},
+		{
 			"post-edit reads the file path from input.args, not output.args",
 			"input.args?.filePath",
 			true,

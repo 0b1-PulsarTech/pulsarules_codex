@@ -42,13 +42,15 @@ export const PulsarulesGovernance = async ({ directory, worktree, $ }) => {
 
   return {
     // "session-start" is OncePerSession-gated in the binary despite firing
-    // every turn here.
+    // every turn here; "user-prompt" has no such gate.
     "experimental.chat.system.transform": async (input, output) => {
       // Some opencode call sites invoke this hook with no sessionID; without
       // this guard it falls into the shared "nosession" tracker key globally.
       if (!input.sessionID) return;
       const contract = await runHook("session-start", input.sessionID);
       if (contract) output.system.push(contract);
+      const nudge = await runHook("user-prompt", input.sessionID);
+      if (nudge) output.system.push(nudge);
     },
 
     // output here is the tool result ({title, metadata, output}), not args;
