@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/arch"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/timediscipline"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
@@ -12,6 +13,7 @@ import (
 
 func pipelineAnalyzerSpecs() []analyzerSpec {
 	return []analyzerSpec{
+		staticSpec("time-discipline", timediscipline.NewAnalyzer),
 		{
 			id: "arch-boundary",
 			build: func(

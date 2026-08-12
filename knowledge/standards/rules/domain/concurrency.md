@@ -10,6 +10,7 @@ linters:
     - govet
 analyzers:
     - golangci-lint
+    - time-discipline
 ---
 
 # Concurrency

@@ -44,6 +44,7 @@ func defaultRuleMap() map[string]string {
 		// for, a var declaration above the call, is the named-returns rule's territory.
 		"short-decl-reuse": "named-returns",
 		"named-returns":    "named-returns",
+		"time-discipline":  "concurrency",
 		"arch-boundary":    "dependency-rule",
 		"import-cycle":     "module-boundaries",
 		"golangci-lint":    "code-smells",
