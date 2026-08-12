@@ -1,17 +1,38 @@
 package opencode
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
+
+func testTemplates(t *testing.T) fs.FS {
+	t.Helper()
+	_, templates, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	return templates
+}
+
+func pluginScriptSource(t *testing.T) string {
+	t.Helper()
+	data, err := fs.ReadFile(testTemplates(t), pluginTemplate)
+	if err != nil {
+		t.Fatalf("read plugin template: %v", err)
+	}
+	return string(data)
+}
 
 func TestInstall(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := Install(dir); err != nil {
+	if err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
@@ -20,20 +41,8 @@ func TestInstall(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read plugin: %v", err)
 	}
-	if !strings.Contains(string(data), "PulsarulesGovernance") {
-		t.Error("plugin missing PulsarulesGovernance export")
-	}
-	if !strings.Contains(string(data), "session.created") {
-		t.Error("plugin missing session.created hook")
-	}
-	if !strings.Contains(string(data), "tool.execute.before") {
-		t.Error("plugin missing tool.execute.before hook")
-	}
-	if !strings.Contains(string(data), "tool.execute.after") {
-		t.Error("plugin missing tool.execute.after hook")
-	}
-	if !strings.Contains(string(data), "session.idle") {
-		t.Error("plugin missing session.idle hook")
+	if string(data) != pluginScriptSource(t) {
+		t.Error("installed plugin does not match the embedded template")
 	}
 }
 
@@ -41,7 +50,7 @@ func TestInstall_BinaryPresent(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := Install(dir); err != nil {
+	if err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 	binPath := filepath.Join(dir, ".opencode", "bin", "pulsarules_cli")
@@ -58,7 +67,7 @@ func TestInstall_GitignoreIgnoresBin(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := Install(dir); err != nil {
+	if err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 	giPath := filepath.Join(dir, ".opencode", ".gitignore")
@@ -71,10 +80,20 @@ func TestInstall_GitignoreIgnoresBin(t *testing.T) {
 	}
 }
 
+func TestInstall_MissingTemplate(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	empty := os.DirFS(t.TempDir())
+	if err := Install(dir, empty); err == nil {
+		t.Fatal("expected an error when the plugin template is missing")
+	}
+}
+
 func TestPluginScript_ContainsBinaryPath(t *testing.T) {
 	t.Parallel()
 
-	if !strings.Contains(pluginScript, binaryRel) {
+	if !strings.Contains(pluginScriptSource(t), binaryRel) {
 		t.Error("plugin script does not reference the binary path")
 	}
 }
