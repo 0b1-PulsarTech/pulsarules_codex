@@ -24,9 +24,10 @@ import (
 
 func analyzerSpecs() []analyzerSpec {
 	return append([]analyzerSpec{
-		staticSpec(filesize.NewAnalyzer),
-		staticSpec(noemdash.NewAnalyzer),
+		staticSpec("file-size", filesize.NewAnalyzer),
+		staticSpec("no-em-dash", noemdash.NewAnalyzer),
 		{
+			id: "import-groups",
 			build: func(
 				_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,
 			) core.Analyzer {
@@ -34,11 +35,12 @@ func analyzerSpecs() []analyzerSpec {
 			},
 			scopes: staticScopes(),
 		},
-		staticSpec(naming.NewAnalyzer),
-		langSpec(topoffile.NewAnalyzer),
-		langSpec(bigcomment.NewAnalyzer),
-		staticSpec(simplificationpath.NewAnalyzer),
+		staticSpec("naming", naming.NewAnalyzer),
+		langSpec("top-of-file", topoffile.NewAnalyzer),
+		langSpec("big-comment", bigcomment.NewAnalyzer),
+		staticSpec("simplification-path", simplificationpath.NewAnalyzer),
 		{
+			id: "commit-lint",
 			build: func(
 				_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,
 			) core.Analyzer {
@@ -55,6 +57,7 @@ func analyzerSpecs() []analyzerSpec {
 			scopes: staticScopes(),
 		},
 		{
+			id: "commit-move-purity",
 			build: func(
 				_ *knowledge.Index, _ *core.LanguageRegistry, repo vcs.Repository,
 			) core.Analyzer {
@@ -62,15 +65,16 @@ func analyzerSpecs() []analyzerSpec {
 			},
 			scopes: staticScopes(),
 		},
-		staticSpec(controlflow.NewAnalyzer),
-		staticSpec(shadowing.NewAnalyzer),
-		staticSpec(complexity.NewAnalyzer),
-		staticSpec(namedreturns.NewAnalyzer),
+		staticSpec("control-flow", controlflow.NewAnalyzer),
+		staticSpec("shadowing", shadowing.NewAnalyzer),
+		staticSpec("complexity", complexity.NewAnalyzer),
+		staticSpec("named-returns", namedreturns.NewAnalyzer),
 	}, pipelineAnalyzerSpecs()...)
 }
 
-func staticSpec[Built core.Analyzer](ctor func() Built) analyzerSpec {
+func staticSpec[Built core.Analyzer](id string, ctor func() Built) analyzerSpec {
 	return analyzerSpec{
+		id: id,
 		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
 			return ctor()
 		},
@@ -78,8 +82,11 @@ func staticSpec[Built core.Analyzer](ctor func() Built) analyzerSpec {
 	}
 }
 
-func langSpec[Built core.Analyzer](ctor func(*core.LanguageRegistry) Built) analyzerSpec {
+func langSpec[Built core.Analyzer](
+	id string, ctor func(*core.LanguageRegistry) Built,
+) analyzerSpec {
 	return analyzerSpec{
+		id: id,
 		build: func(
 			_ *knowledge.Index, langs *core.LanguageRegistry, _ vcs.Repository,
 		) core.Analyzer {

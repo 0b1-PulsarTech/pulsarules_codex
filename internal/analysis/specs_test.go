@@ -22,7 +22,7 @@ func TestLangSpec_InjectedRegistry(t *testing.T) {
 	t.Parallel()
 
 	langs := core.NewLanguageRegistry()
-	spec := langSpec(func(langs *core.LanguageRegistry) *langProbe {
+	spec := langSpec("probe", func(langs *core.LanguageRegistry) *langProbe {
 		return &langProbe{langs: langs}
 	})
 	built, ok := spec.build(nil, langs, nil).(*langProbe)
