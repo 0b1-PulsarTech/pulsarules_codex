@@ -5,6 +5,8 @@ description: Surgical git history rewriting - branch safety and the force-push c
 tags:
     - git
     - history
+analyzers:
+    - commit-move-purity
 ---
 
 # Git history

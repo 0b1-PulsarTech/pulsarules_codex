@@ -17,6 +17,8 @@ linters:
     - gosec
     - depguard
     - sqlc
+analyzers:
+    - golangci-lint
 ---
 
 # Database

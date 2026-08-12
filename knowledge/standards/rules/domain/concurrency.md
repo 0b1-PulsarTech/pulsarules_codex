@@ -8,6 +8,8 @@ tags:
 linters:
     - noctx
     - govet
+analyzers:
+    - golangci-lint
 ---
 
 # Concurrency

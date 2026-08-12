@@ -7,6 +7,7 @@ type Rule struct {
 	Tags         []string `yaml:"tags,omitempty"`
 	Dependencies []string `yaml:"dependencies,omitempty"`
 	Linters      []string `yaml:"linters,omitempty"`
+	Analyzers    []string `yaml:"analyzers,omitempty"`
 	References   []string `yaml:"references,omitempty"`
 }
 

@@ -5,6 +5,9 @@ description: Emoji-prefixed Conventional Commits; one logical change per commit;
 tags:
     - git
     - commits
+analyzers:
+    - commit-lint
+    - commit-move-purity
 ---
 
 # Commits

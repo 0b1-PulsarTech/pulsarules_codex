@@ -9,6 +9,8 @@ linters:
     - ireturn
     - interfacebloat
     - stylecheck
+analyzers:
+    - golangci-lint
 ---
 
 # Types & interfaces

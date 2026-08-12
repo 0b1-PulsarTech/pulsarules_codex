@@ -12,6 +12,10 @@ linters:
     - unparam
     - dupl
     - goconst
+analyzers:
+    - control-flow
+    - complexity
+    - golangci-lint
 ---
 
 # Code smells and their remedies
