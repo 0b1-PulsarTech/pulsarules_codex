@@ -67,22 +67,16 @@ pulsarules_codex/
 │   │   ├── workflows/<id>.md        # workflow + frontmatter
 │   │   ├── skills.yaml              # every skill composition (single file)
 │   │   └── router.yaml  profiles.yaml  references.yaml
-│   └── templates/
-│       ├── skills/{SKILL.md.tmpl, router.md.tmpl}
-│       ├── hooks/{skill-router-reminder.sh, README.md, settings.hooks.json.tmpl}
-│       ├── docs/
-├── internal/skill/
-│   ├── render/                      # transclude composed bodies into a SKILL.md
-│   ├── validate/                    # knowledge-base integrity checks
-│   ├── output/                      # install / generate / package the rendered skills
-│   └── hookwire/                    # install the hook + idempotently wire the Claude settings file
+│   └── templates/                   # skills/  hooks/  docs/  mcp/ (embedded)
+├── internal/                        # governance pipeline, hook dispatcher, skill render/install
 ├── cmd/pulsarules_cli/              # CLI entrypoint (main.go; commands live in internal/cli)
 ├── README.md
 ├── Taskfile.yml  go.mod  go.sum  .gitignore
 ```
 
-Hook assets are embedded under `knowledge/templates/hooks/`. `generated/` is produced on demand and
-gitignored.
+This is an orientation sketch, not an exhaustive tree - it rots the moment a package moves.
+Metadata lives in frontmatter + `skills.yaml`. Hook assets are embedded under
+`knowledge/templates/hooks/`. `generated/` is produced on demand and gitignored.
 
 ## Customization
 
