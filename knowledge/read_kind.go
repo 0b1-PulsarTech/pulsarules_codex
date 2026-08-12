@@ -13,16 +13,14 @@ func ruleID(r Rule) string         { return r.ID }
 func patternID(p Pattern) string   { return p.ID }
 func workflowID(w Workflow) string { return w.ID }
 
-// readKind loads every <kind>/**/*.md (skipping README.md) into items + byID,
-// and records each body for transclusion. Subdirectories are walked recursively
-// so rules and patterns can be grouped into themed folders without changing IDs.
 // kindSink collects one knowledge kind: the ordered items, the id lookup, and
-// the bodies kept for transclusion.
+// the bodies/summaries kept for transclusion.
 type kindSink[T any] struct {
-	items  *[]T
-	byID   map[string]T
-	bodies map[string]string
-	idOf   func(T) string
+	items     *[]T
+	byID      map[string]T
+	bodies    map[string]string
+	summaries map[string]string
+	idOf      func(T) string
 }
 
 func readKind[T any](standards fs.FS, kind string, sink kindSink[T]) error {
@@ -44,7 +42,9 @@ func readKind[T any](standards fs.FS, kind string, sink kindSink[T]) error {
 		}
 		*sink.items = append(*sink.items, item)
 		sink.byID[id] = item
-		sink.bodies[kind+":"+id] = body
+		key := kind + ":" + id
+		sink.bodies[key] = body
+		sink.summaries[key] = firstBlockquote(body)
 	}
 	return nil
 }
