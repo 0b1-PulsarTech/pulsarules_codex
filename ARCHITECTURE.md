@@ -298,6 +298,7 @@ The governance pipeline (see above) adds its own package set:
 | `internal/emoji`                  | `Catalog`, `Anchors`/`themes.go`, `data/{catalog,types,themes}.txt`                                  |
 | `internal/gitignore`              | `Ensure` - idempotent `.gitignore` entries                                                           |
 | `internal/selfbin`                | `Copy` - copies the running executable to install it as a hook/plugin binary                         |
+| `internal/evals`                  | `model.go`/`load.go` (embedded eval scenarios, `data/<skill>.json`), `validate.go` (`ValidateCheck`) |
 
 ## The router skill
 
@@ -309,6 +310,30 @@ outbox event, worker, permission, external provider, test, module boundary, refa
 architecture review, and others for the agent-delegation area. The vertical Dependency Rule
 (`dependency-rule`) and architecture fitness functions (`fitness-functions`) govern layer direction
 and CI enforcement; an `architecture-decision-records` workflow records significant decisions.
+
+## Skill-effectiveness evals
+
+Rendering a skill and having an analyzer catch violations both prove the pipeline is stable; neither
+proves a skill's *text* changes what an agent produces. `internal/evals` holds the scenarios that
+measure that, for a starting set of four skills (`code-minimalism`, `integration-tests`, `commits`,
+and the `safety` rule composed into `go-style`), following the eval-scenario method
+`samber/cc-skills-golang` documents: per skill, a handful of scenarios, each a realistic `prompt`,
+the specific `trap` the skill exists to prevent, and plain-English `assertions` a produced artifact
+is graded against.
+
+Scenarios live under `internal/evals/data/<skill>.json`, embedded via `//go:embed` like
+`internal/emoji/data/*.txt`, not under `knowledge/standards/`, because they are not rendered into a
+`SKILL.md`; they only drive this package's own validation, so they stay colocated with the code that
+reads them. Every assertion in `model.go`'s `Assertion` carries a `Kind`: `"machine"` assertions
+carry a `Check` (`contains`/`not_contains`/`regex_match`/`regex_absent`) that describes a match
+against an artifact's text; `"judge"` assertions carry none and are left for a human or LLM reader.
+
+`evals.ValidateCheck` matches `validate.Check`'s `func(*knowledge.Index) []string` shape and is
+injected via the same `extra` seam `analysis.RuleAnalyzersCheck` uses (`internal/cli/validate.go`):
+every scenario's `skill` must resolve against `skills.yaml` (`idx.SkillExists`), every scenario must
+declare a non-empty `trap` and at least one assertion, every assertion's `Kind` must be `machine`
+(with a `Check`) or `judge` (without one), and a `Check` must have a known type and, for the two
+regex types, a pattern that compiles.
 
 ## Portability
 
