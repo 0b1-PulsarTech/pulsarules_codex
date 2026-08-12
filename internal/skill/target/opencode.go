@@ -46,6 +46,9 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 	if err := writeAgents(ctx, &report); err != nil {
 		return report, err
 	}
+	if err := retireLegacyAgents(ctx.Base, &report); err != nil {
+		return report, err
+	}
 	if err := opencodewire.WireConfig(ctx.Base, gopls); err != nil {
 		return report, fmt.Errorf("wire opencode config: %w", err)
 	}
@@ -99,6 +102,23 @@ func (opencodeTarget) Uninstall(ctx UninstallContext) (Report, error) {
 		return report, fmt.Errorf("remove empty opencode dir: %w", err)
 	}
 	return report, nil
+}
+
+func retireLegacyAgents(base string, report *Report) error {
+	removed, warning, err := opencodewire.RetireLegacyAgents(base)
+	if err != nil {
+		return fmt.Errorf("retire legacy agents: %w", err)
+	}
+	if removed {
+		report.note(
+			"retired legacy %s (superseded by %s)",
+			filepath.Join(base, ".opencode", "AGENTS.md"),
+			filepath.Join(base, "AGENTS.md"),
+		)
+	} else if warning != "" {
+		report.warn("%s", warning)
+	}
+	return nil
 }
 
 func unwireOpencodeConfig(projectDir string, report *Report) error {

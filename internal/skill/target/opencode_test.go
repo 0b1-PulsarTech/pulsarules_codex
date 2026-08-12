@@ -1,6 +1,7 @@
 package target
 
 import (
+	"encoding/json"
 	"errors"
 	"io/fs"
 	"os"
@@ -78,6 +79,66 @@ func TestOpencodeTargetInstall(t *testing.T) {
 		return strings.Contains(note, "wired opencode")
 	}) {
 		t.Errorf("Notes missing 'wired opencode': %v", report.Notes)
+	}
+}
+
+func TestOpencodeInstall_LegacyAgents(t *testing.T) {
+	t.Parallel()
+
+	base := t.TempDir()
+	legacyDir := filepath.Join(base, ".opencode")
+	if err := os.MkdirAll(legacyDir, 0o750); err != nil {
+		t.Fatalf("mkdir .opencode: %v", err)
+	}
+	legacyContent := "# AGENTS.md - demo\n\n## Mandatory routing contract\n\nopencode has no " +
+		"SessionStart hook, so this contract is stated here instead: ...\n"
+	legacyPath := filepath.Join(legacyDir, "AGENTS.md")
+	if err := os.WriteFile(legacyPath, []byte(legacyContent), 0o600); err != nil {
+		t.Fatalf("seed legacy AGENTS.md: %v", err)
+	}
+	seedConfig := `{"instructions": [".opencode/AGENTS.md", ".opencode/skills/*/SKILL.md"]}`
+	configPath := filepath.Join(base, "opencode.json")
+	if err := os.WriteFile(configPath, []byte(seedConfig), 0o600); err != nil {
+		t.Fatalf("seed opencode.json: %v", err)
+	}
+
+	ctx := newTestContext(t, base, []string{"go-style"})
+	if _, err := (opencodeTarget{}).Install(ctx); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	if _, statErr := os.Stat(legacyPath); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("expected legacy %q to be retired, stat err = %v", legacyPath, statErr)
+	}
+	if _, statErr := os.Stat(filepath.Join(base, "AGENTS.md")); statErr != nil {
+		t.Errorf("expected root AGENTS.md to exist: %v", statErr)
+	}
+
+	raw, err := os.ReadFile(configPath) //nolint:gosec // test fixture.
+	if err != nil {
+		t.Fatalf("read opencode.json: %v", err)
+	}
+	var config struct {
+		Instructions []string `json:"instructions"`
+	}
+	if err = json.Unmarshal(raw, &config); err != nil {
+		t.Fatalf("parse opencode.json: %v", err)
+	}
+	if slices.Contains(config.Instructions, ".opencode/AGENTS.md") {
+		t.Errorf("legacy instructions entry survived: %v", config.Instructions)
+	}
+	count := 0
+	for _, entry := range config.Instructions {
+		if entry == "AGENTS.md" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf(
+			"AGENTS.md instructions entry appears %d times, want 1: %v",
+			count,
+			config.Instructions,
+		)
 	}
 }
 
