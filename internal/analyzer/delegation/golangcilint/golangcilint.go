@@ -7,6 +7,18 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
+func forcedLinters() []string {
+	// Forced via -E on every delegated run.
+	return []string{
+		"nolintlint",
+		"paralleltest",
+		"tparallel",
+		"thelper",
+		"forcetypeassert",
+		"nilerr",
+	}
+}
+
 type Runner struct {
 	path    string
 	failure core.Reporter
@@ -66,6 +78,10 @@ func (r *Runner) run(projectDir string, args []string) ([]byte, error) {
 
 func lintArgs(target, configFlag string) []string {
 	args := []string{"run", "--output.json.path=stdout"}
+	// -E adds the forced linters on top of the target's own config; it never replaces it.
+	for _, linter := range forcedLinters() {
+		args = append(args, "-E", linter)
+	}
 	if configFlag != "" {
 		args = append(args, "--config", configFlag)
 	}
