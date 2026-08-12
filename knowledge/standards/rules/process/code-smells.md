@@ -12,6 +12,10 @@ linters:
     - unparam
     - dupl
     - goconst
+analyzers:
+    - control-flow
+    - complexity
+    - golangci-lint
 ---
 
 # Code smells and their remedies
@@ -61,11 +65,15 @@ Applies to: spotting and clearing structural debt. This rule is the trigger list
 - Suppressing a smell's linter with `//nolint` instead of refactoring.
 - Layering new behavior on top of a known smell instead of clearing it first.
 - "Fixing" a duplicated/repeated-switch smell by copying the patch into every site.
+- Mixing a behavior change into a refactor commit.
+- A "refactor" with no tests green between steps.
 {{end}}
 
 {{define "validation"}}
 - [ ] Smell-linter failures (`funlen`/`cyclop`/`nestif`/`dupl`/`goconst`) cleared, not suppressed.
 - [ ] The catalog's remedy applied (Strategy/Registry, named struct, domain type, extraction).
 - [ ] The refactor landed before the feature, in its own commit.
+- [ ] One hat per edit; no refactor mixed with a behavior change.
+- [ ] Tests green (`-race`) between every step.
 - [ ] Review-only smells called out even without a linter hit.
 {{end}}
