@@ -214,15 +214,6 @@ go run ./cmd/pulsarules_cli generate --root .
 `--root .` reads the on-disk `knowledge/` so changes apply without rebuilding. Omit `--root` to use
 the embedded snapshot (the shipped behavior).
 
-## No-Go fallback
-
-`knowledge/templates/installers/install.sh.tmpl` is a `jq` + `bash` script (no node) that copies
-already-rendered skills (run `generate` first) into a Claude skills directory, wires the hook the same
-way the Go installer does (with `--hooks-scope project|local`), and - when `gopls` is on PATH - wires
-the gopls MCP into `.mcp.json` plus the generated `gopls-navigation` skill (`--no-mcp` to skip). It
-covers the Claude target only; use the Go installer for `--target opencode|cursor` and `--layout`. Strip the
-`.tmpl` suffix to use it.
-
 ## Taskfile targets
 
 ```sh

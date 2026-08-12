@@ -41,8 +41,7 @@ This writes `~/.claude/skills/<id>/SKILL.md` for each selected skill.
 # -> build/standards-skills.zip (one SKILL.md per skill)
 ```
 
-Distribute the zip to teammates; they can unzip into `~/.claude/skills/` without building Go, or
-use `templates/installers/install.sh.tmpl` as a no-Go fallback copier.
+Distribute the zip to teammates; they can unzip into `~/.claude/skills/` without building Go.
 
 ## 5. Verify
 

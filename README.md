@@ -69,7 +69,7 @@ pulsarules_codex/
 │   │   ├── skills.yaml              # every skill composition (single file)
 │   │   ├── examples/  references/
 │   │   └── README.md
-│   └── templates/                   # skills/  hooks/  docs/  installers/  mcp/ (embedded)
+│   └── templates/                   # skills/  hooks/  docs/  mcp/ (embedded)
 ├── internal/                        # governance pipeline, hook dispatcher, skill render/install
 ├── cmd/pulsarules_cli/              # CLI entrypoint (one file per command)
 ├── README.md  INSTALL.md  ARCHITECTURE.md
@@ -129,8 +129,7 @@ them - `agents` writes nothing else, covering the AI coding agents that read onl
 `alwaysApply: false` so Cursor pulls it in on demand from its `description`; only a small pointer
 rule carrying the routing contract is `alwaysApply: true`, since Cursor injects every
 `alwaysApply: true` rule into every request rather than firing once per session like the Claude hook.
-Use `--no-hooks` to skip the Claude hook script and settings wiring (git hooks: `--no-git-hooks`), or `--print-hooks` to print the resolved hooks block. A
-no-Go fallback lives at `knowledge/templates/installers/install.sh.tmpl` (`jq` + `bash`, no node).
+Use `--no-hooks` to skip the Claude hook script and settings wiring (git hooks: `--no-git-hooks`), or `--print-hooks` to print the resolved hooks block.
 
 ## Origin
 
