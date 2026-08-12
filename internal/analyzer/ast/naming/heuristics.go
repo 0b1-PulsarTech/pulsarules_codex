@@ -14,16 +14,11 @@ func isExported(name string) bool {
 	return false
 }
 
-// maxCounterValue is the largest trailing NUMBER still readable as a
-// copy-paste counter. The ceiling sits below 8 because that is where the
-// machine vocabulary starts: bit widths, hash sizes, radixes and domain
-// magnitudes (utf8, sha256, limit32, pow10, PhoneTier250) all live at 8 or
-// above, and there the number IS the concept.
+// maxCounterValue is the largest trailing number still read as a
+// copy-paste counter; machine vocabulary (bit widths, hashes, utf8/sha256) starts at 8.
 //
-// simplification: a sequence longer than seven reports only its first seven
-// members, which is ample signal. Raising the ceiling would re-admit pairs
-// like utf8/utf16 as false positives; the upgrade path is to compare the digit
-// RUN LENGTH and require the siblings to form a contiguous series.
+// simplification: sequences over 7 report only the first 7. Upgrade path:
+// compare digit RUN LENGTH, require siblings to form a contiguous series.
 const maxCounterValue = 7
 
 // numberedStem splits a trailing digit run off name, reporting the stem and
@@ -92,8 +87,8 @@ var noiseWords = map[string]bool{
 }
 
 // simplification: only exact noise-word matches are flagged; prefix-contained
-// noise words (e.g. dataValue) are considered specific enough. Upgrade to
-// prefix detection if false-positive rate is acceptable.
+// noise words (e.g. dataValue) are considered specific enough. Upgrade path:
+// switch to prefix detection if the false-positive rate proves acceptable.
 func checkNoiseWord(name string) bool {
 	return noiseWords[strings.ToLower(name)]
 }

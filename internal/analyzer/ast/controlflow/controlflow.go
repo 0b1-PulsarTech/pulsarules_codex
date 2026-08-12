@@ -16,9 +16,13 @@ type Analyzer struct {
 
 var controlFlowReporter = core.NewReporter("control-flow", core.SeverityWarning, core.CatAST)
 
+// defaultMaxNesting is the deepest if/for nesting a function may reach
+// before this analyzer reports it.
+const defaultMaxNesting = 4
+
 // NewAnalyzer creates a control flow analyzer with default max nesting.
 func NewAnalyzer() *Analyzer {
-	return &Analyzer{maxNesting: 4}
+	return &Analyzer{maxNesting: defaultMaxNesting}
 }
 
 func (a *Analyzer) ID() string   { return "control-flow" }

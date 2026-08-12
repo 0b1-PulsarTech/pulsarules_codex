@@ -35,6 +35,34 @@ func checkFileCasesMagicNumbers() []checkFileTestCase {
 				"}\n",
 			expect: 1,
 		},
+		{
+			name: "strconv ParseInt bit-size argument not flagged as magic number",
+			source: "package foo\n" +
+				"import \"strconv\"\n" +
+				"func f() {\n" +
+				"	x, _ := strconv.ParseInt(\"1\", 10, 64)\n" +
+				"	_ = x\n" +
+				"}\n",
+			expect: 0,
+		},
+		{
+			name: "strconv ParseFloat bit-size argument not flagged as magic number",
+			source: "package foo\n" +
+				"import \"strconv\"\n" +
+				"func f() {\n" +
+				"	x, _ := strconv.ParseFloat(\"1\", 64)\n" +
+				"	_ = x\n" +
+				"}\n",
+			expect: 0,
+		},
+		{
+			name: "bare sixty-four in a business expression still flagged as magic number",
+			source: "package foo\n" +
+				"func f(x int) int {\n" +
+				"	return x * 64\n" +
+				"}\n",
+			expect: 1,
+		},
 	}
 }
 
