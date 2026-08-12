@@ -7,33 +7,38 @@ on the machine (not committed to any single repo).
 
 ```sh
 cd pulsarules_codex
-go build -o build/bin/pulsarules_codex-installer ./cmd/pulsarules_codex-installer
+go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
 ```
 
 ## 2. Generate + validate
 
 ```sh
-./build/bin/pulsarules_codex-installer generate
-./build/bin/pulsarules_codex-installer validate
+./build/bin/pulsarules_cli generate
+./build/bin/pulsarules_cli validate
 ```
 
 ## 3. Install globally
 
 ```sh
 # all skills:
-./build/bin/pulsarules_codex-installer install --global
+./build/bin/pulsarules_cli install --global --all
 
 # or just the router (recommended starting point):
-./build/bin/pulsarules_codex-installer install --global --router-only
+./build/bin/pulsarules_cli install --global --router-only
 ```
+
+`install` requires exactly one of `--all`, `--skills a,b,c`, or `--router-only`; with none of them and
+no interactive terminal (e.g. CI), it fails rather than guessing. `--target` (repeatable, default
+`claude`) picks the install layout - `opencode`, `agents`, and `cursor` also exist; see
+[INSTALL.md](../../INSTALL.md#install) for the per-target details.
 
 This writes `~/.claude/skills/<id>/SKILL.md` for each selected skill.
 
 ## 4. Package (optional, for distribution)
 
 ```sh
-./build/bin/pulsarules_codex-installer package
-# -> build/standards-skills.zip (27 SKILL.md files)
+./build/bin/pulsarules_cli package
+# -> build/standards-skills.zip (one SKILL.md per skill)
 ```
 
 Distribute the zip to teammates; they can unzip into `~/.claude/skills/` without building Go, or

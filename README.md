@@ -15,7 +15,7 @@ that contract **once**, independent of any product domain, so projects consume i
 re-authoring it.
 
 The knowledge lives in `knowledge/standards/` (rules, patterns, workflows as markdown with
-frontmatter, plus a single `skills.yaml` defining the 29 skill compositions). The Go binary embeds
+frontmatter, plus a single `skills.yaml` defining every skill composition). The Go binary embeds
 it via `//go:embed` and renders skills on demand - it never hand-writes them and nothing derived is
 committed.
 
@@ -43,11 +43,11 @@ committed.
 ## Quick start
 
 ```sh
-go run ./cmd/pulsarules_codex-installer validate   # check the embedded knowledge
-go run ./cmd/pulsarules_codex-installer list        # print the skill catalog
-go run ./cmd/pulsarules_codex-installer generate    # render generated/skills/ (gitignored)
-go run ./cmd/pulsarules_codex-installer install --project /path/to/project
-go run ./cmd/pulsarules_codex-installer package     # zip all skills into build/
+go run ./cmd/pulsarules_cli validate   # check the embedded knowledge
+go run ./cmd/pulsarules_cli list        # print the skill catalog
+go run ./cmd/pulsarules_cli generate    # render generated/skills/ (gitignored)
+go run ./cmd/pulsarules_cli install --project /path/to/project
+go run ./cmd/pulsarules_cli package     # zip all skills into build/
 ```
 
 With no `--root`, the binary reads the embedded snapshot. Pass `--root DIR` to read
@@ -66,27 +66,21 @@ pulsarules_codex/
 │   │   ├── rules/<id>.md            # rule + YAML frontmatter
 │   │   ├── patterns/<id>.md         # pattern + frontmatter
 │   │   ├── workflows/<id>.md        # workflow + frontmatter
-│   │   ├── skills.yaml              # the 29 skill compositions (single file)
+│   │   ├── skills.yaml              # every skill composition (single file)
 │   │   ├── examples/  references/
 │   │   └── README.md
-│   └── templates/
-│       ├── skills/{SKILL.md.tmpl, router.md.tmpl}
-│       ├── hooks/{skill-router-reminder.sh, README.md, settings.hooks.json.tmpl}
-│       ├── docs/  installers/
-├── internal/skill/
-│   ├── render/                      # transclude composed bodies into a SKILL.md
-│   ├── validate/                    # knowledge-base integrity checks
-│   ├── output/                      # install / generate / package the rendered skills
-│   └── hookwire/                    # install the hook + idempotently wire settings.local.json
-├── cmd/pulsarules_codex-installer/  # CLI (one file per command)
+│   └── templates/                   # skills/  hooks/  docs/  installers/  mcp/ (embedded)
+├── internal/                        # governance pipeline, hook dispatcher, skill render/install
+├── cmd/pulsarules_cli/              # CLI entrypoint (one file per command)
 ├── README.md  INSTALL.md  ARCHITECTURE.md
 ├── Taskfile.yml  go.mod  go.sum  .gitignore
 ```
 
-Go packages: `knowledge` (embed + parse) and the `internal/skill/*` operation packages
-(`render`, `validate`, `output`, `hookwire`), driven by `cmd` (CLI). The old `manifests/` tree is
-gone - metadata lives in frontmatter + `skills.yaml`. Hook assets are embedded under
-`knowledge/templates/hooks/`. `generated/` is produced on demand and gitignored.
+This is an orientation sketch, not an exhaustive tree - it rots the moment a package moves. See
+[ARCHITECTURE.md](ARCHITECTURE.md#packages) for the current, package-by-package breakdown of
+`internal/*` (including every `internal/skill/*` operation package) and `cmd/pulsarules_cli`. The old
+`manifests/` tree is gone - metadata lives in frontmatter + `skills.yaml`. Hook assets are embedded
+under `knowledge/templates/hooks/`. `generated/` is produced on demand and gitignored.
 
 ## Customization
 
@@ -108,8 +102,9 @@ Claude Code's autonomous skill activation is unreliable: the agent invokes `proj
 dispatch table, then skips to implementation without actually LOADING and APPLYING every matched
 skill when it writes code. A skill description is a suggestion the model can ignore; a **hook fires
 deterministically**. The embedded `knowledge/templates/hooks/skill-router-reminder.sh` injects the
-routing contract at `SessionStart` and a pointed reminder at the first `.go`/`.sql` write of a
-session (non-blocking, always exit 0, fires once per session via a per-session flag). See
+routing contract at `SessionStart` and a pointed reminder at the first write to each file the router
+matches to a skill via `Router.SkillsForFile` (non-blocking, always exit 0; gated per file path, not
+once per session, so a session touching several routed files gets reminded once per file). See
 [`knowledge/templates/hooks/README.md`](knowledge/templates/hooks/README.md) for the full rationale
 and design constraints - it is installed alongside the hook.
 
@@ -117,12 +112,25 @@ and design constraints - it is installed alongside the hook.
 into a settings file with an idempotent merge (preserves existing permissions /
 `enabledMcpjsonServers` / unrelated hooks; re-running never duplicates). `--hooks-scope project` (the
 default) targets `settings.json`; `--hooks-scope local` targets `settings.local.json`. The wired
-command resolves the project root at runtime via `$CLAUDE_PROJECT_DIR`, so it survives moving the
-repo. When `gopls` is on PATH, install also wires the gopls MCP into `.mcp.json` and regenerates the
-`gopls-navigation` skill (`--no-mcp` to skip). `--target` is repeatable (`claude`/`opencode`): the
-opencode target writes `.opencode/skills`, `.opencode/AGENTS.md`, and `opencode.json`. Use
-`--no-hooks` to install skills only, or `--print-hooks` to print the resolved hooks block. A no-Go
-fallback lives at `knowledge/templates/installers/install.sh.tmpl` (`jq` + `bash`, no node).
+command locates the installed hook script via `$CLAUDE_PROJECT_DIR` (a Claude Code variable,
+legitimately named there); the script then exports `PULSARULES_PROJECT_DIR` and
+`PULSARULES_SKILLS_DIR` - the only two variables the binary itself reads - so it survives moving the
+repo without hardcoding a host's own variable name or a host's own skills layout. An install
+predating this rename has a hook script with no such exports, so the binary silently resolves an
+empty project dir and the `stop`/`pre-search`/`post-edit` checks go quiet; it now warns once on
+stderr naming the fix (`pulsarules_cli install`) - re-run `install` to pick up the new script. When
+`gopls` is on PATH, install also wires the gopls MCP into `.mcp.json` and regenerates the
+`gopls-navigation` skill (`--no-mcp` to skip). `--target` is repeatable
+(`claude`/`opencode`/`agents`/`cursor`): the opencode target writes `.opencode/skills` and
+`opencode.json`; both opencode and the thin `agents` target write a single `AGENTS.md` at the project
+root (carrying the routing contract) from the same builder, so the file can never diverge between
+them - `agents` writes nothing else, covering the AI coding agents that read only a repo-root
+`AGENTS.md`. The `cursor` target writes `.cursor/rules/<id>.mdc`, one file per skill, each
+`alwaysApply: false` so Cursor pulls it in on demand from its `description`; only a small pointer
+rule carrying the routing contract is `alwaysApply: true`, since Cursor injects every
+`alwaysApply: true` rule into every request rather than firing once per session like the Claude hook.
+Use `--no-hooks` to skip the Claude hook script and settings wiring (git hooks: `--no-git-hooks`), or `--print-hooks` to print the resolved hooks block. A
+no-Go fallback lives at `knowledge/templates/installers/install.sh.tmpl` (`jq` + `bash`, no node).
 
 ## Origin
 

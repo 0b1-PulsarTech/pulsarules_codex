@@ -15,7 +15,7 @@ frontmatter; the fourth is generated.
 | Rule     | `knowledge/standards/rules/<id>.md`     | Mandatory, enforceable principle (the WHAT floor)                     |
 | Pattern  | `knowledge/standards/patterns/<id>.md`  | Implementation recipe with code (the HOW)                             |
 | Workflow | `knowledge/standards/workflows/<id>.md` | Ordered sequence for a task (the ORDER)                               |
-| Sidecar  | `knowledge/standards/skills/<id>.md`    | Authored curated head per skill (Mandatory workflow, checklists)      |
+| Sidecar  | `knowledge/standards/skills/<id>.md`    | Authored orientation per skill (what it governs, when to reach for it) |
 | Skill    | `generated/skills/<id>/SKILL.md`        | Generated capability that composes rules + patterns + workflows       |
 | Profile  | `knowledge/standards/profiles.yaml`     | Install-time customization that overrides a skill's composition       |
 | Router   | `knowledge/standards/router.yaml`       | The router's baseline, dispatch table, and order as filterable data   |
@@ -24,9 +24,9 @@ A **skill** is never authored directly. `knowledge/standards/skills.yaml` declar
 each naming the rules, patterns, and workflows it composes (`compose_rules`, `compose_patterns`,
 `compose_workflows`), plus triggers, load policy (`always_load`), composition `order`, and
 skill-level dependencies (`compose_skills`). The installer renders a skill by transcluding the
-markdown body of its **sidecar** (`knowledge/standards/skills/<id>.md`) as the curated head - a
-distilled `## Mandatory workflow`, consolidated `## Validation checklist`, `## Forbidden actions`,
-and `## Expected outputs` - then **transcluding** the markdown bodies of its composed rules,
+markdown body of its **sidecar** (`knowledge/standards/skills/<id>.md`) as the skill head -
+orientation only, saying what the skill governs and when to reach for it - then **transcluding**
+the markdown bodies of its composed rules,
 patterns, and workflows under `###` sub-headings as the reference detail, wrapped in a frontmatter +
 activation + composition shell. A sidecar is required for every non-router skill (validate enforces
 it); `project-router` renders from its own template and carries no sidecar.
@@ -111,7 +111,7 @@ render.NewRenderer(templates)  ──text/template──>  SKILL.md (transcluded
         ├── output.Install    -> <dest>/<id>/SKILL.md             (rendered in-memory)
         ├── output.Package    -> build/standards-skills.zip       (rendered in-memory)
         ├── validate.Validate -> integrity check
-        └── hookwire.{InstallHook,WireSettings} + gitignore.Ensure  -> .claude/hooks + settings.local.json
+        └── hookwire.{InstallHook,WireSettings} + gitignore.Ensure  -> .claude/hooks + settings.json (settings.local.json with --hooks-scope local)
 ```
 
 This is one of the two things `pulsarules_cli` does. The other, described next, analyzes a target
@@ -121,7 +121,7 @@ repository (Go source, commit messages, git history) instead of rendering the kn
 
 ### Session and scopes
 
-`internal/analysis.Session` (`session.go`) is the single orchestrator: discovery, context loading, and
+`internal/analysis.Session` (`analysis.go`) is the single orchestrator: discovery, context loading, and
 analysis. `NewSession(repo, commitMsg, index, cfg)` builds a session over a `vcs.Repository` (nilable
 when `vcs.Open` returned `vcs.ErrNoRepository` - the session then runs with no git history and no
 changed-file discovery instead of failing), an optional commit message, the knowledge `*Index` (for
@@ -207,7 +207,8 @@ port needs to cover.
 `Dispatcher.Dispatch(mode, payload)` is the one decode point for a Claude Code hook payload
 (`decodeHookPayload`, which degrades a malformed payload to its zero value rather than failing, since a
 hook must never block the agent's turn) and routes it to a per-mode handler (`session-start`,
-`pre-edit`, `post-edit`, `pre-search`, `user-prompt`, `stop`, `subagent-stop`, `session-end`). It always
+`pre-edit`, `post-edit`, `pre-search`, `user-prompt`, `stop`, `subagent-start`, `session-end`;
+plus a deliberately silent `subagent-stop` nothing dispatches today). It always
 returns nil; failures surface only through the optional `*slog.Logger`. `Router.SkillsForFile` resolves
 which skills a `post-edit`/`pre-search` event should announce from `knowledge.Index`'s own
 `skills.yaml`/`router.yaml` data (the always-load baseline for `.go` files, any skill whose trigger
@@ -222,8 +223,8 @@ opens a `Session` at `analysis.ScopeChanged` and formats findings with `analysis
 ### internal/config
 
 `GovernanceConfig` is the top-level runtime configuration: per-analyzer enable/params
-(`AnalyzerConfig`), emoji rules (`EmojiConfig`), move-purity thresholds (`MovePurityConfig`), and git
-hook installation flags (`HooksConfig`). `Defaults()` returns the embedded baseline; `presets.go`
+(`AnalyzerConfig`), emoji rules (`EmojiConfig`), and move-purity thresholds
+(`MovePurityConfig`). `Defaults()` returns the embedded baseline; `presets.go`
 applies a named preset (strict/recommended/minimal) in-memory. `internal/analysis/runner.go`'s
 `toAnalysisConfig` converts a `GovernanceConfig` into the `core.AnalysisConfig` the `StageRunner`'s
 `enabled()` check reads, projecting `EmojiConfig`/`MovePurityConfig` onto the `commit-lint` and
@@ -266,8 +267,10 @@ binary themselves.
 | `internal/skill/output`          | `install.go` (Selection + Install), `generate.go`, `package.go`, `write.go`                                                   |
 | `internal/skill/hookwire`        | `hooks.go` (install hook + gitignore), `settings.go` (idempotent settings.json/.local merge, `$CLAUDE_PROJECT_DIR`)           |
 | `internal/skill/mcpwire`         | `mcp.go` (merge gopls into `.mcp.json`), `gopls.go` (PATH check + generate gopls-navigation from `gopls mcp -instructions`)   |
-| `internal/skill/opencodewire`    | `agents.go` (render `.opencode/AGENTS.md`), `config.go` (merge `opencode.json`: instructions + gopls mcp)                     |
-| `internal/skill/target`          | `target.go` (`Target`/`Context`/`Report`), `registry.go` (`Registry`), `claude.go`, `opencode.go` - one Strategy per install layout |
+| `internal/skill/opencodewire`    | `config.go` (merge `opencode.json`: instructions + gopls mcp, SkillsSubdir), `unwire.go`                                      |
+| `internal/skill/agentswire`      | `agents.go` (render the root `AGENTS.md`, scoped to the selected skills), `uninstall.go` (marker-gated removal)               |
+| `internal/skill/cursorwire`      | `rules.go` (marker-gated write of one `.mdc` per rule under `.cursor/rules`), `remove.go`                                     |
+| `internal/skill/target`          | `target.go` (`Target`/`Context`/`Report`), `registry.go` (`Registry`), `claude.go`, `opencode.go`, `agents.go`, `cursor.go` - one Strategy per install layout |
 | `cmd/pulsarules_cli`             | one file per command: main, generate, install (dispatches to `internal/skill/target`), list, validate, package, version, hook, commitlint, governance |
 
 `knowledge` is the asset + embed anchor; the `internal/skill/*` packages are cohesive operation
