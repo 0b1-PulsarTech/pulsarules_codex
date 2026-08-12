@@ -144,6 +144,9 @@ normally no reason to invoke it by hand.
 With no --root, the binary reads the embedded knowledge snapshot. Pass --root DIR
 to read <DIR>/knowledge from disk (dev edits without rebuild).
 
---log-level (debug|info|warn|error) enables hook execution logging to
-<projectDir>/.claude/hook-execution.log; falls back to $PULSARULES_LOG_LEVEL when
-unset. Logging is off by default and costs nothing (no file is created).
+--log-level (debug|info|warn|error) enables hook execution logging, written to the
+path the installed host wrapper supplies via $PULSARULES_LOG_PATH (e.g.
+<projectDir>/.claude/hook-execution.log for the claude target); falls back to
+$PULSARULES_LOG_LEVEL when unset. Logging is off by default and costs nothing (no
+file is created); it also stays off when $PULSARULES_LOG_PATH is unset (an older
+installed wrapper, or the binary run by hand), rather than guessing a location.

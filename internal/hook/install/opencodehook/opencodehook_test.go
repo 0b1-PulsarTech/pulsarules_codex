@@ -183,6 +183,7 @@ func TestPluginScript(t *testing.T) {
 		{"sets env on the shell command", ".env(", true},
 		{"exports PULSARULES_PROJECT_DIR", "PULSARULES_PROJECT_DIR", true},
 		{"exports PULSARULES_SKILLS_DIR", "PULSARULES_SKILLS_DIR", true},
+		{"exports PULSARULES_LOG_PATH", "PULSARULES_LOG_PATH", true},
 		{"guards a missing binary without a subprocess", "accessSync(bin", true},
 		{"does not shell out to test -x", "test -x", false},
 		{"logs caught errors", "console.error", true},

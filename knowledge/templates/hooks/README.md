@@ -45,11 +45,15 @@ names onto these modes:
 | `subagent-stop`   | never - wired by neither host, and the mode is a no-op                                                     | Nothing. A subagent must not commit (git stays in the main session), so a dirty-tree block aimed at one only derails the work it was spawned to do. |
 | `session-end`     | once when the session ends                                                                                 | Nothing — it cleans up the per-session marker files the other modes create.                                                            |
 
-The binary reads exactly two environment variables - `PULSARULES_PROJECT_DIR` and
-`PULSARULES_SKILLS_DIR` - and nothing else host-specific, so `internal/hook` never hardcodes a host's
-own skills layout (`.claude/skills` vs `.opencode/skills`). Each host's own wiring sets
-`PULSARULES_SKILLS_DIR` to its own layout; without it, the `post-edit` checklist and the `pre-search`
-nudge degrade to their generic, skill-list-free form.
+The binary reads exactly three environment variables - `PULSARULES_PROJECT_DIR`,
+`PULSARULES_SKILLS_DIR`, and `PULSARULES_LOG_PATH` - and nothing else host-specific, so
+`internal/hook`, `internal/obs`, and `internal/cli` never hardcode a host's own skills or log
+layout (`.claude/skills` vs `.opencode/skills`, `.claude/hook-execution.log` vs
+`.opencode/hook-execution.log`). Each host's own wiring sets `PULSARULES_SKILLS_DIR` to its own
+layout; without it, the `post-edit` checklist and the `pre-search` nudge degrade to their generic,
+skill-list-free form. Each host's own wiring likewise sets `PULSARULES_LOG_PATH` to its own layout;
+without it (an older installed wrapper, or the binary run by hand), `--log-level` has nowhere safe
+to write, so `internal/obs` disables logging outright rather than guessing a location.
 
 The reminder text has a single source of truth. `contract.txt` and `contract-tail.txt` render through
 `internal/contract` for both `session-start` (contract plus tail) and `subagent-start` (contract only
@@ -73,8 +77,9 @@ work the same way: a single embedded template read by whichever host's wiring ca
 `skill-router-reminder.sh` is a thin orchestrator: the settings entry locates it via
 `$CLAUDE_PROJECT_DIR` (a Claude Code variable, legitimately named there); the script forwards the
 mode (`session-start`/`pre-edit`/...) and the stdin payload to the installed binary, after exporting
-`PULSARULES_PROJECT_DIR` and `PULSARULES_SKILLS_DIR=$CLAUDE_PROJECT_DIR/.claude/skills`. If the binary
-is absent the script exits `0` (no-op).
+`PULSARULES_PROJECT_DIR`, `PULSARULES_SKILLS_DIR=$CLAUDE_PROJECT_DIR/.claude/skills`, and
+`PULSARULES_LOG_PATH=$CLAUDE_PROJECT_DIR/.claude/hook-execution.log`. If the binary is absent the
+script exits `0` (no-op).
 
 Claude Code's own hook events map onto the shared modes above like this:
 
@@ -106,10 +111,11 @@ dispatches plugin hooks generically by name; only `experimental.chat.system.tran
 dispatches. `session.created`, `session.idle`, and `session.deleted` are bus-event names, not hook
 names - a plugin can register handlers for them and they will never fire.
 
-Before shelling out, the plugin exports `PULSARULES_SKILLS_DIR=<root>/.opencode/skills` via its
-`.env({...})` call, then guards on the binary's existence via a plain `accessSync` syscall (mirroring
-`skill-router-reminder.sh`'s `[ -x "$bin" ] || exit 0` without spawning a subprocess to do it), since
-`.opencode/bin/` is gitignored and a fresh clone has the plugin installed with no binary yet.
+Before shelling out, the plugin exports `PULSARULES_SKILLS_DIR=<root>/.opencode/skills` and
+`PULSARULES_LOG_PATH=<root>/.opencode/hook-execution.log` via its `.env({...})` call, then guards on
+the binary's existence via a plain `accessSync` syscall (mirroring `skill-router-reminder.sh`'s
+`[ -x "$bin" ] || exit 0` without spawning a subprocess to do it), since `.opencode/bin/` is
+gitignored and a fresh clone has the plugin installed with no binary yet.
 
 opencode's own hooks map onto the shared modes like this:
 

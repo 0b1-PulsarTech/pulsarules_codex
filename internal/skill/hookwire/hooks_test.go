@@ -130,10 +130,11 @@ func TestInstallHook_NeverOverwritesExistingBackup(t *testing.T) {
 
 // TestInstallHook_RendersRealTemplate is the byte-identical regression test:
 // InstallHook against the actual embedded knowledge templates (not a fake)
-// must still write a script whose bin/skills paths are the concrete
-// ".claude/bin/pulsarules_cli" and ".claude/skills" - proving the
-// text/template render fully resolves RootDir/SkillsSubdir/binSubdir/
-// binaryName and leaves no "{{" placeholder behind.
+// must still write a script whose bin/skills/log paths are the concrete
+// ".claude/bin/pulsarules_cli", ".claude/skills", and
+// ".claude/hook-execution.log" - proving the text/template render fully
+// resolves RootDir/SkillsSubdir/binSubdir/binaryName/logFileName and leaves
+// no "{{" placeholder behind.
 func TestInstallHook_RendersRealTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -159,6 +160,7 @@ func TestInstallHook_RendersRealTemplate(t *testing.T) {
 	for _, want := range []string{
 		`bin="$CLAUDE_PROJECT_DIR/.claude/bin/pulsarules_cli"`,
 		`export PULSARULES_SKILLS_DIR="$CLAUDE_PROJECT_DIR/.claude/skills"`,
+		`export PULSARULES_LOG_PATH="$CLAUDE_PROJECT_DIR/.claude/hook-execution.log"`,
 	} {
 		if !strings.Contains(script, want) {
 			t.Errorf("rendered script missing %q:\n%s", want, script)
@@ -178,9 +180,9 @@ func TestRenderReminderScript(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "substitutes both paths",
-			body: `bin="{{.BinaryRelPath}}" skills="{{.SkillsRelPath}}"`,
-			want: `bin=".claude/bin/pulsarules_cli" skills=".claude/skills"`,
+			name: "substitutes every path",
+			body: `bin="{{.BinaryRelPath}}" skills="{{.SkillsRelPath}}" log="{{.LogRelPath}}"`,
+			want: `bin=".claude/bin/pulsarules_cli" skills=".claude/skills" log=".claude/hook-execution.log"`,
 		},
 		{
 			name:    "malformed template fails to parse",

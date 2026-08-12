@@ -155,18 +155,29 @@ func TestResolveProjectDir(t *testing.T) {
 	}
 }
 
+// TestResolveLogPath covers the host-neutral PULSARULES_LOG_PATH passthrough:
+// cli holds no host layout of its own, so an unset var leaves obs to decide
+// (it disables logging), and a set var is returned verbatim regardless of
+// what host-specific layout it encodes.
 func TestResolveLogPath(t *testing.T) {
-	t.Run("unset env leaves the path to obs", func(t *testing.T) {
-		t.Setenv("PULSARULES_PROJECT_DIR", "")
-		if got := resolveLogPath(); got != "" {
-			t.Errorf("resolveLogPath() = %q, want empty", got)
-		}
-	})
-	t.Run("set env lands under .claude", func(t *testing.T) {
-		t.Setenv("PULSARULES_PROJECT_DIR", "/proj")
-		want := filepath.Join("/proj", ".claude", "hook-execution.log")
-		if got := resolveLogPath(); got != want {
-			t.Errorf("resolveLogPath() = %q, want %q", got, want)
-		}
-	})
+	testCases := []struct {
+		name    string
+		envPath string
+		want    string
+	}{
+		{name: "unset env leaves the decision to obs", envPath: "", want: ""},
+		{
+			name:    "set env is returned verbatim",
+			envPath: filepath.Join("/proj", ".claude", "hook-execution.log"),
+			want:    filepath.Join("/proj", ".claude", "hook-execution.log"),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Setenv("PULSARULES_LOG_PATH", testCase.envPath)
+			if got := resolveLogPath(); got != testCase.want {
+				t.Errorf("resolveLogPath() = %q, want %q", got, testCase.want)
+			}
+		})
+	}
 }

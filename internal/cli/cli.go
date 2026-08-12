@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
@@ -102,12 +101,13 @@ func resolveProjectDir(opts *cliopts.Options) string {
 	return "."
 }
 
-// resolveLogPath mirrors the hook command's prior PULSARULES_PROJECT_DIR-based
-// log path, leaving obs to pick its own default when the env var is unset.
+// resolveLogPath reads the host-provided PULSARULES_LOG_PATH, the third
+// host-neutral variable alongside PULSARULES_PROJECT_DIR and
+// PULSARULES_SKILLS_DIR: each installed wrapper computes the full log path
+// from its own layout (.claude/hook-execution.log, .opencode/hook-execution.log,
+// ...) and hands it over, so cli/obs hold no host literal. An unset var - an
+// older installed wrapper, or the binary run by hand - leaves obs to disable
+// logging rather than guess a location.
 func resolveLogPath() string {
-	dir := os.Getenv("PULSARULES_PROJECT_DIR")
-	if dir == "" {
-		return ""
-	}
-	return filepath.Join(dir, ".claude", "hook-execution.log")
+	return os.Getenv("PULSARULES_LOG_PATH")
 }

@@ -13,7 +13,8 @@ type Options struct {
 	ProjectDir string
 	// LogLevel gates the hook-execution logger; empty disables logging.
 	LogLevel string
-	// LogPath overrides the hook-execution logger's file path; empty selects
-	// obs's own default.
+	// LogPath is the hook-execution logger's file path; empty disables
+	// logging even when LogLevel is set, since obs holds no host-layout
+	// default of its own to fall back to.
 	LogPath string
 }

@@ -27,6 +27,9 @@ const (
 	binSubdir = "bin"
 	// binaryName is where the orchestrator hook expects the installer binary.
 	binaryName = "pulsarules_cli"
+	// logFileName is where the reminder script points PULSARULES_LOG_PATH,
+	// relative to RootDir.
+	logFileName = "hook-execution.log"
 )
 
 // hookAssets are the files installed from templates/hooks into
@@ -108,12 +111,14 @@ func installBinary(claudeDir string) error {
 
 // reminderScriptValues are the Claude-layout paths the reminder script needs,
 // relative to $CLAUDE_PROJECT_DIR - the values generic Go must never
-// hardcode (see internal/hook/dispatcher_deps.go's resolveSkillsDir), drawn
-// here from this package's own RootDir/SkillsSubdir/binSubdir/binaryName
-// instead of being baked into the template source.
+// hardcode (see internal/hook/dispatcher_deps.go's resolveSkillsDir and
+// internal/cli/cli.go's resolveLogPath), drawn here from this package's own
+// RootDir/SkillsSubdir/binSubdir/binaryName/logFileName instead of being
+// baked into the template source.
 type reminderScriptValues struct {
 	BinaryRelPath string
 	SkillsRelPath string
+	LogRelPath    string
 }
 
 // renderReminderScript executes the named template against
@@ -130,6 +135,7 @@ func renderReminderScript(name string, body []byte) ([]byte, error) {
 	values := reminderScriptValues{
 		BinaryRelPath: path.Join(RootDir, binSubdir, binaryName),
 		SkillsRelPath: path.Join(RootDir, SkillsSubdir),
+		LogRelPath:    path.Join(RootDir, logFileName),
 	}
 	var buf strings.Builder
 	if execErr := tmpl.Execute(&buf, values); execErr != nil {
