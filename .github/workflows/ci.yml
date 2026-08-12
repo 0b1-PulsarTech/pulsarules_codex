@@ -33,6 +33,11 @@ jobs:
           go-version-file: go.mod
       - name: Install task
         run: go install github.com/go-task/task/v3/cmd/task@${{ env.TASK_VERSION }}
+      # knowledge/standards/workflows/dependency-addition.md tells authors to
+      # run `go mod tidy` when they add a dependency; this is the gate that
+      # actually checks they did, plus that every recorded checksum verifies.
+      - name: task tools:tidy
+        run: task tools:tidy
       # go.mod pins `go 1.26` with no toolchain directive on purpose; there is
       # no `task` target that runs a full-module CGO-free build, so this
       # mirrors the Taskfile's own CGO_ENABLED=0 convention directly.
