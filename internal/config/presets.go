@@ -50,6 +50,7 @@ func strictAnalyzers() map[string]AnalyzerConfig {
 
 func (govCfg *GovernanceConfig) ApplyPreset() {
 	overrides, ok := presetAnalyzers()[govCfg.Preset]
+	// Unknown presets are left alone; callers validate the name before this.
 	if !ok {
 		return
 	}
@@ -57,4 +58,16 @@ func (govCfg *GovernanceConfig) ApplyPreset() {
 		govCfg.Analyzers = make(map[string]AnalyzerConfig)
 	}
 	maps.Copy(govCfg.Analyzers, overrides)
+}
+
+func ValidPreset(name string) bool {
+	if name == PresetRecommended {
+		return true
+	}
+	_, ok := presetAnalyzers()[name]
+	return ok
+}
+
+func Presets() []string {
+	return []string{PresetRecommended, PresetStrict, PresetMinimal}
 }

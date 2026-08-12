@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
@@ -27,7 +28,10 @@ func runGovernance(inj remy.Injector, opts *cliopts.Options) error {
 	if err != nil {
 		return fmt.Errorf("open repository: %w", err)
 	}
-	cfg := governanceConfig(opts)
+	cfg, err := governanceConfig(opts)
+	if err != nil {
+		return err
+	}
 
 	idx, err := remy.Get[*knowledge.Index](inj)
 	if err != nil {
@@ -41,6 +45,10 @@ func runGovernance(inj remy.Injector, opts *cliopts.Options) error {
 	}
 
 	result := analysis.NewSession(repo, "", idx, cfg).Analyze(scope, nil, files)
+	return reportGovernance(result)
+}
+
+func reportGovernance(result analysis.Result) error {
 	if len(result.Findings) == 0 {
 		_, _ = fmt.Fprintf(
 			os.Stderr,
@@ -75,9 +83,15 @@ func suppressedClause(suppressed int) string {
 	return fmt.Sprintf(", %d suppressed in generated files", suppressed)
 }
 
-func governanceConfig(opts *cliopts.Options) *config.GovernanceConfig {
+func governanceConfig(opts *cliopts.Options) (*config.GovernanceConfig, error) {
 	cfg := config.Defaults()
 	if opts.Preset != "" {
+		// ApplyPreset silently ignores an unknown name, so reject it here.
+		if !config.ValidPreset(opts.Preset) {
+			return nil, fmt.Errorf(
+				"invalid --preset %q (want %s)", opts.Preset, strings.Join(config.Presets(), "|"),
+			)
+		}
 		cfg.Preset = opts.Preset
 	}
 	cfg.ApplyPreset()
@@ -86,5 +100,5 @@ func governanceConfig(opts *cliopts.Options) *config.GovernanceConfig {
 	if opts.GolangciConfig != "" {
 		cfg.SetParam("golangci-lint", "config_path", opts.GolangciConfig)
 	}
-	return cfg
+	return cfg, nil
 }
