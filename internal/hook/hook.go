@@ -83,7 +83,7 @@ func (d *Dispatcher) record(
 func filterInstalled(ids []string, skillsDir string) []string {
 	out := make([]string, 0, len(ids))
 	for _, id := range ids {
-		// The skillsDir is under CLAUDE_PROJECT_DIR's .claude/skills.
+		// The skillsDir is under PULSARULES_SKILLS_DIR, a hook-provided skills root.
 		if _, err := os.Stat(filepath.Join(skillsDir, id, "SKILL.md")); err == nil {
 			out = append(out, id)
 		}

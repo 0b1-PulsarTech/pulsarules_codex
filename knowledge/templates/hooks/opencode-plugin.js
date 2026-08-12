@@ -28,7 +28,13 @@ export const PulsarulesGovernance = async ({ directory, worktree, $ }) => {
       tool_input: { file_path: filePath ?? "" },
     });
     try {
-      const result = await $`${bin} hook ${mode} < ${Buffer.from(payload)}`.quiet();
+      const result = await $`${bin} hook ${mode} < ${Buffer.from(payload)}`
+        .env({
+          ...process.env,
+          PULSARULES_PROJECT_DIR: root,
+          PULSARULES_SKILLS_DIR: `${root}/.opencode/skills`,
+        })
+        .quiet();
       const text = result.stdout?.toString().trim();
       if (!text) return;
       const parsed = JSON.parse(text);

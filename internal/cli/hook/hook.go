@@ -44,7 +44,8 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 		Logger:     logger,
 		Index:      idx,
 		Out:        os.Stdout,
-		ProjectDir: os.Getenv("CLAUDE_PROJECT_DIR"),
+		ProjectDir: os.Getenv("PULSARULES_PROJECT_DIR"),
+		SkillsDir:  os.Getenv("PULSARULES_SKILLS_DIR"),
 	})
 
 	if dispatchErr := disp.Dispatch(opts.Mode, payload); dispatchErr != nil {

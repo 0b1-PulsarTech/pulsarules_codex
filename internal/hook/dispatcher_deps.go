@@ -18,6 +18,7 @@ type Dispatcher struct {
 	router     *fileRouter
 	out        io.Writer
 	projectDir string
+	skillsDir  string
 	governance func(repo vcs.Repository, status vcs.Status) (string, int)
 }
 
@@ -27,6 +28,7 @@ type Deps struct {
 	Index      *knowledge.Index
 	Out        io.Writer
 	ProjectDir string
+	SkillsDir  string
 	Governance func(repo vcs.Repository, status vcs.Status) (block string, count int)
 }
 
@@ -48,6 +50,7 @@ func NewDispatcher(deps Deps) *Dispatcher {
 		router:     newFileRouter(deps.Index),
 		out:        out,
 		projectDir: deps.ProjectDir,
+		skillsDir:  deps.SkillsDir,
 		governance: governanceItem,
 	}
 }
@@ -56,5 +59,13 @@ func (d *Dispatcher) resolveProjectDir() string {
 	if d.projectDir != "" {
 		return d.projectDir
 	}
-	return os.Getenv("CLAUDE_PROJECT_DIR")
+	return os.Getenv("PULSARULES_PROJECT_DIR")
+}
+
+func (d *Dispatcher) resolveSkillsDir() string {
+	if d.skillsDir != "" {
+		return d.skillsDir
+	}
+	// The layout is host-specific (.claude/skills vs .opencode/skills): no hardcoded default.
+	return os.Getenv("PULSARULES_SKILLS_DIR")
 }

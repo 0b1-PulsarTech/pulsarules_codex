@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -58,6 +59,17 @@ func uniqueSessionID(t *testing.T) string {
 func newSessionPayload(t *testing.T) []byte {
 	t.Helper()
 	return fmt.Appendf(nil, `{"session_id":%q}`, uniqueSessionID(t))
+}
+
+func installSkillFixture(t *testing.T, skillsDir, id string) {
+	t.Helper()
+	dir := filepath.Join(skillsDir, id)
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		t.Fatalf("mkdir skill dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("stub\n"), 0o600); err != nil {
+		t.Fatalf("write SKILL.md: %v", err)
+	}
 }
 
 func gitInit(t *testing.T, dir string) {

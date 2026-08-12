@@ -18,12 +18,12 @@ func (d *Dispatcher) emitPreSearch(session *sessionTracker, in hookPayload) erro
 	if projectDir == "" {
 		return nil
 	}
-	// The projectDir is under CLAUDE_PROJECT_DIR, a hook-provided project root.
+	// The projectDir is under PULSARULES_PROJECT_DIR, a hook-provided project root.
 	if _, err := os.Stat(filepath.Join(projectDir, "go.mod")); err != nil {
 		return nil //nolint:nilerr // no go.mod means "not a Go project", not a failure.
 	}
-	skillsDir := filepath.Join(projectDir, ".claude", "skills")
-	if len(filterInstalled([]string{"gopls-navigation"}, skillsDir)) == 0 {
+	skillsDir := d.resolveSkillsDir()
+	if skillsDir == "" || len(filterInstalled([]string{"gopls-navigation"}, skillsDir)) == 0 {
 		return nil
 	}
 	if !session.OncePerSession("pre-search") {

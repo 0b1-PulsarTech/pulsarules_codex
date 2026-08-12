@@ -41,10 +41,19 @@ to self-route, we inject the contract at each relevant lifecycle moment:
 `skill-router-reminder.sh` is a thin orchestrator: the settings entry locates it via
 `$CLAUDE_PROJECT_DIR` (a Claude Code variable, legitimately named there); the script forwards the
 mode (`session-start`/`pre-edit`/...) and the stdin payload to the installed binary (copied to
-`.claude/bin/` at install). The binary emits the `hookSpecificOutput` JSON from the embedded
+`.claude/bin/` at install), after exporting `PULSARULES_PROJECT_DIR` and `PULSARULES_SKILLS_DIR` -
+the only two variables the binary itself reads, so it never hardcodes a host's own variable name or
+a host's own skills layout. The binary emits the `hookSpecificOutput` JSON from the embedded
 reminder templates (`contract.txt`, `pre-edit.txt`), so the contract text has a single source of
 truth instead of a copy baked into the shell script. If the binary is absent the script exits `0`
 (no-op).
+
+Generic Go never hardcodes `.claude/skills` or `.opencode/skills`: `internal/hook` reads
+`PULSARULES_SKILLS_DIR` at dispatch time (falling back to an unset/empty value, which degrades the
+post-edit checklist to its generic, skill-list-free form and skips the pre-search nudge). Each
+host's own installer wiring sets the variable to its own layout - `skill-router-reminder.sh` exports
+`$CLAUDE_PROJECT_DIR/.claude/skills`; `opencode-plugin.js` exports `<root>/.opencode/skills` via its
+`.env({...})` call below.
 
 ## opencode-plugin.js
 

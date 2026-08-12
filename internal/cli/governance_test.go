@@ -11,7 +11,7 @@ import (
 )
 
 func TestRunGovernance_RequiresProjectDir(t *testing.T) {
-	t.Setenv("CLAUDE_PROJECT_DIR", "")
+	t.Setenv("PULSARULES_PROJECT_DIR", "")
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
 	err := runGovernance(inj, &version.Options{})
