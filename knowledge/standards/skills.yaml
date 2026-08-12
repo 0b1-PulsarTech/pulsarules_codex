@@ -196,6 +196,7 @@ skills:
       - types
       - flag-arguments
       - named-returns
+      - safety
     compose_patterns:
       - iterator-seq
   - id: git-history
