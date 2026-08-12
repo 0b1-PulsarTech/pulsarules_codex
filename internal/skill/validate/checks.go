@@ -31,6 +31,19 @@ func runCompositions(comps []composition) []string {
 	return problems
 }
 
+// ruleSummaries reports every rule whose body carries no "> " blockquote
+// summary directly under its H1. StageRuleInjection surfaces this summary in
+// findings, so a rule authored without one silently prints nothing there.
+func ruleSummaries(idx *knowledge.Index) []string {
+	problems := make([]string, 0, len(idx.Rules))
+	for _, rule := range idx.Rules {
+		if idx.Summary("rules", rule.ID) == "" {
+			problems = append(problems, fmt.Sprintf("rule %q has no blockquote summary", rule.ID))
+		}
+	}
+	return problems
+}
+
 func ruleDependencies(idx *knowledge.Index) []string {
 	problems := make([]string, 0, len(idx.Rules))
 	for _, rule := range idx.Rules {
