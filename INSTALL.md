@@ -101,10 +101,13 @@ and `install` prints each one it added and which skill required it. The skill re
 `.claude/hooks/skill-router-reminder.sh` (executable) and merges its `SessionStart`, `PreToolUse`,
 `PostToolUse`, `UserPromptSubmit`, `Stop` and `SessionEnd` entries into the chosen settings file -
 preserving existing permissions / `enabledMcpjsonServers` / unrelated hooks, never duplicating on
-re-run. The wired command resolves the project root at runtime via `$CLAUDE_PROJECT_DIR`, so it
-survives moving the repo. It also stamps `.claude/.gitignore` with `/bin/` and `/hooks/` (plus an
-ownership marker), so the copied binary and hook script stay local while `settings.json` and the
-rendered skills - which carry their own `.gitignore` - remain yours to commit or not.
+re-run. The wired command locates the installed hook script via `$CLAUDE_PROJECT_DIR` (a Claude Code
+variable, legitimately named there); the script then exports `PULSARULES_PROJECT_DIR` and
+`PULSARULES_SKILLS_DIR` - the only two variables the binary itself reads - so it survives moving the
+repo without hardcoding a host's own variable name or a host's own skills layout. It also stamps
+`.claude/.gitignore` with `/bin/` and `/hooks/` (plus an ownership marker), so the copied binary and
+hook script stay local while `settings.json` and the rendered skills - which carry their own
+`.gitignore` - remain yours to commit or not.
 
 Additional install flags:
 

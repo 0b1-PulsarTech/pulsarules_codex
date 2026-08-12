@@ -12,4 +12,11 @@
 # exits 0 so a missing tool never blocks an edit. See README.md for the rationale.
 bin="$CLAUDE_PROJECT_DIR/.claude/bin/pulsarules_cli"
 [ -x "$bin" ] || exit 0
+
+# Generic Go reads only the host-neutral PULSARULES_PROJECT_DIR and
+# PULSARULES_SKILLS_DIR; Claude Code only sets CLAUDE_PROJECT_DIR, so this
+# Claude-specific script is where that translation - and the Claude skills
+# layout - happens.
+export PULSARULES_PROJECT_DIR="$CLAUDE_PROJECT_DIR"
+export PULSARULES_SKILLS_DIR="$CLAUDE_PROJECT_DIR/.claude/skills"
 exec "$bin" hook "$1"

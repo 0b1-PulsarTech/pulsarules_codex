@@ -63,8 +63,8 @@ func TestDispatchPreSearch(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			dir := preSearchProjectDir(t, testCase.hasGoMod, testCase.hasGoplsSkill)
-			disp, out := dispatchCapture(Deps{ProjectDir: dir})
+			dir, skillsDir := preSearchProjectDir(t, testCase.hasGoMod, testCase.hasGoplsSkill)
+			disp, out := dispatchCapture(Deps{ProjectDir: dir, SkillsDir: skillsDir})
 			payload := fmt.Sprintf(
 				`{"tool_name":%q,"tool_input":{%s},"session_id":%q}`,
 				testCase.toolName, testCase.toolInput, uniqueSessionID(t),
@@ -84,9 +84,9 @@ func TestDispatchPreSearch(t *testing.T) {
 	}
 }
 
-func preSearchProjectDir(t *testing.T, hasGoMod, hasGoplsSkill bool) string {
+func preSearchProjectDir(t *testing.T, hasGoMod, hasGoplsSkill bool) (dir, skillsDir string) {
 	t.Helper()
-	dir := t.TempDir()
+	dir = t.TempDir()
 	if hasGoMod {
 		if err := os.WriteFile(
 			filepath.Join(dir, "go.mod"),
@@ -96,33 +96,24 @@ func preSearchProjectDir(t *testing.T, hasGoMod, hasGoplsSkill bool) string {
 			t.Fatalf("write go.mod: %v", err)
 		}
 	}
+	skillsDir = filepath.Join(dir, ".claude", "skills")
 	if hasGoplsSkill {
-		skillDir := filepath.Join(dir, ".claude", "skills", "gopls-navigation")
-		if err := os.MkdirAll(skillDir, 0o750); err != nil {
-			t.Fatalf("mkdir skill dir: %v", err)
-		}
-		if err := os.WriteFile(
-			filepath.Join(skillDir, "SKILL.md"),
-			[]byte("stub\n"),
-			0o600,
-		); err != nil {
-			t.Fatalf("write SKILL.md: %v", err)
-		}
+		installSkillFixture(t, skillsDir, "gopls-navigation")
 	}
-	return dir
+	return dir, skillsDir
 }
 
 func TestDispatchPreSearchOncePerSession(t *testing.T) {
 	t.Parallel()
 
-	dir := preSearchProjectDir(t, true, true)
+	dir, skillsDir := preSearchProjectDir(t, true, true)
 	id := uniqueSessionID(t)
 	payload := fmt.Appendf(
 		nil,
 		`{"tool_name":"Grep","tool_input":{"pattern":"foo","glob":"*.go"},"session_id":%q}`,
 		id,
 	)
-	disp, out := dispatchCapture(Deps{ProjectDir: dir})
+	disp, out := dispatchCapture(Deps{ProjectDir: dir, SkillsDir: skillsDir})
 
 	_ = disp.Dispatch("pre-search", payload)
 	if !strings.Contains(extractContext(t, out.String()), "pre-search gopls reminder") {

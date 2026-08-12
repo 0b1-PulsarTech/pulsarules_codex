@@ -15,11 +15,11 @@ import (
 )
 
 var errProjectDirRequired = errors.New(
-	"governance requires --project DIR or CLAUDE_PROJECT_DIR",
+	"governance requires --project DIR or PULSARULES_PROJECT_DIR",
 )
 
 func runGovernance(inj remy.Injector, opts *cliopts.Options) error {
-	if opts.ProjectDir == "" && os.Getenv("CLAUDE_PROJECT_DIR") == "" {
+	if opts.ProjectDir == "" && os.Getenv("PULSARULES_PROJECT_DIR") == "" {
 		return errProjectDirRequired
 	}
 

@@ -72,13 +72,13 @@ func resolveProjectDir(opts *cliopts.Options) string {
 		return opts.ProjectDir
 	}
 	if opts.Command == "governance" {
-		return os.Getenv("CLAUDE_PROJECT_DIR")
+		return os.Getenv("PULSARULES_PROJECT_DIR")
 	}
 	return "."
 }
 
 func resolveLogPath() string {
-	dir := os.Getenv("CLAUDE_PROJECT_DIR")
+	dir := os.Getenv("PULSARULES_PROJECT_DIR")
 	if dir == "" {
 		return ""
 	}

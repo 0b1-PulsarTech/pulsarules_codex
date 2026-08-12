@@ -38,10 +38,13 @@ func (d *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) error
 		return nil
 	}
 
-	projectDir := d.resolveProjectDir()
-	if projectDir != "" {
-		skillsDir := filepath.Join(projectDir, ".claude", "skills")
+	if skillsDir := d.resolveSkillsDir(); skillsDir != "" {
 		relevant = filterInstalled(relevant, skillsDir)
+	} else {
+		// Without a skills dir we cannot tell which of the matched skills
+		// are actually installed here, and naming un-installed skills is
+		// wrong output, so degrade to the generic reminder instead.
+		relevant = nil
 	}
 	if len(relevant) == 0 {
 		return d.emitContext("hooks/post-edit.txt", "PostToolUse")
