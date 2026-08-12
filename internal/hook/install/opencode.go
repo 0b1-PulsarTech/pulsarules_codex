@@ -11,7 +11,7 @@ type opencodeInstaller struct{}
 func (opencodeInstaller) Name() string { return "opencode" }
 
 func (opencodeInstaller) Install(ctx Context) error {
-	if err := opencodehook.Install(ctx.Dir); err != nil {
+	if err := opencodehook.Install(ctx.Dir, ctx.Templates); err != nil {
 		return fmt.Errorf("install opencode hook: %w", err)
 	}
 	return nil
