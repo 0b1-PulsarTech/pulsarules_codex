@@ -41,6 +41,65 @@ func TestRun_MissingBinary(t *testing.T) {
 	}
 }
 
+func TestLintArgs(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		target     string
+		configFlag string
+		wantConfig bool
+	}{
+		{
+			name:   "no config discovered",
+			target: "./...",
+		},
+		{
+			name:       "config discovered",
+			target:     "./...",
+			configFlag: "/some/project/.golangci.yml",
+			wantConfig: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			args := lintArgs(testCase.target, testCase.configFlag)
+
+			if args[0] != "run" {
+				t.Fatalf("args[0] = %q, want %q", args[0], "run")
+			}
+			if args[len(args)-1] != testCase.target {
+				t.Errorf("last arg = %q, want target %q", args[len(args)-1], testCase.target)
+			}
+			for _, linter := range forcedLinters() {
+				if !containsPair(args, "-E", linter) {
+					t.Errorf("args %v missing forced -E %s", args, linter)
+				}
+			}
+			hasConfig := containsPair(args, "--config", testCase.configFlag)
+			if hasConfig != testCase.wantConfig {
+				t.Errorf(
+					"--config %s present = %v, want %v",
+					testCase.configFlag,
+					hasConfig,
+					testCase.wantConfig,
+				)
+			}
+		})
+	}
+}
+
+func containsPair(args []string, flag, value string) bool {
+	for pos := 0; pos < len(args)-1; pos++ {
+		if args[pos] == flag && args[pos+1] == value {
+			return true
+		}
+	}
+	return false
+}
+
 func TestParseGoWorkModules(t *testing.T) {
 	t.Parallel()
 
