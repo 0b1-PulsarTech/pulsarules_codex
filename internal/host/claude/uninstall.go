@@ -12,7 +12,7 @@ import (
 func UninstallHook(claudeDir string) (restored []string, err error) {
 	hooksDir := filepath.Join(claudeDir, "hooks")
 	for _, asset := range hookAssets() {
-		path := filepath.Join(hooksDir, asset.name)
+		path := filepath.Join(hooksDir, asset.destName)
 		removedOK, removeErr := removeIfInstalled(path)
 		if removeErr != nil {
 			return restored, removeErr

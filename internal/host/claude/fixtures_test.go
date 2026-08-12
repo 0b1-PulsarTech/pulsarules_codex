@@ -11,7 +11,7 @@ func routerHook(arg string) string {
 
 func fakeTemplates() fstest.MapFS {
 	return fstest.MapFS{
-		"hooks/skill-router-reminder.sh": {
+		"hooks/skill-router-reminder.sh.tmpl": {
 			Data: []byte("#!/usr/bin/env bash\n# Installed by pulsarules_cli\nexit 0\n"),
 		},
 		"hooks/README.md": {

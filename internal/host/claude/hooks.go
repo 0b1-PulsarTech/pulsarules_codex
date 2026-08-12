@@ -11,15 +11,22 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
+const reminderScriptAsset = "skill-router-reminder.sh"
+
 type hookAsset struct {
-	name string
-	mode os.FileMode
+	templateName string
+	destName     string
+	mode         os.FileMode
 }
 
 func hookAssets() []hookAsset {
 	return []hookAsset{
-		{"skill-router-reminder.sh", disk.FileExec},
-		{"README.md", disk.File},
+		{
+			templateName: reminderScriptAsset + ".tmpl",
+			destName:     reminderScriptAsset,
+			mode:         disk.FileExec,
+		},
+		{templateName: "README.md", destName: "README.md", mode: disk.File},
 	}
 }
 
@@ -31,11 +38,11 @@ func InstallHook(templates fs.FS, claudeDir string) (backedUp []string, err erro
 		return nil, fmt.Errorf("mkdir %q: %w", hooksDir, err)
 	}
 	for _, asset := range hookAssets() {
-		assetBytes, readErr := fs.ReadFile(templates, "hooks/"+asset.name)
+		assetBytes, readErr := fs.ReadFile(templates, "hooks/"+asset.templateName)
 		if readErr != nil {
-			return backedUp, fmt.Errorf("read template hooks/%s: %w", asset.name, readErr)
+			return backedUp, fmt.Errorf("read template hooks/%s: %w", asset.templateName, readErr)
 		}
-		dst := filepath.Join(hooksDir, asset.name)
+		dst := filepath.Join(hooksDir, asset.destName)
 		exists, ours, checkErr := ownedfile.Check(dst)
 		if checkErr != nil {
 			return backedUp, fmt.Errorf("check %q: %w", dst, checkErr)
