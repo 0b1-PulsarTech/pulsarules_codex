@@ -89,3 +89,65 @@ func TestBackup(t *testing.T) {
 		})
 	}
 }
+
+func TestRestore_RestoresAnExistingBackup(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "pre-commit")
+	backupPath := path + BackupSuffix
+	seedFile(t, backupPath, "mine")
+
+	restored, err := Restore(path)
+	if err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	if !restored {
+		t.Fatal("restored = false, want true")
+	}
+	assertContent(t, path, "mine")
+	assertMissing(t, backupPath)
+}
+
+func TestRestore_NoBackupIsANoOp(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "pre-commit")
+	restored, err := Restore(path)
+	if err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	if restored {
+		t.Error("restored = true, want false for a missing backup")
+	}
+}
+
+func TestRestore_NumberedOverflowBackup(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "pre-commit")
+	overflow := path + BackupSuffix + ".1"
+	seedFile(t, overflow, "overflow")
+
+	restored, err := Restore(path)
+	if err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	if restored {
+		t.Error("restored = true, want false (only the bare slot is restored)")
+	}
+	assertContent(t, overflow, "overflow")
+}
+
+func TestBackupMessage_RestoreMessage(t *testing.T) {
+	t.Parallel()
+
+	if got, want := BackupMessage(
+		"/a/b",
+		"/a/b.pulsarules-backup",
+	), "backed up existing /a/b to /a/b.pulsarules-backup"; got != want {
+		t.Errorf("BackupMessage = %q, want %q", got, want)
+	}
+	if got, want := RestoreMessage("/a/b"), "restored backup to /a/b"; got != want {
+		t.Errorf("RestoreMessage = %q, want %q", got, want)
+	}
+}
