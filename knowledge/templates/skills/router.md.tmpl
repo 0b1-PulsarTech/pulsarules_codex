@@ -1,12 +1,7 @@
----
-name: {{.ID}}
-description: {{.Description}}
----
-
+{{template "mdFrontmatter" .}}
 # {{.Name}} (MANDATORY orchestrator)
 
-<!-- Installed by pulsarules_cli; re-run install to update, do not hand-edit. -->
-
+{{template "installedComment"}}
 This is the entry point for working in any project that follows these standards. The engineering
 contract lives in `standards/rules/`, `standards/patterns/`, and `standards/workflows/`, distilled
 here into composable skills. This router decides WHICH skills apply to the task and in what ORDER,
