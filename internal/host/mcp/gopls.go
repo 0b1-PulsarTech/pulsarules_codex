@@ -26,10 +26,14 @@ func GoplsInstructions(ctx context.Context) (string, error) {
 	return string(out), nil
 }
 
-func GenerateGoplsSkill(templates fs.FS, skillsDir, instructions string) error {
-	header, err := fs.ReadFile(templates, "skills/gopls-navigation.header.md")
+func GenerateGoplsSkill(
+	templates fs.FS,
+	skillsDir, instructions string,
+) (backedUp []string, err error) {
+	var header []byte
+	header, err = fs.ReadFile(templates, "skills/gopls-navigation.header.md")
 	if err != nil {
-		return fmt.Errorf("read gopls-navigation header template: %w", err)
+		return nil, fmt.Errorf("read gopls-navigation header template: %w", err)
 	}
 	var doc strings.Builder
 	doc.Write(header)
@@ -38,8 +42,9 @@ func GenerateGoplsSkill(templates fs.FS, skillsDir, instructions string) error {
 	doc.WriteString("\n")
 
 	dir := filepath.Join(skillsDir, "gopls-navigation")
-	if err = docs.Write(dir, "SKILL.md", doc.String()); err != nil {
-		return fmt.Errorf("write gopls-navigation skill: %w", err)
+	backedUp, err = docs.Write(dir, "SKILL.md", doc.String())
+	if err != nil {
+		return backedUp, fmt.Errorf("write gopls-navigation skill: %w", err)
 	}
-	return nil
+	return backedUp, nil
 }

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 )
 
 func writeFile(filePath, content string) error {
@@ -18,13 +19,42 @@ func writeFile(filePath, content string) error {
 	return nil
 }
 
-func Write(dir, docName, body string) error {
-	if err := writeFile(filepath.Join(dir, docName), body); err != nil {
-		return fmt.Errorf("write %q: %w", docName, err)
+func backupIfPresent(filePath string) (backedUp string, err error) {
+	if _, statErr := os.Lstat(filePath); statErr != nil {
+		return "", nil //nolint:nilerr // absent is the expected "nothing to back up" case.
+	}
+	backupPath, backupErr := ownedfile.Backup(filePath)
+	if backupErr != nil {
+		return "", fmt.Errorf("replace existing file: %w", backupErr)
+	}
+	return ownedfile.BackupMessage(filePath, backupPath), nil
+}
+
+func Write(dir, docName, body string) (backedUp []string, err error) {
+	docPath := filepath.Join(dir, docName)
+	gitignorePath := filepath.Join(dir, ".gitignore")
+	if !isOwnedDoc(dir, docName) {
+		for _, path := range []string{docPath, gitignorePath} {
+			msg, backupErr := backupIfPresent(path)
+			if backupErr != nil {
+				return backedUp, backupErr
+			}
+			if msg != "" {
+				backedUp = append(backedUp, msg)
+			}
+		}
+	}
+	if err = writeFile(docPath, body); err != nil {
+		return backedUp, fmt.Errorf("write %q: %w", docName, err)
 	}
 	gitignoreBody := docName + "\n.gitignore\n"
-	if err := writeFile(filepath.Join(dir, ".gitignore"), gitignoreBody); err != nil {
-		return fmt.Errorf("gitignore for %q: %w", docName, err)
+	if err = writeFile(gitignorePath, gitignoreBody); err != nil {
+		return backedUp, fmt.Errorf("gitignore for %q: %w", docName, err)
 	}
-	return nil
+	return backedUp, nil
+}
+
+func isOwnedDoc(dir, docName string) bool {
+	_, ours, err := ownedfile.Check(filepath.Join(dir, docName))
+	return err == nil && ours
 }

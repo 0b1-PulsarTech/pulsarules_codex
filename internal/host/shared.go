@@ -12,7 +12,7 @@ const noGoplsWarning = "gopls not on PATH; skipping gopls MCP + gopls-navigation
 	"(install: go install golang.org/x/tools/gopls@latest)"
 
 func installSkills(ctx Context, dest string, report *Report) error {
-	installed, skipped, err := docs.Install(
+	installed, skipped, backedUp, err := docs.Install(
 		ctx.Index, ctx.Renderer, dest, ctx.IDs, ctx.RouterFilter,
 	)
 	if err != nil {
@@ -23,6 +23,9 @@ func installSkills(ctx Context, dest string, report *Report) error {
 	}
 	for _, id := range skipped {
 		report.warn("skipped (unknown skill): %s", id)
+	}
+	for _, msg := range backedUp {
+		report.warn("%s", msg)
 	}
 	return nil
 }
@@ -50,7 +53,12 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 	if len(wfIDs) == 0 {
 		return nil
 	}
-	installed, skipped, err := docs.InstallWorkflows(ctx.Index, ctx.Renderer, dest, wfIDs)
+	installed, skipped, backedUp, err := docs.InstallWorkflows(
+		ctx.Index,
+		ctx.Renderer,
+		dest,
+		wfIDs,
+	)
 	if err != nil {
 		return fmt.Errorf("render workflows to %q: %w", dest, err)
 	}
@@ -59,6 +67,9 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 	}
 	for _, id := range skipped {
 		report.warn("skipped workflow (unknown): %s", id)
+	}
+	for _, msg := range backedUp {
+		report.warn("%s", msg)
 	}
 	return nil
 }
