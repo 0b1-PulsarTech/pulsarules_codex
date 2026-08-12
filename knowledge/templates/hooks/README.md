@@ -46,6 +46,31 @@ reminder templates (`contract.txt`, `pre-edit.txt`), so the contract text has a 
 truth instead of a copy baked into the shell script. If the binary is absent the script exits `0`
 (no-op).
 
+## opencode-plugin.js
+
+`opencode-plugin.js` gives opencode the same governance context Claude Code gets from
+`skill-router-reminder.sh`, adapted to opencode's plugin API instead of its hooks JSON. opencode
+dispatches plugin hooks generically by name; only `experimental.chat.system.transform`,
+`tool.execute.before`, and `tool.execute.after` are hook names opencode's `trigger()` actually
+dispatches. `session.created`, `session.idle`, and `session.deleted` are bus-event names, not hook
+names; a plugin can register handlers for them, but they will never fire.
+
+The plugin appends the `session-start` contract text to `output.system` (a mutable array) on
+`experimental.chat.system.transform`. That hook fires at the start of every turn, but the contract
+text is not re-injected every turn: the underlying `session-start` mode this calls is still gated
+once-per-session by the binary itself (`internal/hook/hook.go`'s `emitSessionStart`, behind
+`OncePerSession("session-start")`), so the contract is actually injected only on a session's first
+request - matching Claude Code's once-per-session `SessionStart` hook. `tool.execute.after` forwards
+to the binary's `post-edit` mode exactly like its Claude Code counterpart, appending the result to
+`output.output` (the field the model reads back - never `console.log`, which only reaches opencode's
+server log). `tool.execute.before` is deliberately not registered: its output object is only
+`{args}`, with no field the model reads back, so there is no channel to deliver a pre-edit nudge
+through. The governance/stop check (the dirty-worktree nag) has no opencode hook to attach to either
+and is not wired; see the script's `// simplification:` comment for both ceilings and the upgrade
+path. Before shelling out, the plugin guards on the binary's existence via a plain `accessSync`
+syscall (mirroring `skill-router-reminder.sh`'s `[ -x "$bin" ] || exit 0`), since `.opencode/bin/`
+is gitignored and a fresh clone has the plugin installed with no binary yet.
+
 ## Design constraints (don't regress these)
 
 - The script and the binary always exit `0`, so the hook only nudges: a non-zero exit from a

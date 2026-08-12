@@ -73,6 +73,8 @@ func (tracker *sessionTracker) Cleanup() {
 	if err != nil {
 		return
 	}
+	// simplification: runs only on "session-end"; opencode's trigger() can't send it,
+	// so markers accumulate for the machine's life. Upgrade path: an opencode equivalent.
 	for _, entry := range entries {
 		name := entry.Name()
 		// A plain token holds no dot, so a short id never matches the tail of a longer one.
