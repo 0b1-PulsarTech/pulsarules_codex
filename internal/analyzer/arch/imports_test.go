@@ -162,7 +162,7 @@ func TestCheckBoundaries(t *testing.T) {
 
 func TestDiscoverRealProject(t *testing.T) {
 	// simplification: real-project discovery skips walking past test boundaries; it
-	// relies on the unit tests above. An upgrade path is using go/packages for
+	// relies on the unit tests above. Upgrade path: use go/packages for
 	// accurate multi-module import resolution.
 	t.Skip("runs against the actual project tree - enable manually")
 	pkgs := discoverPackages(".", "github.com/0b1-PulsarTech/pulsarules_codex")

@@ -23,11 +23,11 @@ type EmojiWindowConfig struct {
 	Suggestions int
 }
 
-// DefaultEmojiWindowConfig returns the project defaults: no repeat within five
-// commits, advice up to twenty, seven alternatives offered.
-func DefaultEmojiWindowConfig() EmojiWindowConfig {
-	return EmojiWindowConfig{HardWindow: 5, SoftWindow: 20, Suggestions: 7}
-}
+// defaultEmojiWindow is the project default: no repeat within five commits,
+// advice up to twenty, seven alternatives offered.
+var defaultEmojiWindow = EmojiWindowConfig{HardWindow: 5, SoftWindow: 20, Suggestions: 7}
+
+func DefaultEmojiWindowConfig() EmojiWindowConfig { return defaultEmojiWindow }
 
 var (
 	emojiProhibitedReporter = core.NewReporter(

@@ -67,8 +67,8 @@ func findCycles(g depGraph) [][]string {
 }
 
 // simplification: boundary rules use a simple prefix-based classification
-// (domain, infra, transport). This works for the standard app layout but will
-// need an explicit config map for non-standard layouts.
+// (domain, infra, transport). This works for the standard app layout.
+// Upgrade path: add an explicit config map for non-standard layouts.
 func classifyLayer(pkgPath string) string {
 	for p := range strings.SplitSeq(pkgPath, "/") {
 		switch p {
@@ -85,16 +85,26 @@ func classifyLayer(pkgPath string) string {
 	return "other"
 }
 
+// layer rank constants used by checkBoundaries' inward-only ordering: a
+// higher rank must never depend on a lower one.
+const (
+	layerRankCmd = iota
+	layerRankTransport
+	layerRankInfra
+	layerRankDomain
+	layerRankOther
+)
+
 // checkBoundaries verifies that inner layers do not depend on outer layers.
 // Returns human-readable violation messages.
 func checkBoundaries(g depGraph, modulePath string) []string {
 	var violations []string
 	layerOrder := map[string]int{
-		"cmd":       0,
-		"transport": 1,
-		"infra":     2,
-		"domain":    3,
-		"other":     4,
+		"cmd":       layerRankCmd,
+		"transport": layerRankTransport,
+		"infra":     layerRankInfra,
+		"domain":    layerRankDomain,
+		"other":     layerRankOther,
 	}
 
 	for pkg, deps := range g {

@@ -48,6 +48,24 @@ func TestValidateMissingType(t *testing.T) {
 	}
 }
 
+// TestValidateEmojiCountExceedsMax proves commit-emoji-count is reachable
+// through the normal Parse+Validate path: previously the parser truncated at
+// MaxLeadingEmojis, so no parsed Message could ever exceed it and this
+// finding never fired. It also proves the type parses correctly past all
+// four leading emojis instead of the 4th being misread as the type.
+func TestValidateEmojiCountExceedsMax(t *testing.T) {
+	t.Parallel()
+
+	msg := commitmsg.Parse(":sparkles: :bug: :wrench: :zap: feat: Add a thing")
+	findings := Validate(msg, DefaultRuleConfig())
+	if !hasAnalyzer(findings, "commit-emoji-count") {
+		t.Errorf("expected commit-emoji-count finding for 4 leading emojis")
+	}
+	if hasAnalyzer(findings, "commit-type-required") {
+		t.Errorf("type should parse correctly past all 4 leading emojis")
+	}
+}
+
 func TestValidateScopeCharset(t *testing.T) {
 	t.Parallel()
 

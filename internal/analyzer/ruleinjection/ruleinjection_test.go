@@ -7,7 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func TestInjectRuleBodies(t *testing.T) {
+func TestInjectRuleSummaries(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
@@ -32,22 +32,22 @@ func TestInjectRuleBodies(t *testing.T) {
 		{AnalyzerID: "arch-boundary", Severity: core.SeverityError, Message: "boundary violation"},
 	}
 
-	injectRuleBodies(findings, idx)
+	injectRuleSummaries(findings, idx)
 
-	check := func(t *testing.T, i int, wantRuleID string, wantBody bool) {
+	check := func(t *testing.T, i int, wantRuleID string, wantSummary bool) {
 		t.Helper()
 		f := findings[i]
 		if f.RuleID != wantRuleID {
 			t.Errorf("finding %d: got RuleID=%q, want %q", i, f.RuleID, wantRuleID)
 		}
-		hasBody := f.RuleBody != ""
-		if hasBody != wantBody {
+		hasSummary := f.RuleSummary != ""
+		if hasSummary != wantSummary {
 			t.Errorf(
-				"finding %d: hasBody=%v, want %v (body length %d)",
+				"finding %d: hasSummary=%v, want %v (summary length %d)",
 				i,
-				hasBody,
-				wantBody,
-				len(f.RuleBody),
+				hasSummary,
+				wantSummary,
+				len(f.RuleSummary),
 			)
 		}
 	}
@@ -60,21 +60,21 @@ func TestInjectRuleBodies(t *testing.T) {
 	check(t, 5, "dependency-rule", true)
 }
 
-func TestInjectRuleBodies_NilIndex(t *testing.T) {
+func TestInjectRuleSummaries_NilIndex(t *testing.T) {
 	t.Parallel()
 
 	findings := []core.Finding{
 		{AnalyzerID: "file-size", Severity: core.SeverityWarning, Message: "file too long"},
 	}
 
-	injectRuleBodies(findings, nil)
+	injectRuleSummaries(findings, nil)
 
-	if findings[0].RuleBody != "" {
-		t.Fatalf("expected empty RuleBody with nil index, got %q", findings[0].RuleBody)
+	if findings[0].RuleSummary != "" {
+		t.Fatalf("expected empty RuleSummary with nil index, got %q", findings[0].RuleSummary)
 	}
 }
 
-func TestInjectRuleBodies_PreexistingRuleID(t *testing.T) {
+func TestInjectRuleSummaries_PreexistingRuleID(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
@@ -91,17 +91,17 @@ func TestInjectRuleBodies_PreexistingRuleID(t *testing.T) {
 		},
 	}
 
-	injectRuleBodies(findings, idx)
+	injectRuleSummaries(findings, idx)
 
 	if findings[0].RuleID != "imports" {
 		t.Fatalf("RuleID should remain pre-set: got %q", findings[0].RuleID)
 	}
-	if len(findings[0].RuleBody) == 0 {
-		t.Fatal("expected RuleBody to be populated from pre-set RuleID")
+	if len(findings[0].RuleSummary) == 0 {
+		t.Fatal("expected RuleSummary to be populated from pre-set RuleID")
 	}
 }
 
-func TestInjectRuleBodies_AlreadyHasBody(t *testing.T) {
+func TestInjectRuleSummaries_AlreadyHasSummary(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
@@ -111,17 +111,17 @@ func TestInjectRuleBodies_AlreadyHasBody(t *testing.T) {
 
 	findings := []core.Finding{
 		{
-			AnalyzerID: "file-size",
-			Severity:   core.SeverityWarning,
-			Message:    "msg",
-			RuleBody:   "custom body",
+			AnalyzerID:  "file-size",
+			Severity:    core.SeverityWarning,
+			Message:     "msg",
+			RuleSummary: "custom summary",
 		},
 	}
 
-	injectRuleBodies(findings, idx)
+	injectRuleSummaries(findings, idx)
 
-	if findings[0].RuleBody != "custom body" {
-		t.Fatalf("existing RuleBody should not be overwritten: got %q", findings[0].RuleBody)
+	if findings[0].RuleSummary != "custom summary" {
+		t.Fatalf("existing RuleSummary should not be overwritten: got %q", findings[0].RuleSummary)
 	}
 }
 
@@ -137,7 +137,7 @@ func TestRuleInjectionAnalyzer_Stage(t *testing.T) {
 	}
 }
 
-func TestRuleInjectionAnalyzer_AnalyzePopulatesBodies(t *testing.T) {
+func TestRuleInjectionAnalyzer_AnalyzePopulatesSummaries(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
@@ -156,8 +156,8 @@ func TestRuleInjectionAnalyzer_AnalyzePopulatesBodies(t *testing.T) {
 	if len(findings) != 0 {
 		t.Fatalf("expected empty return (mutates context), got %d findings", len(findings))
 	}
-	if ctx.Findings[0].RuleBody == "" {
-		t.Fatal("expected RuleBody to be populated via pipeline context mutation")
+	if ctx.Findings[0].RuleSummary == "" {
+		t.Fatal("expected RuleSummary to be populated via pipeline context mutation")
 	}
 	if ctx.Findings[0].RuleID != "naming" {
 		t.Fatalf("expected RuleID=naming, got %q", ctx.Findings[0].RuleID)

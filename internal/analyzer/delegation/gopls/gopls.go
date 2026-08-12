@@ -16,12 +16,10 @@ var goplsReporter = core.NewReporter("gopls", core.SeverityInfo, core.CatSyntax)
 // Runner shells out to gopls for diagnostics.
 type Runner struct{}
 
-// NewRunner creates a Runner that delegates to gopls for diagnostics.
 func NewRunner() *Runner {
 	return &Runner{}
 }
 
-// Available reports whether gopls is on PATH.
 func (r *Runner) Available() bool {
 	_, err := exec.LookPath(binary)
 	return err == nil
@@ -29,10 +27,9 @@ func (r *Runner) Available() bool {
 
 // Run shells out to "gopls version" for a lightweight availability check.
 //
-// simplification: "gopls version" is the only portable CLI query. Full
-// file-level diagnostics require MCP or LSP; the upgrade path is connecting
-// the gopls MCP server (via internal/skill/mcpwire) and routing its
-// diagnostics through the pipeline.
+// simplification: "gopls version" is the only portable CLI query; full
+// diagnostics need MCP or LSP. Upgrade path: connect the gopls MCP server
+// (internal/skill/mcpwire) and route its diagnostics through the pipeline.
 func (r *Runner) Run() []core.Finding {
 	if !r.Available() {
 		return nil

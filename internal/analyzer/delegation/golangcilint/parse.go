@@ -65,6 +65,15 @@ func parseOutput(out []byte, cmdErr error) []core.Finding {
 	return findings
 }
 
+// golangci-lint's own pkg/exitcodes reserves these two codes for "the tool
+// ran fine and found something to report", as opposed to a genuine failure
+// (config error, timeout, panic): 1 is issues found, 7 is issues found but
+// only surfaced through its own error log.
+const (
+	lintExitIssuesFound    = 1
+	lintExitErrorWasLogged = 7
+)
+
 func isLintExit(code int) bool {
-	return code == 1 || code == 7
+	return code == lintExitIssuesFound || code == lintExitErrorWasLogged
 }
