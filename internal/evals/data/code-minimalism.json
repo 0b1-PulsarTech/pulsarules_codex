@@ -1,0 +1,92 @@
+{
+  "skill": "code-minimalism",
+  "version": "1.0.0",
+  "scenarios": [
+    {
+      "id": "single-site-cache",
+      "description": "In-memory TTL cache behind one call site should not grow an interface + options constructor.",
+      "prompt": "Add an in-memory cache for user profile lookups behind a `Get(id string) (Profile, bool)` method on the existing `ProfileHandler`. There is exactly one call site today (`ProfileHandler.Get`), no other consumer, and no plan to add one this quarter.",
+      "trap": "Model defines a `Cache` interface, a `CacheOption` functional-options constructor (`WithTTL`, `WithMaxSize`), and a `Factory`/`Provider` abstraction for a single concrete implementation and a single call site, skipping the necessity/stdlib/existing-dep rungs and inventing speculative generality the ladder forbids at fewer than 2 real call sites.",
+      "assertions": [
+        {
+          "id": "1.1",
+          "text": "No exported Cache interface is declared for a single-implementation, single-call-site cache",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "type\\s+\\w*Cache\\w*\\s+interface\\b" }
+        },
+        {
+          "id": "1.2",
+          "text": "No functional-options constructor (With-prefixed option funcs) is added for a single call site",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "func With[A-Z]\\w*\\(" }
+        },
+        {
+          "id": "1.3",
+          "text": "No third-party caching library is imported when stdlib map + time already covers TTL expiry",
+          "kind": "judge"
+        },
+        {
+          "id": "1.4",
+          "text": "The implementation is the smallest sufficient rung: a struct wrapping map[string]entry plus a mutex and a manual expiry check, not a generic cache abstraction",
+          "kind": "judge"
+        }
+      ]
+    },
+    {
+      "id": "duplicate-string-helper",
+      "description": "A one-line normalization used at one call site should not become a new package.",
+      "prompt": "`config.Normalize` needs to trim a config value and lowercase it before comparison. This is used in exactly one place today.",
+      "trap": "Model creates a new exported `stringutils` package (or a generic [T ~string] normalization abstraction) instead of composing the two stdlib calls strings.TrimSpace and strings.ToLower inline or behind a private one-line helper.",
+      "assertions": [
+        {
+          "id": "2.1",
+          "text": "No new stringutils package is created to hold a one-line helper",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "package\\s+stringutils" }
+        },
+        {
+          "id": "2.2",
+          "text": "The normalization uses strings.TrimSpace",
+          "kind": "machine",
+          "check": { "type": "contains", "pattern": "strings.TrimSpace" }
+        },
+        {
+          "id": "2.3",
+          "text": "The normalization uses strings.ToLower",
+          "kind": "machine",
+          "check": { "type": "contains", "pattern": "strings.ToLower" }
+        },
+        {
+          "id": "2.4",
+          "text": "No new dependency or generic abstraction is added merely to hold this one-line helper",
+          "kind": "judge"
+        }
+      ]
+    },
+    {
+      "id": "dead-flag-removal",
+      "description": "A confirmed-dead config field should be deleted, not kept behind a lint suppression.",
+      "prompt": "The `LegacyRetryEnabled` bool field on `Config` hasn't been read anywhere in the codebase since the retry path was rewritten last quarter (confirmed via go_symbol_references: zero call sites read it, only the struct field and its YAML tag remain). Clean this up.",
+      "trap": "Model keeps the field 'for backward compat' and adds a //nolint:unused directive, or leaves a now-dead guard branch in place, instead of deleting the dead field and any branch that only existed to check it.",
+      "assertions": [
+        {
+          "id": "3.1",
+          "text": "No //nolint:unused directive is added to keep the dead field",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "nolint:unused" }
+        },
+        {
+          "id": "3.2",
+          "text": "The LegacyRetryEnabled field is removed, not merely renamed or hidden",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "LegacyRetryEnabled" }
+        },
+        {
+          "id": "3.3",
+          "text": "Any branch that only existed to check the dead field is deleted outright, not commented out",
+          "kind": "judge"
+        }
+      ]
+    }
+  ]
+}
