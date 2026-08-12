@@ -29,7 +29,7 @@ func (d *Dispatcher) Dispatch(mode string, payload []byte) error {
 	case "pre-search":
 		err = d.emitPreSearch(session, in)
 	case "user-prompt":
-		err = d.emitUserPrompt(session)
+		err = d.emitUserPrompt()
 	case "stop":
 		findings, err = d.emitStop("Stop", session)
 	case "session-end":

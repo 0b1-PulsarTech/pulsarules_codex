@@ -90,6 +90,71 @@ func TestPreEditAsset_ByteBudget(t *testing.T) {
 	}
 }
 
+func TestUserPromptNudge_ShortAndKeepsPhrases(t *testing.T) {
+	t.Parallel()
+
+	_, templates, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	body, err := fs.ReadFile(templates, "hooks/user-prompt.txt")
+	if err != nil {
+		t.Fatalf("read user-prompt.txt: %v", err)
+	}
+	text := strings.TrimSpace(string(body))
+
+	const nudgeByteCeiling = 300
+	if got := len(text); got > nudgeByteCeiling {
+		t.Errorf(
+			"user-prompt.txt is %d bytes, want <= %d",
+			got,
+			nudgeByteCeiling,
+		)
+	}
+	if strings.ContainsRune(text, '\u2014') {
+		t.Error("user-prompt.txt contains an em dash (U+2014)")
+	}
+
+	testCases := []struct {
+		name string
+		want string
+	}{
+		{"routing question kept", "Have you invoked the project-router skill"},
+		{"go/sql/config trigger kept", "Go/SQL/config"},
+		{"skip consequence kept", "Skipping the router skips the rules"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if !strings.Contains(text, testCase.want) {
+				t.Errorf("user-prompt.txt missing %q:\n%s", testCase.want, text)
+			}
+		})
+	}
+
+	notWantedCases := []struct {
+		name   string
+		phrase string
+	}{
+		{"contract.txt's baseline skill list", "code-minimalism"},
+		{"contract.txt/pre-edit.txt already state the test shape", "testCase"},
+		{"pre-edit.txt's minimalism ladder", "ladder"},
+		{"pre-edit.txt's stdlib rung", "slices/maps/cmp"},
+		{"pre-edit.txt's named-domain-type rule", "minor-unit int64"},
+	}
+	for _, notWantedCase := range notWantedCases {
+		t.Run(notWantedCase.name, func(t *testing.T) {
+			t.Parallel()
+			if strings.Contains(text, notWantedCase.phrase) {
+				t.Errorf(
+					"user-prompt.txt duplicates contract.txt/pre-edit.txt phrase %q",
+					notWantedCase.phrase,
+				)
+			}
+		})
+	}
+}
+
 func TestDispatchPreEdit(t *testing.T) {
 	t.Parallel()
 
@@ -124,23 +189,6 @@ func TestDispatchPreEdit(t *testing.T) {
 				t.Errorf("missing reminder text:\n%s", ctx)
 			}
 		})
-	}
-}
-
-func TestDispatchUserPrompt(t *testing.T) {
-	t.Parallel()
-
-	payload := newSessionPayload(t)
-	disp, out := dispatchCapture(Deps{})
-
-	_ = disp.Dispatch("user-prompt", payload)
-	if !strings.Contains(extractContext(t, out.String()), "user-prompt routing reminder") {
-		t.Fatalf("first call did not fire: %q", out.String())
-	}
-	out.Reset()
-	_ = disp.Dispatch("user-prompt", payload)
-	if strings.Contains(out.String(), "user-prompt routing reminder") {
-		t.Errorf("second call fired again: %q", out.String())
 	}
 }
 
@@ -182,6 +230,23 @@ func TestDispatchPreEditPerFile_OncePerFile(t *testing.T) {
 	}
 }
 
+func TestDispatchUserPrompt_EveryDispatch(t *testing.T) {
+	t.Parallel()
+
+	payload := newSessionPayload(t)
+	disp, out := dispatchCapture(Deps{})
+
+	_ = disp.Dispatch("user-prompt", payload)
+	if !strings.Contains(extractContext(t, out.String()), "user-prompt routing reminder") {
+		t.Fatalf("first call did not fire: %q", out.String())
+	}
+	out.Reset()
+	_ = disp.Dispatch("user-prompt", payload)
+	if !strings.Contains(extractContext(t, out.String()), "user-prompt routing reminder") {
+		t.Errorf("second call did not fire: %q", out.String())
+	}
+}
+
 func TestDispatchSessionEnd_Markers(t *testing.T) {
 	t.Parallel()
 
@@ -194,12 +259,10 @@ func TestDispatchSessionEnd_Markers(t *testing.T) {
 		"pre-edit",
 		fmt.Appendf(nil, `{"tool_input":{"file_path":"a.go"},"session_id":%q}`, id),
 	)
-	_ = disp.Dispatch("user-prompt", session)
 
 	markers := []string{
 		"skill-route-session-start." + id,
 		"skill-hook-" + preEditFileEvent("a.go") + "." + id,
-		"skill-route-prompt." + id,
 	}
 	for _, name := range markers {
 		if _, err := os.Stat(filepath.Join(os.TempDir(), name)); err != nil {

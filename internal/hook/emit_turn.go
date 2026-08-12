@@ -53,10 +53,7 @@ func searchTargetsGo(in hookPayload) bool {
 	}
 }
 
-func (d *Dispatcher) emitUserPrompt(session *SessionTracker) error {
-	if !session.OncePerSession("prompt") {
-		return nil
-	}
+func (d *Dispatcher) emitUserPrompt() error {
 	return d.emitContext("hooks/user-prompt.txt", "UserPromptSubmit")
 }
 
