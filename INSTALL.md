@@ -119,9 +119,9 @@ Additional install flags:
 
 - `--target` (repeatable, default `claude`): pass `--target claude --target opencode` to install
   both layouts in one run. The **opencode** target renders skills into `<target>/.opencode/skills`,
-  writes `<target>/.opencode/AGENTS.md` (which carries the routing contract, since opencode has no
-  SessionStart hook), and merges `<target>/opencode.json` with the skills as `instructions` plus the
-  gopls `mcp` server.
+  writes `<target>/AGENTS.md` at the project root (which carries the routing contract, since
+  opencode has no SessionStart hook), and merges `<target>/opencode.json` with the skills as
+  `instructions` plus the gopls `mcp` server.
 - `--hooks-scope project|local` (default `project`): wire the hook into `settings.json` (shared) or
   `settings.local.json` (per-machine).
 - `--no-mcp`: skip the `.mcp.json` + gopls-navigation generation.

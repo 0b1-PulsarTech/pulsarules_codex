@@ -126,9 +126,9 @@ empty project dir and the `stop`/`pre-search`/`post-edit` checks go quiet; it no
 stderr naming the fix (`pulsarules_cli install`) - re-run `install` to pick up the new script. When
 `gopls` is on PATH, install also wires the gopls MCP into `.mcp.json` and regenerates the
 `gopls-navigation` skill (`--no-mcp` to skip). `--target` is repeatable (`claude`/`opencode`): the
-opencode target writes `.opencode/skills`, `.opencode/AGENTS.md`, and `opencode.json`. Use
-`--no-hooks` to skip the Claude hook script and settings wiring (git hooks: `--no-git-hooks`), or
-`--print-hooks` to print the resolved hooks block.
+opencode target writes `.opencode/skills`, a root `AGENTS.md`, and `opencode.json`. Use `--no-hooks`
+to skip the Claude hook script and settings wiring (git hooks: `--no-git-hooks`), or `--print-hooks`
+to print the resolved hooks block.
 
 ## Origin
 
