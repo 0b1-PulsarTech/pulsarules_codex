@@ -12,7 +12,7 @@ import (
 
 func literalGatedAssets() []string {
 	return []string{
-		"hooks/skill-router-reminder.sh",
+		"hooks/skill-router-reminder.sh.tmpl",
 		"hooks/README.md",
 		"docs/AGENTS.md.tmpl",
 		"hooks/opencode-plugin.js",
