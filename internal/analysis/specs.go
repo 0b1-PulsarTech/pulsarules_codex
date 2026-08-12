@@ -15,6 +15,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/bigcomment"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/noemdash"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/simplificationpath"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/topoffile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -36,6 +37,7 @@ func analyzerSpecs() []analyzerSpec {
 		staticSpec(naming.NewAnalyzer),
 		langSpec(topoffile.NewAnalyzer),
 		langSpec(bigcomment.NewAnalyzer),
+		staticSpec(simplificationpath.NewAnalyzer),
 		{
 			build: func(
 				_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,
