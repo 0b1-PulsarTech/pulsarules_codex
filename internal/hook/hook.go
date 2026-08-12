@@ -35,6 +35,8 @@ func (d *Dispatcher) Dispatch(mode string, payload []byte) error {
 		err = d.emitUserPrompt()
 	case "stop":
 		findings, err = d.emitStop("Stop", session)
+	case "subagent-start":
+		err = d.emitSubagentStart()
 	case "session-end":
 		session.Cleanup()
 	}
@@ -53,6 +55,16 @@ func (d *Dispatcher) emitSessionStart(session *SessionTracker) error {
 		return fmt.Errorf("session contract: %w", err)
 	}
 	d.emitOutput("SessionStart", text)
+	return nil
+}
+
+func (d *Dispatcher) emitSubagentStart() error {
+	text, err := contract.Subagent(d.templates)
+	if err != nil {
+		return fmt.Errorf("subagent contract: %w", err)
+	}
+	// No OncePerSession gate: a subagent shares its parent's session id and would be muted.
+	d.emitOutput("SubagentStart", text)
 	return nil
 }
 

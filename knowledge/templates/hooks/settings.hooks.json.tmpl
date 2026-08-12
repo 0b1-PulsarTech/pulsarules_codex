@@ -51,6 +51,16 @@
         ]
       }
     ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh\" subagent-start"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

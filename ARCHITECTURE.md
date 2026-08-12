@@ -207,8 +207,8 @@ the vcs port needs to cover.
 `Dispatcher.Dispatch(mode, payload)` is the one decode point for a Claude Code hook payload
 (`decodeHookPayload`, which degrades a malformed payload to its zero value rather than failing,
 since a hook must never block the agent's turn) and routes it to a per-mode handler
-(`session-start`, `pre-edit`, `post-edit`, `pre-search`, `user-prompt`, `stop`, `session-end`). It
-always returns nil; failures surface only through the optional `*slog.Logger`.
+(`session-start`, `pre-edit`, `post-edit`, `pre-search`, `user-prompt`, `stop`, `subagent-start`,
+`session-end`). It always returns nil; failures surface only through the optional `*slog.Logger`.
 `Router.SkillsForFile` resolves which skills a `post-edit` event should announce from
 `knowledge.Index`'s own `skills.yaml`/`router.yaml` data (the always-load baseline for `.go` files,
 any skill whose trigger names the file's extension, the "Any test work" dispatch row for `_test.go`
