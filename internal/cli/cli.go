@@ -13,6 +13,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/list"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/packaging"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/uninstall"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/validate"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 )
@@ -33,6 +34,11 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	case "install":
 		if installErr := install.Run(inj, opts); installErr != nil {
 			return fmt.Errorf("install: %w", installErr)
+		}
+		return nil
+	case "uninstall":
+		if uninstallErr := uninstall.Run(inj, opts); uninstallErr != nil {
+			return fmt.Errorf("uninstall: %w", uninstallErr)
 		}
 		return nil
 	case "list":

@@ -35,6 +35,10 @@ func (opts *Options) Targets() []string {
 	return dedupeStrings(opts.Target)
 }
 
+func (opts *Options) ExplicitTargets() []string {
+	return dedupeStrings(opts.Target)
+}
+
 func (opts *Options) GitHookNames() []string {
 	raw := strings.Split(opts.GitHooks, ",")
 	names := make([]string, 0, len(raw))

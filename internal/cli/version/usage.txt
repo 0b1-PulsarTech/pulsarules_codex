@@ -5,6 +5,7 @@ Usage:
   pulsarules_cli validate [--root DIR]
   pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
   pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--git-hooks commit-msg,pre-commit] [--no-git-hooks]
+  pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
   pulsarules_cli package [--root DIR] [--out FILE]
   pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
   pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
@@ -73,6 +74,30 @@ pre-push. Default: commit-msg,pre-commit. An unrecognized name fails the
 whole install command before anything is written, naming the valid set. Use
 --no-git-hooks to skip the git hook scripts; the binary is still copied to
 .git/hooks/ so a hook added later works.
+
+uninstall reverses install. Unlike install, it does not default to the
+"claude" target: with no --target it probes the project for every layout it
+can detect on disk (a .claude dir, a .opencode dir / opencode.json, a root
+AGENTS.md, or a .cursor/rules dir) and reverses all of them; pass --target to
+narrow it to one layout. It removes the hook wiring from both settings.json
+and settings.local.json by default, since it cannot recover which
+--hooks-scope install used; pass --hooks-scope to narrow to just one file. The
+removal is command-level, so an unrelated command sharing the same hook
+matcher group survives. It also removes the gopls entry from .mcp.json, the
+opencode plugin plus its opencode.json wiring, and the git hooks install wrote
+into .git/hooks/. The root AGENTS.md is removed only when its content still
+carries the marker install wrote it with, so a hand-authored one is never
+touched even when the agents or opencode target is detected. Unless
+--keep-skills is given, it also removes every rendered skill and workflow doc
+install wrote (recognized by the install marker in SKILL.md/WORKFLOW.md, so a
+user's own directory under .claude/skills - and anything else placed inside a
+rendered skill's own directory - is never touched); --keep-skills keeps those
+docs (and AGENTS.md) but still removes the hook wiring. A merged config file
+(settings.json, .mcp.json, opencode.json) uninstall cannot parse as JSON is
+left untouched with a warning rather than risking corruption. Running
+uninstall against a project install never touched, or running it twice, is
+not an error; every step is idempotent, so a partial failure can always be
+fixed by re-running.
 
 commitlint validates a commit message against the emoji, format, type, scope, and
 body rules. Use --msg "..." for a direct string, --file PATH to read from a

@@ -44,6 +44,8 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 		fs.StringVar(&opts.Out, "out", "", "output dir (defaults to ./generated)")
 	case "install":
 		bindInstallFlags(fs, opts)
+	case "uninstall":
+		bindUninstallFlags(fs, opts)
 	case "package":
 		fs.StringVar(
 			&opts.Out,

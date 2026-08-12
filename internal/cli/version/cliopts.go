@@ -26,6 +26,8 @@ type Options struct {
 	GitHooks    string
 	NoGitHooks  bool
 
+	KeepSkills bool
+
 	Preset           string
 	Scope            string
 	GolangciConfig   string
@@ -55,6 +57,20 @@ func (opts *Options) SettingsFileName() (string, error) {
 		return settingsLocal, nil
 	default:
 		return "", fmt.Errorf("invalid --hooks-scope %q (want project|local)", opts.HooksScope)
+	}
+}
+
+func (opts *Options) SettingsFiles() ([]string, error) {
+	switch opts.HooksScope {
+	case "":
+		// Uninstall has no record of which scope install used, so check both.
+		return []string{settingsProject, settingsLocal}, nil
+	case "project":
+		return []string{settingsProject}, nil
+	case "local":
+		return []string{settingsLocal}, nil
+	default:
+		return nil, fmt.Errorf("invalid --hooks-scope %q (want project|local)", opts.HooksScope)
 	}
 }
 

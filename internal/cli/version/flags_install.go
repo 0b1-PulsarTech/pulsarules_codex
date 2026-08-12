@@ -80,3 +80,28 @@ func bindInstallWiringFlags(fs *flag.FlagSet, opts *Options) {
 		"skip git hooks installation entirely",
 	)
 }
+
+func bindUninstallFlags(fs *flag.FlagSet, opts *Options) {
+	fs.BoolVar(&opts.Global, "global", false, "uninstall from ~/.claude/skills")
+	fs.StringVar(&opts.Project, "project", "", "uninstall from PATH/.claude/skills")
+	fs.Var(
+		(*stringSliceFlag)(&opts.Target),
+		"target",
+		"uninstall target (repeatable): claude | opencode | agents | cursor "+
+			"(default: every target detected on disk)",
+	)
+	fs.StringVar(
+		&opts.HooksScope,
+		"hooks-scope",
+		"",
+		"hook settings file to narrow to: project (settings.json) | local "+
+			"(settings.local.json) (default: unwire both, since uninstall cannot "+
+			"recover which scope install used)",
+	)
+	fs.BoolVar(
+		&opts.KeepSkills,
+		"keep-skills",
+		false,
+		"keep the rendered skill/workflow docs; the hook wiring is still removed",
+	)
+}

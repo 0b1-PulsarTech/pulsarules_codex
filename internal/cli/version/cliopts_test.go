@@ -7,15 +7,39 @@ import (
 	"testing"
 )
 
+type parseArgsCase struct {
+	name    string
+	args    []string
+	wantErr bool
+	check   func(*testing.T, *Options)
+}
+
+func runParseArgsCases(t *testing.T, testCases []parseArgsCase) {
+	t.Helper()
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			opts, err := ParseArgs(testCase.args)
+			if testCase.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got opts %+v", opts)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if testCase.check != nil {
+				testCase.check(t, opts)
+			}
+		})
+	}
+}
+
 func TestParseArgs(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct {
-		name    string
-		args    []string
-		wantErr bool
-		check   func(*testing.T, *Options)
-	}{
+	runParseArgsCases(t, []parseArgsCase{
 		{
 			name:  "install project with hooks flags",
 			args:  []string{"install", "--project", "/tmp/repo", "--no-hooks", "--print-hooks"},
@@ -63,25 +87,36 @@ func TestParseArgs(t *testing.T) {
 			check: checkGovernanceIncludeGenerated,
 		},
 		{name: "unknown command", args: []string{"frobnicate"}, wantErr: true},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			opts, err := ParseArgs(testCase.args)
-			if testCase.wantErr {
-				if err == nil {
-					t.Fatalf("expected error, got opts %+v", opts)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if testCase.check != nil {
-				testCase.check(t, opts)
-			}
-		})
-	}
+	})
+}
+
+func TestParseArgs_Uninstall(t *testing.T) {
+	t.Parallel()
+
+	runParseArgsCases(t, []parseArgsCase{
+		{
+			name: "project with target and keep-skills",
+			args: []string{
+				"uninstall",
+				"--project",
+				"/tmp/repo",
+				"--target",
+				"opencode",
+				"--keep-skills",
+			},
+			check: checkUninstallKeepSkills,
+		},
+		{
+			name:  "default keep-skills is false",
+			args:  []string{"uninstall", "--project", "/tmp/repo"},
+			check: checkUninstallDefaultKeepSkills,
+		},
+		{
+			name:  "default hooks-scope is empty (narrows to nothing yet)",
+			args:  []string{"uninstall", "--project", "/tmp/repo"},
+			check: checkUninstallDefaultHooksScope,
+		},
+	})
 }
 
 func checkInstallProjectWithHooks(t *testing.T, opts *Options) {
@@ -115,6 +150,36 @@ func checkInstallDefaultGitHooks(t *testing.T, opts *Options) {
 	t.Helper()
 	if opts.GitHooks != "commit-msg,pre-commit" {
 		t.Errorf("default GitHooks = %q, want commit-msg,pre-commit", opts.GitHooks)
+	}
+}
+
+func checkUninstallKeepSkills(t *testing.T, opts *Options) {
+	t.Helper()
+	if opts.Command != "uninstall" || opts.Project != "/tmp/repo" {
+		t.Errorf("unexpected opts: %+v", opts)
+	}
+	if !slices.Contains(opts.Target, "opencode") {
+		t.Errorf("Target = %v, want to contain opencode", opts.Target)
+	}
+	if !opts.KeepSkills {
+		t.Error("KeepSkills should be true")
+	}
+}
+
+func checkUninstallDefaultKeepSkills(t *testing.T, opts *Options) {
+	t.Helper()
+	if opts.KeepSkills {
+		t.Error("KeepSkills should default to false")
+	}
+}
+
+func checkUninstallDefaultHooksScope(t *testing.T, opts *Options) {
+	t.Helper()
+	if opts.HooksScope != "" {
+		t.Errorf(
+			"HooksScope = %q, want empty (uninstall defaults to unwiring both files)",
+			opts.HooksScope,
+		)
 	}
 }
 
@@ -193,6 +258,76 @@ func TestBaseDir_Global(t *testing.T) {
 	}
 	if base != home {
 		t.Errorf("base = %q, want %q", base, home)
+	}
+}
+
+func TestSettingsFiles(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		hooksScope string
+		want       []string
+		wantErr    bool
+	}{
+		{name: "default unwires both", want: []string{"settings.json", "settings.local.json"}},
+		{
+			name:       "project narrows to project",
+			hooksScope: "project",
+			want:       []string{"settings.json"},
+		},
+		{
+			name:       "local narrows to local",
+			hooksScope: "local",
+			want:       []string{"settings.local.json"},
+		},
+		{name: "invalid scope errors", hooksScope: "bogus", wantErr: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			opts := Options{HooksScope: testCase.hooksScope}
+			got, err := opts.SettingsFiles()
+			if testCase.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for --hooks-scope %q", testCase.hooksScope)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("SettingsFiles: %v", err)
+			}
+			if !slices.Equal(got, testCase.want) {
+				t.Errorf("SettingsFiles() = %v, want %v", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestExplicitTargets(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		target []string
+		want   []string
+	}{
+		{name: "none passed", want: nil},
+		{name: "single target", target: []string{"opencode"}, want: []string{"opencode"}},
+		{
+			name:   "duplicate deduped preserving order",
+			target: []string{"opencode", "claude", "opencode"},
+			want:   []string{"opencode", "claude"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			opts := Options{Target: testCase.target}
+			if got := opts.ExplicitTargets(); !slices.Equal(got, testCase.want) {
+				t.Errorf("ExplicitTargets() = %v, want %v", got, testCase.want)
+			}
+		})
 	}
 }
 
