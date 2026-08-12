@@ -62,7 +62,7 @@ linters:
             - gopkg.in/yaml.v3
             - github.com/wrapped-owls/goremy-di/remy
     wrapcheck:
-      ignorePackageGlobs:
+      ignore-package-globs:
         - github.com/0b1-PulsarTech/pulsarules_codex/**
     # require-explanation/require-specific make nolintlint enforce this repo's own rule
     # (knowledge/standards/rules/infra/build.md #9): every //nolint must name its linter and
