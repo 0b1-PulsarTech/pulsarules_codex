@@ -77,7 +77,7 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 
 func writeAgents(ctx Context, report *Report) error {
 	path := filepath.Join(ctx.Base, "AGENTS.md")
-	wrote, err := agents.Write(ctx.Templates, ctx.Base, ctx.Index)
+	wrote, err := agents.Write(ctx.Templates, ctx.Base, ctx.Index, ctx.IDs)
 	if err != nil {
 		return fmt.Errorf("write agents: %w", err)
 	}

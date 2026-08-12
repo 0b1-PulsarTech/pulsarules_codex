@@ -11,7 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func TestWriteAgents(t *testing.T) {
+func TestWriteAgents_RendersOnlySelectedSkills(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
@@ -19,7 +19,7 @@ func TestWriteAgents(t *testing.T) {
 		t.Fatalf("load embedded knowledge: %v", err)
 	}
 	projectDir := t.TempDir()
-	wrote, err := Write(fakeTemplates(), projectDir, idx)
+	wrote, err := Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
 	if err != nil {
 		t.Fatalf("WriteAgents: %v", err)
 	}
@@ -34,15 +34,14 @@ func TestWriteAgents(t *testing.T) {
 	}
 	got := string(raw)
 	for _, want := range []string{
-		filepath.Base(projectDir),
-		"`project-router`",
-		"`git-history`",
-		ownedfile.Marker,
-		"routing contract text.",
+		filepath.Base(projectDir), "`go-style`", ownedfile.Marker, "routing contract text.",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("AGENTS.md missing %q:\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, "`git-history`") {
+		t.Errorf("AGENTS.md lists git-history, which was never selected:\n%s", got)
 	}
 }
 
@@ -91,7 +90,7 @@ func TestWriteAgents_OwnershipDiscipline(t *testing.T) {
 				}
 			}
 
-			wrote, writeErr := Write(fakeTemplates(), projectDir, idx)
+			wrote, writeErr := Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
 			if writeErr != nil {
 				t.Fatalf("WriteAgents: %v", writeErr)
 			}
@@ -171,7 +170,12 @@ func TestWriteAgents_Errors(t *testing.T) {
 					t.Fatalf("seed directory in place of AGENTS.md: %v", mkErr)
 				}
 			}
-			if _, writeErr := Write(testCase.templates, projectDir, idx); writeErr == nil {
+			if _, writeErr := Write(
+				testCase.templates,
+				projectDir,
+				idx,
+				[]string{"go-style"},
+			); writeErr == nil {
 				t.Error("expected an error, got nil")
 			}
 		})

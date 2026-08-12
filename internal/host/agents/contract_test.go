@@ -23,7 +23,7 @@ func TestWriteAgents_MatchesSessionStart(t *testing.T) {
 	}
 
 	projectDir := t.TempDir()
-	wrote, err := Write(templates, projectDir, idx)
+	wrote, err := Write(templates, projectDir, idx, []string{"go-style"})
 	if err != nil {
 		t.Fatalf("WriteAgents: %v", err)
 	}

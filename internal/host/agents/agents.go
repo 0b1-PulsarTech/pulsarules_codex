@@ -29,7 +29,7 @@ type agentsDoc struct {
 }
 
 func Write(
-	templates fs.FS, projectDir string, idx *knowledge.Index,
+	templates fs.FS, projectDir string, idx *knowledge.Index, ids []string,
 ) (wrote bool, err error) {
 	path := filepath.Join(projectDir, "AGENTS.md")
 	var exists, ours bool
@@ -57,7 +57,7 @@ func Write(
 		ProjectName:        filepath.Base(projectDir),
 		ProjectDescription: defaultProjectDescription,
 		Contract:           contractText,
-		Skills:             skillRefs(idx),
+		Skills:             skillRefs(idx, ids),
 	}
 	var buf bytes.Buffer
 	if err = tmpl.Execute(&buf, doc); err != nil {
@@ -74,10 +74,18 @@ func Write(
 	return true, nil
 }
 
-func skillRefs(idx *knowledge.Index) []skillRef {
+func skillRefs(idx *knowledge.Index, ids []string) []skillRef {
+	// Scope to ids so AGENTS.md never lists a skill that was not installed.
+	selected := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		selected[id] = true
+	}
 	ordered := idx.SkillsOrdered()
-	refs := make([]skillRef, 0, len(ordered))
+	refs := make([]skillRef, 0, len(ids))
 	for _, skill := range ordered {
+		if !selected[skill.ID] {
+			continue
+		}
 		refs = append(refs, skillRef{
 			ID: skill.ID, Description: knowledge.FirstSentence(skill.Description),
 		})
