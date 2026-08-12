@@ -28,15 +28,6 @@ func (opts *Options) BaseDir() (string, error) {
 	}
 }
 
-// InstallDest resolves the Claude skills destination (<base>/.claude/skills).
-func (opts *Options) InstallDest() (string, error) {
-	projectDir, err := opts.BaseDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(projectDir, ".claude", "skills"), nil
-}
-
 // Targets resolves the requested install targets, defaulting to claude. Order is
 // preserved and duplicates are dropped; install.Run validates each name against
 // the target.Registry.
