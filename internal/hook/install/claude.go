@@ -34,3 +34,32 @@ func (claudeInstaller) Install(ctx Context) error {
 	}
 	return nil
 }
+
+func (claudeInstaller) Uninstall(ctx UninstallContext) (Result, error) {
+	claudeDir := ctx.Dir
+	settingsFile := ctx.SettingsFile
+	if settingsFile == "" {
+		settingsFile = "settings.json"
+	}
+	restored, err := hookwire.UninstallHook(claudeDir)
+	if err != nil {
+		return Result{}, fmt.Errorf("uninstall claude hook: %w", err)
+	}
+	removedEntries, err := gitignore.Remove(claudeDir, "/bin/", "/hooks/")
+	if err != nil {
+		return Result{}, fmt.Errorf("remove claude gitignore entries: %w", err)
+	}
+	// Settings go last: an unparseable file still leaves the rest reversed.
+	changed, err := hookwire.UnwireSettings(claudeDir, settingsFile)
+	if err != nil {
+		return Result{}, fmt.Errorf("unwire claude settings: %w", err)
+	}
+	result := Result{Restored: restored}
+	if len(removedEntries) > 0 {
+		result.Removed = append(result.Removed, "gitignore")
+	}
+	if changed {
+		result.Removed = append(result.Removed, "settings")
+	}
+	return result, nil
+}

@@ -14,9 +14,20 @@ type Context struct {
 	Warn         func(format string, args ...any)
 }
 
+type UninstallContext struct {
+	Dir          string
+	SettingsFile string
+}
+
+type Result struct {
+	Removed  []string
+	Restored []string
+}
+
 type Installer interface {
 	Name() string
 	Install(ctx Context) error
+	Uninstall(ctx UninstallContext) (Result, error)
 }
 
 type Registry struct {
@@ -40,6 +51,18 @@ func (reg *Registry) Install(name string, ctx Context) error {
 		return fmt.Errorf("install %s: %w", inst.Name(), err)
 	}
 	return nil
+}
+
+func (reg *Registry) Uninstall(name string, ctx UninstallContext) (Result, error) {
+	inst, ok := reg.byName[name]
+	if !ok {
+		return Result{}, fmt.Errorf("unknown hook installer %q", name)
+	}
+	result, err := inst.Uninstall(ctx)
+	if err != nil {
+		return result, fmt.Errorf("uninstall %s: %w", inst.Name(), err)
+	}
+	return result, nil
 }
 
 func (reg *Registry) Has(name string) bool {

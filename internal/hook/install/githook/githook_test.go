@@ -1,6 +1,8 @@
 package githook
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -184,5 +186,105 @@ func TestInstall_ExistingBackupNextSlot(t *testing.T) {
 	}
 	if string(got) != current {
 		t.Errorf("new backup content = %q, want %q", got, current)
+	}
+}
+
+func TestUninstall_FingerprintedHooks(
+	t *testing.T,
+) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	gitDir := filepath.Join(dir, ".git")
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+		t.Fatalf("mkdir .git: %v", err)
+	}
+	if _, err := Install(dir, []string{"commit-msg", "pre-commit"}); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if err := InstallBinary(dir); err != nil {
+		t.Fatalf("InstallBinary: %v", err)
+	}
+	foreign := filepath.Join(dir, ".git", "hooks", "pre-push")
+	if err := os.WriteFile(foreign, []byte("#!/bin/sh\necho mine\n"), 0o700); err != nil {
+		t.Fatalf("seed foreign hook: %v", err)
+	}
+
+	removed, _, err := Uninstall(dir)
+	if err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	wantRemoved := []string{"commit-msg", "pre-commit"}
+	for _, name := range wantRemoved {
+		if _, statErr := os.Stat(
+			filepath.Join(dir, ".git", "hooks", name),
+		); !errors.Is(statErr, fs.ErrNotExist) {
+			t.Errorf("expected %q to be removed, stat err = %v", name, statErr)
+		}
+	}
+	if len(removed) != len(wantRemoved) {
+		t.Errorf("removed = %v, want 2 hooks", removed)
+	}
+	if _, statErr := os.Stat(
+		filepath.Join(dir, ".git", "hooks", "pulsarules_cli"),
+	); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("expected installer binary to be removed, stat err = %v", statErr)
+	}
+	if _, statErr := os.Stat(foreign); statErr != nil {
+		t.Errorf("expected foreign pre-push hook to survive, stat err = %v", statErr)
+	}
+}
+
+func TestUninstall_DirectoryInstall(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if _, _, err := Uninstall(dir); err != nil {
+		t.Fatalf("Uninstall on untouched dir: %v", err)
+	}
+}
+
+func TestUninstall_RestoresBackup(
+	t *testing.T,
+) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	gitDir := filepath.Join(dir, ".git", "hooks")
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	preCommit := filepath.Join(dir, ".git", "hooks", "pre-commit")
+	foreign := "#!/bin/sh\nnpx lint-staged\n"
+	if err := os.WriteFile(preCommit, []byte(foreign), 0o755); err != nil {
+		t.Fatalf("seed foreign hook: %v", err)
+	}
+	if _, err := Install(dir, []string{"pre-commit"}); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	removed, restored, err := Uninstall(dir)
+	if err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if len(removed) != 1 || removed[0] != "pre-commit" {
+		t.Fatalf("removed = %v, want [pre-commit]", removed)
+	}
+	wantMsg := marker.RestoreMessage(preCommit)
+	if len(restored) != 1 || restored[0] != wantMsg {
+		t.Fatalf("restored = %v, want [%q]", restored, wantMsg)
+	}
+
+	got, readErr := os.ReadFile(preCommit) //nolint:gosec // test fixture.
+	if readErr != nil {
+		t.Fatalf("read restored hook: %v", readErr)
+	}
+	if string(got) != foreign {
+		t.Errorf("restored content = %q, want %q", got, foreign)
+	}
+	if _, statErr := os.Stat(
+		preCommit + marker.BackupSuffix,
+	); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("expected backup slot to be gone after restore, stat err = %v", statErr)
 	}
 }

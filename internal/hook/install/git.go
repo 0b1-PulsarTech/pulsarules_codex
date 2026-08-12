@@ -22,3 +22,12 @@ func (gitInstaller) Install(ctx Context) error {
 	}
 	return nil
 }
+
+func (gitInstaller) Uninstall(ctx UninstallContext) (Result, error) {
+	removed, restored, err := githook.Uninstall(ctx.Dir)
+	result := Result{Removed: removed, Restored: restored}
+	if err != nil {
+		return result, fmt.Errorf("uninstall git hooks: %w", err)
+	}
+	return result, nil
+}

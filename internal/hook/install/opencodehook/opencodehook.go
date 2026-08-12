@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/gitignore"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
@@ -46,4 +48,33 @@ func InstallBinary(dir string) error {
 		return fmt.Errorf("copy installer binary: %w", err)
 	}
 	return nil
+}
+
+func Uninstall(dir string) (removed bool, err error) {
+	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
+	pluginPath := filepath.Join(pluginsDir, pluginName)
+	_, ours, checkErr := marker.Check(pluginPath)
+	if checkErr != nil {
+		return false, fmt.Errorf("check plugin: %w", checkErr)
+	}
+	if ours {
+		if err = os.Remove(pluginPath); err != nil {
+			return false, fmt.Errorf("remove plugin: %w", err)
+		}
+		removed = true
+	}
+	if err = fsx.RemoveEmptyDir(pluginsDir); err != nil {
+		return false, fmt.Errorf("remove empty plugins dir: %w", err)
+	}
+	binDir := filepath.Join(dir, ".opencode", "bin")
+	if err = os.RemoveAll(filepath.Join(dir, binaryRel)); err != nil {
+		return false, fmt.Errorf("remove installer binary: %w", err)
+	}
+	if err = fsx.RemoveEmptyDir(binDir); err != nil {
+		return false, fmt.Errorf("remove empty bin dir: %w", err)
+	}
+	if _, err = gitignore.Remove(filepath.Join(dir, ".opencode"), "/bin/"); err != nil {
+		return false, fmt.Errorf("remove opencode gitignore entry: %w", err)
+	}
+	return removed, nil
 }
