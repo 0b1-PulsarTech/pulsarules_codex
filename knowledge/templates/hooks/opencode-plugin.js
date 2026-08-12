@@ -4,8 +4,8 @@ import { accessSync, constants as fsConstants } from "node:fs";
 // simplification: pre-edit stays unwired. tool.execute.before's output object is only
 // {args}: no field the model reads back, so calling pre-edit there would be the same
 // silently-inert bug this plugin exists to kill; register no handler until it has one.
-// stop has no opencode hook either (a bus event never fires here).
-// Ceiling: no pre-edit reminder, no dirty-worktree nag.
+// stop and subagent-start have no opencode hook either (bus events never fire here).
+// Ceiling: no pre-edit reminder, no dirty-worktree nag, subtasks start with no contract.
 // Revisit when opencode adds a hook whose output the model reads back.
 export const PulsarulesGovernance = async ({ directory, worktree, $ }) => {
   const root = worktree || directory;

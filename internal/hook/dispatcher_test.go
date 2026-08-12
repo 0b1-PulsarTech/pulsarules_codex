@@ -18,8 +18,10 @@ func TestDispatchSessionStart(t *testing.T) {
 	disp, out := dispatchCapture(Deps{})
 	_ = disp.Dispatch("session-start", newSessionPayload(t))
 	ctx := extractContext(t, out.String())
-	if !strings.Contains(ctx, "session contract text") {
-		t.Errorf("missing contract text:\n%s", ctx)
+	for _, want := range []string{"contract text", "commit tail text"} {
+		if !strings.Contains(ctx, want) {
+			t.Errorf("missing %q:\n%s", want, ctx)
+		}
 	}
 }
 

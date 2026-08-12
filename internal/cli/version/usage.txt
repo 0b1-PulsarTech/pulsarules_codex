@@ -91,10 +91,11 @@ exemptions individual analyzers carry for legitimate machine headers
 package clause, because that line is correct Go, not a defect to report).
 
 hook dispatches a single Claude Code (or opencode) hook event by mode, reading
-the tool/session JSON payload from stdin and writing the hookSpecificOutput JSON
-to stdout. Modes: session-start, pre-edit, post-edit, pre-search, user-prompt,
-stop, session-end. install wires this invocation into the target's hook script
-automatically; there is normally no reason to invoke it by hand.
+the tool/session JSON payload from stdin and writing the hookSpecificOutput
+JSON to stdout. Modes: session-start, pre-edit, post-edit, pre-search,
+user-prompt, stop, subagent-start, session-end. install wires
+this invocation into the target's hook script automatically; there is
+normally no reason to invoke it by hand.
 
 With no --root, the binary reads the embedded knowledge snapshot. Pass --root DIR
 to read <DIR>/knowledge from disk (dev edits without rebuild).

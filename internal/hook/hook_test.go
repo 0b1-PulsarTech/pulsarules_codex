@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,9 +19,10 @@ import (
 
 func hookTemplates() fstest.MapFS {
 	return fstest.MapFS{
-		"hooks/contract.txt":  {Data: []byte("session contract text\n")},
-		"hooks/pre-edit.txt":  {Data: []byte("pre-edit reminder text\n")},
-		"hooks/post-edit.txt": {Data: []byte("post-edit generic reminder\n")},
+		"hooks/contract.txt":      {Data: []byte("contract text\n")},
+		"hooks/contract-tail.txt": {Data: []byte("commit tail text\n")},
+		"hooks/pre-edit.txt":      {Data: []byte("pre-edit reminder text\n")},
+		"hooks/post-edit.txt":     {Data: []byte("post-edit generic reminder\n")},
 		"hooks/post-edit-checklist.txt.tmpl": {Data: []byte(
 			"checklist for {{.BaseName}}:\n" +
 				"{{range .SkillIDs}}  - {{.}}\n{{end -}}" +
@@ -87,7 +89,51 @@ func gitInit(t *testing.T, dir string) {
 	}
 }
 
-func TestDispatchContract_SessionStart(t *testing.T) {
+func TestDispatchSubagentStart_InheritedSession(t *testing.T) {
+	t.Parallel()
+
+	disp, out := dispatchCapture(Deps{})
+	payload := newSessionPayload(t)
+
+	_ = disp.Dispatch("subagent-start", payload)
+	first := extractContext(t, out.String())
+	if first == "" {
+		t.Fatalf("expected subagent-start to emit the contract, got empty output")
+	}
+	if strings.Contains(first, "commit tail text") {
+		t.Errorf("subagent-start must omit the commit tail (a subagent never commits):\n%s", first)
+	}
+
+	out.Reset()
+	_ = disp.Dispatch("subagent-start", payload)
+	second := extractContext(t, out.String())
+	if second != first {
+		t.Errorf(
+			"second dispatch with the same session id = %q, want %q (re-emitted, not suppressed)",
+			second, first,
+		)
+	}
+}
+
+func TestDispatchSubagentStart_MissingContract(t *testing.T) {
+	t.Parallel()
+
+	var logBuf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
+	disp, out := dispatchCapture(Deps{Logger: logger, Templates: fstest.MapFS{}})
+
+	if err := disp.Dispatch("subagent-start", newSessionPayload(t)); err != nil {
+		t.Fatalf("Dispatch must never block, got error: %v", err)
+	}
+	if strings.TrimSpace(out.String()) != "" {
+		t.Errorf("expected no hook output, got %q", out.String())
+	}
+	if !strings.Contains(logBuf.String(), "read hooks/contract.txt") {
+		t.Errorf("log missing contract.txt read failure:\n%s", logBuf.String())
+	}
+}
+
+func TestDispatchContract_SessionAndSubagent(t *testing.T) {
 	t.Parallel()
 
 	_, templates, err := knowledge.Load("")
@@ -95,13 +141,32 @@ func TestDispatchContract_SessionStart(t *testing.T) {
 		t.Fatalf("load embedded knowledge: %v", err)
 	}
 
-	want, err := contract.Session(templates)
+	wantSession, err := contract.Session(templates)
 	if err != nil {
 		t.Fatalf("contract.Session: %v", err)
 	}
-	disp, out := dispatchCapture(Deps{Templates: templates})
-	_ = disp.Dispatch("session-start", newSessionPayload(t))
-	if got := extractContext(t, out.String()); got != want {
-		t.Errorf("session-start emitted %q, want %q", got, want)
+	wantSubagent, err := contract.Subagent(templates)
+	if err != nil {
+		t.Fatalf("contract.Subagent: %v", err)
+	}
+
+	testCases := []struct {
+		name string
+		mode string
+		want string
+	}{
+		{name: "session-start", mode: "session-start", want: wantSession},
+		{name: "subagent-start", mode: "subagent-start", want: wantSubagent},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			disp, out := dispatchCapture(Deps{Templates: templates})
+			_ = disp.Dispatch(testCase.mode, newSessionPayload(t))
+			got := extractContext(t, out.String())
+			if got != testCase.want {
+				t.Errorf("%s emitted %q, want %q", testCase.mode, got, testCase.want)
+			}
+		})
 	}
 }
