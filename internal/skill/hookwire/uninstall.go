@@ -9,18 +9,15 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
 )
 
-// UninstallHook removes the hook script and README InstallHook copied into
-// <claudeDir>/hooks, and the installer binary InstallHook copied into
-// <claudeDir>/bin, then removes those two directories once they are left
-// empty. It is idempotent: a file InstallHook never wrote is simply already
-// absent, so re-running is a no-op, not an error. Removing an asset that
-// uncovers a backup InstallHook left behind (see marker.Backup) restores
-// that backup to the asset's path, completing the reversal; restored reports
-// each such restore as a ready-to-print message.
+// UninstallHook removes the hook script, README, and installer binary
+// InstallHook copied into <claudeDir>/hooks and <claudeDir>/bin, then
+// removes those directories once empty. It is idempotent: a file
+// InstallHook never wrote is simply absent, a no-op not an error. Removing
+// an asset that uncovers a marker.Backup restores it; restored reports each.
 func UninstallHook(claudeDir string) (restored []string, err error) {
 	hooksDir := filepath.Join(claudeDir, "hooks")
 	for _, asset := range hookAssets {
-		path := filepath.Join(hooksDir, asset.name)
+		path := filepath.Join(hooksDir, asset.destName)
 		removedOK, removeErr := removeIfInstalled(path)
 		if removeErr != nil {
 			return restored, removeErr

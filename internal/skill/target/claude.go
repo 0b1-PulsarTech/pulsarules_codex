@@ -8,6 +8,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/hookwire"
 )
 
 // claudeTarget renders the skills into <base>/.claude/skills, wires the gopls
@@ -22,7 +23,7 @@ func (claudeTarget) Name() string { return "claude" }
 // Present reports whether base holds a .claude dir, the one place Install
 // writes everything this layout owns (skills, workflows, hooks, settings).
 func (claudeTarget) Present(base string) bool {
-	_, err := os.Stat(filepath.Join(base, ".claude"))
+	_, err := os.Stat(filepath.Join(base, hookwire.RootDir))
 	return err == nil
 }
 
@@ -31,12 +32,12 @@ func (claudeTarget) Present(base string) bool {
 // wires the gopls MCP and the reminder hook.
 func (claudeTarget) Install(ctx Context) (Report, error) {
 	var report Report
-	dest := filepath.Join(ctx.Base, ".claude", "skills")
-	claudeDir := filepath.Join(ctx.Base, ".claude")
+	claudeDir := filepath.Join(ctx.Base, hookwire.RootDir)
+	dest := filepath.Join(claudeDir, hookwire.SkillsSubdir)
 	if err := installSkills(ctx, dest, &report); err != nil {
 		return report, err
 	}
-	workflowDest := filepath.Join(ctx.Base, ".claude", "workflows")
+	workflowDest := filepath.Join(claudeDir, "workflows")
 	if err := installWorkflows(ctx, workflowDest, &report); err != nil {
 		return report, err
 	}
@@ -72,9 +73,12 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 // hand-authored file both leave it alone.
 func (claudeTarget) Uninstall(ctx UninstallContext) (Report, error) {
 	var report Report
-	claudeDir := filepath.Join(ctx.Base, ".claude")
+	claudeDir := filepath.Join(ctx.Base, hookwire.RootDir)
 	if !ctx.KeepSkills {
-		if err := removeSkills(filepath.Join(claudeDir, "skills"), &report); err != nil {
+		if err := removeSkills(
+			filepath.Join(claudeDir, hookwire.SkillsSubdir),
+			&report,
+		); err != nil {
 			return report, err
 		}
 		if err := removeWorkflows(filepath.Join(claudeDir, "workflows"), &report); err != nil {

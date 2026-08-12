@@ -3,9 +3,11 @@ package hookwire
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 // TestInstallHook copies the script (executable) and README into <claudeDir>/hooks.
@@ -123,5 +125,86 @@ func TestInstallHook_NeverOverwritesExistingBackup(t *testing.T) {
 	}
 	if string(got) != current {
 		t.Errorf("new backup content = %q, want %q", got, current)
+	}
+}
+
+// TestInstallHook_RendersRealTemplate is the byte-identical regression test:
+// InstallHook against the actual embedded knowledge templates (not a fake)
+// must still write a script whose bin/skills paths are the concrete
+// ".claude/bin/pulsarules_cli" and ".claude/skills" - proving the
+// text/template render fully resolves RootDir/SkillsSubdir/binSubdir/
+// binaryName and leaves no "{{" placeholder behind.
+func TestInstallHook_RendersRealTemplate(t *testing.T) {
+	t.Parallel()
+
+	_, templates, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load embedded knowledge: %v", err)
+	}
+	claudeDir := filepath.Join(t.TempDir(), ".claude")
+	if _, err = InstallHook(templates, claudeDir); err != nil {
+		t.Fatalf("InstallHook: %v", err)
+	}
+
+	got, err := os.ReadFile(
+		filepath.Join(claudeDir, "hooks", reminderScriptAsset),
+	) //nolint:gosec // test fixture.
+	if err != nil {
+		t.Fatalf("read rendered script: %v", err)
+	}
+	script := string(got)
+	if strings.Contains(script, "{{") {
+		t.Errorf("rendered script still carries a template placeholder:\n%s", script)
+	}
+	for _, want := range []string{
+		`bin="$CLAUDE_PROJECT_DIR/.claude/bin/pulsarules_cli"`,
+		`export PULSARULES_SKILLS_DIR="$CLAUDE_PROJECT_DIR/.claude/skills"`,
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("rendered script missing %q:\n%s", want, script)
+		}
+	}
+}
+
+// TestRenderReminderScript covers the render helper directly: the success
+// substitution and the template-parse failure path.
+func TestRenderReminderScript(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		body    string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "substitutes both paths",
+			body: `bin="{{.BinaryRelPath}}" skills="{{.SkillsRelPath}}"`,
+			want: `bin=".claude/bin/pulsarules_cli" skills=".claude/skills"`,
+		},
+		{
+			name:    "malformed template fails to parse",
+			body:    `{{.BinaryRelPath`,
+			wantErr: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, renderErr := renderReminderScript("t", []byte(testCase.body))
+			if testCase.wantErr {
+				if renderErr == nil {
+					t.Fatal("expected an error, got nil")
+				}
+				return
+			}
+			if renderErr != nil {
+				t.Fatalf("renderReminderScript: %v", renderErr)
+			}
+			if string(got) != testCase.want {
+				t.Errorf("got %q, want %q", got, testCase.want)
+			}
+		})
 	}
 }

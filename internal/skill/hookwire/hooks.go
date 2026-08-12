@@ -4,25 +4,52 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
+	"text/template"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
-// hookAssets are the files copied verbatim from templates/hooks into
-// <claudeDir>/hooks. The script is made executable; the README carries its WHY.
-var hookAssets = []struct {
-	name string
-	mode os.FileMode
-}{
-	{"skill-router-reminder.sh", fsperm.FileExec},
-	{"README.md", fsperm.File},
-}
+const (
+	// RootDir is the Claude Code layout's root, relative to a project's root
+	// directory. claudeTarget's own paths (internal/skill/target/claude.go)
+	// and the reminder script this package renders both derive from it,
+	// instead of each hand-copying ".claude".
+	RootDir = ".claude"
+	// SkillsSubdir is where claudeTarget renders skills, relative to RootDir.
+	SkillsSubdir = "skills"
+	// binSubdir is where InstallHook copies the installer binary, relative
+	// to RootDir.
+	binSubdir = "bin"
+	// binaryName is where the orchestrator hook expects the installer binary.
+	binaryName = "pulsarules_cli"
+)
 
-// binaryName is where the orchestrator hook expects the installer binary.
-const binaryName = "pulsarules_cli"
+// hookAssets are the files installed from templates/hooks into
+// <claudeDir>/hooks. reminderScriptAsset is rendered through text/template
+// (its two Claude-layout paths come from RootDir/SkillsSubdir/binSubdir
+// rather than being baked into the template source); README.md is copied
+// verbatim. The script is made executable; the README carries its WHY.
+const reminderScriptAsset = "skill-router-reminder.sh"
+
+var hookAssets = []struct {
+	templateName string
+	destName     string
+	mode         os.FileMode
+	render       bool
+}{
+	{
+		templateName: reminderScriptAsset + ".tmpl",
+		destName:     reminderScriptAsset,
+		mode:         fsperm.FileExec,
+		render:       true,
+	},
+	{templateName: "README.md", destName: "README.md", mode: fsperm.File},
+}
 
 // InstallHook copies the hook script (executable) and its README from the
 // embedded templates into <claudeDir>/hooks, then installs the binary the
@@ -36,11 +63,17 @@ func InstallHook(templates fs.FS, claudeDir string) (backedUp []string, err erro
 		return nil, fmt.Errorf("mkdir %q: %w", hooksDir, err)
 	}
 	for _, asset := range hookAssets {
-		assetBytes, readErr := fs.ReadFile(templates, "hooks/"+asset.name)
+		assetBytes, readErr := fs.ReadFile(templates, "hooks/"+asset.templateName)
 		if readErr != nil {
-			return backedUp, fmt.Errorf("read template hooks/%s: %w", asset.name, readErr)
+			return backedUp, fmt.Errorf("read template hooks/%s: %w", asset.templateName, readErr)
 		}
-		dst := filepath.Join(hooksDir, asset.name)
+		if asset.render {
+			assetBytes, readErr = renderReminderScript(asset.templateName, assetBytes)
+			if readErr != nil {
+				return backedUp, readErr
+			}
+		}
+		dst := filepath.Join(hooksDir, asset.destName)
 		exists, ours, checkErr := marker.Check(dst)
 		if checkErr != nil {
 			return backedUp, fmt.Errorf("check %q: %w", dst, checkErr)
@@ -66,9 +99,41 @@ func InstallHook(templates fs.FS, claudeDir string) (backedUp []string, err erro
 // orchestrator hook can invoke it. The hook script guards on the binary's
 // presence, so a copy failure degrades to a no-op hook rather than a hard error.
 func installBinary(claudeDir string) error {
-	dst := filepath.Join(claudeDir, "bin", binaryName)
+	dst := filepath.Join(claudeDir, binSubdir, binaryName)
 	if err := selfbin.Copy(dst); err != nil {
 		return fmt.Errorf("copy installer binary: %w", err)
 	}
 	return nil
+}
+
+// reminderScriptValues are the Claude-layout paths the reminder script needs,
+// relative to $CLAUDE_PROJECT_DIR - the values generic Go must never
+// hardcode (see internal/hook/dispatcher_deps.go's resolveSkillsDir), drawn
+// here from this package's own RootDir/SkillsSubdir/binSubdir/binaryName
+// instead of being baked into the template source.
+type reminderScriptValues struct {
+	BinaryRelPath string
+	SkillsRelPath string
+}
+
+// renderReminderScript executes the named template against
+// reminderScriptValues, the same text/template convention
+// internal/hook/emit_edit.go's renderPostEditChecklist uses for the
+// post-edit checklist. path.Join (not filepath.Join) keeps the rendered
+// paths forward-slashed regardless of the host OS running the installer,
+// since the result is embedded in a bash script, not used as an OS path.
+func renderReminderScript(name string, body []byte) ([]byte, error) {
+	tmpl, err := template.New(name).Parse(string(body))
+	if err != nil {
+		return nil, fmt.Errorf("parse hooks/%s: %w", name, err)
+	}
+	values := reminderScriptValues{
+		BinaryRelPath: path.Join(RootDir, binSubdir, binaryName),
+		SkillsRelPath: path.Join(RootDir, SkillsSubdir),
+	}
+	var buf strings.Builder
+	if execErr := tmpl.Execute(&buf, values); execErr != nil {
+		return nil, fmt.Errorf("render hooks/%s: %w", name, execErr)
+	}
+	return []byte(buf.String()), nil
 }

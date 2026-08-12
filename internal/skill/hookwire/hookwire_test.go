@@ -6,10 +6,15 @@ import (
 
 // fakeTemplates is the minimal templates filesystem the hookwire tests render
 // against: the hook script, its README, and the settings block template.
+// The script fixture carries the same {{.BinaryRelPath}} / {{.SkillsRelPath}}
+// placeholders as the real embedded template, so InstallHook exercises the
+// same render path here as in production.
 func fakeTemplates() fstest.MapFS {
 	return fstest.MapFS{
-		"hooks/skill-router-reminder.sh": {
-			Data: []byte("#!/usr/bin/env bash\n# Installed by pulsarules_cli\nexit 0\n"),
+		"hooks/skill-router-reminder.sh.tmpl": {
+			Data: []byte("#!/usr/bin/env bash\n# Installed by pulsarules_cli\n" +
+				"bin=\"$CLAUDE_PROJECT_DIR/{{.BinaryRelPath}}\"\n" +
+				"skills=\"$CLAUDE_PROJECT_DIR/{{.SkillsRelPath}}\"\nexit 0\n"),
 		},
 		"hooks/README.md": {
 			Data: []byte("<!-- Installed by pulsarules_cli -->\n# why\n"),
