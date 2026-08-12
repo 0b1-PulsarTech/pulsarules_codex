@@ -1,17 +1,14 @@
 package target
 
 import (
-	"context"
+	"errors"
 	"fmt"
-	"io/fs"
+	"os"
 	"path/filepath"
-	"time"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpwire"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
 )
-
-// goplsInstructionsTimeout bounds the `gopls mcp -instructions` call.
-const goplsInstructionsTimeout = 30 * time.Second
 
 // claudeTarget renders the skills into <base>/.claude/skills, wires the gopls
 // MCP into .mcp.json, and wires the reminder hook into the chosen settings file.
@@ -21,6 +18,13 @@ var _ Target = claudeTarget{}
 
 // Name is the layout key for the Claude Code layout.
 func (claudeTarget) Name() string { return "claude" }
+
+// Present reports whether base holds a .claude dir, the one place Install
+// writes everything this layout owns (skills, workflows, hooks, settings).
+func (claudeTarget) Present(base string) bool {
+	_, err := os.Stat(filepath.Join(base, ".claude"))
+	return err == nil
+}
 
 // Install renders the selected skills under .claude/skills, installs workflows
 // composed by those skills under .claude/workflows, then (unless gated off)
@@ -44,50 +48,85 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 	if ctx.NoHooks {
 		return report, nil
 	}
-	if err := ctx.HookInstallers.Install(
-		"claude",
-		claudeDir,
-		ctx.Templates,
-		ctx.SettingsFile,
-	); err != nil {
+	if err := ctx.HookInstallers.Install("claude", install.Context{
+		Dir:          claudeDir,
+		Templates:    ctx.Templates,
+		SettingsFile: ctx.SettingsFile,
+		Warn:         report.warn,
+	}); err != nil {
 		return report, fmt.Errorf("install hooks: %w", err)
 	}
 	report.note("wired hook into %s", filepath.Join(claudeDir, ctx.SettingsFile))
 	return report, nil
 }
 
-// wireClaudeMCP merges the gopls server into the project's .mcp.json and
-// regenerates the gopls-navigation skill. It is a no-op (with a warning) when
-// gopls is not on PATH, so a missing tool never fails an install.
-func wireClaudeMCP(templates fs.FS, repoDir, skillsDir string, report *Report) error {
-	if !mcpwire.GoplsOnPath() {
-		report.warn(noGoplsWarning)
-		return nil
+// Uninstall removes the rendered skills and workflows (unless ctx.KeepSkills),
+// the gopls MCP entry, and the hook wiring Install wrote under ctx.Base,
+// reversing Install. It unwires every file in ctx.SettingsFiles (uninstall's
+// contract is to leave nothing behind, so by default that is both
+// settings.json and settings.local.json - install's --hooks-scope choice is
+// not something uninstall can recover after the fact). Once every leaf under
+// .claude (skills, workflows, the hook's own hooks/bin dirs, settings files)
+// is gone, it reaps the now-empty .claude root too - fsx.RemoveEmptyDir is a
+// no-op when anything of the user's still lives there, so --keep-skills or a
+// hand-authored file both leave it alone.
+func (claudeTarget) Uninstall(ctx UninstallContext) (Report, error) {
+	var report Report
+	claudeDir := filepath.Join(ctx.Base, ".claude")
+	if !ctx.KeepSkills {
+		if err := removeSkills(filepath.Join(claudeDir, "skills"), &report); err != nil {
+			return report, err
+		}
+		if err := removeWorkflows(filepath.Join(claudeDir, "workflows"), &report); err != nil {
+			return report, err
+		}
 	}
-	if err := mcpwire.WriteMCP(templates, repoDir); err != nil {
-		return fmt.Errorf("write mcp: %w", err)
+	if err := unwireClaudeMCP(ctx.Base, &report); err != nil {
+		return report, err
 	}
-	if err := generateGoplsSkill(templates, skillsDir); err != nil {
-		return fmt.Errorf("generate gopls skill: %w", err)
+	if err := unwireClaudeHooks(
+		ctx.HookUninstallers,
+		claudeDir,
+		ctx.SettingsFiles,
+		&report,
+	); err != nil {
+		return report, err
 	}
-	report.note(
-		"wired gopls MCP into %s; generated gopls-navigation skill",
-		filepath.Join(repoDir, ".mcp.json"),
-	)
-	return nil
+	if err := fsx.RemoveEmptyDir(claudeDir); err != nil {
+		return report, fmt.Errorf("remove empty claude dir: %w", err)
+	}
+	return report, nil
 }
 
-// generateGoplsSkill runs `gopls mcp -instructions` and writes the
-// gopls-navigation skill into skillsDir.
-func generateGoplsSkill(templates fs.FS, skillsDir string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), goplsInstructionsTimeout)
-	defer cancel()
-	instructions, err := mcpwire.GoplsInstructions(ctx)
-	if err != nil {
-		return fmt.Errorf("get gopls instructions: %w", err)
+// unwireClaudeHooks removes the hook wiring from every settings file in
+// files. UnwireSettings filters at the command level (never a whole matcher
+// group), so running it against a settings file the hook was never wired
+// into is a safe no-op - which is what makes unwiring every candidate file
+// safe instead of guessing which one --hooks-scope chose at install time.
+// The note is gated on Result.Removed, so a settings file the hook was never
+// wired into is not reported as touched. Errors across files are folded with
+// errors.Join so one bad file does not stop the rest from being reversed.
+func unwireClaudeHooks(
+	hooks *install.Registry, claudeDir string, files []string, report *Report,
+) error {
+	var errs []error
+	for _, settingsFile := range files {
+		uctx := install.UninstallContext{Dir: claudeDir, SettingsFile: settingsFile}
+		result, err := hooks.Uninstall("claude", uctx)
+		if err != nil {
+			if errors.Is(err, fsx.ErrUnparseableJSON) {
+				report.warn("%v", err)
+				continue
+			}
+			errs = append(errs, fmt.Errorf("uninstall hooks (%s): %w", settingsFile, err))
+			continue
+		}
+		if len(result.Removed) > 0 {
+			report.note("removed hook wiring from %s", filepath.Join(claudeDir, settingsFile))
+		}
+		for _, msg := range result.Restored {
+			report.note("%s", msg)
+		}
 	}
-	if genErr := mcpwire.GenerateGoplsSkill(templates, skillsDir, instructions); genErr != nil {
-		return fmt.Errorf("generate gopls skill: %w", genErr)
-	}
-	return nil
+	return errors.Join(errs...)
 }

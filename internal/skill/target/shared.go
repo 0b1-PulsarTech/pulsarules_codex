@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/agentswire"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -14,9 +15,11 @@ const noGoplsWarning = "gopls not on PATH; skipping gopls MCP + gopls-navigation
 	"(install: go install golang.org/x/tools/gopls@latest)"
 
 // installSkills renders the selected skills to dest, recording installed and
-// skipped (unknown) ids in the report. It is shared by every layout Strategy.
+// skipped (unknown) ids in the report, plus a warning for every foreign file
+// output.Install backed up rather than overwrote (see output.WriteDoc). It is
+// shared by every layout Strategy.
 func installSkills(ctx Context, dest string, report *Report) error {
-	installed, skipped, err := output.Install(
+	installed, skipped, backedUp, err := output.Install(
 		ctx.Index, ctx.Renderer, dest, ctx.IDs, ctx.RouterFilter,
 	)
 	if err != nil {
@@ -27,6 +30,9 @@ func installSkills(ctx Context, dest string, report *Report) error {
 	}
 	for _, id := range skipped {
 		report.warn("skipped (unknown skill): %s", id)
+	}
+	for _, msg := range backedUp {
+		report.warn("%s", msg)
 	}
 	return nil
 }
@@ -53,13 +59,20 @@ func workflowsForSkills(idx *knowledge.Index, skillIDs []string) []string {
 }
 
 // installWorkflows renders the workflows composed by the installed skills to
-// dest, recording installed and skipped ids in the report.
+// dest, recording installed and skipped ids in the report, plus a warning
+// for every foreign file output.InstallWorkflows backed up rather than
+// overwrote (see output.WriteDoc).
 func installWorkflows(ctx Context, dest string, report *Report) error {
 	wfIDs := workflowsForSkills(ctx.Index, ctx.IDs)
 	if len(wfIDs) == 0 {
 		return nil
 	}
-	installed, skipped, err := output.InstallWorkflows(ctx.Index, ctx.Renderer, dest, wfIDs)
+	installed, skipped, backedUp, err := output.InstallWorkflows(
+		ctx.Index,
+		ctx.Renderer,
+		dest,
+		wfIDs,
+	)
 	if err != nil {
 		return fmt.Errorf("render workflows to %q: %w", dest, err)
 	}
@@ -68,6 +81,81 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 	}
 	for _, id := range skipped {
 		report.warn("skipped workflow (unknown): %s", id)
+	}
+	for _, msg := range backedUp {
+		report.warn("%s", msg)
+	}
+	return nil
+}
+
+// removeSkills deletes every skill directory output.RemoveDocs recognizes as
+// ours under dest, recording each removed id in the report, plus a note for
+// every backup output.RemoveDocs restored (see marker.Backup). It is shared
+// by every layout Strategy's Uninstall, mirroring installSkills; it also
+// cleans up the generated gopls-navigation skill, since GenerateGoplsSkill
+// writes it through the same output.WriteDoc fingerprint.
+func removeSkills(dest string, report *Report) error {
+	removed, restored, err := output.RemoveDocs(dest, "SKILL.md")
+	if err != nil {
+		return fmt.Errorf("remove skills from %q: %w", dest, err)
+	}
+	for _, id := range removed {
+		report.note("removed: %s", filepath.Join(dest, id))
+	}
+	for _, msg := range restored {
+		report.note("%s", msg)
+	}
+	return nil
+}
+
+// removeWorkflows deletes every workflow directory output.RemoveDocs
+// recognizes as ours under dest, recording each removed id in the report,
+// plus a note for every backup output.RemoveDocs restored (see
+// marker.Backup). Only the claude layout installs workflows.
+func removeWorkflows(dest string, report *Report) error {
+	removed, restored, err := output.RemoveDocs(dest, "WORKFLOW.md")
+	if err != nil {
+		return fmt.Errorf("remove workflows from %q: %w", dest, err)
+	}
+	for _, id := range removed {
+		report.note("removed workflow: %s", filepath.Join(dest, id))
+	}
+	for _, msg := range restored {
+		report.note("%s", msg)
+	}
+	return nil
+}
+
+// writeAgents renders the root AGENTS.md through agentswire.WriteAgents,
+// shared by opencodeTarget and agentsTarget so the file can never diverge
+// between them. It notes the write, or warns instead when a user-authored
+// AGENTS.md without the ownership marker already occupies the path, so
+// Install never silently clobbers a file a user very plausibly owns already.
+func writeAgents(ctx Context, report *Report) error {
+	path := filepath.Join(ctx.Base, "AGENTS.md")
+	wrote, err := agentswire.WriteAgents(ctx.Templates, ctx.Base, ctx.Index, ctx.IDs)
+	if err != nil {
+		return fmt.Errorf("write agents: %w", err)
+	}
+	if wrote {
+		report.note("wrote %s", path)
+	} else {
+		report.warn("kept existing user-authored %s (not overwritten)", path)
+	}
+	return nil
+}
+
+// removeAgents deletes <base>/AGENTS.md through agentswire.RemoveAgents,
+// undoing writeAgents. It is shared by opencodeTarget and agentsTarget so
+// both layouts reverse the same file the same way.
+func removeAgents(base string, report *Report) error {
+	path := filepath.Join(base, "AGENTS.md")
+	removed, err := agentswire.RemoveAgents(base)
+	if err != nil {
+		return fmt.Errorf("remove agents: %w", err)
+	}
+	if removed {
+		report.note("removed %s", path)
 	}
 	return nil
 }
