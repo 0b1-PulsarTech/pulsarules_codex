@@ -70,6 +70,10 @@ func mergeInstructions(config map[string]json.RawMessage) error {
 			return fmt.Errorf("parse existing instructions: %w", err)
 		}
 	}
+	// Retire the legacy glob a prior install left so a reinstall converges.
+	instructions = slices.DeleteFunc(instructions, func(entry string) bool {
+		return entry == legacyAgentsInstructionGlob
+	})
 	for _, glob := range instructionGlobs() {
 		if !slices.Contains(instructions, glob) {
 			instructions = append(instructions, glob)
