@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/gitignore"
 )
 
@@ -50,9 +50,8 @@ func WriteMCP(templates fs.FS, repoDir string) error {
 	if err != nil {
 		return fmt.Errorf("merge servers: %w", err)
 	}
-	//nolint:gosec // path is the caller's project root.
-	if err = os.WriteFile(path, merged, fsperm.FilePrivate); err != nil {
-		return fmt.Errorf("write %q: %w", path, err)
+	if err = fsx.Save(path, merged); err != nil {
+		return fmt.Errorf("save %q: %w", path, err)
 	}
 	if err = gitignore.Ensure(repoDir, ".mcp.json"); err != nil {
 		return fmt.Errorf("ensure mcp gitignore: %w", err)
@@ -77,7 +76,10 @@ func renderServers(templates fs.FS, repoDir string) (map[string]json.RawMessage,
 	return cfg.MCPServers, nil
 }
 
-func mergeServers(existing []byte, servers map[string]json.RawMessage) ([]byte, error) {
+func mergeServers(
+	existing []byte,
+	servers map[string]json.RawMessage,
+) (map[string]json.RawMessage, error) {
 	config := map[string]json.RawMessage{}
 	if len(bytes.TrimSpace(existing)) > 0 {
 		if err := json.Unmarshal(existing, &config); err != nil {
@@ -98,10 +100,5 @@ func mergeServers(existing []byte, servers map[string]json.RawMessage) ([]byte, 
 		return nil, fmt.Errorf("marshal mcpServers: %w", err)
 	}
 	config["mcpServers"] = rawServers
-
-	out, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal .mcp.json: %w", err)
-	}
-	return append(out, '\n'), nil
+	return config, nil
 }
