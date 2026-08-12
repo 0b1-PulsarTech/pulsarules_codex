@@ -22,6 +22,18 @@ func NewRenderer(templates fs.FS) (*Renderer, error) {
 }
 
 func (renderer *Renderer) Render(idx *knowledge.Index, skill knowledge.Skill) (string, error) {
+	return renderer.renderSkill(idx, skill, "SKILL.md.tmpl")
+}
+
+func (renderer *Renderer) RenderCursorRule(
+	idx *knowledge.Index, skill knowledge.Skill,
+) (string, error) {
+	return renderer.renderSkill(idx, skill, "SKILL.mdc.tmpl")
+}
+
+func (renderer *Renderer) renderSkill(
+	idx *knowledge.Index, skill knowledge.Skill, tmplName string,
+) (string, error) {
 	sidecar, err := renderSidecar(idx.Body("skills", skill.ID))
 	if err != nil {
 		return "", fmt.Errorf("skill %q sidecar: %w", skill.ID, err)
@@ -49,7 +61,7 @@ func (renderer *Renderer) Render(idx *knowledge.Index, skill knowledge.Skill) (s
 		return "", err
 	}
 	var buf bytes.Buffer
-	if execErr := renderer.base.ExecuteTemplate(&buf, "SKILL.md.tmpl", doc); execErr != nil {
+	if execErr := renderer.base.ExecuteTemplate(&buf, tmplName, doc); execErr != nil {
 		return "", fmt.Errorf("render skill %q: %w", skill.ID, execErr)
 	}
 	return buf.String(), nil
@@ -64,6 +76,17 @@ func (renderer *Renderer) RenderSkill(
 		return renderer.RenderRouter(idx, installed)
 	}
 	return renderer.Render(idx, skill)
+}
+
+func (renderer *Renderer) RenderSkillCursor(
+	idx *knowledge.Index,
+	skill knowledge.Skill,
+	installed []string,
+) (string, error) {
+	if skill.ID == "project-router" {
+		return renderer.RenderCursorRouter(idx, installed)
+	}
+	return renderer.RenderCursorRule(idx, skill)
 }
 
 func (renderer *Renderer) RenderWorkflow(

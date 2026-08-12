@@ -134,3 +134,45 @@ func TestRender_UnknownComposition(t *testing.T) {
 		t.Fatal("expected error for unknown composed rule, got nil")
 	}
 }
+
+func TestRenderSkillCursor_AllSkills(t *testing.T) {
+	t.Parallel()
+
+	idx, templates, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	rnd, err := NewRenderer(templates)
+	if err != nil {
+		t.Fatalf("NewRenderer: %v", err)
+	}
+
+	for _, skill := range idx.Skills {
+		body, renderErr := rnd.RenderSkillCursor(idx, skill, nil)
+		if renderErr != nil {
+			t.Errorf("render cursor %q: %v", skill.ID, renderErr)
+			continue
+		}
+		if !strings.HasPrefix(body, "---\ndescription: ") {
+			t.Errorf("%q: missing Cursor frontmatter description", skill.ID)
+		}
+		if !strings.Contains(body, "alwaysApply: false") {
+			t.Errorf("%q: expected alwaysApply: false, got:\n%s", skill.ID, body)
+		}
+		if strings.HasPrefix(body, "---\nname: ") {
+			t.Errorf("%q: cursor rule still carries SKILL.md's name field", skill.ID)
+		}
+	}
+
+	router, err := rnd.RenderCursorRouter(idx, nil)
+	if err != nil {
+		t.Fatalf("RenderCursorRouter: %v", err)
+	}
+	for _, want := range []string{
+		"MANDATORY orchestrator", "Dispatch table", "alwaysApply: false",
+	} {
+		if !strings.Contains(router, want) {
+			t.Errorf("cursor router missing %q", want)
+		}
+	}
+}

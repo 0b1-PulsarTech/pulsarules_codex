@@ -26,7 +26,7 @@ go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
 pulsarules_cli generate [--root DIR] [--out DIR]
 pulsarules_cli validate [--root DIR]
 pulsarules_cli list [--root DIR] [skills|rules|patterns|workflows]
-pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--no-git-hooks]
+pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--no-git-hooks]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
 pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
@@ -124,7 +124,13 @@ Additional install flags:
   root (carrying the mandatory routing contract, since a host AI agent may read nothing else) from the
   same builder, so the file can never diverge between them. `agents` writes nothing else - it exists
   for the AI coding agents (Codex, Gemini CLI, Zed, Amp, JetBrains Junie, Jules, and others) that read
-  only a repo-root `AGENTS.md`.
+  only a repo-root `AGENTS.md`. The **cursor** target renders skills into `<target>/.cursor/rules` as
+  one `.mdc` file per skill (Cursor's own rule format), each carrying `alwaysApply: false` so Cursor
+  pulls it in on demand by matching its `description`, plus one small `alwaysApply: true` pointer rule
+  carrying the routing contract. Cursor injects every `alwaysApply: true` rule into every request
+  (unlike Claude's session/file-scoped hooks), and Cursor's own guidance keeps that content near 2000
+  tokens; the `always_load` skills alone render to tens of KB, so none of them are `alwaysApply`
+  here - only the compact pointer rule (about 1.3KB) is.
 - `--hooks-scope project|local` (default `project`): wire the hook into `settings.json` (shared) or
   `settings.local.json` (per-machine).
 - `--no-mcp`: skip the `.mcp.json` + gopls-navigation generation.

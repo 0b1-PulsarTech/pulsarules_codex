@@ -270,7 +270,7 @@ binary themselves.
 | `internal/skill/opencodewire`    | `config.go` (merge `opencode.json`: instructions + gopls mcp, SkillsSubdir), `unwire.go`                                      |
 | `internal/skill/agentswire`      | `agents.go` (render the root `AGENTS.md`, scoped to the selected skills), `uninstall.go` (marker-gated removal)               |
 | `internal/skill/cursorwire`      | `rules.go` (marker-gated write of one `.mdc` per rule under `.cursor/rules`), `remove.go`                                     |
-| `internal/skill/target`          | `target.go` (`Target`/`Context`/`Report`), `registry.go` (`Registry`), `claude.go`, `opencode.go`, `agents.go` - one Strategy per install layout |
+| `internal/skill/target`          | `target.go` (`Target`/`Context`/`Report`), `registry.go` (`Registry`), `claude.go`, `opencode.go`, `agents.go`, `cursor.go` - one Strategy per install layout |
 | `cmd/pulsarules_cli`             | `main.go` only: parse args, run `bootstrap.DoInjections`, dispatch to `internal/cli`, the one place that calls `os.Exit` |
 
 `knowledge` is the asset + embed anchor; the `internal/skill/*` packages are cohesive operation

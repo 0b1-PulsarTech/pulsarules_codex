@@ -28,7 +28,9 @@ go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
 ```
 
 `install` requires exactly one of `--all`, `--skills a,b,c`, or `--router-only`; with none of them and
-no interactive terminal (e.g. CI), it fails rather than guessing.
+no interactive terminal (e.g. CI), it fails rather than guessing. `--target` (repeatable, default
+`claude`) picks the install layout - `opencode`, `agents`, and `cursor` also exist; see
+[INSTALL.md](../../INSTALL.md#install) for the per-target details.
 
 This writes `~/.claude/skills/<id>/SKILL.md` for each selected skill.
 

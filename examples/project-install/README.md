@@ -44,7 +44,10 @@ Re-run install with `--target agents` (or `--target opencode`, which writes the 
 identical either way and covers every AI coding agent that reads a repo-root `AGENTS.md` and nothing
 else. To do it by hand instead, copy `templates/docs/AGENTS.md.tmpl` into the project as `AGENTS.md`,
 fill in `{{.ProjectName}}` and `{{.ProjectDescription}}`, and adjust the "Engineering standards"
-section to point at this repo. The stop-signs block is already generalized.
+section to point at this repo. The stop-signs block is already generalized. `--target` is repeatable
+(pass it more than once to install several layouts at once) and also accepts `cursor`, which writes
+one `.mdc` rule per skill under `.cursor/rules` instead of `AGENTS.md`; see
+[INSTALL.md](../../INSTALL.md#install) for details.
 
 ## 5. Verify
 

@@ -9,6 +9,18 @@ import (
 )
 
 func (renderer *Renderer) RenderRouter(idx *knowledge.Index, installed []string) (string, error) {
+	return renderer.renderRouter(idx, installed, "router.md.tmpl")
+}
+
+func (renderer *Renderer) RenderCursorRouter(
+	idx *knowledge.Index, installed []string,
+) (string, error) {
+	return renderer.renderRouter(idx, installed, "router.mdc.tmpl")
+}
+
+func (renderer *Renderer) renderRouter(
+	idx *knowledge.Index, installed []string, tmplName string,
+) (string, error) {
 	router, ok := idx.Skill("project-router")
 	if !ok {
 		return "", errors.New("missing project-router skill")
@@ -30,7 +42,7 @@ func (renderer *Renderer) RenderRouter(idx *knowledge.Index, installed []string)
 		})
 	}
 	var buf bytes.Buffer
-	if err := renderer.base.ExecuteTemplate(&buf, "router.md.tmpl", doc); err != nil {
+	if err := renderer.base.ExecuteTemplate(&buf, tmplName, doc); err != nil {
 		return "", fmt.Errorf("render router: %w", err)
 	}
 	return buf.String(), nil
