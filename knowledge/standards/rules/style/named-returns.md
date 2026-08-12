@@ -10,6 +10,9 @@ tags:
     - style
 linters:
     - nakedret
+analyzers:
+    - named-returns
+    - shadowing
 ---
 
 # Named results - when to name them, and how to assign them

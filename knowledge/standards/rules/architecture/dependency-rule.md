@@ -8,6 +8,8 @@ tags:
     - layout
 linters:
     - depguard
+analyzers:
+    - arch-boundary
 ---
 
 # The Dependency Rule - inward-only layer dependencies

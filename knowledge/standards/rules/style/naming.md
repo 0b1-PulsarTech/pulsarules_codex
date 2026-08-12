@@ -9,6 +9,8 @@ linters:
     - stylecheck
     - revive
     - godoclint
+analyzers:
+    - naming
 ---
 
 # Naming

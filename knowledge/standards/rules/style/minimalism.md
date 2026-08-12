@@ -13,6 +13,8 @@ linters:
     - nestif
     - unused
     - unparam
+analyzers:
+    - simplification-path
 ---
 
 # Code minimalism (function scope)
@@ -32,29 +34,40 @@ Applies to: function and method bodies, helper/abstraction/dependency decisions.
 {{end}}
 
 {{define "must"}}
-1. Walk the decision ladder and STOP at the first rung that satisfies the task: (1) necessity - does
+1. Understand the problem before choosing a fix's shape: trace the failing path and name the cause.
+   The decision ladder below governs HOW SMALL a fix is, never WHETHER you diagnosed one first.
+2. Walk the decision ladder and STOP at the first rung that satisfies the task: (1) necessity - does
    it need to exist at all? (2) stdlib - does `std` do it (`slices`/`maps`/`cmp`/`errors.Join`/`iter`/
-   `min`/`max`)? (3) language/platform feature? (4) an already-imported dependency? (5) one line -
-   make it one line. (6) only then implement the minimum that works.
-2. Add NO abstraction/interface/option/generic/layer that isn't used by >= 2 real call sites today.
+   `min`/`max`)? (3) language/platform feature? (4) reuse what this codebase already has - an existing
+   helper in this package, or one already reachable through a facade port this package consumes (see
+   [[module-boundaries]], [[interop]]) - never a new deep import across a module boundary just to
+   reach it, that is a facade decision, not a minimalism one. (5) an already-imported dependency?
+   (6) one line - make it one line. (7) only then implement the minimum that works.
+3. A bug fix targets the root cause, not the symptom: before patching a shared symbol, run
+   `go_symbol_references` (the gopls MCP) to enumerate every caller, then land the fix once at the
+   shared definition instead of at each call site. Where the fix needs a guard, add an early return of
+   `error`, never a `bool`/status parameter the caller branches on (see [[flag-arguments]],
+   [[command-query-separation]]); a smaller diff is not the correctness argument, a test that fails
+   against the old code is (see [[verification]]).
+4. Add NO abstraction/interface/option/generic/layer that isn't used by >= 2 real call sites today.
    No "for the future" indirection. (A consumer-declared interface a rule REQUIRES - e.g. a use case
    `Repository` - is mandated, not speculative; it stays.)
-3. Add NO third-party dependency when `std` or an existing dep covers it; a new dependency is a
+5. Add NO third-party dependency when `std` or an existing dep covers it; a new dependency is a
    design-patterns decision.
-4. Prefer deletion over addition, boring over clever, the newest fitting stdlib over hand-rolled.
+6. Prefer deletion over addition, boring over clever, the newest fitting stdlib over hand-rolled.
    Fewest files/functions that still honour one-concept-per-file.
-5. Document a deliberate corner with a `// simplification:` comment naming the known ceiling +
+7. Document a deliberate corner with a `// simplification:` comment naming the known ceiling +
    upgrade path. Never cut a corner silently.
-6. NEVER trim the hard guardrails: input validation at trust boundaries, error wrapping/handling (no
+8. NEVER trim the hard guardrails: input validation at trust boundaries, error wrapping/handling (no
    data loss), security controls, required observability/audit.
-7. SCOPE GUARD: this rule stops at the package boundary. It never justifies skipping a facade, the
+9. SCOPE GUARD: this rule stops at the package boundary. It never justifies skipping a facade, the
    transactional outbox, a multi-write transaction, DI, or a mandated consumer interface, and never
    merging packages. When minimalism and a stop-sign rule disagree, the stop sign wins.
-8. Non-trivial logic leaves one runnable check behind (smallest failing test); trivial one-liners
-   need none.
-9. Delete dead code rather than keeping it: no unused functions, variables, parameters (`unused`,
-   `unparam`), and no commented-out code blocks - version control remembers the old version, so a
-   commented-out block is just noise. Never `//nolint:unused` to keep a symbol nothing calls.
+10. Non-trivial logic leaves one runnable check behind (smallest failing test); trivial one-liners
+    need none.
+11. Delete dead code rather than keeping it: no unused functions, variables, parameters (`unused`,
+    `unparam`), and no commented-out code blocks - version control remembers the old version, so a
+    commented-out block is just noise. Never `//nolint:unused` to keep a symbol nothing calls.
 {{end}}
 
 {{define "forbidden"}}
@@ -69,7 +82,12 @@ Applies to: function and method bodies, helper/abstraction/dependency decisions.
 {{end}}
 
 {{define "validation"}}
+- [ ] The problem was understood (cause traced) before the decision ladder picked a fix's shape.
 - [ ] Decision ladder walked; stopped at the first sufficient rung.
+- [ ] Existing in-package or facade-reachable code was reused before writing new code; no new deep
+  import across a module boundary to reach it.
+- [ ] A shared-symbol bug fix found every caller via `go_symbol_references` and landed once at the
+  root; any added guard is an early-return `error`, not a bool/status flag.
 - [ ] No speculative abstraction/interface/option/generic with < 2 real call sites.
 - [ ] No new dependency that `std` or an existing dep already covers.
 - [ ] Newest fitting stdlib used instead of hand-rolled.

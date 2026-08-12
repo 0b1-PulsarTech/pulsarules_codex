@@ -10,6 +10,8 @@ linters:
     - gci
     - importas
     - depguard
+analyzers:
+    - import-groups
 ---
 
 # Imports
