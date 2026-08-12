@@ -140,6 +140,7 @@ func TestInstallHook_RendersRealTemplate(t *testing.T) {
 	for _, want := range []string{
 		`bin="$CLAUDE_PROJECT_DIR/.claude/bin/pulsarules_cli"`,
 		`export PULSARULES_SKILLS_DIR="$CLAUDE_PROJECT_DIR/.claude/skills"`,
+		`export PULSARULES_LOG_PATH="$CLAUDE_PROJECT_DIR/.claude/hook-execution.log"`,
 	} {
 		if !strings.Contains(script, want) {
 			t.Errorf("rendered script missing %q:\n%s", want, script)
@@ -157,9 +158,10 @@ func TestRenderReminderScript(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "substitutes both paths",
-			body: `bin="{{.BinaryRelPath}}" skills="{{.SkillsRelPath}}"`,
-			want: `bin=".claude/bin/pulsarules_cli" skills=".claude/skills"`,
+			name: "substitutes every path",
+			body: `bin="{{.BinaryRelPath}}" skills="{{.SkillsRelPath}}" log="{{.LogRelPath}}"`,
+			want: `bin=".claude/bin/pulsarules_cli" skills=".claude/skills" ` +
+				`log=".claude/hook-execution.log"`,
 		},
 		{
 			name:    "malformed template fails to parse",

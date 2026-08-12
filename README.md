@@ -110,14 +110,14 @@ into a settings file with an idempotent merge (preserves existing permissions /
 `enabledMcpjsonServers` / unrelated hooks; re-running never duplicates). `--hooks-scope project`
 (the default) targets `settings.json`; `--hooks-scope local` targets `settings.local.json`. The
 wired command locates the installed hook script via `$CLAUDE_PROJECT_DIR` (a Claude Code variable,
-legitimately named there); the script then exports `PULSARULES_PROJECT_DIR` and
-`PULSARULES_SKILLS_DIR` - the only two variables the binary itself reads - so it survives moving the
-repo without hardcoding a host's own variable name or a host's own skills layout. An install
-predating this rename has a hook script with no such exports, so the binary silently resolves an
-empty project dir and the `stop`/`pre-search`/`post-edit` checks go quiet; it now warns once on
-stderr naming the fix (`pulsarules_cli install`) - re-run `install` to pick up the new script. When
-`gopls` is on PATH, install also wires the gopls MCP into `.mcp.json` and regenerates the
-`gopls-navigation` skill (`--no-mcp` to skip). `--target` is repeatable
+legitimately named there); the script then exports `PULSARULES_PROJECT_DIR`,
+`PULSARULES_SKILLS_DIR`, and `PULSARULES_LOG_PATH` - the only three variables the binary itself
+reads - so it survives moving the repo without hardcoding a host's own variable name, skills layout,
+or log location. An install predating this rename has a hook script with no such exports, so the
+binary silently resolves an empty project dir and the `stop`/`pre-search`/`post-edit` checks go
+quiet; it now warns once on stderr naming the fix (`pulsarules_cli install`) - re-run `install` to
+pick up the new script. When `gopls` is on PATH, install also wires the gopls MCP into `.mcp.json`
+and regenerates the `gopls-navigation` skill (`--no-mcp` to skip). `--target` is repeatable
 (`claude`/`opencode`/`agents`/`cursor`): the opencode target writes `.opencode/skills` and
 `opencode.json`; both opencode and the thin `agents` target write a single `AGENTS.md` at the
 project root (carrying the routing contract) from the same builder, so the file can never diverge

@@ -13,10 +13,11 @@
 bin="$CLAUDE_PROJECT_DIR/{{.BinaryRelPath}}"
 [ -x "$bin" ] || exit 0
 
-# Generic Go reads only the host-neutral PULSARULES_PROJECT_DIR and
-# PULSARULES_SKILLS_DIR; Claude Code only sets CLAUDE_PROJECT_DIR, so this
-# Claude-specific script is where that translation - and the Claude skills
-# layout - happens.
+# Generic Go reads only the host-neutral PULSARULES_PROJECT_DIR,
+# PULSARULES_SKILLS_DIR and PULSARULES_LOG_PATH; Claude Code only sets
+# CLAUDE_PROJECT_DIR, so this Claude-specific script is where that
+# translation - and the Claude skills/log layout - happens.
 export PULSARULES_PROJECT_DIR="$CLAUDE_PROJECT_DIR"
 export PULSARULES_SKILLS_DIR="$CLAUDE_PROJECT_DIR/{{.SkillsRelPath}}"
+export PULSARULES_LOG_PATH="$CLAUDE_PROJECT_DIR/{{.LogRelPath}}"
 exec "$bin" hook "$1"

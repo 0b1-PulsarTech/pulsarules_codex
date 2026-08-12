@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
@@ -89,9 +88,5 @@ func resolveProjectDir(opts *version.Options) string {
 }
 
 func resolveLogPath() string {
-	dir := os.Getenv("PULSARULES_PROJECT_DIR")
-	if dir == "" {
-		return ""
-	}
-	return filepath.Join(dir, ".claude", "hook-execution.log")
+	return os.Getenv("PULSARULES_LOG_PATH")
 }

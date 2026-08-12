@@ -92,6 +92,7 @@ func installBinary(claudeDir string) error {
 type reminderScriptValues struct {
 	BinaryRelPath string
 	SkillsRelPath string
+	LogRelPath    string
 }
 
 func renderReminderScript(name string, body []byte) ([]byte, error) {
@@ -99,9 +100,12 @@ func renderReminderScript(name string, body []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse hooks/%s: %w", name, err)
 	}
+	const logFileName = "hook-execution.log"
+	// path.Join, not filepath.Join: these paths are embedded in a bash script.
 	values := reminderScriptValues{
 		BinaryRelPath: path.Join(RootDir, binSubdir, binaryName),
 		SkillsRelPath: path.Join(RootDir, SkillsSubdir),
+		LogRelPath:    path.Join(RootDir, logFileName),
 	}
 	var buf strings.Builder
 	if execErr := tmpl.Execute(&buf, values); execErr != nil {
