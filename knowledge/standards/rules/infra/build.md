@@ -75,7 +75,11 @@ Applies to: build, tooling, and code generation.
    stricter enforcement sets those two settings itself; without them, the forced `nolintlint` still
    catches unused and malformed `//nolint` directives, just not a bare unqualified one.
    `bodyclose` and `sqlclosecheck` are RECOMMENDED, not forced: forcing them can flood a legacy
-   project that never ran them, and a gate that floods is a gate people switch off.
+   project that never ran them, and a gate that floods is a gate people switch off. `revive` is
+   RECOMMENDED with its `defer` rule and the `loop` argument, which is what catches the
+   defer-inside-a-loop clause in `[[safety]]`. It cannot be forced: `-E` enables a linter but its
+   settings come from the target's own config, and `defer` is not in revive's defaults, so forcing
+   revive would list a guard that catches nothing. Enable it locally to get that clause enforced.
 {{end}}
 
 {{define "forbidden"}}
