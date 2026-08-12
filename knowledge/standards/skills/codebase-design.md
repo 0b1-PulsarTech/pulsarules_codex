@@ -45,20 +45,6 @@ things:
 - A type-keyed constructor registry (`BindKey[T]`, `ProviderKey[V]`, a `map[Kind]constructor`) is a
   deep selection module - no `switch`, no reflection at the call site.
 
-## Mandatory workflow
-
-1. When designing or reshaping a module, describe it in the vocabulary above before writing code:
-   name the module, its interface, its seam, and whether it is deep or shallow.
-2. Shrink the interface: fewer methods, simpler parameters, more complexity hidden inside. In Go,
-   this means a small consumer-declared interface (a `Repository`, not a `Port`) and named input
-   structs over long positional parameter lists.
-3. Apply the deletion test to anything you suspect is shallow: imagine deleting it. If complexity
-   vanishes it was a pass-through; if complexity reappears across callers it earned its keep.
-4. Design for the interface as the test surface - callers and tests cross the same seam. If you
-   need to test past the interface, the module is the wrong shape.
-5. Introduce a seam only when something actually varies across it: one adapter is a hypothetical
-   seam, two adapters is a real one. Do not add interfaces for a single implementation.
-
 ## Designing for testability
 
 - Accept dependencies, do not construct them: `ProcessOrder(order Order, gateway PaymentGateway)`,
@@ -66,24 +52,3 @@ things:
 - Return results, avoid hidden side effects: prefer `CalculateDiscount(cart) Discount` over a
   function that mutates the cart in place.
 - Keep the surface small: fewer methods mean fewer tests, fewer parameters mean simpler setup.
-
-## Validation checklist
-
-- [ ] The module was described in the vocabulary (module, interface, seam, depth) before coding.
-- [ ] The interface is as small as the behavior allows; no shallow pass-through module was added.
-- [ ] The deletion test was applied to any suspected pass-through.
-- [ ] Every seam has at least two real implementations, or it was not introduced.
-- [ ] Dependencies are accepted, not constructed; the interface is the test surface.
-
-## Forbidden actions
-
-- Drifting into "component", "service", "API", or "boundary" instead of the glossary terms.
-- Adding an interface or seam for a single, hypothetical implementation.
-- Measuring depth as implementation-lines over interface-lines (rewards padding the body).
-- Exposing internal collaborators just so a test can reach past the interface.
-
-## Expected outputs
-
-- Deep modules: substantial behavior behind a small, stable interface at a real seam.
-- A design described in shared vocabulary that `refactoring` and
-  `improve-codebase-architecture` can build on directly.

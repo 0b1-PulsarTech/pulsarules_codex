@@ -14,7 +14,7 @@ steps:
     - add the docs tree (rules/patterns; domain specs in the app repo); AGENTS stop signs
     - set up the data layer (ent, atlas, sqlc, goverter)
     - container build (multi-stage, distroless, digest-pinned)
-    - install the standards skills (pulsarules_codex-installer install --project .)
+    - install the standards skills (pulsarules_cli install --project .)
     - initial commit
 composes_rules:
     - code-placement
