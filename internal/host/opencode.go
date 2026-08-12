@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
 )
@@ -38,8 +39,12 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 		return report, fmt.Errorf("wire opencode config: %w", err)
 	}
 	if !ctx.NoHooks {
-		if err := ctx.HookInstallers.Install("opencode", ctx.Base, ctx.Templates, ""); err != nil {
-			report.warn("opencode plugin: %v", err)
+		installErr := ctx.HookInstallers.Install("opencode", install.Context{
+			Dir:       ctx.Base,
+			Templates: ctx.Templates,
+		})
+		if installErr != nil {
+			report.warn("opencode plugin: %v", installErr)
 		} else {
 			report.note(
 				"installed opencode governance plugin: %s",

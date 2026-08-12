@@ -6,9 +6,16 @@ import (
 	"slices"
 )
 
+type Context struct {
+	Dir          string
+	Templates    fs.FS
+	SettingsFile string
+	GitHooks     []string
+}
+
 type Installer interface {
 	Name() string
-	Install(dir string, templates fs.FS, settingsFile string) error
+	Install(ctx Context) error
 }
 
 type Registry struct {
@@ -23,12 +30,12 @@ func NewRegistry() *Registry {
 	return reg
 }
 
-func (reg *Registry) Install(name, dir string, templates fs.FS, settingsFile string) error {
+func (reg *Registry) Install(name string, ctx Context) error {
 	inst, ok := reg.byName[name]
 	if !ok {
 		return fmt.Errorf("unknown hook installer %q", name)
 	}
-	if err := inst.Install(dir, templates, settingsFile); err != nil {
+	if err := inst.Install(ctx); err != nil {
 		return fmt.Errorf("install %s: %w", inst.Name(), err)
 	}
 	return nil

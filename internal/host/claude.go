@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 )
 
@@ -35,12 +36,11 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 	if ctx.NoHooks {
 		return report, nil
 	}
-	if err := ctx.HookInstallers.Install(
-		"claude",
-		claudeDir,
-		ctx.Templates,
-		ctx.SettingsFile,
-	); err != nil {
+	if err := ctx.HookInstallers.Install("claude", install.Context{
+		Dir:          claudeDir,
+		Templates:    ctx.Templates,
+		SettingsFile: ctx.SettingsFile,
+	}); err != nil {
 		return report, fmt.Errorf("install hooks: %w", err)
 	}
 	report.note("wired hook into %s", filepath.Join(claudeDir, ctx.SettingsFile))
