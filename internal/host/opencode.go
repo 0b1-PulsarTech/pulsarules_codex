@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/agents"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
@@ -32,7 +33,7 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 			report.warn(noGoplsWarning)
 		}
 	}
-	if err := opencode.WriteAgents(ctx.Templates, ctx.Base, ctx.Index); err != nil {
+	if err := agents.Write(ctx.Templates, ctx.Base, ctx.Index); err != nil {
 		return report, fmt.Errorf("write agents: %w", err)
 	}
 	if err := opencode.WireConfig(ctx.Base, gopls); err != nil {

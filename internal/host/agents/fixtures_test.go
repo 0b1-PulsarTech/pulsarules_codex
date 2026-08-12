@@ -1,4 +1,4 @@
-package opencode
+package agents
 
 import (
 	"testing/fstest"

@@ -1,4 +1,4 @@
-package opencode
+package agents
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -26,7 +27,7 @@ type agentsDoc struct {
 	Skills             []skillRef
 }
 
-func WriteAgents(templates fs.FS, projectDir string, idx *knowledge.Index) error {
+func Write(templates fs.FS, projectDir string, idx *knowledge.Index) error {
 	tmpl, err := template.ParseFS(templates, "docs/AGENTS.md.tmpl")
 	if err != nil {
 		return fmt.Errorf("parse AGENTS.md.tmpl: %w", err)
@@ -36,7 +37,7 @@ func WriteAgents(templates fs.FS, projectDir string, idx *knowledge.Index) error
 	doc := agentsDoc{
 		ProjectName:        filepath.Base(projectDir),
 		ProjectDescription: defaultProjectDescription,
-		SkillsDir:          SkillsSubdir,
+		SkillsDir:          opencode.SkillsSubdir,
 		Skills:             skillRefs(idx),
 	}
 	var buf bytes.Buffer

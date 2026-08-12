@@ -1,4 +1,4 @@
-package opencode
+package agents
 
 import (
 	"os"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -17,7 +18,7 @@ func TestWriteAgents(t *testing.T) {
 		t.Fatalf("load embedded knowledge: %v", err)
 	}
 	projectDir := t.TempDir()
-	if err = WriteAgents(fakeTemplates(), projectDir, idx); err != nil {
+	if err = Write(fakeTemplates(), projectDir, idx); err != nil {
 		t.Fatalf("WriteAgents: %v", err)
 	}
 
@@ -29,7 +30,7 @@ func TestWriteAgents(t *testing.T) {
 	got := string(raw)
 	for _, want := range []string{
 		filepath.Base(projectDir),
-		SkillsSubdir,
+		opencode.SkillsSubdir,
 		"`project-router`",
 		"`git-history`",
 	} {
