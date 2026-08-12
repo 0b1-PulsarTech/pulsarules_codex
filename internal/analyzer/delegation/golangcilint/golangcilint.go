@@ -45,28 +45,29 @@ func (r *Runner) runPerModule(projectDir, configPath string) []core.Finding {
 	var allFindings []core.Finding
 	for _, mod := range modules {
 		modDir := filepath.Join(projectDir, mod)
-		args := []string{"run", "--output.json.path=stdout", modDir + "/..."}
-		if configFlag != "" {
-			args = append(args, "--config", configFlag)
-		}
-		//nolint:gosec,noctx
-		cmd := exec.Command(r.path, args...)
-		cmd.Dir = projectDir
-		out, err := cmd.Output()
+		out, err := r.run(projectDir, lintArgs(modDir+"/...", configFlag))
 		allFindings = append(allFindings, r.parseOutput(out, err)...)
 	}
 	return allFindings
 }
 
 func (r *Runner) runSingle(projectDir, configPath string) []core.Finding {
-	args := []string{"run", "--output.json.path=stdout", "./..."}
 	configFlag := resolvedConfigFlag(projectDir, configPath)
-	if configFlag != "" {
-		args = append(args, "--config", configFlag)
-	}
+	out, err := r.run(projectDir, lintArgs("./...", configFlag))
+	return r.parseOutput(out, err)
+}
+
+func (r *Runner) run(projectDir string, args []string) ([]byte, error) {
 	//nolint:gosec,noctx
 	cmd := exec.Command(r.path, args...)
 	cmd.Dir = projectDir
-	out, err := cmd.Output()
-	return r.parseOutput(out, err)
+	return cmd.Output()
+}
+
+func lintArgs(target, configFlag string) []string {
+	args := []string{"run", "--output.json.path=stdout"}
+	if configFlag != "" {
+		args = append(args, "--config", configFlag)
+	}
+	return append(args, target)
 }
