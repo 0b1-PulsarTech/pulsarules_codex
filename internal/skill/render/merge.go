@@ -23,6 +23,10 @@ var canonicalSections = []struct{ Key, Heading string }{
 	{"examples", "Examples"},
 	{"forbidden", "Forbidden"},
 	{"validation", "Validation checklist"},
+	// outputs renders last: the pre-refactor sidecars carried "Expected outputs"
+	// after Forbidden actions too, since it summarizes the payoff of everything
+	// above rather than gating it.
+	{"outputs", "Expected outputs"},
 }
 
 // contribution is one rule's or pattern's text for a merged section.

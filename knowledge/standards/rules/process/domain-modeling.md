@@ -53,3 +53,7 @@ Applies to: any task that changes the domain model, not merely consumes it.
 - [ ] An ADR was offered only when hard-to-reverse, surprising, and a real trade-off; recorded
   through the ADR workflow.
 {{end}}
+
+{{define "outputs"}}
+- Sharpened, canonical domain terms other skills and code can name seams after.
+{{end}}
