@@ -1,0 +1,1 @@
+Before commit run each loaded skill Validation checklist + verify: go build && go vet && go test -race, golangci-lint (curated bar), gofmt -l.
