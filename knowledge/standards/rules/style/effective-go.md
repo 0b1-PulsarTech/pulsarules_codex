@@ -50,9 +50,14 @@ newest stable the module pins (source repos use `go 1.26`).
 2. Use early returns over deep nesting; keep functions under ~80 lines and cyclomatic complexity under ~15.
    `else` is fine when both branches do genuinely different work; when one branch only holds a default
    that a condition overrides, assign the default value directly and drop the `else`.
-3. Doc-comment every exported symbol, starting with its name, describing behaviour not signature.
-   No `// Package foo` package docstrings. No doc comments on unexported symbols; add a single-line
-   `// why` only when non-obvious (hidden constraint, workaround, non-obvious invariant).
+3. A comment earns its place by saying WHY. Doc-comment an exported symbol only when its name and
+   signature leave something out - a constraint, an invariant, a non-obvious bound or format, a
+   reason the simpler-looking implementation is wrong. Delete the ones that restate the signature:
+   `// ID returns the analyzer's unique identifier` above `func (a *A) ID() string` costs a reader
+   a pause and repays nothing. Any comment kept on an exported symbol still starts with its name
+   (staticcheck ST1020-ST1022 enforce that, and only that). No `// Package foo` docstrings, and no
+   doc comments on unexported symbols beyond a `// why` when it is non-obvious. Cap any block at 5
+   lines - `big-comment` enforces it.
 4. Comments explain WHY, not WHAT; the code shows what. Do not narrate the obvious.
 5. Reach for the newest fitting stdlib: `slices`/`maps`/`cmp`, `errors.Join`, `min`/`max`/`clear`,
    `for range int`, `iter.Seq` (range-over-func), typed atomics, generic type aliases. Prefer
@@ -82,6 +87,10 @@ newest stable the module pins (source repos use `go 1.26`).
     value" AND that distinction changes behaviour - a partial-update payload, a tri-state flag.
     Optionality alone does not earn a pointer: it costs every reader a nil check, every writer an
     allocation, and turns a missing value into a panic instead of a harmless default.
+15. The nil-slice zero value is right in general and WRONG on a REST `Output` DTO: `encoding/json`
+    serialises a nil slice as `null`, not `[]`, surprising a consumer expecting an array. A DTO
+    field crossing a JSON boundary initialises its slice fields explicitly (`[]T{}` or a mapped
+    result), even when the general zero-value principle above would otherwise leave it nil.
 {{end}}
 
 {{define "forbidden"}}
@@ -89,8 +98,8 @@ newest stable the module pins (source repos use `go 1.26`).
 - Deep nesting where an early return flattens it; functions past ~80 lines without justification.
 - `interface{}` instead of `any`; mixed value/pointer receivers on the same type.
 - `fmt.Println`/`log.Println` in non-test code.
-- Exported symbols without doc comments; comments that restate the signature; package docstrings;
-  doc comments on unexported symbols.
+- A comment that restates the signature; a comment block over 5 lines; package docstrings; doc
+  comments on unexported symbols beyond a non-obvious `// why`.
 - Re-implementing what the stdlib already does (`slices.Equal`, `min`/`max`, `iter.Seq`).
 - Shadowing an outer `err`/`ctx` with `:=` in an inner scope (govet `shadow`).
 - Spelling out generic type parameters the compiler can infer from an argument.
@@ -98,13 +107,14 @@ newest stable the module pins (source repos use `go 1.26`).
   space, or an AI provenance key in a markdown frontmatter block.
 - `regexp` for simple string work the `strings` stdlib or a generic `[T ~string]` helper covers.
 - `*T` for an optional field or parameter whose zero value already means "absent".
+- A nil slice field left unset on a REST `Output` DTO, serialising as `null` instead of `[]`.
 {{end}}
 
 {{define "validation"}}
 - [ ] Formatter run; no manual formatting remains.
 - [ ] Functions under ~80 lines, complexity under ~15; early returns used.
-- [ ] Every exported symbol has a doc comment beginning with its name; no package docstrings; no doc
-  comments on unexported symbols.
+- [ ] No comment restates its signature; every kept doc comment begins with its symbol's name and
+  fits in 5 lines; no package docstrings; no doc comments on unexported symbols.
 - [ ] Newest fitting stdlib used; no hand-rolled equivalents.
 - [ ] Receivers consistent; `any` used; zero values safe.
 - [ ] Interface-implementing types carry `var _ Iface = (*impl)(nil)`.
@@ -112,4 +122,5 @@ newest stable the module pins (source repos use `go 1.26`).
 - [ ] Optional values carry the zero value, not `*T`, unless "unset" must differ from zero.
 - [ ] Inferable generic type params omitted; no AI text marker in `.go` or `.md`; no `regexp` for simple
   string work (use `strings`/a generic `[T ~string]` helper).
+- [ ] Output DTO slice fields crossing a JSON boundary are initialised explicitly, not left nil.
 {{end}}
