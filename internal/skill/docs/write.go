@@ -53,8 +53,3 @@ func Write(dir, docName, body string) (backedUp []string, err error) {
 	}
 	return backedUp, nil
 }
-
-func isOwnedDoc(dir, docName string) bool {
-	_, ours, err := ownedfile.Check(filepath.Join(dir, docName))
-	return err == nil && ours
-}
