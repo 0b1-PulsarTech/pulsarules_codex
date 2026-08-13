@@ -101,7 +101,7 @@ func TestCheckFile(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			cache, file := parseSourceFile(t, testCase.source)
-			fc := core.FileChange{Path: "foo.go", Extension: ".go"}
+			fc := core.FileChange{Path: "foo.go", Extension: ".go", IsTest: testCase.test}
 			got := th.checkFile(cache.FileSet(), fc, file)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d: %v", len(got), testCase.expect, got)
@@ -114,6 +114,7 @@ type checkFileTestCase struct {
 	name   string
 	source string
 	expect int
+	test   bool
 }
 
 func checkFileTestCases() []checkFileTestCase {
@@ -168,6 +169,17 @@ func checkFileCasesThresholds() []checkFileTestCase {
 				"	if true {}\n" +
 				"}\n",
 			expect: 1,
+		},
+		{
+			name:   "long func in a production file",
+			source: "package foo\nfunc tbl() {\n" + strings.Repeat("\tprintln()\n", 98) + "}\n",
+			expect: 1,
+		},
+		{
+			name:   "test file relaxes only the length",
+			source: "package foo\nfunc tbl() {\n" + strings.Repeat("\tprintln()\n", 98) + "}\n",
+			test:   true,
+			expect: 0,
 		},
 	}
 }
