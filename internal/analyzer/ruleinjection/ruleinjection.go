@@ -20,6 +20,7 @@ var defaultRuleMap = map[string]string{
 	"naming":              "naming",
 	"top-of-file":         "effective-go",
 	"big-comment":         "effective-go",
+	"vacuous-doc":         "effective-go",
 	"simplification-path": "minimalism",
 	// commit-lint sub-rules (each has its own AnalyzerID)
 	"commit-lint":              "commits",

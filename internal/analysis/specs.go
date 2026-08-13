@@ -10,6 +10,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/naming"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/shadowing"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/timediscipline"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/vacuousdoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/movepurity"
@@ -127,6 +128,13 @@ var analyzerSpecs = append([]analyzerSpec{
 		id: "named-returns",
 		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
 			return namedreturns.NewAnalyzer()
+		},
+		scopes: staticScopes,
+	},
+	{
+		id: "vacuous-doc",
+		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
+			return vacuousdoc.NewAnalyzer()
 		},
 		scopes: staticScopes,
 	},
