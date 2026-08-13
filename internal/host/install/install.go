@@ -20,8 +20,9 @@ type UninstallContext struct {
 }
 
 type Result struct {
-	Removed  []string
-	Restored []string
+	Removed         []string
+	Restored        []string
+	SettingsChanged bool
 }
 
 type Installer interface {

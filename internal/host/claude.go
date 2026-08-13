@@ -100,7 +100,7 @@ func unwireClaudeHooks(
 			errs = append(errs, fmt.Errorf("uninstall hooks (%s): %w", settingsFile, err))
 			continue
 		}
-		if len(result.Removed) > 0 {
+		if result.SettingsChanged {
 			report.note("removed hook wiring from %s", filepath.Join(claudeDir, settingsFile))
 		}
 		for _, msg := range result.Restored {

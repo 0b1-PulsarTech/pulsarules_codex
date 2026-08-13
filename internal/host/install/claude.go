@@ -54,7 +54,7 @@ func (claudeInstaller) Uninstall(ctx UninstallContext) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("unwire claude settings: %w", err)
 	}
-	result := Result{Restored: restored}
+	result := Result{Restored: restored, SettingsChanged: changed}
 	if len(removedEntries) > 0 {
 		result.Removed = append(result.Removed, "gitignore")
 	}
