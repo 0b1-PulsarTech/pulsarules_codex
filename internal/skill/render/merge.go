@@ -2,7 +2,6 @@ package render
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"strings"
 	"text/template"
@@ -98,23 +97,6 @@ func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error)
 
 func normativeSectionKeys() []string {
 	return []string{"must", "forbidden", "validation"}
-}
-
-var ErrUnknownComposition = errors.New("unknown composition")
-
-func HasNormativeSection(idx *knowledge.Index, skill knowledge.Skill) (bool, error) {
-	sources, err := mergeSources(idx, skill)
-	if err != nil {
-		return false, fmt.Errorf("skill %q: %w", skill.ID, err)
-	}
-	for _, key := range normativeSectionKeys() {
-		for _, src := range sources {
-			if src.sections[key] != "" {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
 }
 
 type source struct {
