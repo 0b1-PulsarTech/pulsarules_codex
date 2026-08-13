@@ -7,7 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-const defaultMaxCommentLines = 20
+const defaultMaxCommentLines = 5
 
 type Analyzer struct {
 	langs    *core.LanguageRegistry
