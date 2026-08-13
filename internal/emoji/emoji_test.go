@@ -253,3 +253,23 @@ func TestReadRecordsNamesTheFileOnMalformedRows(t *testing.T) {
 		})
 	}
 }
+
+func TestReadCatalogRejectsUnparseableCount(t *testing.T) {
+	t.Parallel()
+
+	fsys := fstest.MapFS{"data/catalog.txt": &fstest.MapFile{
+		Data: []byte(":sparkles:\tActivities\tevent\tnot-a-number\n"),
+	}}
+	catalog := &Catalog{allowed: map[string]entry{}, byType: map[string][]string{}}
+
+	err := catalog.readCatalog(fsys)
+	if err == nil {
+		t.Fatalf(
+			"readCatalog returned nil; catalog silently holds %d entries",
+			len(catalog.allowed),
+		)
+	}
+	if !strings.Contains(err.Error(), ":sparkles:") {
+		t.Errorf("error = %q, want it to name the offending shortcode", err)
+	}
+}

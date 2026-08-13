@@ -65,7 +65,11 @@ func (catalog *Catalog) readCatalog(fsys fs.FS) error {
 	for _, fields := range records {
 		count, countErr := strconv.Atoi(fields[useCountFieldIndex])
 		if countErr != nil {
-			continue
+			// A malformed record is a generator defect; fail rather than narrow the catalog.
+			return fmt.Errorf(
+				"catalog.txt: shortcode %q has an unparseable usage count %q: %w",
+				fields[0], fields[useCountFieldIndex], countErr,
+			)
 		}
 		catalog.allowed[fields[0]] = entry{group: fields[1], subgroup: fields[2], useCount: count}
 	}
