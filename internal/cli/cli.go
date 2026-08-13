@@ -52,6 +52,8 @@ func Run(inj remy.Injector, opts *version.Options) error {
 		return runCommitLint(inj, opts)
 	case "governance":
 		return runGovernance(inj, opts)
+	case "evals":
+		return runEvals(inj, opts)
 	default:
 		return fmt.Errorf("unknown command %q", opts.Command)
 	}
