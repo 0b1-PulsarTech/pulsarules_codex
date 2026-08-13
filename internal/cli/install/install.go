@@ -43,7 +43,9 @@ func Run(inj remy.Injector, opts *version.Options) error {
 		report, installErr := deps.targets.Install(name, ctx)
 		printReport(report)
 		if installErr != nil {
-			return fmt.Errorf("install target %q: %w", name, installErr)
+			// The target registry's Install already wraps this as
+			// `install target %q: %w`; re-wrapping here would double it.
+			return installErr
 		}
 	}
 

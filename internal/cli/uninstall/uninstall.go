@@ -84,7 +84,9 @@ func uninstallTargets(
 		report, uninstallErr := deps.targets.Uninstall(name, ctx)
 		printReport(report)
 		if uninstallErr != nil {
-			errs = append(errs, fmt.Errorf("uninstall target %q: %w", name, uninstallErr))
+			// The target registry's Uninstall already wraps this as
+			// `uninstall target %q: %w`; re-wrapping here would double it.
+			errs = append(errs, uninstallErr)
 		}
 	}
 	return errs
