@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"math"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -15,6 +16,16 @@ type thresholds struct {
 	maxParams     int
 	warnReporter  finding.Reporter
 	infoReporter  finding.Reporter
+}
+
+func (th thresholds) maxFuncLinesFor(fc pass.FileChange) int {
+	if fc.IsTest {
+		const testFuncLinesMultiplier = 1.5
+		// A table-driven test carries a literal case table with no code counterpart;
+		// complexity and param-count stay unrelaxed since those measure real branching.
+		return int(math.Round(float64(th.maxFuncLines) * testFuncLinesMultiplier))
+	}
+	return th.maxFuncLines
 }
 
 func (th thresholds) checkFile(
@@ -60,13 +71,14 @@ func (th thresholds) checkFuncDecl(
 	startLine := fset.Position(fn.Body.Lbrace).Line
 	endLine := fset.Position(fn.Body.Rbrace).Line
 	funcLines := endLine - startLine + 1
-	if funcLines > th.maxFuncLines {
+	maxFuncLines := th.maxFuncLinesFor(fc)
+	if funcLines > maxFuncLines {
 		findings = append(findings, th.warnReporter.At(
 			fc.Path,
 			fset.Position(fn.Pos()).Line,
 			fmt.Sprintf(
 				"%s is %d lines, max %d",
-				fn.Name.Name, funcLines, th.maxFuncLines,
+				fn.Name.Name, funcLines, maxFuncLines,
 			),
 			"extract helper functions to reduce size",
 		))

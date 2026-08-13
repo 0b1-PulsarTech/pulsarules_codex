@@ -19,7 +19,7 @@ func TestBodyDefines(t *testing.T) {
 			t.Errorf("defines %v missing %q", defs, want)
 		}
 	}
-	if _, err := bodyDefines("{{define bad"); err == nil {
+	if _, err = bodyDefines("{{define bad"); err == nil {
 		t.Error("expected a parse error for malformed template")
 	}
 }

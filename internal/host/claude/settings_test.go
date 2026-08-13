@@ -18,7 +18,7 @@ func TestRenderHooksBlock(t *testing.T) {
 		t.Fatalf("RenderHooksBlock: %v", err)
 	}
 	var parsed hooksBlock
-	if err := json.Unmarshal(block, &parsed); err != nil {
+	if err = json.Unmarshal(block, &parsed); err != nil {
 		t.Fatalf("rendered block is not valid JSON: %v", err)
 	}
 	got := parsed.Hooks["SessionStart"][0].Hooks[0].Command
@@ -40,7 +40,7 @@ func TestRenderHooksBlock_SubagentStart(t *testing.T) {
 		t.Fatalf("RenderHooksBlock: %v", err)
 	}
 	var parsed hooksBlock
-	if err := json.Unmarshal(block, &parsed); err != nil {
+	if err = json.Unmarshal(block, &parsed); err != nil {
 		t.Fatalf("rendered block is not valid JSON: %v", err)
 	}
 	groups := parsed.Hooks["SubagentStart"]
@@ -79,14 +79,35 @@ func TestWireSettings_FreshFile(t *testing.T) {
 	}
 }
 
+func wireTwice(tb testing.TB, claudeDir, settingsFile string) {
+	tb.Helper()
+
+	for range 2 {
+		if err := WireSettings(fakeTemplates(), claudeDir, settingsFile); err != nil {
+			tb.Fatalf("WireSettings: %v", err)
+		}
+	}
+}
+
+func readTopLevel(tb testing.TB, path string) map[string]json.RawMessage {
+	tb.Helper()
+
+	raw, err := os.ReadFile(path) //nolint:gosec // temp dir.
+	if err != nil {
+		tb.Fatalf("read: %v", err)
+	}
+	var settings map[string]json.RawMessage
+	if err = json.Unmarshal(raw, &settings); err != nil {
+		tb.Fatalf("parse: %v", err)
+	}
+	return settings
+}
+
 func TestWireSettings_PreservesNotificationHook(t *testing.T) {
 	t.Parallel()
 
 	const settingsFile = "settings.json"
 	claudeDir := filepath.Join(t.TempDir(), ".claude")
-	if err := os.MkdirAll(claudeDir, 0o750); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
 	seed := `{
   "permissions": {"allow": ["Bash(go test *)"]},
   "enabledMcpjsonServers": ["example"],
@@ -95,25 +116,11 @@ func TestWireSettings_PreservesNotificationHook(t *testing.T) {
   }
 }`
 	settingsPath := filepath.Join(claudeDir, settingsFile)
-	if err := os.WriteFile(settingsPath, []byte(seed), 0o600); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
+	seedFile(t, settingsPath, seed)
 
-	if err := WireSettings(fakeTemplates(), claudeDir, settingsFile); err != nil {
-		t.Fatalf("WireSettings #1: %v", err)
-	}
-	if err := WireSettings(fakeTemplates(), claudeDir, settingsFile); err != nil {
-		t.Fatalf("WireSettings #2: %v", err)
-	}
+	wireTwice(t, claudeDir, settingsFile)
 
-	var settings map[string]json.RawMessage
-	raw, err := os.ReadFile(settingsPath) //nolint:gosec // temp dir.
-	if err != nil {
-		t.Fatalf("read: %v", err)
-	}
-	if err := json.Unmarshal(raw, &settings); err != nil {
-		t.Fatalf("parse: %v", err)
-	}
+	settings := readTopLevel(t, settingsPath)
 	for _, key := range []string{"permissions", "enabledMcpjsonServers"} {
 		if _, ok := settings[key]; !ok {
 			t.Errorf("lost top-level key %q", key)
@@ -136,7 +143,7 @@ func TestWireSettings_PreservesNotificationHook(t *testing.T) {
 	}
 }
 
-func TestWireSettings_ThirdPartyCommandInSharedGroupSurvives(t *testing.T) {
+func TestWireSettings_ThirdPartyCommand(t *testing.T) {
 	t.Parallel()
 
 	const settingsFile = "settings.json"
@@ -193,7 +200,7 @@ func readHooks(tb testing.TB, claudeDir, settingsFile string) map[string][]hookG
 	var settings struct {
 		Hooks map[string][]hookGroup `json:"hooks"`
 	}
-	if err := json.Unmarshal(raw, &settings); err != nil {
+	if err = json.Unmarshal(raw, &settings); err != nil {
 		tb.Fatalf("parse settings: %v", err)
 	}
 	return settings.Hooks

@@ -11,12 +11,12 @@ import (
 func TestAnalyze(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	cleanFile := filepath.Join(tmp, "clean.go")
+	dir := t.TempDir()
+	cleanFile := filepath.Join(dir, "clean.go")
 	if err := os.WriteFile(cleanFile, []byte("package foo\n\nfunc f() {}\n"), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
-	dirtyFile := filepath.Join(tmp, "dirty.go")
+	dirtyFile := filepath.Join(dir, "dirty.go")
 	if err := os.WriteFile(
 		dirtyFile,
 		[]byte("package foo\n\n// \u2014 em-dash comment\n"),
@@ -26,7 +26,7 @@ func TestAnalyze(t *testing.T) {
 	}
 
 	a := NewAnalyzer()
-	srcs := pass.NewSourceProvider(tmp)
+	srcs := pass.NewSourceProvider(dir)
 
 	testCases := []struct {
 		name   string
@@ -35,12 +35,12 @@ func TestAnalyze(t *testing.T) {
 	}{
 		{
 			name: "no changed files",
-			ctx:  &pass.Context{ProjectDir: tmp, Sources: srcs, ChangedFiles: nil},
+			ctx:  &pass.Context{ProjectDir: dir, Sources: srcs, ChangedFiles: nil},
 		},
 		{
 			name: "non-go file skipped",
 			ctx: &pass.Context{
-				ProjectDir:   tmp,
+				ProjectDir:   dir,
 				Sources:      srcs,
 				ChangedFiles: []pass.FileChange{{Path: "foo.md", Extension: ".md"}},
 			},
@@ -48,7 +48,7 @@ func TestAnalyze(t *testing.T) {
 		{
 			name: "clean file no finding",
 			ctx: &pass.Context{
-				ProjectDir:   tmp,
+				ProjectDir:   dir,
 				Sources:      srcs,
 				ChangedFiles: []pass.FileChange{{Path: "clean.go", Extension: ".go"}},
 			},
@@ -56,7 +56,7 @@ func TestAnalyze(t *testing.T) {
 		{
 			name: "dirty file has finding",
 			ctx: &pass.Context{
-				ProjectDir:   tmp,
+				ProjectDir:   dir,
 				Sources:      srcs,
 				ChangedFiles: []pass.FileChange{{Path: "dirty.go", Extension: ".go"}},
 			},
@@ -65,7 +65,7 @@ func TestAnalyze(t *testing.T) {
 		{
 			name: "nonexistent file skipped",
 			ctx: &pass.Context{
-				ProjectDir:   tmp,
+				ProjectDir:   dir,
 				Sources:      srcs,
 				ChangedFiles: []pass.FileChange{{Path: "gone.go", Extension: ".go"}},
 			},

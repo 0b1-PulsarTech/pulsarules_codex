@@ -49,8 +49,8 @@ func TestAnalyze_HonoursConfiguredThresholds(t *testing.T) {
 	t.Parallel()
 
 	a := NewAnalyzer()
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "foo.go")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo.go")
 	src := []byte("package foo\nfunc f() {\n\tx := 1\n\t_ = x\n}\n")
 	if err := os.WriteFile(path, src, 0o644); err != nil {
 		t.Fatalf("write source: %v", err)
@@ -102,7 +102,7 @@ func TestCheckFile(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			cache, file := parseSourceFile(t, testCase.source)
-			fc := pass.FileChange{Path: "foo.go", Extension: ".go"}
+			fc := pass.FileChange{Path: "foo.go", Extension: ".go", IsTest: testCase.test}
 			got := th.checkFile(cache.FileSet(), fc, file)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d: %v", len(got), testCase.expect, got)
@@ -115,6 +115,7 @@ type checkFileTestCase struct {
 	name   string
 	source string
 	expect int
+	test   bool
 }
 
 func checkFileTestCases() []checkFileTestCase {
@@ -169,6 +170,17 @@ func checkFileCasesThresholds() []checkFileTestCase {
 				"	if true {}\n" +
 				"}\n",
 			expect: 1,
+		},
+		{
+			name:   "long func in a production file",
+			source: "package foo\nfunc tbl() {\n" + strings.Repeat("\tprintln()\n", 98) + "}\n",
+			expect: 1,
+		},
+		{
+			name:   "test file relaxes only the length",
+			source: "package foo\nfunc tbl() {\n" + strings.Repeat("\tprintln()\n", 98) + "}\n",
+			test:   true,
+			expect: 0,
 		},
 	}
 }
@@ -264,8 +276,8 @@ func TestCountParams(t *testing.T) {
 func parseSourceFile(t *testing.T, source string) (*astcache.Cache, *ast.File) {
 	t.Helper()
 
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "foo.go")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo.go")
 	if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}

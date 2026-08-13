@@ -10,28 +10,28 @@ import (
 func newBoundaryAndCycleFixture(t *testing.T) string {
 	t.Helper()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "go.mod", "module example.com/target\n\ngo 1.24\n")
-	writeFile(t, tmp, "domain/user.go", `package domain
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "go.mod", "module example.com/target\n\ngo 1.24\n")
+	writeFile(t, projectDir, "domain/user.go", `package domain
 
 import _ "example.com/target/infra"
 
 type User struct{}
 `)
-	writeFile(t, tmp, "infra/db.go", `package infra
+	writeFile(t, projectDir, "infra/db.go", `package infra
 
 import _ "example.com/target/domain"
 
 type DB struct{}
 `)
-	return tmp
+	return projectDir
 }
 
 func TestPackageBoundary_Violation(t *testing.T) {
 	t.Parallel()
 
-	tmp := newBoundaryAndCycleFixture(t)
-	ctx := &pass.Context{ProjectDir: tmp}
+	projectDir := newBoundaryAndCycleFixture(t)
+	ctx := &pass.Context{ProjectDir: projectDir}
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -52,8 +52,8 @@ func TestPackageBoundary_Violation(t *testing.T) {
 func TestImportCycle_DetectsCycle(t *testing.T) {
 	t.Parallel()
 
-	tmp := newBoundaryAndCycleFixture(t)
-	ctx := &pass.Context{ProjectDir: tmp}
+	projectDir := newBoundaryAndCycleFixture(t)
+	ctx := &pass.Context{ProjectDir: projectDir}
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
@@ -74,9 +74,9 @@ func TestImportCycle_DetectsCycle(t *testing.T) {
 func TestPackageBoundaryAnalyzer_Analyze_NoGoMod(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "domain/user.go", "package domain\n")
-	ctx := &pass.Context{ProjectDir: tmp}
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "domain/user.go", "package domain\n")
+	ctx := &pass.Context{ProjectDir: projectDir}
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -88,9 +88,9 @@ func TestPackageBoundaryAnalyzer_Analyze_NoGoMod(t *testing.T) {
 func TestImportCycleAnalyzer_Analyze_NoGoMod(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "domain/user.go", "package domain\n")
-	ctx := &pass.Context{ProjectDir: tmp}
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "domain/user.go", "package domain\n")
+	ctx := &pass.Context{ProjectDir: projectDir}
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
@@ -102,10 +102,10 @@ func TestImportCycleAnalyzer_Analyze_NoGoMod(t *testing.T) {
 func TestPackageBoundary_MalformedGoMod(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "go.mod", "go 1.24\n")
-	writeFile(t, tmp, "domain/user.go", "package domain\n")
-	ctx := &pass.Context{ProjectDir: tmp}
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "go.mod", "go 1.24\n")
+	writeFile(t, projectDir, "domain/user.go", "package domain\n")
+	ctx := &pass.Context{ProjectDir: projectDir}
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -123,10 +123,10 @@ func TestPackageBoundary_MalformedGoMod(t *testing.T) {
 func TestImportCycle_MalformedGoMod(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "go.mod", "go 1.24\n")
-	writeFile(t, tmp, "domain/user.go", "package domain\n")
-	ctx := &pass.Context{ProjectDir: tmp}
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "go.mod", "go 1.24\n")
+	writeFile(t, projectDir, "domain/user.go", "package domain\n")
+	ctx := &pass.Context{ProjectDir: projectDir}
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 

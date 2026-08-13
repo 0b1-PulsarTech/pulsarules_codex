@@ -213,11 +213,11 @@ func TestRemove_SecondRun(t *testing.T) {
 
 func readFile(tb testing.TB, path string) string {
 	tb.Helper()
-	data, err := os.ReadFile(path) //nolint:gosec // temp dir.
+	raw, err := os.ReadFile(path) //nolint:gosec // temp dir.
 	if err != nil {
 		tb.Fatalf("read %q: %v", path, err)
 	}
-	return string(data)
+	return string(raw)
 }
 
 func TestEnsure_StampsTheMarkerOnce(t *testing.T) {
