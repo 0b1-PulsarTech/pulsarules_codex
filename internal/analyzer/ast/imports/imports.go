@@ -10,14 +10,12 @@ import (
 )
 
 type Analyzer struct {
-	modulePath string
-	reporter   core.Reporter
+	reporter core.Reporter
 }
 
-func NewAnalyzer(modulePath string) *Analyzer {
+func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		modulePath: modulePath,
-		reporter:   core.NewReporter("import-groups", core.SeverityError, core.CatSyntax),
+		reporter: core.NewReporter("import-groups", core.SeverityError, core.CatSyntax),
 	}
 }
 
@@ -28,16 +26,18 @@ func (a *Analyzer) Needs() core.Requirements {
 }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if a.modulePath == "" {
+	modulePath, err := core.ModulePath(ctx.ProjectDir)
+	if err != nil || modulePath == "" {
 		return nil
 	}
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return a.checkFile(ctx.ASTCache.FileSet(), fc, f)
+		return a.checkFile(ctx.ASTCache.FileSet(), modulePath, fc, f)
 	})
 }
 
 func (a *Analyzer) checkFile(
 	fset *token.FileSet,
+	modulePath string,
 	fc core.FileChange,
 	f *ast.File,
 ) []core.Finding {
@@ -54,8 +54,8 @@ func (a *Analyzer) checkFile(
 
 	classify := func(path string) group {
 		clean := strings.Trim(path, `"`)
-		if a.modulePath != "" &&
-			(clean == a.modulePath || strings.HasPrefix(clean, a.modulePath+"/")) {
+		if modulePath != "" &&
+			(clean == modulePath || strings.HasPrefix(clean, modulePath+"/")) {
 			return groupModule
 		}
 		if strings.Contains(clean, ".") {
@@ -76,7 +76,7 @@ func (a *Analyzer) checkFile(
 					fmt.Sprintf(
 						"import %s out of order (stdlib → external → %s)",
 						spec.Path.Value,
-						a.modulePath,
+						modulePath,
 					),
 					"reorder imports to follow: stdlib, external, this module",
 				),
