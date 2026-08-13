@@ -14,19 +14,16 @@ var (
 	importCycleReporter  = core.NewReporter("import-cycle", core.SeverityError, core.CatArch)
 )
 
-// why: a missing go.mod means "not a Go project here", matching the
-// convention already used for the pre-search hook (internal/hook/emit_turn.go),
-// so it returns no finding at all - same as ctx.ProjectDir == "". Any other
-// resolution failure (an unreadable or malformed go.mod) is a genuinely
-// broken environment: the analyzer cannot tell whether the project has
-// boundary/cycle violations, so it must say so via a Finding rather than
-// silently reporting zero - the exact defect the hardcoded modulePath
-// constant caused.
+// why: a missing go.mod means "not a Go project here" (same convention as
+// the pre-search hook), so it returns no finding, like ctx.ProjectDir == "".
+// Any other failure - unreadable/malformed go.mod - is a broken environment:
+// silently reporting zero would hide it, the exact defect the hardcoded
+// modulePath constant caused - so this returns a Finding instead.
 func resolveModulePathOrFindings(
 	reporter core.Reporter,
 	projectDir string,
 ) (string, []core.Finding) {
-	modulePath, err := resolveModulePath(projectDir)
+	modulePath, err := core.ModulePath(projectDir)
 	if err == nil {
 		return modulePath, nil
 	}
@@ -42,8 +39,6 @@ func resolveModulePathOrFindings(
 // import outer-layer packages (infra, transport, cmd).
 type PackageBoundaryAnalyzer struct{}
 
-// NewPackageBoundaryAnalyzer creates an analyzer that checks inner-layer packages
-// do not import outer-layer packages.
 func NewPackageBoundaryAnalyzer() *PackageBoundaryAnalyzer {
 	return &PackageBoundaryAnalyzer{}
 }
@@ -86,8 +81,6 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Find
 // ImportCycleAnalyzer detects cycles in the project's import graph.
 type ImportCycleAnalyzer struct{}
 
-// NewImportCycleAnalyzer creates an analyzer that detects cycles in the
-// project's package import graph.
 func NewImportCycleAnalyzer() *ImportCycleAnalyzer {
 	return &ImportCycleAnalyzer{}
 }

@@ -1,4 +1,4 @@
-package arch
+package core
 
 import (
 	"errors"
@@ -38,7 +38,7 @@ func TestResolveModulePath(t *testing.T) {
 			name:       "go.mod with no module directive",
 			writeGoMod: true,
 			goModBody:  "go 1.24\n",
-			wantErr:    errNoModuleDirective,
+			wantErr:    ErrNoModuleDirective,
 		},
 	}
 	for _, testCase := range testCases {
@@ -56,7 +56,7 @@ func TestResolveModulePath(t *testing.T) {
 				}
 			}
 
-			got, err := resolveModulePath(projectDir)
+			got, err := ModulePath(projectDir)
 			if testCase.wantErr != nil {
 				if !errors.Is(err, testCase.wantErr) {
 					t.Fatalf("err = %v, want wrapping %v", err, testCase.wantErr)
