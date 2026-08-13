@@ -42,6 +42,9 @@ type Options struct {
 	CommitFile string
 
 	ProjectDir string
+
+	Scenario string
+	Artifact string
 }
 
 const (
