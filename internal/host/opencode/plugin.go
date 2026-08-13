@@ -18,26 +18,37 @@ const pluginName = "pulsarules-governance.js"
 
 const pluginTemplate = "hooks/opencode-plugin.js"
 
-func Install(dir string, templates fs.FS) error {
+func Install(dir string, templates fs.FS) (backedUp []string, err error) {
 	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
-	if err := os.MkdirAll(pluginsDir, disk.DirPrivate); err != nil {
-		return fmt.Errorf("mkdir plugins: %w", err)
+	if err = os.MkdirAll(pluginsDir, disk.DirPrivate); err != nil {
+		return nil, fmt.Errorf("mkdir plugins: %w", err)
 	}
-	script, err := fs.ReadFile(templates, pluginTemplate)
-	if err != nil {
-		return fmt.Errorf("read plugin template: %w", err)
+	script, readErr := fs.ReadFile(templates, pluginTemplate)
+	if readErr != nil {
+		return nil, fmt.Errorf("read plugin template: %w", readErr)
 	}
 	pluginPath := filepath.Join(pluginsDir, pluginName)
+	exists, ours, checkErr := ownedfile.Check(pluginPath)
+	if checkErr != nil {
+		return nil, fmt.Errorf("check plugin: %w", checkErr)
+	}
+	if exists && !ours {
+		backupPath, backupErr := ownedfile.Backup(pluginPath)
+		if backupErr != nil {
+			return nil, fmt.Errorf("back up %q: %w", pluginPath, backupErr)
+		}
+		backedUp = append(backedUp, ownedfile.BackupMessage(pluginPath, backupPath))
+	}
 	if err = os.WriteFile(pluginPath, script, disk.FilePrivate); err != nil {
-		return fmt.Errorf("write plugin: %w", err)
+		return backedUp, fmt.Errorf("write plugin: %w", err)
 	}
 	if err = InstallBinary(dir); err != nil {
-		return fmt.Errorf("install binary: %w", err)
+		return backedUp, fmt.Errorf("install binary: %w", err)
 	}
 	if err = gitignore.Ensure(filepath.Join(dir, ".opencode"), "/bin/"); err != nil {
-		return fmt.Errorf("ensure opencode gitignore: %w", err)
+		return backedUp, fmt.Errorf("ensure opencode gitignore: %w", err)
 	}
-	return nil
+	return backedUp, nil
 }
 
 func InstallBinary(dir string) error {
