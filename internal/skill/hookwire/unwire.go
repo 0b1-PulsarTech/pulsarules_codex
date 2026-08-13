@@ -12,20 +12,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
 )
 
-// UnwireSettings removes the hook script's entries from
-// <claudeDir>/<settingsFile>, undoing WireSettings. Unlike the install-time
-// merge (whose withoutHookScript drops an entire hookGroup when any of its
-// commands reference the hook script - safe there only because the group is
-// immediately re-appended), this filters at the COMMAND level: a group that
-// also carries an unrelated command keeps that command, since removal never
-// re-appends anything. It drops a group left with no commands, an event left
-// with no groups, and the "hooks" key itself left with no events, mirroring
-// how mergeSettings shapes the file, and deletes the file when nothing but
-// our entries was ever in it. It wraps fsx.ErrUnparseableJSON and makes no
-// change when the file is not valid JSON, and is a silent no-op when the file
-// or its "hooks" key is absent, so re-running is never an error. It reports
-// whether it actually changed the file, so a caller can tell a real removal
-// from a no-op against a settings file the hook was never wired into.
+// UnwireSettings undoes WireSettings on <claudeDir>/<settingsFile>, reporting
+// whether it changed the file and dropping an emptied group, event, "hooks"
+// key or file in turn. Invalid JSON returns a wrapped fsx.ErrUnparseableJSON
+// and changes nothing; an absent file is a silent no-op.
+// why: filters at COMMAND level, but an emptied group survives unless we emptied it.
 func UnwireSettings(claudeDir, settingsFile string) (bool, error) {
 	path := filepath.Join(claudeDir, settingsFile)
 	existing, err := os.ReadFile(path) //nolint:gosec // path is under the caller's .claude dir.

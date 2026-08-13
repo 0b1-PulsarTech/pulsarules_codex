@@ -153,6 +153,58 @@ func TestWireSettings_Idempotent(t *testing.T) {
 	}
 }
 
+// TestWireSettings_ThirdPartyCommandInSharedGroupSurvives is the regression test
+// for the install-time counterpart of the bug TestUnwireSettings_ThirdPartyCommandSurvives
+// covers on the removal side. TestWireSettings_Idempotent seeds its unrelated hook
+// under a DIFFERENT event, so it never exercised a third-party command sharing one
+// group with ours - the merge dropped the whole group to re-append its own, taking
+// the neighbour with it and leaving no backup to recover from.
+func TestWireSettings_ThirdPartyCommandInSharedGroupSurvives(t *testing.T) {
+	t.Parallel()
+
+	const settingsFile = "settings.json"
+	claudeDir := filepath.Join(t.TempDir(), ".claude")
+	if err := os.MkdirAll(claudeDir, 0o750); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	seed := `{
+  "hooks": {
+    "SessionStart": [{"hooks": [
+      {"type": "command", "command": "bash .claude/hooks/skill-router-reminder.sh session-start"},
+      {"type": "command", "command": "bash third-party-tool.sh"}
+    ]}]
+  }
+}`
+	if err := os.WriteFile(
+		filepath.Join(claudeDir, settingsFile), []byte(seed), 0o600,
+	); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	if err := WireSettings(fakeTemplates(), claudeDir, settingsFile); err != nil {
+		t.Fatalf("WireSettings: %v", err)
+	}
+
+	hooks := readHooks(t, claudeDir, settingsFile)
+	var thirdParty, ours int
+	for _, group := range hooks["SessionStart"] {
+		for _, cmd := range group.Hooks {
+			switch {
+			case strings.Contains(cmd.Command, "third-party-tool.sh"):
+				thirdParty++
+			case strings.Contains(cmd.Command, hookScript):
+				ours++
+			}
+		}
+	}
+	if thirdParty != 1 {
+		t.Errorf("third-party command count = %d, want 1 (it was deleted)", thirdParty)
+	}
+	if ours != 1 {
+		t.Errorf("our command count = %d, want exactly 1 (no duplication)", ours)
+	}
+}
+
 func readHooks(tb testing.TB, claudeDir, settingsFile string) map[string][]hookGroup {
 	tb.Helper()
 	raw, err := os.ReadFile(
