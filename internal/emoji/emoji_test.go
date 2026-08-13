@@ -263,3 +263,26 @@ func TestReadRecords(t *testing.T) {
 		})
 	}
 }
+
+// TestReadCatalogRejectsUnparseableCount pins NewCatalog's own promise: a malformed generator row
+// is reported, never silently dropped. A dropped shortcode is invisible here and then surfaces far
+// away, as commitlint rejecting a commit emoji that the catalog file plainly contains.
+func TestReadCatalogRejectsUnparseableCount(t *testing.T) {
+	t.Parallel()
+
+	fsys := fstest.MapFS{"data/catalog.txt": &fstest.MapFile{
+		Data: []byte(":sparkles:\tActivities\tevent\tnot-a-number\n"),
+	}}
+	catalog := &Catalog{allowed: map[string]entry{}, byType: map[string][]string{}}
+
+	err := catalog.readCatalog(fsys)
+	if err == nil {
+		t.Fatalf(
+			"readCatalog returned nil; catalog silently holds %d entries",
+			len(catalog.allowed),
+		)
+	}
+	if !strings.Contains(err.Error(), ":sparkles:") {
+		t.Errorf("error = %q, want it to name the offending shortcode", err)
+	}
+}

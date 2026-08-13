@@ -77,7 +77,7 @@ func NewCatalog() (*Catalog, error) {
 		allowed: make(map[string]entry, estimatedCatalogSize),
 		byType:  make(map[string][]string, estimatedCommitTypeCount),
 	}
-	if err := catalog.readCatalog(); err != nil {
+	if err := catalog.readCatalog(dataFS); err != nil {
 		return nil, err
 	}
 	if err := catalog.readTypes(); err != nil {
@@ -87,15 +87,21 @@ func NewCatalog() (*Catalog, error) {
 	return catalog, nil
 }
 
-func (c *Catalog) readCatalog() error {
-	records, err := readRecords(dataFS, "data/catalog.txt", catalogFieldCount)
+// why: an unparseable count used to `continue`, which is exactly the "silently narrower catalog"
+// NewCatalog's own doc promises not to return - an emoji dropped here is an emoji commitlint would
+// then reject as unknown, with nothing anywhere naming the generator row that caused it.
+func (c *Catalog) readCatalog(fsys fs.FS) error {
+	records, err := readRecords(fsys, "data/catalog.txt", catalogFieldCount)
 	if err != nil {
 		return err
 	}
 	for _, fields := range records {
 		count, countErr := strconv.Atoi(fields[janeCountFieldIndex])
 		if countErr != nil {
-			continue
+			return fmt.Errorf(
+				"catalog.txt: shortcode %q has an unparseable usage count %q: %w",
+				fields[0], fields[janeCountFieldIndex], countErr,
+			)
 		}
 		c.allowed[fields[0]] = entry{group: fields[1], subgroup: fields[2], janeCount: count}
 	}
