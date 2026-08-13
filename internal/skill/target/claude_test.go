@@ -80,6 +80,44 @@ func TestClaudeTargetUninstall_UnwiresBothSettingsFiles(t *testing.T) {
 	}
 }
 
+// TestClaudeTargetUninstall_LocalScopeOnlyDoesNotReportSettingsJSON
+// reproduces --hooks-scope local (settings.json never written) then a
+// default-scope uninstall unwiring both files: the shared gitignore
+// cleanup fires on the first call regardless of file, so keying a note off
+// Result.Removed instead of SettingsChanged misattributes it to settings.json.
+func TestClaudeTargetUninstall_LocalScopeOnlyDoesNotReportSettingsJSON(t *testing.T) {
+	t.Parallel()
+
+	base := t.TempDir()
+	ctx := newTestContext(t, base, []string{"go-style"})
+	ctx.NoHooks = false
+	ctx.SettingsFile = "settings.local.json"
+	if _, err := (claudeTarget{}).Install(ctx); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	settingsJSON := filepath.Join(base, ".claude", "settings.json")
+	if _, statErr := os.Stat(settingsJSON); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Fatalf("settings.json must never exist for a local-scope install, stat err = %v", statErr)
+	}
+
+	uctx := UninstallContext{
+		Base:             base,
+		HookUninstallers: install.NewRegistry(),
+		SettingsFiles:    []string{"settings.json", "settings.local.json"},
+	}
+	report, err := (claudeTarget{}).Uninstall(uctx)
+	if err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	for _, note := range report.Notes {
+		if strings.Contains(note, settingsJSON) {
+			t.Errorf(
+				"note %q references settings.json, which never existed", note,
+			)
+		}
+	}
+}
+
 func TestClaudeTargetInstall(t *testing.T) {
 	t.Parallel()
 

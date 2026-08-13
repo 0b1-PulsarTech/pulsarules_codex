@@ -37,15 +37,11 @@ func (claudeInstaller) Install(ctx Context) error {
 	return nil
 }
 
-// Uninstall removes the hook script, README, binary, and settings wiring
-// Install wrote into ctx.Dir, plus the "/bin/" and "/hooks/" gitignore
-// entries. The hook files and gitignore entries are removed first, so a
-// settings file UnwireSettings cannot parse still leaves the rest of the
-// reversal done; its error (wrapping fsx.ErrUnparseableJSON) propagates last
-// for the caller to turn into a warning instead of a hard failure.
-// Result.Removed carries "gitignore" and/or "settings" only when that piece
-// actually changed, so a caller can tell a real removal from a no-op against
-// files the hook was never wired into.
+// Uninstall removes the hook script, README, binary, settings wiring, and
+// the "/bin/"/"/hooks/" gitignore entries Install wrote. Hook files and
+// gitignore go first, so an unparseable settings file still leaves the
+// rest reversed; its error propagates last for the caller to warn on.
+// Result.Removed names "gitignore"/"settings" only when that piece changed.
 func (claudeInstaller) Uninstall(ctx UninstallContext) (Result, error) {
 	claudeDir := ctx.Dir
 	settingsFile := ctx.SettingsFile
@@ -64,7 +60,7 @@ func (claudeInstaller) Uninstall(ctx UninstallContext) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("unwire claude settings: %w", err)
 	}
-	result := Result{Restored: restored}
+	result := Result{Restored: restored, SettingsChanged: changed}
 	if len(removedEntries) > 0 {
 		result.Removed = append(result.Removed, "gitignore")
 	}
