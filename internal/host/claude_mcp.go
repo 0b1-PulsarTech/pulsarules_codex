@@ -56,11 +56,12 @@ func generateGoplsSkill(templates fs.FS, skillsDir string, report *Report) error
 		return fmt.Errorf("get gopls instructions: %w", err)
 	}
 	backedUp, genErr := mcp.GenerateGoplsSkill(templates, skillsDir, instructions)
-	if genErr != nil {
-		return fmt.Errorf("generate gopls skill: %w", genErr)
-	}
+	// Backed-up foreign files must reach the report, or a hand-written skill is renamed silently.
 	for _, msg := range backedUp {
 		report.warn("%s", msg)
+	}
+	if genErr != nil {
+		return fmt.Errorf("generate gopls skill: %w", genErr)
 	}
 	return nil
 }
