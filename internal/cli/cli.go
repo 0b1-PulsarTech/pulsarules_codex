@@ -56,6 +56,8 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 		return runCommitLint(inj, opts)
 	case "governance":
 		return runGovernance(inj, opts)
+	case "evals":
+		return runEvals(inj, opts)
 	default:
 		return fmt.Errorf("unknown command %q", opts.Command)
 	}
@@ -101,13 +103,11 @@ func resolveProjectDir(opts *cliopts.Options) string {
 	return "."
 }
 
-// resolveLogPath reads the host-provided PULSARULES_LOG_PATH, the third
-// host-neutral variable alongside PULSARULES_PROJECT_DIR and
-// PULSARULES_SKILLS_DIR: each installed wrapper computes the full log path
-// from its own layout (.claude/hook-execution.log, .opencode/hook-execution.log,
-// ...) and hands it over, so cli/obs hold no host literal. An unset var - an
-// older installed wrapper, or the binary run by hand - leaves obs to disable
-// logging rather than guess a location.
+// resolveLogPath reads PULSARULES_LOG_PATH, the third host-neutral var
+// alongside PULSARULES_PROJECT_DIR and PULSARULES_SKILLS_DIR: each installed
+// wrapper computes its own full log path and hands it over, so cli/obs hold
+// no host literal. An unset var leaves obs to disable logging rather than
+// guess a location.
 func resolveLogPath() string {
 	return os.Getenv("PULSARULES_LOG_PATH")
 }

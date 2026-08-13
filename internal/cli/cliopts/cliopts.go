@@ -51,6 +51,10 @@ type Options struct {
 	ProjectDir string // --project: project dir for git history lookup
 
 	// governance (also reuses --project and --root)
+
+	// evals
+	Scenario string // --scenario: grade only this scenario id (default: every one)
+	Artifact string // --artifact: path to the produced code/transcript to grade
 }
 
 // settings file names for the two hook scopes.
@@ -78,12 +82,9 @@ func (opts *Options) SettingsFileName() (string, error) {
 }
 
 // SettingsFiles resolves the settings files uninstall should unwire hook
-// wiring from. With no --hooks-scope it targets both settings.json and
-// settings.local.json: install's default writes into settings.json, but
-// --hooks-scope local at install time leaves live wiring in
-// settings.local.json that uninstall must still find, and uninstall has no
-// record of which scope install used - so its default is "check both",
-// narrowed to just the named scope only when --hooks-scope is passed.
+// wiring from. With no --hooks-scope it checks both settings.json and
+// settings.local.json, since uninstall has no record of which scope install
+// used; it narrows to the named scope only when --hooks-scope is passed.
 func (opts *Options) SettingsFiles() ([]string, error) {
 	switch opts.HooksScope {
 	case "":

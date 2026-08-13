@@ -31,6 +31,7 @@ pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|a
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
 pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
+pulsarules_cli evals --artifact FILE [--scenario ID]
 pulsarules_cli version
 ```
 
@@ -209,6 +210,19 @@ pulsarules_cli governance --project . --all-files
 
 # full sweep, explicit scope:
 pulsarules_cli governance --scope full --all-files
+```
+
+### Evals
+
+Grade a produced artifact against the embedded skill scenarios and print the machine tally plus
+every assertion that needs a human judge. This is step (3) of the operator procedure in
+ARCHITECTURE.md — the harness deliberately does not invoke a model, so you produce the
+with-skill and without-skill artifacts yourself and grade each one here. Exits non-zero when any
+machine assertion fails.
+
+```sh
+pulsarules_cli evals --artifact with-skill.txt
+pulsarules_cli evals --artifact without-skill.txt --scenario typed-nil-error-return
 ```
 
 ## Dev mode
