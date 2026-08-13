@@ -12,5 +12,8 @@ func NewCard(text string) Card {
 
 // Render returns the card's text for display — see the style guide.
 func (c Card) Render() string {
+	if c.Text == "" {
+		return "(empty)"
+	}
 	return c.Text
 }

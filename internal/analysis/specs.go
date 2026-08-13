@@ -9,6 +9,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/namedreturns"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/naming"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/shadowing"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/vacuousdoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/movepurity"
@@ -61,6 +62,7 @@ func analyzerSpecs() []analyzerSpec {
 		staticSpec("shadowing", shadowing.NewAnalyzer),
 		staticSpec("complexity", complexity.NewAnalyzer),
 		staticSpec("named-returns", namedreturns.NewAnalyzer),
+		staticSpec("vacuous-doc", vacuousdoc.NewAnalyzer),
 	}, pipelineAnalyzerSpecs()...)
 }
 
