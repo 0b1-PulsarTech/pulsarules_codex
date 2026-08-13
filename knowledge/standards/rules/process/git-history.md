@@ -46,7 +46,12 @@ Applies to: rebuilding a squash or temp history into clean incremental commits.
    part stays.
 5. A move/rename (`:open_file_folder:`) commit is PURE RENAMES ONLY while decomposing a rewrite. Never mix a
    relocation with new implementation; split the new code into separate `feat` commits placed after
-   the move.
+   the move. ONE exception, and it is a language fact rather than a judgement call: moving a Go file
+   ACROSS a package boundary must edit its `package` clause, and every importer with it, or nothing
+   compiles. `commit-move-purity` will still warn - correctly, it cannot tell that edit from any
+   other. Keep the commit to the rename plus the minimum that makes it build, say so in the subject,
+   and treat the warning as acknowledged; do NOT reach for `[wip]`, which claims the commit does not
+   build when it does.
 6. THE FINAL-TREE INVARIANT (the safety proof). After every rewrite, `git diff
    <pre-rewrite-snapshot> HEAD` is EMPTY - the rewrite only moved commit boundaries, no content
    changed - OR it equals EXACTLY the intended new edits and nothing else. An unexpected non-empty
