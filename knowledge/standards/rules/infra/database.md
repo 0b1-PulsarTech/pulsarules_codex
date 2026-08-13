@@ -64,6 +64,11 @@ Applies to: persistence. Canonical reference stack: `entgo.io/ent`, `atlasgo.io`
 10. A repository method serving a list MUST batch into one query (`IN (...)`) rather than a use case
     looping per-entity repo calls (N+1). Any request-scoped cache stays request-scoped - never a
     package-level cache, which leaks data across requests and users.
+11. NULL stops at the repository. A nullable column maps to a value-typed field (ent `Optional()`
+    without `.Nillable()`); reach for `.Nillable()` or `sql.Null*` only where NULL means something
+    the zero value does not, and convert it before returning - no `*string`/`sql.Null*` reaches a
+    use case or entity. This is [[effective-go]]'s zero-value-over-pointer rule at the one boundary
+    that genuinely produces nulls.
 {{end}}
 
 {{define "forbidden"}}
@@ -78,6 +83,7 @@ Applies to: persistence. Canonical reference stack: `entgo.io/ent`, `atlasgo.io`
 - Importing the ent client at runtime (schema is authoring-only).
 - A use case looping per-entity repo calls where a batched `IN (...)` query would serve the list.
 - A package-level or process-global cache for request-scoped data.
+- A `.Nillable()` field or `sql.Null*` value escaping the repository into a use case or entity.
 {{end}}
 
 {{define "validation"}}
