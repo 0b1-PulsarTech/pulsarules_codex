@@ -16,6 +16,11 @@ func installSkills(ctx Context, dest string, report *Report) error {
 	installed, skipped, backedUp, err := output.Install(
 		ctx.Index, ctx.Renderer, dest, ctx.IDs, ctx.RouterFilter,
 	)
+	// Install returns the backups it already made alongside the error; report them
+	// even when a later id fails.
+	for _, msg := range backedUp {
+		report.warn("%s", msg)
+	}
 	if err != nil {
 		return fmt.Errorf("render skills to %q: %w", dest, err)
 	}
@@ -24,9 +29,6 @@ func installSkills(ctx Context, dest string, report *Report) error {
 	}
 	for _, id := range skipped {
 		report.warn("skipped (unknown skill): %s", id)
-	}
-	for _, msg := range backedUp {
-		report.warn("%s", msg)
 	}
 	return nil
 }
@@ -60,6 +62,9 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 		dest,
 		wfIDs,
 	)
+	for _, msg := range backedUp {
+		report.warn("%s", msg)
+	}
 	if err != nil {
 		return fmt.Errorf("render workflows to %q: %w", dest, err)
 	}
@@ -68,9 +73,6 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 	}
 	for _, id := range skipped {
 		report.warn("skipped workflow (unknown): %s", id)
-	}
-	for _, msg := range backedUp {
-		report.warn("%s", msg)
 	}
 	return nil
 }
