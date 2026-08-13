@@ -10,8 +10,9 @@ import (
 
 var golangciLintReporter = core.NewReporter("golangci-lint", core.SeverityError, core.CatSyntax)
 
-// why: the non-negotiable baseline forced via -E on every delegated run, on top of whatever the
-// target's own config enables (see knowledge/standards/rules/infra/build.md).
+// why: the baseline forced via -E on every delegated run, on top of whatever the target's own
+// config enables (see knowledge/standards/rules/infra/build.md). It is forced against SILENCE, not
+// against an explicit opt-out - see forcedBaselineFindings for the one case -E loses.
 var forcedLinters = []string{
 	"nolintlint",
 	"paralleltest",
@@ -52,7 +53,7 @@ func (r *Runner) runPerModule(projectDir, configPath string) []core.Finding {
 
 	configFlag := resolvedConfigFlag(projectDir, configPath)
 
-	var allFindings []core.Finding
+	allFindings := forcedBaselineFindings(configFlag)
 	for _, mod := range modules {
 		modDir := filepath.Join(projectDir, mod)
 		out, err := r.run(projectDir, lintArgs(modDir+"/...", configFlag))
@@ -64,7 +65,7 @@ func (r *Runner) runPerModule(projectDir, configPath string) []core.Finding {
 func (r *Runner) runSingle(projectDir, configPath string) []core.Finding {
 	configFlag := resolvedConfigFlag(projectDir, configPath)
 	out, err := r.run(projectDir, lintArgs("./...", configFlag))
-	return parseOutput(out, err)
+	return append(forcedBaselineFindings(configFlag), parseOutput(out, err)...)
 }
 
 // why: %w keeps *exec.ExitError reachable through parseOutput's errors.As.
