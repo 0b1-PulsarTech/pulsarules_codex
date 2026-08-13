@@ -20,13 +20,11 @@ import (
 const retryHint = "uninstall did not finish cleanly; every step is idempotent, " +
 	"so re-running will finish the job"
 
-// Run reverses install for every target: hook wiring, merged config entries, git hooks, and
-// (unless --keep-skills) the rendered docs.
-//
-// why: unlike install it does NOT default to "claude" - with no --target it probes every layout on
-// disk, and it unwires both settings scopes, because its contract is to leave nothing behind and it
-// has no record of which --hooks-scope install used. Every step is idempotent. A hard failure is
-// returned, never swallowed, so a caller never sees exit 0 with executable wiring still in place.
+// Run reverses install for every target: hook wiring, config, git hooks,
+// and rendered docs (unless --keep-skills).
+// why: unlike install it does not default to "claude" - with no --target it
+// probes every target on disk and unwires both settings scopes, since it has
+// no record which --hooks-scope install used. Every step is idempotent.
 func Run(inj remy.Injector, opts *cliopts.Options) error {
 	projectDir, err := opts.BaseDir()
 	if err != nil {
@@ -61,7 +59,9 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 		report, uninstallErr := deps.targets.Uninstall(name, ctx)
 		printReport(report)
 		if uninstallErr != nil {
-			errs = append(errs, fmt.Errorf("uninstall target %q: %w", name, uninstallErr))
+			// why: target.Registry.Uninstall already wraps this as
+			// `uninstall target %q: %w`; re-wrapping here would double it.
+			errs = append(errs, uninstallErr)
 		}
 	}
 

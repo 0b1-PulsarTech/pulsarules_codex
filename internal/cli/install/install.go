@@ -76,7 +76,9 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 		report, installErr := reg.Install(name, ctx)
 		printReport(report)
 		if installErr != nil {
-			return fmt.Errorf("install target %q: %w", name, installErr)
+			// why: target.Registry.Install already wraps this as
+			// `install target %q: %w`; re-wrapping here would double it.
+			return installErr
 		}
 	}
 
@@ -133,9 +135,12 @@ func installPostTargets(
 				_, _ = fmt.Fprintf(os.Stderr, "warning: "+format+"\n", args...)
 			},
 		})
-		if hookErr != nil {
+		switch {
+		case hookErr != nil:
 			_, _ = fmt.Fprintf(os.Stderr, "warning: git hooks: %v\n", hookErr)
-		} else {
+		case len(gitHooks) > 0:
+			// why: an explicit empty --git-hooks list writes nothing, so the
+			// success line must not claim hooks were installed either.
 			_, _ = fmt.Printf("installed git hooks: %s\n", strings.Join(gitHooks, ","))
 		}
 	}
