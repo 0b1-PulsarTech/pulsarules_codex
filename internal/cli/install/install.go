@@ -3,15 +3,12 @@ package install
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install/githook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/hookwire"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/target"
 )
@@ -129,40 +126,6 @@ func resolveInstallConfig(opts *cliopts.Options) (installConfig, error) {
 		return installConfig{}, err
 	}
 	return installConfig{absBase: absBase, settingsFile: settingsFile, gitHooks: gitHooks}, nil
-}
-
-func installPostTargets(
-	opts *cliopts.Options,
-	projectDir string,
-	templates fs.FS,
-	hookReg *install.Registry,
-	gitHooks []string,
-) error {
-	if !opts.NoGitHooks {
-		hookErr := hookReg.Install("git", install.Context{
-			Dir:       projectDir,
-			Templates: templates,
-			GitHooks:  gitHooks,
-			Warn: func(format string, args ...any) {
-				_, _ = fmt.Fprintf(os.Stderr, "warning: "+format+"\n", args...)
-			},
-		})
-		if hookErr != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "warning: git hooks: %v\n", hookErr)
-		} else {
-			_, _ = fmt.Printf("installed git hooks: %s\n", strings.Join(gitHooks, ","))
-		}
-	}
-
-	// The binary is copied even with --no-git-hooks.
-	binaryErr := githook.InstallBinary(projectDir)
-	if binaryErr != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "warning: binary: %v\n", binaryErr)
-	} else {
-		_, _ = fmt.Println("installed governance binary")
-	}
-
-	return nil
 }
 
 func splitCSV(value string) []string {

@@ -2,10 +2,13 @@ package install
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
 	"slices"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install/githook"
 )
 
@@ -28,5 +31,39 @@ func validateGitHooks(hooks []string) error {
 			return fmt.Errorf("invalid --git-hooks %q (want %s)", name, strings.Join(valid, "|"))
 		}
 	}
+	return nil
+}
+
+func installPostTargets(
+	opts *cliopts.Options,
+	projectDir string,
+	templates fs.FS,
+	hookReg *install.Registry,
+	gitHooks []string,
+) error {
+	if !opts.NoGitHooks {
+		hookErr := hookReg.Install("git", install.Context{
+			Dir:       projectDir,
+			Templates: templates,
+			GitHooks:  gitHooks,
+			Warn: func(format string, args ...any) {
+				_, _ = fmt.Fprintf(os.Stderr, "warning: "+format+"\n", args...)
+			},
+		})
+		if hookErr != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "warning: git hooks: %v\n", hookErr)
+		} else {
+			_, _ = fmt.Printf("installed git hooks: %s\n", strings.Join(gitHooks, ","))
+		}
+	}
+
+	// The binary is copied even with --no-git-hooks.
+	binaryErr := githook.InstallBinary(projectDir)
+	if binaryErr != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "warning: binary: %v\n", binaryErr)
+	} else {
+		_, _ = fmt.Println("installed governance binary")
+	}
+
 	return nil
 }
