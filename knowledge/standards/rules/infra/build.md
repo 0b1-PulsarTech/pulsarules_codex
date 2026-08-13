@@ -67,15 +67,21 @@ Applies to: build, tooling, and code generation.
    via `-E` on every delegated run - `nolintlint`, `paralleltest`, `tparallel`, `thelper`,
    `forcetypeassert`, `nilerr` - on top of whatever the target's own config already enables
    (`golangci-lint run -E foo` adds `foo`, it does not replace the config's enabled set; verified
-   against golangci-lint v2.12.2). This is how `nolintlint` catches unused and malformed `//nolint`
-   directives and how the testing rule's `t.Parallel()`/`t.Helper()` obligations become
-   machine-checked in every consumer, not just here. `nolintlint`'s own
-   `require-explanation`/`require-specific` settings cannot be forced through `-E` - it only enables
-   the linter at its permissive defaults - so a consumer wanting that stricter enforcement sets
-   those two settings itself; without them, the forced `nolintlint` still catches unused and
-   malformed `//nolint` directives, just not a bare unqualified one. `bodyclose` and `sqlclosecheck`
-   are recommended, not forced: forcing them can flood a legacy project that never ran them, and a
-   gate that floods is a gate people switch off.
+   against golangci-lint v2.12.2). The forcing has one hole: a target that names a forced linter
+   under `linters.disable` wins over `-E`, and the run then reports zero findings for it with no
+   indication the guard was switched off (verified on v2.12.2 under both `default: standard` and
+   `default: all`). Merely omitting the linter from an `enable:` list does not do this - `-E` still
+   adds it. So the baseline is forced against silence, not against a consumer who explicitly opted
+   out; the delegation runner reads the target's config and warns when it finds a forced linter
+   disabled. This is how `nolintlint` catches unused and malformed `//nolint` directives and how
+   the testing rule's `t.Parallel()`/`t.Helper()` obligations become machine-checked in every
+   consumer, not just here.
+   `nolintlint`'s own `require-explanation`/`require-specific` settings cannot be forced through
+   `-E` - it only enables the linter at its permissive defaults - so a consumer wanting that
+   stricter enforcement sets those two settings itself; without them, the forced `nolintlint` still
+   catches unused and malformed `//nolint` directives, just not a bare unqualified one.
+   `bodyclose` and `sqlclosecheck` are recommended, not forced: forcing them can flood a legacy
+   project that never ran them, and a gate that floods is a gate people switch off.
 {{end}}
 
 {{define "forbidden"}}
@@ -102,6 +108,7 @@ Applies to: build, tooling, and code generation.
   `replace ( ... )` block per `go.mod` with tab-indented clean `../` paths.
 - [ ] Container multi-stage, distroless, digest-pinned; tools in `tools/go.mod`.
 - [ ] The golangci-lint delegation runner forces `nolintlint`, `paralleltest`, `tparallel`,
-  `thelper`, `forcetypeassert`, `nilerr` via `-E` on every target project; `bodyclose` and
+  `thelper`, `forcetypeassert`, `nilerr` via `-E` on every target project, and warns when the
+  target's own config disables one of them (the one case `-E` loses); `bodyclose` and
   `sqlclosecheck` are documented as recommended, not forced.
 {{end}}
