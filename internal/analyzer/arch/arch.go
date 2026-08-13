@@ -1,13 +1,30 @@
 package arch
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-const modulePath = "github.com/0b1-PulsarTech/pulsarules_codex"
+func resolveModulePathOrFindings(
+	reporter core.Reporter,
+	projectDir string,
+) (string, []core.Finding) {
+	modulePath, err := core.ModulePath(projectDir)
+	if err == nil {
+		return modulePath, nil
+	}
+	// A missing go.mod means no Go project here; any other failure must surface as a finding.
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	}
+	return "", []core.Finding{reporter.New(
+		fmt.Sprintf("cannot determine the project's module path: %s", err),
+	)}
+}
 
 type PackageBoundaryAnalyzer struct {
 	reporter core.Reporter
@@ -30,10 +47,14 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Find
 		return nil
 	}
 
+	modulePath, findings := resolveModulePathOrFindings(a.reporter, ctx.ProjectDir)
+	if modulePath == "" {
+		return findings
+	}
+
 	idx := loadProjectIndex(ctx.ProjectDir, modulePath)
 	violations := checkBoundaries(idx.graph, modulePath)
 
-	var findings []core.Finding
 	for _, v := range violations {
 		findings = append(findings, a.reporter.At(
 			".",
@@ -66,10 +87,14 @@ func (a *ImportCycleAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding 
 		return nil
 	}
 
+	modulePath, findings := resolveModulePathOrFindings(a.reporter, ctx.ProjectDir)
+	if modulePath == "" {
+		return findings
+	}
+
 	idx := loadProjectIndex(ctx.ProjectDir, modulePath)
 	cycles := findCycles(idx.graph)
 
-	var findings []core.Finding
 	for _, cycle := range cycles {
 		var b strings.Builder
 		for i, p := range cycle {
