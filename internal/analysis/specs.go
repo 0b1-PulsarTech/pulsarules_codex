@@ -23,18 +23,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-// analyzerSpecs is the full ordered list of every registered analyzer and the
-// scopes it runs under: this file's text/AST-check table followed by
-// pipelineAnalyzerSpecs (specs_pipeline.go), split into two files purely to
-// keep each under the file-size ceiling - the append below is still the one
-// place a new analyzer gets registered, not a second duplicated list.
+// analyzerSpecs is the full ordered list of every registered analyzer,
+// split across this file and specs_pipeline.go for file-size only.
 //
-// why: this stays a plain table rather than injector bindings resolved via
-// remy.GetAll with tags. The table already solves the problem that move
-// would target - two duplicated per-scope registration lists where a missed
-// line silently dropped an analyzer - so moving it into a tag-keyed graph
-// would add indirection without a correctness gain. Deliberate, not an
-// oversight.
+// why: a plain table, not remy.GetAll tags - avoids the missed-line bug a
+// duplicated per-scope list caused; tags add indirection, no gain.
 var analyzerSpecs = append([]analyzerSpec{
 	{
 		id: "file-size",
@@ -53,7 +46,7 @@ var analyzerSpecs = append([]analyzerSpec{
 	{
 		id: "import-groups",
 		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
-			return imports.NewAnalyzer("github.com/0b1-PulsarTech/pulsarules_codex")
+			return imports.NewAnalyzer()
 		},
 		scopes: staticScopes,
 	},
@@ -87,15 +80,11 @@ var analyzerSpecs = append([]analyzerSpec{
 	},
 	{
 		id: "commit-lint",
-		// simplification: analyzerBuilder returns only core.Analyzer, with no
-		// error and no injected logger, shared across every spec in this table -
-		// so a catalog load failure cannot propagate through registerForScope /
-		// Session.Analyze without widening that contract for every other
-		// analyzer. Log the failure once here (the only point that observes it)
-		// and skip registering the analyzer, rather than falling back to an
-		// empty catalog, which would reject every commit. Upgrade path: give
-		// analyzerBuilder an error return if a load failure ever needs to fail
-		// the whole run loudly instead of just disabling this one check.
+		// simplification: analyzerBuilder returns only core.Analyzer (no error,
+		// no logger), so a load failure here can't widen that contract for
+		// every analyzer. Log it once and skip registering, instead of falling
+		// back to an empty catalog that would reject every commit. Upgrade
+		// path: give analyzerBuilder an error return if this ever needs to fail loudly.
 		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
 			catalog, err := emoji.NewCatalog()
 			if err != nil {

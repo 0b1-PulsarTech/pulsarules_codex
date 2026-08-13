@@ -10,18 +10,16 @@ import (
 )
 
 // Analyzer checks that Go import statements follow the three-group
-// convention: standard library, external (third-party), this module. Each group
-// must be a contiguous block separated by blank lines.
-type Analyzer struct {
-	modulePath string
-}
+// convention (stdlib, external, this module), each a contiguous block.
+//
+// why: it holds no module path. It used to be hardcoded to this tool's own
+// module, so any other project's "this module" group matched nothing.
+type Analyzer struct{}
 
 var importGroupsReporter = core.NewReporter("import-groups", core.SeverityError, core.CatSyntax)
 
-// NewAnalyzer creates an import-groups analyzer that checks
-// import ordering follows stdlib → external → this-module convention.
-func NewAnalyzer(modulePath string) *Analyzer {
-	return &Analyzer{modulePath: modulePath}
+func NewAnalyzer() *Analyzer {
+	return &Analyzer{}
 }
 
 func (a *Analyzer) ID() string   { return "import-groups" }
@@ -35,17 +33,24 @@ func (a *Analyzer) Needs() core.Requirements {
 	return core.Requirements{}
 }
 
+// Analyze reports every file whose import blocks break the three-group order.
+//
+// why: an unreadable go.mod means "this module" is unknowable, so it stays
+// silent rather than guess - arch-boundary already reports the broken-go.mod
+// case, and a second finding would be noise.
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if a.modulePath == "" {
+	modulePath, err := core.ModulePath(ctx.ProjectDir)
+	if err != nil || modulePath == "" {
 		return nil
 	}
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return a.checkFile(ctx.ASTCache.FileSet(), fc, f)
+		return a.checkFile(ctx.ASTCache.FileSet(), modulePath, fc, f)
 	})
 }
 
 func (a *Analyzer) checkFile(
 	fset *token.FileSet,
+	modulePath string,
 	fc core.FileChange,
 	f *ast.File,
 ) []core.Finding {
@@ -62,8 +67,8 @@ func (a *Analyzer) checkFile(
 
 	classify := func(path string) group {
 		clean := strings.Trim(path, `"`)
-		if a.modulePath != "" &&
-			(clean == a.modulePath || strings.HasPrefix(clean, a.modulePath+"/")) {
+		if modulePath != "" &&
+			(clean == modulePath || strings.HasPrefix(clean, modulePath+"/")) {
 			return groupModule
 		}
 		if strings.Contains(clean, ".") {
@@ -84,7 +89,7 @@ func (a *Analyzer) checkFile(
 					fmt.Sprintf(
 						"import %s out of order (stdlib → external → %s)",
 						spec.Path.Value,
-						a.modulePath,
+						modulePath,
 					),
 					"reorder imports to follow: stdlib, external, this module",
 				),
