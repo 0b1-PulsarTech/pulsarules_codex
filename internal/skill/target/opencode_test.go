@@ -85,12 +85,44 @@ func TestOpencodeTargetInstall(t *testing.T) {
 	}
 }
 
+// TestOpencodeTargetInstall_ReportsBackedUpPlugin asserts a hand-authored
+// file already at the plugin path is backed up (not destroyed) and threaded
+// into the returned Report's Warnings, mirroring claudeTarget.Install. Fixes
+// opencodeTarget.Install building install.Context with no Warn set, which
+// dropped the message even after opencodehook.Install started reporting it.
+func TestOpencodeTargetInstall_ReportsBackedUpPlugin(t *testing.T) {
+	t.Parallel()
+	base := t.TempDir()
+	pluginsDir := filepath.Join(base, ".opencode", "plugins")
+	if err := os.MkdirAll(pluginsDir, 0o750); err != nil {
+		t.Fatalf("mkdir plugins: %v", err)
+	}
+	pluginPath := filepath.Join(pluginsDir, "pulsarules-governance.js")
+	if err := os.WriteFile(
+		pluginPath, []byte("// hand-authored, not ours\n"), 0o600,
+	); err != nil {
+		t.Fatalf("seed foreign plugin: %v", err)
+	}
+
+	ctx := newTestContext(t, base, []string{"go-style"})
+	ctx.NoHooks = false
+
+	report, err := opencodeTarget{}.Install(ctx)
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if !slices.ContainsFunc(report.Warnings, func(warning string) bool {
+		return strings.Contains(warning, "backed up")
+	}) {
+		t.Errorf("Warnings missing a backup notice: %v", report.Warnings)
+	}
+}
+
 // TestOpencodeTargetInstall_MigratesLegacyAgents asserts a project carrying
-// the pre-migration ".opencode/AGENTS.md" (from before WriteAgents's output
-// moved to the project root) and the matching legacy opencode.json
-// instructions entry ends up, after Install, with exactly one AGENTS.md on
-// disk (the root one) and exactly one AGENTS.md-shaped entry in
-// opencode.json's instructions - the migration Install never used to run.
+// the pre-migration ".opencode/AGENTS.md" and its matching legacy
+// opencode.json instructions entry ends up, after Install, with exactly one
+// AGENTS.md on disk (root) and one AGENTS.md-shaped instructions entry -
+// the migration Install never used to run.
 func TestOpencodeTargetInstall_MigratesLegacyAgents(t *testing.T) {
 	t.Parallel()
 

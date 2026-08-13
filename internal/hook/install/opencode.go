@@ -13,8 +13,14 @@ type opencodeInstaller struct{}
 func (opencodeInstaller) Name() string { return "opencode" }
 
 func (opencodeInstaller) Install(ctx Context) error {
-	if err := opencodehook.Install(ctx.Dir, ctx.Templates); err != nil {
+	backedUp, err := opencodehook.Install(ctx.Dir, ctx.Templates)
+	if err != nil {
 		return fmt.Errorf("install opencode hook: %w", err)
+	}
+	if ctx.Warn != nil {
+		for _, msg := range backedUp {
+			ctx.Warn("%s", msg)
+		}
 	}
 	return nil
 }

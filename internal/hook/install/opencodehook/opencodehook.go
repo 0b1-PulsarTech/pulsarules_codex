@@ -25,33 +25,42 @@ const pluginName = "pulsarules-governance.js"
 const pluginTemplate = "hooks/opencode-plugin.js"
 
 // Install writes the governance plugin into <dir>/.opencode/plugins/ and
-// copies the running binary into <dir>/.opencode/bin/. The plugin hooks into
-// experimental.chat.system.transform and tool.execute.after, forwarding each
-// to the installer binary's hook command; tool.execute.before is a real
-// opencode hook too but is deliberately left unregistered since its output
-// has no field the model reads back (see the plugin script's simplification
-// comment). It also ensures .opencode/.gitignore ignores the binary
-// directory.
-func Install(dir string, templates fs.FS) error {
+// copies the running binary into <dir>/.opencode/bin/. It wires
+// experimental.chat.system.transform and tool.execute.after -
+// tool.execute.before stays unregistered since its output has no
+// model-read field. A pre-existing plugin file is backed up, not destroyed.
+func Install(dir string, templates fs.FS) (backedUp []string, err error) {
 	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
-	if err := os.MkdirAll(pluginsDir, fsperm.DirPrivate); err != nil {
-		return fmt.Errorf("mkdir plugins: %w", err)
+	if err = os.MkdirAll(pluginsDir, fsperm.DirPrivate); err != nil {
+		return nil, fmt.Errorf("mkdir plugins: %w", err)
 	}
-	script, err := fs.ReadFile(templates, pluginTemplate)
+	var script []byte
+	script, err = fs.ReadFile(templates, pluginTemplate)
 	if err != nil {
-		return fmt.Errorf("read plugin template: %w", err)
+		return nil, fmt.Errorf("read plugin template: %w", err)
 	}
 	pluginPath := filepath.Join(pluginsDir, pluginName)
+	exists, ours, checkErr := marker.Check(pluginPath)
+	if checkErr != nil {
+		return nil, fmt.Errorf("check plugin: %w", checkErr)
+	}
+	if exists && !ours {
+		backupPath, backupErr := marker.Backup(pluginPath)
+		if backupErr != nil {
+			return nil, fmt.Errorf("%w", backupErr)
+		}
+		backedUp = append(backedUp, marker.BackupMessage(pluginPath, backupPath))
+	}
 	if err = os.WriteFile(pluginPath, script, fsperm.FilePrivate); err != nil {
-		return fmt.Errorf("write plugin: %w", err)
+		return backedUp, fmt.Errorf("write plugin: %w", err)
 	}
 	if err = InstallBinary(dir); err != nil {
-		return fmt.Errorf("install binary: %w", err)
+		return backedUp, fmt.Errorf("install binary: %w", err)
 	}
 	if err = gitignore.Ensure(filepath.Join(dir, ".opencode"), "/bin/"); err != nil {
-		return fmt.Errorf("ensure opencode gitignore: %w", err)
+		return backedUp, fmt.Errorf("ensure opencode gitignore: %w", err)
 	}
-	return nil
+	return backedUp, nil
 }
 
 // InstallBinary copies the running installer binary into <dir>/.opencode/bin/
@@ -64,15 +73,11 @@ func InstallBinary(dir string) error {
 	return nil
 }
 
-// Uninstall removes the governance plugin, the installer binary, and the
-// "/bin/" gitignore entry Install wrote into <dir>/.opencode/, undoing
-// Install. The plugin file is removed only when its content carries
-// marker.Installed, so a same-named file a user hand-authored survives
-// untouched. It removes the plugins and bin directories once they are left
-// empty, and is idempotent: files Install never wrote are simply already
-// absent, so re-running is a no-op, not an error. It reports whether the
-// plugin file was actually ours and removed, so a caller can tell a real
-// removal from a no-op against a project Install never touched.
+// Uninstall removes the governance plugin, installer binary, and "/bin/"
+// gitignore entry Install wrote into <dir>/.opencode/. The plugin is
+// removed only when it carries marker.Installed, so a hand-authored
+// same-named file survives untouched. It is idempotent, and reports
+// whether the plugin was actually ours and removed.
 func Uninstall(dir string) (removed bool, err error) {
 	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
 	pluginPath := filepath.Join(pluginsDir, pluginName)

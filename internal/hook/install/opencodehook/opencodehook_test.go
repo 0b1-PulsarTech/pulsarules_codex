@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -39,7 +40,7 @@ func TestInstall(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := Install(dir, testTemplates(t)); err != nil {
+	if _, err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
@@ -57,7 +58,7 @@ func TestInstall_BinaryPresent(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := Install(dir, testTemplates(t)); err != nil {
+	if _, err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 	binPath := filepath.Join(dir, ".opencode", "bin", "pulsarules_cli")
@@ -74,7 +75,7 @@ func TestInstall_GitignoreIgnoresBin(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := Install(dir, testTemplates(t)); err != nil {
+	if _, err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 	giPath := filepath.Join(dir, ".opencode", ".gitignore")
@@ -93,7 +94,7 @@ func TestUninstall(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := Install(dir, testTemplates(t)); err != nil {
+	if _, err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
@@ -141,8 +142,52 @@ func TestInstall_MissingTemplate(t *testing.T) {
 
 	dir := t.TempDir()
 	empty := os.DirFS(t.TempDir())
-	if err := Install(dir, empty); err == nil {
+	if _, err := Install(dir, empty); err == nil {
 		t.Fatal("expected an error when the plugin template is missing")
+	}
+}
+
+// TestInstall_BacksUpForeignFile asserts a hand-authored file already at the
+// plugin path survives Install: it is renamed to a ".pulsarules-backup" slot
+// instead of being silently overwritten, and Install reports the rename so
+// the caller's report channel can surface it (see marker.Backup and
+// internal/skill/hookwire's InstallHook, the pattern this mirrors).
+func TestInstall_BacksUpForeignFile(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
+	if err := os.MkdirAll(pluginsDir, fsperm.DirPrivate); err != nil {
+		t.Fatalf("mkdir plugins: %v", err)
+	}
+	pluginPath := filepath.Join(pluginsDir, pluginName)
+	const foreignContent = "// hand-authored plugin, not ours\n"
+	if err := os.WriteFile(pluginPath, []byte(foreignContent), fsperm.File); err != nil {
+		t.Fatalf("seed foreign plugin: %v", err)
+	}
+
+	backedUp, err := Install(dir, testTemplates(t))
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if len(backedUp) != 1 {
+		t.Fatalf("backedUp = %v, want exactly one backup message", backedUp)
+	}
+
+	backupData, err := os.ReadFile(pluginPath + ".pulsarules-backup")
+	if err != nil {
+		t.Fatalf("read backup: %v", err)
+	}
+	if string(backupData) != foreignContent {
+		t.Errorf("backup content = %q, want %q", backupData, foreignContent)
+	}
+
+	installedData, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatalf("read installed plugin: %v", err)
+	}
+	if string(installedData) != pluginScriptSource(t) {
+		t.Error("installed plugin does not match the embedded template")
 	}
 }
 
