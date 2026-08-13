@@ -9,7 +9,7 @@ import (
 )
 
 func forcedLinters() []string {
-	// Forced via -E on every delegated run.
+	// Forced via -E on every delegated run: against silence, not an explicit opt-out.
 	return []string{
 		"nolintlint",
 		"paralleltest",
@@ -23,12 +23,14 @@ func forcedLinters() []string {
 type Runner struct {
 	path    string
 	failure finding.Reporter
+	warning finding.Reporter
 }
 
 func NewRunner(golangciLintPath string) *Runner {
 	return &Runner{
 		path:    golangciLintPath,
 		failure: finding.NewReporter("golangci-lint", finding.SeverityError, finding.CatSyntax),
+		warning: finding.NewReporter("golangci-lint", finding.SeverityWarning, finding.CatSyntax),
 	}
 }
 
@@ -55,7 +57,7 @@ func (r *Runner) runPerModule(projectDir, configPath string) []finding.Finding {
 
 	configFlag := resolvedConfigFlag(projectDir, configPath)
 
-	var allFindings []finding.Finding
+	allFindings := r.forcedBaselineFindings(configFlag)
 	for _, mod := range modules {
 		modDir := filepath.Join(projectDir, mod)
 		out, err := r.run(projectDir, lintArgs(modDir+"/...", configFlag))
@@ -67,7 +69,7 @@ func (r *Runner) runPerModule(projectDir, configPath string) []finding.Finding {
 func (r *Runner) runSingle(projectDir, configPath string) []finding.Finding {
 	configFlag := resolvedConfigFlag(projectDir, configPath)
 	out, err := r.run(projectDir, lintArgs("./...", configFlag))
-	return r.parseOutput(out, err)
+	return append(r.forcedBaselineFindings(configFlag), r.parseOutput(out, err)...)
 }
 
 func (r *Runner) run(projectDir string, args []string) ([]byte, error) {
