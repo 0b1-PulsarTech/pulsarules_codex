@@ -20,14 +20,11 @@ type candidateSet struct {
 	fresh    []string
 }
 
-// Suggest returns up to count shortcodes to offer as alternatives.
-//
-// The set leads with emoji whose family matches what the subject describes,
+// Suggest returns up to count shortcodes: emoji matching the subject first,
 // then the commit type's measured vocabulary, then the wider pool. The seed
-// varies the picks between commits while staying reproducible for the same
-// message - always naming the same few alternatives is what produced the runs
-// of identical emoji this catalog exists to break up. Shortcodes in exclude
-// (the recent-history window) are never offered.
+// varies picks between commits while staying reproducible per message -
+// otherwise the same alternatives repeat, the identical-emoji problem this
+// catalog exists to break up. Shortcodes in exclude are never offered.
 func (c *Catalog) Suggest(commitType, seed string, exclude []string, count int) []string {
 	if count <= 0 {
 		return nil

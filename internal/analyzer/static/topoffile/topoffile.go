@@ -14,8 +14,6 @@ type Analyzer struct {
 
 var topOfFileReporter = core.NewReporter("top-of-file", core.SeverityError, core.CatSyntax)
 
-// NewAnalyzer creates an Analyzer that uses the given
-// language registry for comment and package-declaration detection.
 func NewAnalyzer(langs *core.LanguageRegistry) *Analyzer {
 	return &Analyzer{langs: langs}
 }

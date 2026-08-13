@@ -4,24 +4,11 @@ import (
 	"strings"
 )
 
-// The commit message grammar (BNF):
+// The commit message grammar. The type-less special cases (initial, merge,
+// [wip]) are documented on the Message fields that carry them. Each grammar
+// production below is documented next to the function that parses it.
 //
-//   message  ::= emojis? header (blank body? (blank footers?)?)?
-//   emojis   ::= emoji (spaces emoji)*   (up to 3)
-//   emoji    ::= ":" name ":"             (name = [a-z0-9_]+, no spaces inside)
-//   header   ::= type scope? breaking? ": " description
-//   scope    ::= "(" scopechars ")"
-//   breaking ::= "!"
-//   description ::= non-newline-chars
-//   body     ::= text-paragraphs
-//   footers  ::= footer (blank footer)*
-//   footer   ::= footerkey (": " | " #") footervalue
-//   blank    ::= "\n" "\n"
-//
-// Special cases (checked after parse):
-//   ":ghost: Initial Commit"         → IsInitial = true (no type)
-//   ":volcano: Merge ..."             → IsMerge = true (no type)
-//   "[wip]" / "[WIP]" prefix in desc  → IsWIP = true
+//	message ::= emojis? header (blank body? (blank footers?)?)?
 
 // MaxLeadingEmojis is the most leading :shortcode: emoji a commit message may
 // carry. The parser consumes every leading emoji token, however many there
@@ -73,6 +60,7 @@ func (p *parser) parse(msg *Message) {
 	p.parseBodyAndFooters(msg)
 }
 
+// emojis ::= emoji (spaces emoji)*        up to 3
 // why: uncapped on purpose - MaxLeadingEmojis is a validation rule the commit
 // analyzer enforces on the resulting count, not a token-count the parser
 // truncates at, so an over-long run reports commit-emoji-count instead of
@@ -88,6 +76,7 @@ func (p *parser) parseEmojis(msg *Message) {
 	}
 }
 
+// emoji ::= ":" [a-z0-9_]+ ":"
 // tryEmoji attempts to consume a :shortcode: at the current position. On
 // success it returns the shortcode name (without colons) and advances past
 // the closing colon. On failure it restores the position.
@@ -122,6 +111,7 @@ func (p *parser) tryEmoji() (string, bool) {
 	return name, true
 }
 
+// header ::= type scope? "!"? ": " description
 func (p *parser) parseHeader(msg *Message) {
 	if !p.parseType(msg) {
 		return
@@ -131,6 +121,7 @@ func (p *parser) parseHeader(msg *Message) {
 	p.parseDescription(msg)
 }
 
+// footers ::= footer (blank footer)*
 func (p *parser) parseBodyAndFooters(msg *Message) {
 	if p.peek() == '\n' {
 		p.pos++

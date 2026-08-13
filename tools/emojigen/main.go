@@ -1,9 +1,8 @@
 package main
 
-// emojigen regenerates the embedded commit-emoji catalog. It is a manual tool,
-// not part of the build: it reaches the network and a local clone of the
-// reference repository. Run it only when the catalog needs to change, then
-// commit the regenerated data files.
+// emojigen regenerates the embedded commit-emoji catalog. Manual tool, not
+// part of the build: it reaches the network and a local clone of the
+// reference repository. Run only when the catalog changes.
 //
 //	go run ./tools/emojigen --jane <path-to-jane> --out internal/emoji/data
 

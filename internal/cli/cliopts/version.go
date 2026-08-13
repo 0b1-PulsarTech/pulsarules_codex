@@ -19,7 +19,6 @@ func IsVersion(command string) bool {
 	return false
 }
 
-// PrintVersion writes the version banner to stdout.
 func PrintVersion() {
 	_, _ = fmt.Fprintf(os.Stdout, "pulsarules_cli %s\n", version)
 }

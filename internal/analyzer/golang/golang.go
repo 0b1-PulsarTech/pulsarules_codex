@@ -11,7 +11,6 @@ type GoHandler struct{}
 
 var _ core.Language = GoHandler{}
 
-// New returns a GoHandler.
 func New() GoHandler { return GoHandler{} }
 
 func (GoHandler) ID() string            { return "go" }

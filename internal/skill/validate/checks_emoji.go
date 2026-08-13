@@ -7,12 +7,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-// emojiThemeShortcodes reports any commit emoji theme that names a shortcode
-// absent from the commit emoji catalog: without this check, a theme could
-// recommend an emoji the catalog then rejects at commit time, and the drift
-// would only surface as a confusing hook failure instead of a validate error.
-// A malformed catalog or theme table (a tools/emojigen build defect) is
-// reported the same way, as a validate problem, rather than being swallowed.
+// emojiThemeShortcodes reports any commit emoji theme that names a
+// shortcode absent from the commit emoji catalog: without this check, a
+// theme could recommend an emoji the catalog rejects at commit time,
+// surfacing as a confusing hook failure instead of a validate error. A
+// malformed catalog or theme table is reported the same way, not swallowed.
 func emojiThemeShortcodes(_ *knowledge.Index) []string {
 	catalog, err := emoji.NewCatalog()
 	if err != nil {

@@ -21,6 +21,7 @@ func (p *parser) parseType(msg *Message) bool {
 	return true
 }
 
+// scope ::= "(" scopechars ")"
 func (p *parser) parseScope(msg *Message) {
 	if p.peek() == '(' {
 		p.pos++

@@ -20,7 +20,6 @@ var prohibited = map[string]string{
 // list if raw text shows up again.
 var nonRendering = []string{"clown_face", "adhesive_bandage", "abacus"}
 
-// IsProhibited reports whether a shortcode is banned by decision.
 func IsProhibited(shortcode string) bool {
 	_, found := prohibited[shortcode]
 	return found
@@ -34,7 +33,6 @@ func ProhibitedReplacement(shortcode string) (string, bool) {
 	return replacement, found
 }
 
-// IsNonRendering reports whether a shortcode is known to display as raw text.
 func IsNonRendering(shortcode string) bool {
 	return slices.Contains(nonRendering, shortcode)
 }

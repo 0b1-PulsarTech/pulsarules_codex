@@ -21,11 +21,10 @@ const renameDiffProbeScore = 1
 var _ core.Analyzer = (*Analyzer)(nil)
 
 // Analyzer reports staged renames that are not pure moves: a rename scored
-// below the configured similarity, or one or more renames staged alongside
-// unrelated edits. It reports at warning severity by default (a project may
-// raise it to error via the "severity" param) because a legitimate
-// high-similarity rename picking up an import fixup is common; the point is
-// to nudge toward committing the move first, not to abort the commit.
+// below the configured similarity, or renames staged alongside unrelated
+// edits. Default severity is warning (raise via the "severity" param)
+// because a high-similarity rename picking up an import fixup is common;
+// the point is to nudge toward committing the move first, not abort it.
 type Analyzer struct {
 	minSimilarity int
 	diffs         diffReader
@@ -40,21 +39,16 @@ func NewAnalyzer(diffs diffReader) *Analyzer {
 	return &Analyzer{minSimilarity: defaultMinSimilarity, diffs: diffs}
 }
 
-// ID returns the analyzer's unique identifier.
 func (a *Analyzer) ID() string { return analyzerID }
 
-// Name returns a short human-readable label.
 func (a *Analyzer) Name() string { return "Commit move purity" }
 
-// Description returns a one-line explanation.
 func (a *Analyzer) Description() string {
 	return "Reports staged renames that mix content edits into the move, or coexist with unrelated staged edits"
 }
 
-// Stage returns the pipeline stage.
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
-// Category returns the analysis category.
 func (a *Analyzer) Category() core.Category { return core.CatCommit }
 
 // Needs declares what the analyzer requires from the pipeline context. It
@@ -111,14 +105,11 @@ func (a *Analyzer) renameEditFinding(
 	return renameCarriesEditFinding(reporter, rename), true
 }
 
-// unrelatedStagedEdits returns the staged file changes that are neither the
-// old nor the new path of any staged rename, and whose own staged diff is
-// not limited to the mechanical consequences of the move (an import path,
-// the package clause, an import alias) - the move-first commit rule allows
-// those to ride along, so they are not "edits" for the mixed-changeset
-// check. Git status reports a staged rename as a single entry whose Path is
-// the new path, so excluding both sides of every rename pair is enough to
-// isolate the changes a mixed commit smuggles in alongside the move.
+// unrelatedStagedEdits returns staged changes that are neither side of any
+// staged rename, whose diff also isn't limited to the move's mechanical
+// consequences (import path, package clause, alias) - those ride along
+// under the move-first rule. Git status keys a rename by its new path, so
+// excluding both sides of every pair isolates what a mixed commit smuggled in.
 func (a *Analyzer) unrelatedStagedEdits(
 	changes []core.FileChange,
 	renames []core.Rename,

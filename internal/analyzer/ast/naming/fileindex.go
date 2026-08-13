@@ -14,12 +14,10 @@ type fileIndex struct {
 	// whether a numbered name has a sibling worth calling a sequence.
 	declared map[string]bool
 	// typeDerived holds the BINDING SITES whose name repeats the type they
-	// come from - a constructor result, a composite literal, a parameter
-	// type. Such a name is precise, not noise.
-	//
-	// Keyed by position, not by name, on purpose: a file-wide exemption would
-	// let one `manager := NewManager()` clear every other `manager` in the
-	// file, which is the rule quietly gutting itself.
+	// come from - a constructor result, composite literal, or parameter
+	// type; such a name is precise, not noise. Keyed by position, not name:
+	// a file-wide exemption would let one `manager := NewManager()` clear
+	// every other `manager` in the file.
 	typeDerived map[token.Pos]bool
 }
 

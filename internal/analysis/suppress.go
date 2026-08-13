@@ -17,11 +17,9 @@ type Result struct {
 
 // splitGenerated partitions findings by whether they land in a generated file.
 //
-// It filters FINDINGS rather than skipping files on the way in, because that
-// is the only point every analyzer passes through: golangci-lint and gopls run
-// as external processes, and the arch analyzers walk the tree themselves, so
-// neither would honour a filter applied to ChangedFiles. It is also what
-// yields the exact count the footer reports.
+// It filters findings, not ChangedFiles: golangci-lint/gopls run as external
+// processes and arch analyzers walk the tree themselves, so a file-level
+// filter wouldn't reach them; this also yields the exact suppressed count.
 func splitGenerated(ctx *core.AnalysisContext, findings []core.Finding) Result {
 	known := make(map[string]bool, len(ctx.ChangedFiles))
 	for _, fc := range ctx.ChangedFiles {

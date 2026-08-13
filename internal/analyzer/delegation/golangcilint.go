@@ -12,7 +12,6 @@ type GolangcilintAnalyzer struct {
 	runner *golangcilint.Runner
 }
 
-// NewGolangcilintAnalyzer creates an analyzer that delegates to golangci-lint.
 func NewGolangcilintAnalyzer(path string) *GolangcilintAnalyzer {
 	return &GolangcilintAnalyzer{runner: golangcilint.NewRunner(path)}
 }

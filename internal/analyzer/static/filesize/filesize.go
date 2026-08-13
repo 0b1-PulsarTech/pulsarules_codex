@@ -27,7 +27,6 @@ type Analyzer struct {
 
 var fileSizeReporter = core.NewReporter("file-size", core.SeverityWarning, core.CatProject)
 
-// NewAnalyzer creates a file-size analyzer with the default line threshold.
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{maxLines: defaultMaxLines}
 }
