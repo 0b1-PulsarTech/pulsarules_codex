@@ -7,11 +7,11 @@ import (
 func TestLoadProjectIndex(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "foo.go", "package foo\n")
-	writeFile(t, tmp, "bar/baz.go", "package bar\nimport \"example.com/mod/foo\"\n")
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "foo.go", "package foo\n")
+	writeFile(t, projectDir, "bar/baz.go", "package bar\nimport \"example.com/mod/foo\"\n")
 
-	idx := loadProjectIndex(tmp, "example.com/mod")
+	idx := loadProjectIndex(projectDir, "example.com/mod")
 	if idx == nil {
 		t.Fatal("expected a non-nil project index")
 	}
@@ -26,13 +26,13 @@ func TestLoadProjectIndex(t *testing.T) {
 func TestLoadProjectIndex_RebuildsEveryCall(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "foo.go", "package foo\n")
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "foo.go", "package foo\n")
 
-	idx1 := loadProjectIndex(tmp, "example.com/mod")
-	idx2 := loadProjectIndex(tmp, "example.com/mod")
+	firstIndex := loadProjectIndex(projectDir, "example.com/mod")
+	secondIndex := loadProjectIndex(projectDir, "example.com/mod")
 
-	if idx1 == idx2 {
+	if firstIndex == secondIndex {
 		t.Error("expected a freshly built index on every call, got the same pointer")
 	}
 }

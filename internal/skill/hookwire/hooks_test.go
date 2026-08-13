@@ -19,19 +19,19 @@ func TestInstallHook(t *testing.T) {
 	}
 
 	script := filepath.Join(claudeDir, "hooks", "skill-router-reminder.sh")
-	info, err := os.Stat(script)
+	stat, err := os.Stat(script)
 	if err != nil {
 		t.Fatalf("stat script: %v", err)
 	}
-	if info.Mode().Perm()&0o100 == 0 {
-		t.Errorf("script not executable: mode %v", info.Mode().Perm())
+	if stat.Mode().Perm()&0o100 == 0 {
+		t.Errorf("script not executable: mode %v", stat.Mode().Perm())
 	}
-	if _, err := os.Stat(filepath.Join(claudeDir, "hooks", "README.md")); err != nil {
+	if _, err = os.Stat(filepath.Join(claudeDir, "hooks", "README.md")); err != nil {
 		t.Errorf("README not installed: %v", err)
 	}
 }
 
-func TestInstallHook_BacksUpForeignReadme(t *testing.T) {
+func TestInstallHook_ForeignReadmeBackup(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := filepath.Join(t.TempDir(), ".claude")
@@ -62,12 +62,38 @@ func TestInstallHook_BacksUpForeignReadme(t *testing.T) {
 		t.Errorf("backup content = %q, want %q", got, foreign)
 	}
 
-	backedUp2, err := InstallHook(fakeTemplates(), claudeDir)
+	secondBackedUp, err := InstallHook(fakeTemplates(), claudeDir)
 	if err != nil {
 		t.Fatalf("second InstallHook: %v", err)
 	}
-	if len(backedUp2) != 0 {
-		t.Errorf("second InstallHook backedUp = %v, want none (it owns the file now)", backedUp2)
+	if len(secondBackedUp) != 0 {
+		t.Errorf(
+			"second InstallHook backedUp = %v, want none (it owns the file now)",
+			secondBackedUp,
+		)
+	}
+}
+
+func seedFile(tb testing.TB, path, content string) {
+	tb.Helper()
+
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		tb.Fatalf("mkdir %q: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		tb.Fatalf("seed %q: %v", path, err)
+	}
+}
+
+func assertContent(tb testing.TB, path, want string) {
+	tb.Helper()
+
+	got, err := os.ReadFile(path) //nolint:gosec // test fixture.
+	if err != nil {
+		tb.Fatalf("read %q: %v", path, err)
+	}
+	if string(got) != want {
+		tb.Errorf("%q content = %q, want %q", path, got, want)
 	}
 }
 
@@ -75,20 +101,12 @@ func TestInstallHook_NextNumberedSlot(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := filepath.Join(t.TempDir(), ".claude")
-	hooksDir := filepath.Join(claudeDir, "hooks")
-	if err := os.MkdirAll(hooksDir, 0o750); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	readme := filepath.Join(hooksDir, "README.md")
+	readme := filepath.Join(claudeDir, "hooks", "README.md")
 	current := "# current notes\n"
-	if err := os.WriteFile(readme, []byte(current), 0o600); err != nil {
-		t.Fatalf("seed foreign readme: %v", err)
-	}
+	seedFile(t, readme, current)
 	priorBackup := readme + marker.BackupSuffix
 	priorContent := "# an even earlier version of the user's notes\n"
-	if err := os.WriteFile(priorBackup, []byte(priorContent), 0o600); err != nil {
-		t.Fatalf("seed prior backup: %v", err)
-	}
+	seedFile(t, priorBackup, priorContent)
 
 	backedUp, err := InstallHook(fakeTemplates(), claudeDir)
 	if err != nil {
@@ -99,23 +117,11 @@ func TestInstallHook_NextNumberedSlot(t *testing.T) {
 	if len(backedUp) != 1 || backedUp[0] != wantMsg {
 		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
 	}
-	got, readErr := os.ReadFile(priorBackup) //nolint:gosec // test fixture.
-	if readErr != nil {
-		t.Fatalf("read prior backup: %v", readErr)
-	}
-	if string(got) != priorContent {
-		t.Errorf("prior backup content = %q, want %q (clobbered)", got, priorContent)
-	}
-	got, readErr = os.ReadFile(newBackup) //nolint:gosec // test fixture.
-	if readErr != nil {
-		t.Fatalf("read new backup: %v", readErr)
-	}
-	if string(got) != current {
-		t.Errorf("new backup content = %q, want %q", got, current)
-	}
+	assertContent(t, priorBackup, priorContent)
+	assertContent(t, newBackup, current)
 }
 
-func TestInstallHook_RendersRealTemplate(t *testing.T) {
+func TestInstallHook_RealTemplate(t *testing.T) {
 	t.Parallel()
 
 	_, templates, err := knowledge.Load("")

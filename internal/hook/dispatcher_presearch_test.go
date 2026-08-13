@@ -63,7 +63,10 @@ func TestDispatchPreSearch(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			dir, skillsDir := preSearchProjectDir(t, testCase.hasGoMod, testCase.hasGoplsSkill)
+			dir, skillsDir := preSearchProjectDir(t, preSearchFixture{
+				hasGoMod:      testCase.hasGoMod,
+				hasGoplsSkill: testCase.hasGoplsSkill,
+			})
 			disp, out := dispatchCapture(Deps{ProjectDir: dir, SkillsDir: skillsDir})
 			payload := fmt.Sprintf(
 				`{"tool_name":%q,"tool_input":{%s},"session_id":%q}`,
@@ -84,10 +87,15 @@ func TestDispatchPreSearch(t *testing.T) {
 	}
 }
 
-func preSearchProjectDir(t *testing.T, hasGoMod, hasGoplsSkill bool) (dir, skillsDir string) {
+type preSearchFixture struct {
+	hasGoMod      bool
+	hasGoplsSkill bool
+}
+
+func preSearchProjectDir(t *testing.T, fixture preSearchFixture) (dir, skillsDir string) {
 	t.Helper()
 	dir = t.TempDir()
-	if hasGoMod {
+	if fixture.hasGoMod {
 		if err := os.WriteFile(
 			filepath.Join(dir, "go.mod"),
 			[]byte("module x\n"),
@@ -97,7 +105,7 @@ func preSearchProjectDir(t *testing.T, hasGoMod, hasGoplsSkill bool) (dir, skill
 		}
 	}
 	skillsDir = filepath.Join(dir, ".claude", "skills")
-	if hasGoplsSkill {
+	if fixture.hasGoplsSkill {
 		installSkillFixture(t, skillsDir, "gopls-navigation")
 	}
 	return dir, skillsDir
@@ -106,7 +114,7 @@ func preSearchProjectDir(t *testing.T, hasGoMod, hasGoplsSkill bool) (dir, skill
 func TestDispatchPreSearchOncePerSession(t *testing.T) {
 	t.Parallel()
 
-	dir, skillsDir := preSearchProjectDir(t, true, true)
+	dir, skillsDir := preSearchProjectDir(t, preSearchFixture{hasGoMod: true, hasGoplsSkill: true})
 	id := uniqueSessionID(t)
 	payload := fmt.Appendf(
 		nil,
