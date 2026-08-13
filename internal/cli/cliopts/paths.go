@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/slicesx"
 )
 
 // BaseDir resolves the install base directory (the project root, or the home dir
@@ -35,17 +36,16 @@ func (opts *Options) Targets() []string {
 	if len(opts.Target) == 0 {
 		return []string{defaultTarget}
 	}
-	return dedupeStrings(opts.Target)
+	return slicesx.Dedupe(opts.Target)
 }
 
 // ExplicitTargets returns the --target values the user actually passed,
 // deduped and order-preserved, with no default applied. Uninstall must tell
-// "nothing passed" apart from "claude explicitly asked for": its contract is
-// to act on every target it can detect on disk (see target.Registry.
-// DetectTargets), never to silently narrow to install's "claude only"
-// default the way Targets does.
+// "nothing passed" apart from "claude explicitly asked for": its contract
+// acts on every target it can detect on disk (target.Registry.DetectTargets),
+// never narrowing to Targets' "claude only" default.
 func (opts *Options) ExplicitTargets() []string {
-	return dedupeStrings(opts.Target)
+	return slicesx.Dedupe(opts.Target)
 }
 
 // GitHookNames parses --git-hooks into the ordered, deduped hook names to
@@ -58,18 +58,7 @@ func (opts *Options) GitHookNames() []string {
 			names = append(names, trimmed)
 		}
 	}
-	return dedupeStrings(names)
-}
-
-// dedupeStrings drops duplicate names while preserving order.
-func dedupeStrings(raw []string) []string {
-	targets := make([]string, 0, len(raw))
-	for _, name := range raw {
-		if !slices.Contains(targets, name) {
-			targets = append(targets, name)
-		}
-	}
-	return targets
+	return slicesx.Dedupe(names)
 }
 
 // IsHelp reports whether the command requests the usage banner.

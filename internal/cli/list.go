@@ -83,12 +83,5 @@ func joinOrDash(items []string) string {
 	if len(items) == 0 {
 		return "-"
 	}
-	var builder strings.Builder
-	for i, item := range items {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(item)
-	}
-	return builder.String()
+	return strings.Join(items, ", ")
 }
