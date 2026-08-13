@@ -26,15 +26,7 @@ func analyzerSpecs() []analyzerSpec {
 	return append([]analyzerSpec{
 		staticSpec("file-size", filesize.NewAnalyzer),
 		staticSpec("no-em-dash", noemdash.NewAnalyzer),
-		{
-			id: "import-groups",
-			build: func(
-				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
-			) pass.Analyzer {
-				return importgroup.NewAnalyzer("github.com/0b1-PulsarTech/pulsarules_codex")
-			},
-			scopes: staticScopes(),
-		},
+		staticSpec("import-groups", importgroup.NewAnalyzer),
 		staticSpec("naming", identifier.NewAnalyzer),
 		langSpec("top-of-file", banner.NewAnalyzer),
 		langSpec("big-comment", blocksize.NewAnalyzer),
