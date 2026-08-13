@@ -25,16 +25,9 @@ func (a *Analyzer) Needs() finding.Requirements {
 }
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	if ctx.ASTCache == nil {
-		return nil
-	}
-
-	fset := ctx.ASTCache.FileSet()
-	var findings []finding.Finding
-	for fc, f := range ctx.ChangedGoASTs() {
-		findings = append(findings, checkFile(fset, fc, f, a.reporter)...)
-	}
-	return findings
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []finding.Finding {
+		return checkFile(ctx.ASTCache.FileSet(), fc, f, a.reporter)
+	})
 }
 
 func checkFile(

@@ -1,6 +1,8 @@
 package complexity
 
 import (
+	"go/ast"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
@@ -36,16 +38,10 @@ func (a *Analyzer) Needs() finding.Requirements {
 }
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	if ctx.ASTCache == nil {
-		return nil
-	}
 	th := a.resolveThresholds(ctx)
-	fset := ctx.ASTCache.FileSet()
-	var findings []finding.Finding
-	for fc, f := range ctx.ChangedGoASTs() {
-		findings = append(findings, th.checkFile(fset, fc, f)...)
-	}
-	return findings
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []finding.Finding {
+		return th.checkFile(ctx.ASTCache.FileSet(), fc, f)
+	})
 }
 
 func (a *Analyzer) resolveThresholds(ctx *pass.Context) thresholds {
