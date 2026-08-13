@@ -13,13 +13,22 @@ import (
 func parseOutput(out []byte, cmdErr error) []core.Finding {
 	if cmdErr != nil {
 		var exitErr *exec.ExitError
-		if errors.As(cmdErr, &exitErr) {
+		switch {
+		case errors.As(cmdErr, &exitErr):
 			if !isLintExit(exitErr.ExitCode()) {
 				return []core.Finding{
 					golangciLintReporter.New(
 						fmt.Sprintf("golangci-lint failed: %s", string(exitErr.Stderr)),
 					),
 				}
+			}
+		default:
+			// why: a non-ExitError (e.g. *exec.Error from a missing binary,
+			// or a permission error) means the command never produced
+			// stdout to parse; report the real cause instead of falling
+			// through to a JSON parse failure on empty output.
+			return []core.Finding{
+				golangciLintReporter.New(fmt.Sprintf("golangci-lint failed: %s", cmdErr)),
 			}
 		}
 	}

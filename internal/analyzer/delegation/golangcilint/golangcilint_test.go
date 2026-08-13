@@ -20,8 +20,9 @@ func TestRun_NoBinary(t *testing.T) {
 func TestRun_MissingBinary(t *testing.T) {
 	t.Parallel()
 
-	// A binary path guaranteed not to resolve fails the exec, so the runner
-	// gets no JSON to parse and must report that as a single finding.
+	// A binary path guaranteed not to resolve fails the exec before any
+	// stdout exists, so the runner must report the real exec failure -
+	// never a misleading "failed to parse ... output" on empty JSON.
 	r := NewRunner("/nonexistent/golangci-lint")
 	findings := r.Run(".", "")
 
@@ -32,8 +33,14 @@ func TestRun_MissingBinary(t *testing.T) {
 	if got.AnalyzerID != "golangci-lint" {
 		t.Errorf("AnalyzerID = %q, want %q", got.AnalyzerID, "golangci-lint")
 	}
-	if !strings.Contains(got.Message, "failed to parse golangci-lint output") {
-		t.Errorf("Message = %q, want it to mention a parse failure", got.Message)
+	if strings.Contains(got.Message, "failed to parse golangci-lint output") {
+		t.Errorf("Message = %q, must not claim a JSON parse failure", got.Message)
+	}
+	if !strings.Contains(got.Message, "/nonexistent/golangci-lint") {
+		t.Errorf(
+			"Message = %q, want it to name the real exec failure (missing binary path)",
+			got.Message,
+		)
 	}
 }
 
