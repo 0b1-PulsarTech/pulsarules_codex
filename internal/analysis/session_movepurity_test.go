@@ -55,9 +55,6 @@ func runGitAt(t *testing.T, dir string, args ...string) {
 	}
 }
 
-// TestSession_MovePurity proves the full wiring: a real staged rename or
-// mixed changeset, read through vcs.Repository and threaded by Session into
-// the pipeline, reaches the registered commit-move-purity analyzer.
 type movePurityFixture struct {
 	name        string
 	setup       func(t *testing.T, dir string)
@@ -151,6 +148,9 @@ var movePurityFixtures = []movePurityFixture{
 	},
 }
 
+// TestSession_MovePurity proves the full wiring: a real staged rename or
+// mixed changeset, read through vcs.Repository and threaded by Session into
+// the pipeline, reaches the registered commit-move-purity analyzer.
 func TestSession_MovePurity(t *testing.T) {
 	t.Parallel()
 

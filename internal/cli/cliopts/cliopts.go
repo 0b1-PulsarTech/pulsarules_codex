@@ -97,9 +97,6 @@ func (opts *Options) SettingsFiles() ([]string, error) {
 	}
 }
 
-// ParseArgs binds the CLI flags for the chosen subcommand onto opts and applies
-// defaults. A parse failure wraps flag.ErrHelp, which main detects with
-// errors.Is so it can print usage cleanly instead of an error.
 func (opts *Options) applyDefaults() {
 	switch opts.Command {
 	case "generate":

@@ -48,6 +48,25 @@ linters:
     # gochecknoglobals has not been measured against this codebase and is left off pending
     # that evaluation.
   settings:
+    # golangci-lint's own default for staticcheck is "all" minus ST1000, ST1003,
+    # ST1016, ST1020, ST1021, ST1022 and ST1023. This list is that default with the
+    # three doc-comment-form checks put back: ST1020 (exported func), ST1021
+    # (exported type), ST1022 (exported var/const) all require the comment to open
+    # with the identifier it documents - which effective-go.md #3 already demands in
+    # prose, so this is the machine finally carrying an obligation we were writing
+    # down and never checking. Spelling out the surviving exclusions matters: a bare
+    # `checks: [ST1020, ST1021, ST1022]` REPLACES the default set rather than adding
+    # to it, silently dropping every SA check (verified against golangci-lint v2.12.2
+    # with an SA9003 probe). ST1000 stays off - it wants a package comment on every
+    # package, which is the opposite of effective-go.md #3's "no package docstrings"
+    # and would fire 194 times here.
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+        - -ST1003
+        - -ST1016
+        - -ST1023
     govet:
       enable:
         - shadow

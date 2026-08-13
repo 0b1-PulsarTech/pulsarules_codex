@@ -6,6 +6,9 @@ import (
 	"os"
 )
 
+// ParseArgs binds the CLI flags for the chosen subcommand onto opts and applies
+// defaults. A parse failure wraps flag.ErrHelp, which main detects with
+// errors.Is so it can print usage cleanly instead of an error.
 func ParseArgs(args []string) (*Options, error) {
 	opts := &Options{}
 	if len(args) == 0 {

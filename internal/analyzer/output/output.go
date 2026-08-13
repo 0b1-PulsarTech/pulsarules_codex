@@ -12,7 +12,6 @@ import (
 // ctx.Findings in place and returns nil.
 type Analyzer struct{}
 
-// NewOutputAnalyzer creates an output analyzer that sorts and deduplicates findings.
 func NewAnalyzer() *Analyzer { return &Analyzer{} }
 
 func (a *Analyzer) ID() string   { return "output" }
