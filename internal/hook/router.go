@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -40,7 +41,7 @@ func (r *fileRouter) SkillsForFile(filePath string) []string {
 	if strings.HasSuffix(strings.ToLower(filePath), "_test.go") {
 		ids = append(ids, r.dispatchSkills("test")...)
 	}
-	return dedupe(ids)
+	return ordered.Dedupe(ids)
 }
 
 func (r *fileRouter) dispatchSkills(keyword string) []string {
@@ -75,20 +76,4 @@ func hasWord(text, word string) bool {
 		}
 	}
 	return false
-}
-
-func dedupe(ids []string) []string {
-	if len(ids) == 0 {
-		return nil
-	}
-	seen := make(map[string]bool, len(ids))
-	out := make([]string, 0, len(ids))
-	for _, id := range ids {
-		if seen[id] {
-			continue
-		}
-		seen[id] = true
-		out = append(out, id)
-	}
-	return out
 }
