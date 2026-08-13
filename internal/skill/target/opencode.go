@@ -56,6 +56,7 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 		installErr := ctx.HookInstallers.Install("opencode", install.Context{
 			Dir:       ctx.Base,
 			Templates: ctx.Templates,
+			Warn:      report.warn,
 		})
 		if installErr != nil {
 			report.warn("opencode plugin: %v", installErr)

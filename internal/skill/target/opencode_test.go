@@ -82,6 +82,34 @@ func TestOpencodeTargetInstall(t *testing.T) {
 	}
 }
 
+func TestOpencodeInstall_PluginBackup(t *testing.T) {
+	t.Parallel()
+	base := t.TempDir()
+	pluginsDir := filepath.Join(base, ".opencode", "plugins")
+	if err := os.MkdirAll(pluginsDir, 0o750); err != nil {
+		t.Fatalf("mkdir plugins: %v", err)
+	}
+	pluginPath := filepath.Join(pluginsDir, "pulsarules-governance.js")
+	if err := os.WriteFile(
+		pluginPath, []byte("// hand-authored, not ours\n"), 0o600,
+	); err != nil {
+		t.Fatalf("seed foreign plugin: %v", err)
+	}
+
+	ctx := newTestContext(t, base, []string{"go-style"})
+	ctx.NoHooks = false
+
+	report, err := opencodeTarget{}.Install(ctx)
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if !slices.ContainsFunc(report.Warnings, func(warning string) bool {
+		return strings.Contains(warning, "backed up")
+	}) {
+		t.Errorf("Warnings missing a backup notice: %v", report.Warnings)
+	}
+}
+
 func TestOpencodeInstall_LegacyAgents(t *testing.T) {
 	t.Parallel()
 
