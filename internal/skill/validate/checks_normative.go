@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
@@ -27,7 +28,11 @@ func skillNormativeSections(idx *knowledge.Index) []string {
 		if skill.ID == "project-router" {
 			continue
 		}
-		if !skillHasNormativeSection(idx, skill) {
+		has, problem := skillHasNormativeSection(idx, skill)
+		switch {
+		case problem != "":
+			problems = append(problems, problem)
+		case !has:
 			problems = append(problems, fmt.Sprintf(
 				"skill %q renders no normative section (must, forbidden, or validation)", skill.ID,
 			))
@@ -42,7 +47,11 @@ func skillNormativeSections(idx *knowledge.Index) []string {
 				continue
 			}
 			overridden := applyOverride(skill, override)
-			if !skillHasNormativeSection(idx, overridden) {
+			has, problem := skillHasNormativeSection(idx, overridden)
+			switch {
+			case problem != "":
+				problems = append(problems, fmt.Sprintf("profile %q: %s", profile.ID, problem))
+			case !has:
 				problems = append(problems, fmt.Sprintf(
 					"profile %q overrides skill %q to render no normative section (must, forbidden, or validation)",
 					profile.ID,
@@ -54,11 +63,23 @@ func skillNormativeSections(idx *knowledge.Index) []string {
 	return problems
 }
 
-// why: an unresolved reference is already reported by
-// skillCompositions/profileOverrides, so it must not double-report here.
-func skillHasNormativeSection(idx *knowledge.Index, skill knowledge.Skill) bool {
+// why: an unresolved reference is already reported by skillCompositions/profileOverrides, so it
+// must not double-report here - but that is the ONLY failure worth swallowing. This used to
+// swallow every error, which silently passed a skill whose {{define "must"}} block does not parse:
+// a real defect nothing else in this function's own pipeline reports.
+func skillHasNormativeSection(
+	idx *knowledge.Index,
+	skill knowledge.Skill,
+) (has bool, problem string) {
 	has, err := render.HasNormativeSection(idx, skill)
-	return err != nil || has
+	switch {
+	case errors.Is(err, render.ErrUnknownComposition):
+		return true, ""
+	case err != nil:
+		return true, err.Error()
+	default:
+		return has, ""
+	}
 }
 
 // why: mirrors (*knowledge.Index).ApplyProfiles - a nil composition list in

@@ -60,13 +60,11 @@ func TestSkillNormativeSections_Fixture(t *testing.T) {
 	}
 }
 
-// TestSkillNormativeSections_ProfileOverride builds a fixture where a skill's
-// base composition passes (it composes a "must"-carrying rule) but two
-// profiles override that composition: one down to a "when"-only rule (no
-// obligation left to render), one to a different "must"-carrying rule (still
-// normative). It asserts the degrading override is reported by profile and
-// skill, and the still-normative override is silent - proving the check
-// follows a profile's override, not just a skill's base composition.
+// TestSkillNormativeSections_ProfileOverride builds a fixture where a
+// skill's base composition passes, but two profiles override it: one to a
+// "when"-only rule (no obligation left), one to a different "must"-carrying
+// rule (still normative). It asserts the degrading override is reported and
+// the still-normative one is silent, following a profile's override.
 func TestSkillNormativeSections_ProfileOverride(t *testing.T) {
 	t.Parallel()
 
@@ -268,5 +266,55 @@ func writeFixtureFile(tb testing.TB, path, content string) {
 	tb.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		tb.Fatalf("write %s: %v", path, err)
+	}
+}
+
+// TestSkillNormativeSections_BrokenTemplateIsReported covers the failure this check used to
+// swallow. skillHasNormativeSection returned `err != nil || has`, treating EVERY mergeSources
+// failure as "has a normative section, move on". An unresolved composition genuinely is reported
+// elsewhere - but a rule body whose {{define "must"}} does not parse is not, so a broken clause
+// block passed validation silently while rendering nothing.
+func TestSkillNormativeSections_BrokenTemplateIsReported(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	standards := filepath.Join(root, "knowledge", "standards")
+	for _, dir := range []string{"rules", "patterns", "workflows"} {
+		if err := os.MkdirAll(filepath.Join(standards, dir), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+	writeFixtureFile(t, filepath.Join(standards, "rules", "broken-rule.md"), `---
+id: broken-rule
+name: Broken Rule
+description: fixture rule whose must block does not parse
+---
+
+# Broken Rule
+
+{{define "must"}}
+Do the thing {{ .Unclosed
+{{end}}
+`)
+	writeFixtureFile(t, filepath.Join(standards, "skills.yaml"), `skills:
+  - id: composes-broken
+    name: Composes Broken
+    description: fixture skill
+    compose_rules: [broken-rule]
+  - id: project-router
+    name: Project Router
+    description: fixture router
+`)
+
+	idx, _, err := knowledge.Load(root)
+	if err != nil {
+		t.Fatalf("Load fixture: %v", err)
+	}
+	problems := skillNormativeSections(idx)
+	if len(problems) == 0 {
+		t.Fatal("an unparseable must block was accepted silently")
+	}
+	if !strings.Contains(strings.Join(problems, "\n"), "broken-rule") {
+		t.Errorf("problems = %v, want them to name the rule that does not parse", problems)
 	}
 }

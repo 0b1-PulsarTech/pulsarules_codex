@@ -2,6 +2,7 @@ package render
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 	"text/template"
@@ -80,7 +81,9 @@ func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error)
 		id, _, _ := strings.Cut(entry, "#")
 		rule, ok := idx.Rule(id)
 		if !ok {
-			return nil, fmt.Errorf("skill %q composes unknown rule %q", skill.ID, id)
+			return nil, fmt.Errorf(
+				"%w: skill %q composes unknown rule %q", ErrUnknownComposition, skill.ID, id,
+			)
 		}
 		if err := add("rules", entry, rule.Name); err != nil {
 			return nil, err
@@ -90,7 +93,9 @@ func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error)
 		id, _, _ := strings.Cut(entry, "#")
 		pattern, ok := idx.Pattern(id)
 		if !ok {
-			return nil, fmt.Errorf("skill %q composes unknown pattern %q", skill.ID, id)
+			return nil, fmt.Errorf(
+				"%w: skill %q composes unknown pattern %q", ErrUnknownComposition, skill.ID, id,
+			)
 		}
 		if err := add("patterns", entry, pattern.Name); err != nil {
 			return nil, err
@@ -103,6 +108,12 @@ func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error)
 // (what a skill's consumer must, must not, or must check) rather than merely
 // describe or demonstrate one.
 var normativeSectionKeys = []string{"must", "forbidden", "validation"}
+
+// ErrUnknownComposition marks the one mergeSources failure that is NOT a defect in a body: a skill
+// naming a rule or pattern id that does not exist. Callers that already report unresolved
+// references separately match on it so they can keep reporting every OTHER failure - notably a
+// text/template parse error inside a {{define}} block, which nothing else would catch.
+var ErrUnknownComposition = errors.New("unknown composition")
 
 // HasNormativeSection reports whether skill renders at least one non-empty
 // "must", "forbidden", or "validation" section across its composed rules and
