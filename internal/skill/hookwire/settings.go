@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
@@ -84,19 +83,17 @@ func mergeSettings(existing []byte, block hooksBlock) (map[string]json.RawMessag
 func withoutHookScript(groups []hookGroup) []hookGroup {
 	kept := make([]hookGroup, 0, len(groups))
 	for _, group := range groups {
-		if groupReferencesHook(group) {
+		// Filter per command so a command a user appended next to ours survives.
+		cmds, removed := withoutHookCommand(group.Hooks)
+		if !removed {
+			kept = append(kept, group)
 			continue
 		}
+		if len(cmds) == 0 {
+			continue
+		}
+		group.Hooks = cmds
 		kept = append(kept, group)
 	}
 	return kept
-}
-
-func groupReferencesHook(group hookGroup) bool {
-	for _, cmd := range group.Hooks {
-		if strings.Contains(cmd.Command, hookScript) {
-			return true
-		}
-	}
-	return false
 }
