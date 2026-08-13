@@ -27,24 +27,12 @@ type lintPos struct {
 }
 
 func (r *Runner) parseOutput(out []byte, cmdErr error) []core.Finding {
-	if cmdErr != nil {
-		var exitErr *exec.ExitError
-		if errors.As(cmdErr, &exitErr) {
-			if !isLintExit(exitErr.ExitCode()) {
-				return []core.Finding{
-					r.failure.New(
-						fmt.Sprintf("golangci-lint failed: %s", string(exitErr.Stderr)),
-					),
-				}
-			}
-		}
+	if failure := r.exitFailure(cmdErr); failure != nil {
+		return failure
 	}
 
-	jsonOut := extractJSON(out)
-
 	var result lintReport
-
-	if parseErr := json.Unmarshal(jsonOut, &result); parseErr != nil {
+	if parseErr := json.Unmarshal(extractJSON(out), &result); parseErr != nil {
 		return []core.Finding{
 			r.failure.New(
 				fmt.Sprintf("failed to parse golangci-lint output: %s", parseErr),
@@ -69,6 +57,26 @@ func (r *Runner) parseOutput(out []byte, cmdErr error) []core.Finding {
 	}
 
 	return findings
+}
+
+func (r *Runner) exitFailure(cmdErr error) []core.Finding {
+	if cmdErr == nil {
+		return nil
+	}
+	var exitErr *exec.ExitError
+	if !errors.As(cmdErr, &exitErr) {
+		// A non-ExitError means the command never produced stdout to parse;
+		// report the real cause, not a JSON parse failure on empty output.
+		return []core.Finding{
+			r.failure.New(fmt.Sprintf("golangci-lint failed: %s", cmdErr)),
+		}
+	}
+	if isLintExit(exitErr.ExitCode()) {
+		return nil
+	}
+	return []core.Finding{
+		r.failure.New(fmt.Sprintf("golangci-lint failed: %s", string(exitErr.Stderr))),
+	}
 }
 
 func isLintExit(code int) bool {

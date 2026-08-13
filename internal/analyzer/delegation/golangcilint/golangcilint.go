@@ -1,6 +1,7 @@
 package golangcilint
 
 import (
+	"fmt"
 	"os/exec"
 	"path/filepath"
 
@@ -75,7 +76,11 @@ func (r *Runner) run(projectDir string, args []string) ([]byte, error) {
 	//nolint:gosec,noctx // r.path is the configured golangci-lint binary, and Run has no context.
 	cmd := exec.Command(r.path, args...)
 	cmd.Dir = projectDir
-	return cmd.Output()
+	out, err := cmd.Output()
+	if err != nil {
+		return out, fmt.Errorf("run golangci-lint: %w", err)
+	}
+	return out, nil
 }
 
 func lintArgs(target, configFlag string) []string {
