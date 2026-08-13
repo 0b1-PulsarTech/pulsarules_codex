@@ -74,17 +74,7 @@ DI: register the gRPC client connection as a singleton; the adapter as a singlet
 request-scoped). The use case depends only on the port.
 {{end}}
 
-{{define "forbidden"}}
-- Committing `.proto` files or copying generated Go from the proto repo.
-- Leaking proto types into domain code; calling a proto client directly from a use case.
-- Business logic in the adapter or the gRPC server.
-- Unaliased proto imports (alias `<service>v<n>`).
-{{end}}
+<!-- No forbidden/validation blocks here on purpose: every line this pattern used to carry was a
+     verbatim subset of [[grpc]]'s own, and the two only ever render into the same skill, so the
+     reader met each obligation twice. The rule owns them; this file owns the recipe. -->
 
-{{define "validation"}}
-- [ ] No `.proto` files or copied generated code; proto module version pinned.
-- [ ] Proto packages aliased `<service>v<n>`.
-- [ ] Consumer port declared with domain types; adapter in `internal/infra/grpc/<service>grpc/`.
-- [ ] gRPC server is a thin shell embedding `Unimplemented...Server`; logic in the use case.
-- [ ] Proto types confined to adapter/server + `mappers.go`; domain never imports proto.
-{{end}}
