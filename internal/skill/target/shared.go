@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/agentswire"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/output"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/slicesx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -34,21 +35,15 @@ func installSkills(ctx Context, dest string, report *Report) error {
 }
 
 func workflowsForSkills(idx *knowledge.Index, skillIDs []string) []string {
-	seen := make(map[string]bool)
 	var ids []string
 	for _, sid := range skillIDs {
 		skill, ok := idx.Skill(sid)
 		if !ok {
 			continue
 		}
-		for _, wid := range skill.ComposeWorkflows {
-			if !seen[wid] {
-				seen[wid] = true
-				ids = append(ids, wid)
-			}
-		}
+		ids = append(ids, skill.ComposeWorkflows...)
 	}
-	return ids
+	return slicesx.Dedupe(ids)
 }
 
 func installWorkflows(ctx Context, dest string, report *Report) error {

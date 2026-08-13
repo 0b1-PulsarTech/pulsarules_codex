@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/slicesx"
 )
 
 func (opts *Options) BaseDir() (string, error) {
@@ -32,11 +33,11 @@ func (opts *Options) Targets() []string {
 		const defaultTarget = "claude"
 		return []string{defaultTarget}
 	}
-	return dedupeStrings(opts.Target)
+	return slicesx.Dedupe(opts.Target)
 }
 
 func (opts *Options) ExplicitTargets() []string {
-	return dedupeStrings(opts.Target)
+	return slicesx.Dedupe(opts.Target)
 }
 
 func (opts *Options) GitHookNames() []string {
@@ -47,17 +48,7 @@ func (opts *Options) GitHookNames() []string {
 			names = append(names, trimmed)
 		}
 	}
-	return dedupeStrings(names)
-}
-
-func dedupeStrings(raw []string) []string {
-	targets := make([]string, 0, len(raw))
-	for _, name := range raw {
-		if !slices.Contains(targets, name) {
-			targets = append(targets, name)
-		}
-	}
-	return targets
+	return slicesx.Dedupe(names)
 }
 
 func IsHelp(command string) bool {
