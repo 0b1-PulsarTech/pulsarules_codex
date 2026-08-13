@@ -39,12 +39,10 @@ func Remove(repoDir string) error {
 	if !changed {
 		return nil
 	}
-	removed, err := jsondoc.SaveOrRemove(path, config)
-	if err != nil {
+	// The gitignore entry goes whenever mcpServers changed, or a surviving .mcp.json
+	// would leave it orphaned.
+	if _, err = jsondoc.SaveOrRemove(path, config); err != nil {
 		return fmt.Errorf("write mcp config: %w", err)
-	}
-	if !removed {
-		return nil
 	}
 	if _, err = gitignore.Remove(repoDir, ".mcp.json"); err != nil {
 		return fmt.Errorf("remove mcp gitignore entry: %w", err)

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
@@ -70,6 +71,43 @@ func TestRemoveMCP_PreservesUnrelated(t *testing.T) {
 	}
 	if _, ok := config.MCPServers["other"]; !ok {
 		t.Error("lost unrelated server other")
+	}
+}
+
+func TestRemoveMCP_StripsGitignore(t *testing.T) {
+	t.Parallel()
+
+	repoDir := t.TempDir()
+	seed := `{"mcpServers": {"myserver": {"command": "myserver"}}}`
+	path := filepath.Join(repoDir, ".mcp.json")
+	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	if err := Write(fakeTemplates(), repoDir); err != nil {
+		t.Fatalf("WriteMCP: %v", err)
+	}
+	giPath := filepath.Join(repoDir, ".gitignore")
+	giBefore, err := os.ReadFile(giPath) //nolint:gosec // temp dir.
+	if err != nil {
+		t.Fatalf("read .gitignore after WriteMCP: %v", err)
+	}
+	if !strings.Contains(string(giBefore), ".mcp.json") {
+		t.Fatalf(".gitignore missing .mcp.json entry after WriteMCP: %q", giBefore)
+	}
+
+	if err = Remove(repoDir); err != nil {
+		t.Fatalf("RemoveMCP: %v", err)
+	}
+
+	if _, statErr := os.Stat(path); statErr != nil {
+		t.Fatalf("expected .mcp.json to survive (user server present), stat err = %v", statErr)
+	}
+	giAfter, readErr := os.ReadFile(giPath) //nolint:gosec // temp dir.
+	if readErr == nil {
+		t.Errorf(".gitignore still holds the .mcp.json entry after RemoveMCP: %q", giAfter)
+	} else if !errors.Is(readErr, fs.ErrNotExist) {
+		t.Fatalf("read .gitignore after RemoveMCP: %v", readErr)
 	}
 }
 
