@@ -20,7 +20,7 @@ func TestRenderHooksBlock(t *testing.T) {
 		t.Fatalf("RenderHooksBlock: %v", err)
 	}
 	var parsed hooksBlock
-	if err := json.Unmarshal(block, &parsed); err != nil {
+	if err = json.Unmarshal(block, &parsed); err != nil {
 		t.Fatalf("rendered block is not valid JSON: %v", err)
 	}
 	got := parsed.Hooks["SessionStart"][0].Hooks[0].Command
@@ -47,7 +47,7 @@ func TestRenderHooksBlock_SubagentStart(t *testing.T) {
 		t.Fatalf("RenderHooksBlock: %v", err)
 	}
 	var parsed hooksBlock
-	if err := json.Unmarshal(block, &parsed); err != nil {
+	if err = json.Unmarshal(block, &parsed); err != nil {
 		t.Fatalf("rendered block is not valid JSON: %v", err)
 	}
 	groups := parsed.Hooks["SubagentStart"]
@@ -125,7 +125,7 @@ func TestWireSettings_Idempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	if err := json.Unmarshal(raw, &settings); err != nil {
+	if err = json.Unmarshal(raw, &settings); err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	for _, key := range []string{"permissions", "enabledMcpjsonServers"} {
@@ -153,12 +153,11 @@ func TestWireSettings_Idempotent(t *testing.T) {
 	}
 }
 
-// TestWireSettings_ThirdPartyCommandInSharedGroupSurvives is the regression test
-// for the install-time counterpart of the bug TestUnwireSettings_ThirdPartyCommandSurvives
-// covers on the removal side. TestWireSettings_Idempotent seeds its unrelated hook
-// under a DIFFERENT event, so it never exercised a third-party command sharing one
-// group with ours - the merge dropped the whole group to re-append its own, taking
-// the neighbour with it and leaving no backup to recover from.
+// TestWireSettings_ThirdPartyCommandInSharedGroupSurvives is the regression
+// test for the install-time counterpart of the bug
+// TestUnwireSettings_ThirdPartyCommandSurvives covers on removal.
+// TestWireSettings_Idempotent seeds its unrelated hook under a different
+// event, never exercising a third-party command sharing one group with ours.
 func TestWireSettings_ThirdPartyCommandInSharedGroupSurvives(t *testing.T) {
 	t.Parallel()
 
@@ -216,7 +215,7 @@ func readHooks(tb testing.TB, claudeDir, settingsFile string) map[string][]hookG
 	var settings struct {
 		Hooks map[string][]hookGroup `json:"hooks"`
 	}
-	if err := json.Unmarshal(raw, &settings); err != nil {
+	if err = json.Unmarshal(raw, &settings); err != nil {
 		tb.Fatalf("parse settings: %v", err)
 	}
 	return settings.Hooks

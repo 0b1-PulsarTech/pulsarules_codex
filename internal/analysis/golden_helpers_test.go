@@ -34,12 +34,12 @@ type goldenExpectation struct {
 // loadExpectation reads and parses a case's expect.json.
 func loadExpectation(t *testing.T, path string) goldenExpectation {
 	t.Helper()
-	data, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
 	var expectation goldenExpectation
-	if err := json.Unmarshal(data, &expectation); err != nil {
+	if err = json.Unmarshal(raw, &expectation); err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}
 	return expectation
@@ -61,17 +61,17 @@ func copyTree(t *testing.T, src, dst string) {
 		srcPath := filepath.Join(src, entry.Name())
 		dstPath := filepath.Join(dst, entry.Name())
 		if entry.IsDir() {
-			if err := os.MkdirAll(dstPath, 0o750); err != nil {
+			if err = os.MkdirAll(dstPath, 0o750); err != nil {
 				t.Fatalf("mkdir %s: %v", dstPath, err)
 			}
 			copyTree(t, srcPath, dstPath)
 			continue
 		}
-		data, readErr := os.ReadFile(srcPath)
+		raw, readErr := os.ReadFile(srcPath)
 		if readErr != nil {
 			t.Fatalf("read %s: %v", srcPath, readErr)
 		}
-		if writeErr := os.WriteFile(dstPath, data, 0o600); writeErr != nil {
+		if writeErr := os.WriteFile(dstPath, raw, 0o600); writeErr != nil {
 			t.Fatalf("write %s: %v", dstPath, writeErr)
 		}
 	}

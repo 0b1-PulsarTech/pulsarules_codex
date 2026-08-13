@@ -51,8 +51,8 @@ func TestAnalyze_HonoursConfiguredThresholds(t *testing.T) {
 	t.Parallel()
 
 	a := NewAnalyzer()
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "foo.go")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo.go")
 	src := []byte("package foo\nfunc f() {\n\tx := 1\n\t_ = x\n}\n")
 	if err := os.WriteFile(path, src, 0o644); err != nil {
 		t.Fatalf("write source: %v", err)
@@ -269,8 +269,8 @@ func TestCountParams(t *testing.T) {
 func parseSourceFile(t *testing.T, source string) (*astcache.Cache, *ast.File) {
 	t.Helper()
 
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "foo.go")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo.go")
 	if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}

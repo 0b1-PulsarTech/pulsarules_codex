@@ -217,8 +217,8 @@ func TestCheckFileMessage(t *testing.T) {
 func analyzeMessage(t *testing.T, a *Analyzer, source string) string {
 	t.Helper()
 
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "foo.go")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo.go")
 	if err := os.WriteFile(path, []byte(source), fsperm.File); err != nil {
 		t.Fatal(err)
 	}
@@ -252,8 +252,8 @@ func runCheckFile(t *testing.T, a *Analyzer, testCase checkFileTestCase) {
 func countByRule(t *testing.T, a *Analyzer, source string) (shadows, reuses int) {
 	t.Helper()
 
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "foo.go")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo.go")
 	if err := os.WriteFile(path, []byte(source), fsperm.File); err != nil {
 		t.Fatal(err)
 	}

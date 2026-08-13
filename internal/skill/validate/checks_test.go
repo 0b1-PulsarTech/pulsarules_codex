@@ -40,7 +40,7 @@ func TestRuleSummaries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if problems := ruleSummaries(idx); len(problems) != 0 {
+	if problems = ruleSummaries(idx); len(problems) != 0 {
 		t.Errorf("embedded rules should all carry a summary, got %v", problems)
 	}
 }
@@ -227,7 +227,7 @@ func TestReferencesResolve(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if problems := referencesResolve(idx); len(problems) != 0 {
+	if problems = referencesResolve(idx); len(problems) != 0 {
 		t.Errorf("embedded citations should all resolve, got %v", problems)
 	}
 }

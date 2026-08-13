@@ -63,7 +63,10 @@ func TestDispatchPreSearch(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			dir, skillsDir := preSearchProjectDir(t, testCase.hasGoMod, testCase.hasGoplsSkill)
+			dir, skillsDir := preSearchProjectDir(t, preSearchFixture{
+				hasGoMod:      testCase.hasGoMod,
+				hasGoplsSkill: testCase.hasGoplsSkill,
+			})
 			disp, out := dispatchCapture(Deps{ProjectDir: dir, SkillsDir: skillsDir})
 			payload := fmt.Sprintf(
 				`{"tool_name":%q,"tool_input":{%s},"session_id":%q}`,
@@ -84,15 +87,24 @@ func TestDispatchPreSearch(t *testing.T) {
 	}
 }
 
+// preSearchFixture selects which optional pieces preSearchProjectDir seeds.
+// The two toggles are independent axes (a go.mod and an installed skill), not
+// a single either/or choice, so they read as named fields at the call site
+// instead of two positional bools.
+type preSearchFixture struct {
+	hasGoMod      bool
+	hasGoplsSkill bool
+}
+
 // preSearchProjectDir builds a fresh project dir carrying a go.mod (when
-// hasGoMod) and a skills dir carrying an installed gopls-navigation skill
-// (when hasGoplsSkill), so pre-search tests can exercise every gate
-// combination. It returns the project dir and the skills dir separately -
-// generic Go never derives one from the other (see B5 in the fix notes).
-func preSearchProjectDir(t *testing.T, hasGoMod, hasGoplsSkill bool) (dir, skillsDir string) {
+// fixture.hasGoMod) and a skills dir carrying an installed gopls-navigation
+// skill (when fixture.hasGoplsSkill), so pre-search tests can exercise every
+// gate combination. It returns the project dir and the skills dir separately
+// - generic Go never derives one from the other (see B5 in the fix notes).
+func preSearchProjectDir(t *testing.T, fixture preSearchFixture) (dir, skillsDir string) {
 	t.Helper()
 	dir = t.TempDir()
-	if hasGoMod {
+	if fixture.hasGoMod {
 		if err := os.WriteFile(
 			filepath.Join(dir, "go.mod"),
 			[]byte("module x\n"),
@@ -102,7 +114,7 @@ func preSearchProjectDir(t *testing.T, hasGoMod, hasGoplsSkill bool) (dir, skill
 		}
 	}
 	skillsDir = filepath.Join(dir, ".claude", "skills")
-	if hasGoplsSkill {
+	if fixture.hasGoplsSkill {
 		installSkillFixture(t, skillsDir, "gopls-navigation")
 	}
 	return dir, skillsDir
@@ -111,7 +123,7 @@ func preSearchProjectDir(t *testing.T, hasGoMod, hasGoplsSkill bool) (dir, skill
 func TestDispatchPreSearchOncePerSession(t *testing.T) {
 	t.Parallel()
 
-	dir, skillsDir := preSearchProjectDir(t, true, true)
+	dir, skillsDir := preSearchProjectDir(t, preSearchFixture{hasGoMod: true, hasGoplsSkill: true})
 	id := uniqueSessionID(t)
 	payload := fmt.Appendf(
 		nil,

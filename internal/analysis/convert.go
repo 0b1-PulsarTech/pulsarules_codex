@@ -66,20 +66,24 @@ func markGenerated(files []core.FileChange, sources core.SourceProvider) {
 
 // populateASTCache pre-parses all changed Go files into an AST cache so
 // analyzers can call Get(path) without file I/O or parsing.
+//
+// why: _test.go files are included too, or time-discipline - which polices
+// time.Sleep/now-func clocks in tests - would never see one.
 func populateASTCache(changedFiles []core.FileChange, sources core.SourceProvider) *astcache.Cache {
 	if len(changedFiles) == 0 {
 		return nil
 	}
 	cache := astcache.New()
 	for _, fc := range changedFiles {
-		if fc.Extension == ".go" && !fc.IsTest {
-			src, ok := sources.Read(fc.Path)
-			if !ok {
-				continue
-			}
-			if _, err := cache.Parse(fc.Path, src); err != nil {
-				continue
-			}
+		if fc.Extension != ".go" {
+			continue
+		}
+		src, ok := sources.Read(fc.Path)
+		if !ok {
+			continue
+		}
+		if _, err := cache.Parse(fc.Path, src); err != nil {
+			continue
 		}
 	}
 	return cache

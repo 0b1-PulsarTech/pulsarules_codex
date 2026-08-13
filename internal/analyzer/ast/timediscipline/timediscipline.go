@@ -16,7 +16,6 @@ type Analyzer struct{}
 
 var timeDisciplineReporter = core.NewReporter("time-discipline", core.SeverityWarning, core.CatAST)
 
-// NewAnalyzer creates a time-discipline analyzer.
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
@@ -33,16 +32,9 @@ func (a *Analyzer) Needs() core.Requirements {
 }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if ctx.ASTCache == nil {
-		return nil
-	}
-
-	fset := ctx.ASTCache.FileSet()
-	var findings []core.Finding
-	for fc, f := range ctx.ChangedGoASTs() {
-		findings = append(findings, checkFile(fset, fc, f)...)
-	}
-	return findings
+	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
+		return checkFile(ctx.ASTCache.FileSet(), fc, f)
+	})
 }
 
 func checkFile(fset *token.FileSet, fc core.FileChange, f *ast.File) []core.Finding {

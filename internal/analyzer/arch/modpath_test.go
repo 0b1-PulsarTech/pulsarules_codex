@@ -45,10 +45,10 @@ func TestResolveModulePath(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			tmp := t.TempDir()
+			projectDir := t.TempDir()
 			if testCase.writeGoMod {
 				if err := os.WriteFile(
-					filepath.Join(tmp, "go.mod"),
+					filepath.Join(projectDir, "go.mod"),
 					[]byte(testCase.goModBody),
 					0o644,
 				); err != nil {
@@ -56,7 +56,7 @@ func TestResolveModulePath(t *testing.T) {
 				}
 			}
 
-			got, err := resolveModulePath(tmp)
+			got, err := resolveModulePath(projectDir)
 			if testCase.wantErr != nil {
 				if !errors.Is(err, testCase.wantErr) {
 					t.Fatalf("err = %v, want wrapping %v", err, testCase.wantErr)

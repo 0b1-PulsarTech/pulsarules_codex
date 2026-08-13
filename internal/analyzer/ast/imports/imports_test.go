@@ -97,8 +97,8 @@ func TestCheckFile(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			tmp := t.TempDir()
-			path := filepath.Join(tmp, "foo.go")
+			dir := t.TempDir()
+			path := filepath.Join(dir, "foo.go")
 			if err := os.WriteFile(path, []byte(testCase.source), 0o644); err != nil {
 				t.Fatal(err)
 			}

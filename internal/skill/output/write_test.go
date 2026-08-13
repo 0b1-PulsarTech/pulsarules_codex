@@ -29,10 +29,10 @@ func TestWriteFile(t *testing.T) {
 	}
 
 	blocker := filepath.Join(dir, "file")
-	if err := os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
+	if err = os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
 		t.Fatalf("seed blocker: %v", err)
 	}
-	if err := writeFile(filepath.Join(blocker, "child.md"), "y"); err == nil {
+	if err = writeFile(filepath.Join(blocker, "child.md"), "y"); err == nil {
 		t.Error("expected error writing under a file, got nil")
 	}
 }

@@ -11,11 +11,11 @@ import (
 func TestDiscoverPackages(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "foo.go", "package foo\n")
-	writeFile(t, tmp, "bar/baz.go", "package bar\n")
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "foo.go", "package foo\n")
+	writeFile(t, projectDir, "bar/baz.go", "package bar\n")
 
-	pkgs := discoverPackages(tmp, "example.com/mod")
+	pkgs := discoverPackages(projectDir, "example.com/mod")
 	if len(pkgs) == 0 {
 		t.Fatal("expected at least one package")
 	}

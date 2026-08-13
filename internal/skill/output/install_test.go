@@ -34,15 +34,15 @@ func TestInstallWorkflows(t *testing.T) {
 	if len(skipped) != 1 || skipped[0] != "ghost-wf" {
 		t.Errorf("skipped = %v, want [ghost-wf]", skipped)
 	}
-	if _, err := os.Stat(filepath.Join(dest, "refactoring", "WORKFLOW.md")); err != nil {
+	if _, err = os.Stat(filepath.Join(dest, "refactoring", "WORKFLOW.md")); err != nil {
 		t.Errorf("WORKFLOW.md not written: %v", err)
 	}
-	data, readErr := os.ReadFile(filepath.Join(dest, "refactoring", ".gitignore"))
+	giContent, readErr := os.ReadFile(filepath.Join(dest, "refactoring", ".gitignore"))
 	if readErr != nil {
 		t.Fatalf("read workflow .gitignore: %v", readErr)
 	}
-	if want := "WORKFLOW.md\n.gitignore\n"; string(data) != want {
-		t.Errorf("workflow .gitignore content = %q, want %q", string(data), want)
+	if want := "WORKFLOW.md\n.gitignore\n"; string(giContent) != want {
+		t.Errorf("workflow .gitignore content = %q, want %q", string(giContent), want)
 	}
 }
 
@@ -79,12 +79,12 @@ func TestInstall_RouterAndUnknown(t *testing.T) {
 	if _, statErr := os.Stat(filepath.Join(dest, "project-router", ".gitignore")); statErr != nil {
 		t.Errorf("router .gitignore not written: %v", statErr)
 	}
-	data, err := os.ReadFile(filepath.Join(dest, "project-router", ".gitignore"))
+	giContent, err := os.ReadFile(filepath.Join(dest, "project-router", ".gitignore"))
 	if err != nil {
 		t.Fatalf("read .gitignore: %v", err)
 	}
-	if want := "SKILL.md\n.gitignore\n"; string(data) != want {
-		t.Errorf(".gitignore content = %q, want %q", string(data), want)
+	if want := "SKILL.md\n.gitignore\n"; string(giContent) != want {
+		t.Errorf(".gitignore content = %q, want %q", string(giContent), want)
 	}
 	if _, statErr := os.Stat(filepath.Join(dest, "ghost")); !errors.Is(statErr, fs.ErrNotExist) {
 		t.Errorf("ghost should not be written, stat err = %v", statErr)

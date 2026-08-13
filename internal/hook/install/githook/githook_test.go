@@ -27,18 +27,18 @@ func TestInstall(t *testing.T) {
 
 	for _, name := range hooks {
 		path := filepath.Join(dir, ".git", "hooks", name)
-		data, err := os.ReadFile(path)
+		hookContent, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", name, err)
 		}
-		if !strings.Contains(string(data), "pulsarules_cli") {
+		if !strings.Contains(string(hookContent), "pulsarules_cli") {
 			t.Errorf("%s: missing binary reference", name)
 		}
-		info, err := os.Stat(path)
+		stat, err := os.Stat(path)
 		if err != nil {
 			t.Fatalf("stat %s: %v", name, err)
 		}
-		if info.Mode()&0o111 == 0 {
+		if stat.Mode()&0o111 == 0 {
 			t.Errorf("%s: not executable", name)
 		}
 	}
@@ -97,12 +97,12 @@ func TestInstall_OverwriteReadOnly(t *testing.T) {
 		t.Errorf("backedUp = %v, want none (the old hook was ours)", backedUp)
 	}
 
-	data, err := os.ReadFile(preCommit)
+	updatedContent, err := os.ReadFile(preCommit)
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	if !strings.Contains(string(data), "governance") {
-		t.Errorf("hook not updated: %s", data)
+	if !strings.Contains(string(updatedContent), "governance") {
+		t.Errorf("hook not updated: %s", updatedContent)
 	}
 }
 
@@ -144,12 +144,12 @@ func TestInstall_BacksUpForeignHook(t *testing.T) {
 		t.Errorf("backup content = %q, want %q", gotBackup, foreign)
 	}
 
-	data, err := os.ReadFile(preCommit)
+	installedContent, err := os.ReadFile(preCommit)
 	if err != nil {
 		t.Fatalf("read installed hook: %v", err)
 	}
-	if !strings.Contains(string(data), "governance") {
-		t.Errorf("hook not installed: %s", data)
+	if !strings.Contains(string(installedContent), "governance") {
+		t.Errorf("hook not installed: %s", installedContent)
 	}
 }
 

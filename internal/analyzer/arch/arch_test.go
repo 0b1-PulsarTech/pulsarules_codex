@@ -6,37 +6,36 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-// newBoundaryAndCycleFixture writes a throwaway Go project under a fresh
-// t.TempDir(): its own go.mod declaring a module path OTHER than this
-// tool's, a domain package that imports an infra package (a boundary
-// violation: an inner layer depending on an outer one) and an infra package
-// that imports the domain package back (closing a genuine two-node import
-// cycle). It returns the project root.
+// newBoundaryAndCycleFixture writes a throwaway Go project under
+// t.TempDir(): a go.mod with a module path other than this tool's, a
+// domain package importing an infra package (boundary violation), and an
+// infra package importing domain back (closing the cycle). Returns the
+// project root.
 func newBoundaryAndCycleFixture(t *testing.T) string {
 	t.Helper()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "go.mod", "module example.com/target\n\ngo 1.24\n")
-	writeFile(t, tmp, "domain/user.go", `package domain
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "go.mod", "module example.com/target\n\ngo 1.24\n")
+	writeFile(t, projectDir, "domain/user.go", `package domain
 
 import _ "example.com/target/infra"
 
 type User struct{}
 `)
-	writeFile(t, tmp, "infra/db.go", `package infra
+	writeFile(t, projectDir, "infra/db.go", `package infra
 
 import _ "example.com/target/domain"
 
 type DB struct{}
 `)
-	return tmp
+	return projectDir
 }
 
 func TestPackageBoundaryAnalyzer_Analyze_DetectsRealBoundaryViolation(t *testing.T) {
 	t.Parallel()
 
-	tmp := newBoundaryAndCycleFixture(t)
-	ctx := &core.AnalysisContext{ProjectDir: tmp}
+	projectDir := newBoundaryAndCycleFixture(t)
+	ctx := &core.AnalysisContext{ProjectDir: projectDir}
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -57,8 +56,8 @@ func TestPackageBoundaryAnalyzer_Analyze_DetectsRealBoundaryViolation(t *testing
 func TestImportCycleAnalyzer_Analyze_DetectsRealCycle(t *testing.T) {
 	t.Parallel()
 
-	tmp := newBoundaryAndCycleFixture(t)
-	ctx := &core.AnalysisContext{ProjectDir: tmp}
+	projectDir := newBoundaryAndCycleFixture(t)
+	ctx := &core.AnalysisContext{ProjectDir: projectDir}
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
@@ -79,9 +78,9 @@ func TestImportCycleAnalyzer_Analyze_DetectsRealCycle(t *testing.T) {
 func TestPackageBoundaryAnalyzer_Analyze_NoGoMod(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "domain/user.go", "package domain\n")
-	ctx := &core.AnalysisContext{ProjectDir: tmp}
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "domain/user.go", "package domain\n")
+	ctx := &core.AnalysisContext{ProjectDir: projectDir}
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -97,9 +96,9 @@ func TestPackageBoundaryAnalyzer_Analyze_NoGoMod(t *testing.T) {
 func TestImportCycleAnalyzer_Analyze_NoGoMod(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "domain/user.go", "package domain\n")
-	ctx := &core.AnalysisContext{ProjectDir: tmp}
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "domain/user.go", "package domain\n")
+	ctx := &core.AnalysisContext{ProjectDir: projectDir}
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
@@ -111,10 +110,10 @@ func TestImportCycleAnalyzer_Analyze_NoGoMod(t *testing.T) {
 func TestPackageBoundaryAnalyzer_Analyze_MalformedGoMod(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "go.mod", "go 1.24\n") // present, but no "module" line
-	writeFile(t, tmp, "domain/user.go", "package domain\n")
-	ctx := &core.AnalysisContext{ProjectDir: tmp}
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "go.mod", "go 1.24\n") // present, but no "module" line
+	writeFile(t, projectDir, "domain/user.go", "package domain\n")
+	ctx := &core.AnalysisContext{ProjectDir: projectDir}
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -136,10 +135,10 @@ func TestPackageBoundaryAnalyzer_Analyze_MalformedGoMod(t *testing.T) {
 func TestImportCycleAnalyzer_Analyze_MalformedGoMod(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
-	writeFile(t, tmp, "go.mod", "go 1.24\n") // present, but no "module" line
-	writeFile(t, tmp, "domain/user.go", "package domain\n")
-	ctx := &core.AnalysisContext{ProjectDir: tmp}
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "go.mod", "go 1.24\n") // present, but no "module" line
+	writeFile(t, projectDir, "domain/user.go", "package domain\n")
+	ctx := &core.AnalysisContext{ProjectDir: projectDir}
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 

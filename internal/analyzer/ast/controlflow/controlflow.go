@@ -20,7 +20,6 @@ var controlFlowReporter = core.NewReporter("control-flow", core.SeverityWarning,
 // before this analyzer reports it.
 const defaultMaxNesting = 4
 
-// NewAnalyzer creates a control flow analyzer with default max nesting.
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{maxNesting: defaultMaxNesting}
 }
@@ -37,16 +36,9 @@ func (a *Analyzer) Needs() core.Requirements {
 }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if ctx.ASTCache == nil {
-		return nil
-	}
-
-	fset := ctx.ASTCache.FileSet()
-	var findings []core.Finding
-	for fc, f := range ctx.ChangedGoASTs() {
-		findings = append(findings, a.checkFile(fset, fc, f)...)
-	}
-	return findings
+	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
+		return a.checkFile(ctx.ASTCache.FileSet(), fc, f)
+	})
 }
 
 func (a *Analyzer) checkFile(

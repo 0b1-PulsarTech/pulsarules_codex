@@ -11,12 +11,10 @@ import (
 // (no real .git, no go.mod needed) plus an expect.json.
 const goldenCasesDir = "testdata/golden"
 
-// TestGolden runs the analyzer pipeline over each fixture in
-// testdata/golden and compares the findings against that case's
-// expect.json. It is the false-positive guard this repo's analyzer suite
-// requires: "clean" proves a realistic multi-file package produces zero
-// findings, "violation" pins one finding to its exact file and line, and
-// "generated" proves the suppression pass hides a finding in a
+// TestGolden runs the analyzer pipeline over each fixture in testdata/golden
+// against its expect.json. It is the false-positive guard: "clean" proves a
+// real package yields zero findings, "violation" pins one finding to its
+// exact file/line, and "generated" proves suppression hides a finding in a
 // generated-marked file while still counting it.
 func TestGolden(t *testing.T) {
 	t.Parallel()
@@ -28,6 +26,10 @@ func TestGolden(t *testing.T) {
 		{name: "clean package produces no findings", dir: "clean"},
 		{name: "single violation pinned to its file and line", dir: "violation"},
 		{name: "generated file suppressed but counted", dir: "generated"},
+		{
+			name: "AST analyzers reach _test.go files, not just production code",
+			dir:  "test-file-blindness",
+		},
 	}
 
 	for _, testCase := range testCases {

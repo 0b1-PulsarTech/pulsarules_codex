@@ -20,24 +20,23 @@ func TestInstallHook(t *testing.T) {
 	}
 
 	script := filepath.Join(claudeDir, "hooks", "skill-router-reminder.sh")
-	info, err := os.Stat(script)
+	stat, err := os.Stat(script)
 	if err != nil {
 		t.Fatalf("stat script: %v", err)
 	}
-	if info.Mode().Perm()&0o100 == 0 {
-		t.Errorf("script not executable: mode %v", info.Mode().Perm())
+	if stat.Mode().Perm()&0o100 == 0 {
+		t.Errorf("script not executable: mode %v", stat.Mode().Perm())
 	}
-	if _, err := os.Stat(filepath.Join(claudeDir, "hooks", "README.md")); err != nil {
+	if _, err = os.Stat(filepath.Join(claudeDir, "hooks", "README.md")); err != nil {
 		t.Errorf("README not installed: %v", err)
 	}
 }
 
 // TestInstallHook_BacksUpForeignReadme is the regression test for the
-// data-loss defect: a user-authored README.md already at
-// <claudeDir>/hooks/README.md (no marker.Installed) is renamed to a
-// ".pulsarules-backup" slot rather than destroyed, and InstallHook reports
-// the rename through backedUp; a second call against ITS OWN previously
-// installed README overwrites in place with no backup at all.
+// data-loss defect: a user-authored README.md (no marker.Installed) is
+// renamed to a ".pulsarules-backup" slot rather than destroyed, and
+// InstallHook reports the rename through backedUp; a second call against
+// its own previously installed README overwrites in place, no backup.
 func TestInstallHook_BacksUpForeignReadme(t *testing.T) {
 	t.Parallel()
 
@@ -71,12 +70,15 @@ func TestInstallHook_BacksUpForeignReadme(t *testing.T) {
 
 	// A second call finds its own README (marker.Installed) and overwrites
 	// it in place, with no further backup.
-	backedUp2, err := InstallHook(fakeTemplates(), claudeDir)
+	secondBackedUp, err := InstallHook(fakeTemplates(), claudeDir)
 	if err != nil {
 		t.Fatalf("second InstallHook: %v", err)
 	}
-	if len(backedUp2) != 0 {
-		t.Errorf("second InstallHook backedUp = %v, want none (it owns the file now)", backedUp2)
+	if len(secondBackedUp) != 0 {
+		t.Errorf(
+			"second InstallHook backedUp = %v, want none (it owns the file now)",
+			secondBackedUp,
+		)
 	}
 }
 
@@ -129,12 +131,10 @@ func TestInstallHook_NeverOverwritesExistingBackup(t *testing.T) {
 }
 
 // TestInstallHook_RendersRealTemplate is the byte-identical regression test:
-// InstallHook against the actual embedded knowledge templates (not a fake)
-// must still write a script whose bin/skills/log paths are the concrete
+// InstallHook against the actual embedded templates (not a fake) must still
+// write a script whose bin/skills/log paths are the concrete
 // ".claude/bin/pulsarules_cli", ".claude/skills", and
-// ".claude/hook-execution.log" - proving the text/template render fully
-// resolves RootDir/SkillsSubdir/binSubdir/binaryName/logFileName and leaves
-// no "{{" placeholder behind.
+// ".claude/hook-execution.log", proving the render leaves no "{{" behind.
 func TestInstallHook_RendersRealTemplate(t *testing.T) {
 	t.Parallel()
 

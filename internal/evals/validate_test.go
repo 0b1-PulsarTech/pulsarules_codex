@@ -126,7 +126,7 @@ func TestValidateScenario_Duplicate(t *testing.T) {
 
 	other := validScenario()
 	other.ID = "s2"
-	if problems := validateScenario(idx, other, seen); len(problems) != 0 {
+	if problems = validateScenario(idx, other, seen); len(problems) != 0 {
 		t.Fatalf("a different id under the same skill should pass, got %v", problems)
 	}
 }

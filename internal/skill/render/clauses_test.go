@@ -211,12 +211,15 @@ func TestClausesSurviveComposition(t *testing.T) {
 		t.Fatalf("NewRenderer: %v", err)
 	}
 
-	type testCase struct {
+	// why: named compositionCase, not testCase - this function's own row
+	// variable is named testCase per the table-test convention, and a
+	// same-named local type would shadow it at every loop site.
+	type compositionCase struct {
 		name  string
 		skill knowledge.Skill
 		want  []string
 	}
-	testCases := make([]testCase, 0, len(idx.Skills))
+	testCases := make([]compositionCase, 0, len(idx.Skills))
 	totalClauses := 0
 	for _, skill := range idx.Skills {
 		sources, mergeErr := mergeSources(idx, skill)
@@ -228,7 +231,7 @@ func TestClausesSurviveComposition(t *testing.T) {
 			want = append(want, clausesFromSections(src.sections)...)
 		}
 		totalClauses += len(want)
-		testCases = append(testCases, testCase{name: skill.ID, skill: skill, want: want})
+		testCases = append(testCases, compositionCase{name: skill.ID, skill: skill, want: want})
 	}
 	if totalClauses == 0 {
 		t.Fatal(

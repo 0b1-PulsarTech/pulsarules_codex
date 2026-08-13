@@ -71,16 +71,18 @@ type AnalysisContext struct {
 	Findings []Finding
 }
 
-// ChangedGoASTs yields each changed, non-test Go file that is already parsed in
-// the AST cache, so an analyzer states what it walks instead of restating how to
-// find it. It yields nothing when no cache was built.
+// ChangedGoASTs yields each changed Go file already parsed in the AST
+// cache; nothing yields if no cache was built.
+//
+// why: it used to skip fc.IsTest, blinding every AST analyzer to _test.go
+// - including time-discipline, whose point is catching sleeps/clocks in tests.
 func (ctx *AnalysisContext) ChangedGoASTs() iter.Seq2[FileChange, *ast.File] {
 	return func(yield func(FileChange, *ast.File) bool) {
 		if ctx.ASTCache == nil {
 			return
 		}
 		for _, fc := range ctx.ChangedFiles {
-			if fc.Extension != ".go" || fc.IsTest {
+			if fc.Extension != ".go" {
 				continue
 			}
 			f := ctx.ASTCache.Get(fc.Path)
@@ -92,6 +94,25 @@ func (ctx *AnalysisContext) ChangedGoASTs() iter.Seq2[FileChange, *ast.File] {
 			}
 		}
 	}
+}
+
+// RunPerGoFile runs check against every changed Go file the AST cache
+// holds (see ChangedGoASTs), collecting findings in file order.
+//
+// why: all seven Go-AST analyzers duplicated this shape, so the AST-cache
+// test-file bug had to be fixed in seven files instead of one.
+func RunPerGoFile(
+	ctx *AnalysisContext,
+	check func(fc FileChange, f *ast.File) []Finding,
+) []Finding {
+	if ctx.ASTCache == nil {
+		return nil
+	}
+	var findings []Finding
+	for fc, f := range ctx.ChangedGoASTs() {
+		findings = append(findings, check(fc, f)...)
+	}
+	return findings
 }
 
 // AnalysisConfig is the runtime config holder consumed by analyzers.
