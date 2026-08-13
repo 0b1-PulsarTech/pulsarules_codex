@@ -22,6 +22,12 @@ func installSkills(ctx Context, dest string, report *Report) error {
 	installed, skipped, backedUp, err := output.Install(
 		ctx.Index, ctx.Renderer, dest, ctx.IDs, ctx.RouterFilter,
 	)
+	// why: output.Install returns the backups it ALREADY made alongside the error, so an id that
+	// fails midway through the batch must not swallow the renames the earlier ids performed - the
+	// user would see only "install failed" while a file of theirs sat renamed away.
+	for _, msg := range backedUp {
+		report.warn("%s", msg)
+	}
 	if err != nil {
 		return fmt.Errorf("render skills to %q: %w", dest, err)
 	}
@@ -30,9 +36,6 @@ func installSkills(ctx Context, dest string, report *Report) error {
 	}
 	for _, id := range skipped {
 		report.warn("skipped (unknown skill): %s", id)
-	}
-	for _, msg := range backedUp {
-		report.warn("%s", msg)
 	}
 	return nil
 }
@@ -73,6 +76,10 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 		dest,
 		wfIDs,
 	)
+	// why: same as installSkills - a backup already made is reported even when a later id fails.
+	for _, msg := range backedUp {
+		report.warn("%s", msg)
+	}
 	if err != nil {
 		return fmt.Errorf("render workflows to %q: %w", dest, err)
 	}
@@ -81,9 +88,6 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 	}
 	for _, id := range skipped {
 		report.warn("skipped workflow (unknown): %s", id)
-	}
-	for _, msg := range backedUp {
-		report.warn("%s", msg)
 	}
 	return nil
 }

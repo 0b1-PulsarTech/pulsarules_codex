@@ -27,7 +27,7 @@ func wireClaudeMCP(templates fs.FS, repoDir, skillsDir string, report *Report) e
 	if err := mcpwire.WriteMCP(templates, repoDir); err != nil {
 		return fmt.Errorf("write mcp: %w", err)
 	}
-	if err := generateGoplsSkill(templates, skillsDir); err != nil {
+	if err := generateGoplsSkill(templates, skillsDir, report); err != nil {
 		return fmt.Errorf("generate gopls skill: %w", err)
 	}
 	report.note(
@@ -58,19 +58,22 @@ func unwireClaudeMCP(repoDir string, report *Report) error {
 }
 
 // generateGoplsSkill runs `gopls mcp -instructions` and writes the
-// gopls-navigation skill into skillsDir. Its signature is shared verbatim by
-// opencodeTarget, so it stays a plain error return rather than threading a
-// *Report through; a foreign gopls-navigation dir a user happens to already
-// own is still backed up rather than destroyed (see output.WriteDoc), it is
-// just not individually echoed into the report from this call site.
-func generateGoplsSkill(templates fs.FS, skillsDir string) error {
+// gopls-navigation skill into skillsDir, warning for every foreign file it
+// backs up rather than overwrites (see output.WriteDoc).
+// why: sharing opencodeTarget's signature discarded that list; both already
+// hold a *Report, so sharing it just silently renamed a hand-written skill.
+func generateGoplsSkill(templates fs.FS, skillsDir string, report *Report) error {
 	ctx, cancel := context.WithTimeout(context.Background(), goplsInstructionsTimeout)
 	defer cancel()
 	instructions, err := mcpwire.GoplsInstructions(ctx)
 	if err != nil {
 		return fmt.Errorf("get gopls instructions: %w", err)
 	}
-	if _, genErr := mcpwire.GenerateGoplsSkill(templates, skillsDir, instructions); genErr != nil {
+	backedUp, genErr := mcpwire.GenerateGoplsSkill(templates, skillsDir, instructions)
+	for _, msg := range backedUp {
+		report.warn("%s", msg)
+	}
+	if genErr != nil {
 		return fmt.Errorf("generate gopls skill: %w", genErr)
 	}
 	return nil

@@ -47,7 +47,7 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 	gopls := opencodewire.WithoutGopls
 	if !ctx.NoMCP {
 		if mcpwire.GoplsOnPath() {
-			if err := generateGoplsSkill(ctx.Templates, dest); err != nil {
+			if err := generateGoplsSkill(ctx.Templates, dest, &report); err != nil {
 				return report, err
 			}
 			gopls = opencodewire.WithGopls
