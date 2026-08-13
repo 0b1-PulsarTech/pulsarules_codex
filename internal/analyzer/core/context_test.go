@@ -1,6 +1,7 @@
 package core
 
 import (
+	"go/ast"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/astcache"
@@ -117,5 +118,24 @@ func TestChangedGoASTs_CallerBreak(t *testing.T) {
 	}
 	if count != 1 {
 		t.Fatalf("count = %d, want 1", count)
+	}
+}
+
+func TestRunPerGoFile_NoCache(t *testing.T) {
+	t.Parallel()
+
+	ctx := &AnalysisContext{
+		ChangedFiles: []FileChange{{Path: "main.go", Extension: ".go"}},
+	}
+	called := false
+	got := RunPerGoFile(ctx, func(FileChange, *ast.File) []Finding {
+		called = true
+		return nil
+	})
+	if called {
+		t.Fatal("expected check not to be called when ASTCache is nil")
+	}
+	if got != nil {
+		t.Fatalf("got %v, want nil", got)
 	}
 }

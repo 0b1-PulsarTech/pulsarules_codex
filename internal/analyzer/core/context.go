@@ -57,6 +57,20 @@ func (ctx *AnalysisContext) ChangedGoASTs() iter.Seq2[FileChange, *ast.File] {
 	}
 }
 
+func RunPerGoFile(
+	ctx *AnalysisContext,
+	check func(fc FileChange, file *ast.File) []Finding,
+) []Finding {
+	if ctx.ASTCache == nil {
+		return nil
+	}
+	var findings []Finding
+	for fc, file := range ctx.ChangedGoASTs() {
+		findings = append(findings, check(fc, file)...)
+	}
+	return findings
+}
+
 type AnalysisConfig struct {
 	Analyzers        map[string]AnalyzerConfig
 	IncludeGenerated bool
