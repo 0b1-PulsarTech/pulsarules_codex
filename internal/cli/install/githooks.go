@@ -50,9 +50,10 @@ func installPostTargets(
 				_, _ = fmt.Fprintf(os.Stderr, "warning: "+format+"\n", args...)
 			},
 		})
-		if hookErr != nil {
+		switch {
+		case hookErr != nil:
 			_, _ = fmt.Fprintf(os.Stderr, "warning: git hooks: %v\n", hookErr)
-		} else {
+		case len(gitHooks) > 0:
 			_, _ = fmt.Printf("installed git hooks: %s\n", strings.Join(gitHooks, ","))
 		}
 	}

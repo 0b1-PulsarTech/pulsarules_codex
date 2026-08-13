@@ -1,6 +1,8 @@
 package install
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 )
 
 //nolint:paralleltest // stubGoplsSoClaudeMCPIsWired needs t.Setenv, which bars t.Parallel.
@@ -48,4 +51,43 @@ func stubGoplsSoClaudeMCPIsWired(tb testing.TB) {
 		tb.Fatalf("write gopls stub: %v", err)
 	}
 	tb.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	original := os.Stdout
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	os.Stdout = writer
+	defer func() { os.Stdout = original }()
+
+	fn()
+
+	if closeErr := writer.Close(); closeErr != nil {
+		t.Fatalf("close pipe writer: %v", closeErr)
+	}
+	var buf bytes.Buffer
+	if _, copyErr := io.Copy(&buf, reader); copyErr != nil {
+		t.Fatalf("read pipe: %v", copyErr)
+	}
+	return buf.String()
+}
+
+//nolint:paralleltest // captureStdout swaps os.Stdout.
+func TestInstallPostTargets_EmptyGitHooks(t *testing.T) {
+	dir := t.TempDir()
+	opts := &version.Options{NoGitHooks: false}
+	hookReg := install.NewRegistry()
+
+	output := captureStdout(t, func() {
+		if err := installPostTargets(opts, dir, nil, hookReg, []string{}); err != nil {
+			t.Fatalf("installPostTargets: %v", err)
+		}
+	})
+
+	if bytes.Contains([]byte(output), []byte("installed git hooks:")) {
+		t.Errorf("output = %q, must not print a git-hooks success line for an empty list", output)
+	}
 }
