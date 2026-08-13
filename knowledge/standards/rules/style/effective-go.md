@@ -28,6 +28,7 @@ analyzers:
     - typographic-markers
     - top-of-file
     - big-comment
+    - vacuous-doc
     - shadowing
 ---
 
@@ -57,7 +58,8 @@ newest stable the module pins (source repos use `go 1.26`).
    a pause and repays nothing. Any comment kept on an exported symbol still starts with its name
    (staticcheck ST1020-ST1022 enforce that, and only that). No `// Package foo` docstrings, and no
    doc comments on unexported symbols beyond a `// why` when it is non-obvious. Cap any block at 5
-   lines - `big-comment` enforces it.
+   lines (`big-comment`); `vacuous-doc` flags a doc comment on a function whose whole body is one
+   return of a literal or field, unless it carries a `why:` marker or a second sentence.
 4. Comments explain WHY, not WHAT; the code shows what. Do not narrate the obvious.
 5. Reach for the newest fitting stdlib: `slices`/`maps`/`cmp`, `errors.Join`, `min`/`max`/`clear`,
    `for range int`, `iter.Seq` (range-over-func), typed atomics, generic type aliases. Prefer
