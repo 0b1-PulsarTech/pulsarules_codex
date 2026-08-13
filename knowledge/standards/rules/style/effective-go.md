@@ -27,6 +27,7 @@ analyzers:
     - no-em-dash
     - top-of-file
     - big-comment
+    - vacuous-doc
     - shadowing
 ---
 

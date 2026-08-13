@@ -3,6 +3,7 @@ package governance
 import (
 	"log/slog"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/vacuousdoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/banner"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/blocksize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/simplification"
@@ -61,6 +62,7 @@ func analyzerSpecs() []analyzerSpec {
 		staticSpec("shadowing", shadowing.NewAnalyzer),
 		staticSpec("complexity", complexity.NewAnalyzer),
 		staticSpec("named-returns", namedreturns.NewAnalyzer),
+		staticSpec("vacuous-doc", vacuousdoc.NewAnalyzer),
 	}, pipelineAnalyzerSpecs()...)
 }
 
