@@ -239,3 +239,28 @@ func TestIsLintExit(t *testing.T) {
 		}
 	}
 }
+
+func TestEscapesProject_StaleCacheEntries(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		path string
+		want bool
+	}{
+		{"inside the project", "internal/analyzer/arch/imports.go", false},
+		{"dot-slash prefixed", "./internal/foo.go", false},
+		{"climbs out once", "../other/foo.go", true},
+		{"climbs out many times", "../../../../tmp/wt-final/internal/foo.go", true},
+		{"climbs out then back in", "../project/internal/foo.go", true},
+		{"normalises to inside", "internal/../internal/foo.go", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := escapesProject(testCase.path); got != testCase.want {
+				t.Errorf("escapesProject(%q) = %v, want %v", testCase.path, got, testCase.want)
+			}
+		})
+	}
+}

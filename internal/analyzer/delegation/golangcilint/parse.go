@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
@@ -40,22 +41,12 @@ func (r *Runner) parseOutput(out []byte, cmdErr error) []finding.Finding {
 		}
 	}
 
-	var findings []finding.Finding
-	for _, issue := range result.Issues {
-		sev := finding.SeverityWarning
-		if strings.Contains(issue.Severity, "error") {
-			sev = finding.SeverityError
-		}
-		findings = append(findings, finding.Finding{
-			AnalyzerID: fmt.Sprintf("golangci-lint/%s", issue.FromLinter),
-			Severity:   sev,
-			Category:   finding.CatSyntax,
-			File:       issue.Pos.Filename,
-			Line:       issue.Pos.Line,
-			Message:    issue.Text,
-		})
+	findings, escaped := issueFindings(result.Issues)
+	// A stale cache is the environment's problem, not the code's, so it
+	// warns instead of failing the gate the way a real lint finding does.
+	if escaped > 0 {
+		findings = append(findings, r.escapedWarning(escaped))
 	}
-
 	return findings
 }
 
@@ -77,6 +68,41 @@ func (r *Runner) exitFailure(cmdErr error) []finding.Finding {
 	return []finding.Finding{
 		r.failure.New(fmt.Sprintf("golangci-lint failed: %s", string(exitErr.Stderr))),
 	}
+}
+
+func issueFindings(issues []lintIssue) (findings []finding.Finding, escaped int) {
+	for _, issue := range issues {
+		if escapesProject(issue.Pos.Filename) {
+			escaped++
+			continue
+		}
+		severity := finding.SeverityWarning
+		if strings.Contains(issue.Severity, "error") {
+			severity = finding.SeverityError
+		}
+		findings = append(findings, finding.Finding{
+			AnalyzerID: fmt.Sprintf("golangci-lint/%s", issue.FromLinter),
+			Severity:   severity,
+			Category:   finding.CatSyntax,
+			File:       issue.Pos.Filename,
+			Line:       issue.Pos.Line,
+			Message:    issue.Text,
+		})
+	}
+	return findings, escaped
+}
+
+func (r *Runner) escapedWarning(escaped int) finding.Finding {
+	return r.warning.NewWithSuggestion(
+		fmt.Sprintf("dropped %d finding(s) naming files outside the analysed project", escaped),
+		"run `golangci-lint cache clean`; a stale cache reports paths from a directory that is "+
+			"gone",
+	)
+}
+
+func escapesProject(path string) bool {
+	// A path that climbs out of cmd.Dir comes from a stale cache keyed to a missing directory.
+	return strings.HasPrefix(filepath.ToSlash(filepath.Clean(path)), "../")
 }
 
 func isLintExit(code int) bool {
