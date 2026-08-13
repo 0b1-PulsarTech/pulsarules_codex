@@ -65,15 +65,17 @@ func populateASTCache(
 		return nil
 	}
 	cache := astcache.New()
+	// A _test.go file is parsed too: time-discipline polices clocks in tests.
 	for _, fc := range changedFiles {
-		if fc.Extension == ".go" && !fc.IsTest {
-			src, ok := sources.Read(fc.Path)
-			if !ok {
-				continue
-			}
-			if _, err := cache.Parse(fc.Path, src); err != nil {
-				continue
-			}
+		if fc.Extension != ".go" {
+			continue
+		}
+		src, ok := sources.Read(fc.Path)
+		if !ok {
+			continue
+		}
+		if _, err := cache.Parse(fc.Path, src); err != nil {
+			continue
 		}
 	}
 	return cache

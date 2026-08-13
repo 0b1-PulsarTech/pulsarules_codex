@@ -17,6 +17,10 @@ func TestGolden(t *testing.T) {
 		{name: "clean package produces no findings", dir: "clean"},
 		{name: "single violation pinned to its file and line", dir: "violation"},
 		{name: "generated file suppressed but counted", dir: "generated"},
+		{
+			name: "AST analyzers reach _test.go files, not just production code",
+			dir:  "test-file-blindness",
+		},
 	}
 
 	for _, testCase := range testCases {

@@ -42,8 +42,9 @@ func (ctx *AnalysisContext) ChangedGoASTs() iter.Seq2[FileChange, *ast.File] {
 		if ctx.ASTCache == nil {
 			return
 		}
+		// _test.go files stay in so the AST analyzers see tests as well.
 		for _, fc := range ctx.ChangedFiles {
-			if fc.Extension != ".go" || fc.IsTest {
+			if fc.Extension != ".go" {
 				continue
 			}
 			f := ctx.ASTCache.Get(fc.Path)

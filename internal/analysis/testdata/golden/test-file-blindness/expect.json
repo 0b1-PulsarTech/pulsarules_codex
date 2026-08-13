@@ -1,0 +1,11 @@
+{
+  "findings": [
+    {
+      "analyzerId": "time-discipline",
+      "file": "greeter/greeter_test.go",
+      "line": 9,
+      "messageSubstring": "time.Sleep"
+    }
+  ],
+  "suppressedGenerated": 0
+}
