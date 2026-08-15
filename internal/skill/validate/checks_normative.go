@@ -8,17 +8,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-// skillNormativeSections reports every skill whose composed rules and patterns
-// render no non-empty "must", "forbidden", or "validation" section. Such a
-// skill states no obligation - it is documentation, not a governed contract -
-// and pulsarules_cli validate would otherwise stay green while a real contract
-// silently disappears (a skill can compose a pattern that defines only
-// "recipe", which is descriptive, not normative). It checks both a skill's
-// base composition AND every profile's override of that composition
-// (knowledge/standards/profiles.yaml): an override replaces which rules or
-// patterns a skill renders, and install --layout <profile> renders that
-// replacement, so a profile that overrides a skill down to nothing normative
-// must fail here even though the base skill still passes.
+// skillNormativeSections reports every skill whose composed rules/patterns
+// render no non-empty "must", "forbidden", or "validation" section:
+// documentation, not a governed contract, that would stay green while an
+// obligation disappears. It checks base composition and every profile's
+// override (profiles.yaml), since --layout can drop normative content.
 func skillNormativeSections(idx *knowledge.Index) []string {
 	problems := make([]string, 0, len(idx.Skills))
 	for _, skill := range idx.Skills {
@@ -71,7 +65,8 @@ func skillHasNormativeSection(
 	idx *knowledge.Index,
 	skill knowledge.Skill,
 ) (has bool, problem string) {
-	has, err := render.HasNormativeSection(idx, skill)
+	var err error
+	has, err = render.HasNormativeSection(idx, skill)
 	switch {
 	case errors.Is(err, render.ErrUnknownComposition):
 		return true, ""
