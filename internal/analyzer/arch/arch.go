@@ -1,18 +1,42 @@
 package arch
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-const modulePath = "github.com/0b1-PulsarTech/pulsarules_codex"
-
 var (
 	archBoundaryReporter = core.NewReporter("arch-boundary", core.SeverityError, core.CatArch)
 	importCycleReporter  = core.NewReporter("import-cycle", core.SeverityError, core.CatArch)
 )
+
+// why: a missing go.mod means "not a Go project here", matching the
+// convention already used for the pre-search hook (internal/hook/emit_turn.go),
+// so it returns no finding at all - same as ctx.ProjectDir == "". Any other
+// resolution failure (an unreadable or malformed go.mod) is a genuinely
+// broken environment: the analyzer cannot tell whether the project has
+// boundary/cycle violations, so it must say so via a Finding rather than
+// silently reporting zero - the exact defect the hardcoded modulePath
+// constant caused.
+func resolveModulePathOrFindings(
+	reporter core.Reporter,
+	projectDir string,
+) (string, []core.Finding) {
+	modulePath, err := resolveModulePath(projectDir)
+	if err == nil {
+		return modulePath, nil
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	}
+	return "", []core.Finding{reporter.New(
+		fmt.Sprintf("cannot determine the project's module path: %s", err),
+	)}
+}
 
 // PackageBoundaryAnalyzer checks that inner-layer packages (domain) do not
 // import outer-layer packages (infra, transport, cmd).
@@ -40,10 +64,14 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Find
 		return nil
 	}
 
+	modulePath, findings := resolveModulePathOrFindings(archBoundaryReporter, ctx.ProjectDir)
+	if modulePath == "" {
+		return findings
+	}
+
 	idx := loadProjectIndex(ctx.ProjectDir, modulePath)
 	violations := checkBoundaries(idx.graph, modulePath)
 
-	var findings []core.Finding
 	for _, v := range violations {
 		findings = append(findings, archBoundaryReporter.At(
 			".",
@@ -80,10 +108,14 @@ func (a *ImportCycleAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding 
 		return nil
 	}
 
+	modulePath, findings := resolveModulePathOrFindings(importCycleReporter, ctx.ProjectDir)
+	if modulePath == "" {
+		return findings
+	}
+
 	idx := loadProjectIndex(ctx.ProjectDir, modulePath)
 	cycles := findCycles(idx.graph)
 
-	var findings []core.Finding
 	for _, cycle := range cycles {
 		var b strings.Builder
 		for i, p := range cycle {
