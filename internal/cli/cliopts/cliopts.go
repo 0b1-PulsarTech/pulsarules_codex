@@ -52,6 +52,9 @@ type Options struct {
 
 	// governance (also reuses --project and --root)
 
+	// clean
+	Write bool // --write: rewrite files instead of only reporting
+
 	// evals
 	Scenario string // --scenario: grade only this scenario id (default: every one)
 	Artifact string // --artifact: path to the produced code/transcript to grade
