@@ -15,7 +15,7 @@ import (
 func (cleaner *Cleaner) read(path string) (Report, string, error) {
 	report := Report{Path: path}
 	if cleaner.root == "" {
-		// A refusal is data, not an error: the caller decides whether to report it.
+		// A refusal is data, not an error: the hook must stay silent and never block a turn.
 		report.SkipReason = "no project root"
 		return report, "", nil
 	}
