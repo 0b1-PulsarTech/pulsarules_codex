@@ -1,11 +1,49 @@
 package fsx
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestWriteFileAtomic_RefusesSymlink(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	target := filepath.Join(dir, "target.txt")
+	if err := os.WriteFile(target, []byte("original"), 0o600); err != nil {
+		t.Fatalf("seed target: %v", err)
+	}
+	link := filepath.Join(dir, "link.txt")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	err := WriteFileAtomic(link, []byte("replacement"), 0o600)
+	if !errors.Is(err, ErrSymlink) {
+		t.Fatalf("err = %v, want ErrSymlink", err)
+	}
+	if !strings.Contains(err.Error(), "refusing to replace a symlink") {
+		t.Errorf("err = %q, want it to say the link would be replaced", err)
+	}
+	body, readErr := os.ReadFile(target)
+	if readErr != nil {
+		t.Fatalf("read target: %v", readErr)
+	}
+	if string(body) != "original" {
+		t.Errorf("target was rewritten to %q", body)
+	}
+	linkStat, statErr := os.Lstat(link)
+	if statErr != nil {
+		t.Fatalf("lstat link: %v", statErr)
+	}
+	if linkStat.Mode()&fs.ModeSymlink == 0 {
+		t.Errorf("link mode = %v, want it to remain a symlink", linkStat.Mode())
+	}
+}
 
 func TestWriteFileAtomic(t *testing.T) {
 	t.Parallel()

@@ -1,13 +1,21 @@
 package fsx
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 )
 
+var ErrSymlink = errors.New("refusing to replace a symlink")
+
 func WriteFileAtomic(path string, body []byte, mode fs.FileMode) error {
+	// Rename would swap the link itself for a regular file, severing a link someone placed there.
+	if existing, err := os.Lstat(path); err == nil && existing.Mode()&fs.ModeSymlink != 0 {
+		return fmt.Errorf("%w: %q", ErrSymlink, path)
+	}
+
 	// Staged in the target directory: Rename is atomic only within one filesystem.
 	staging, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".staging-*")
 	if err != nil {
