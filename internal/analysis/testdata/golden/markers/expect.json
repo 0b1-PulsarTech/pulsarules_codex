@@ -1,0 +1,17 @@
+{
+  "findings": [
+    {
+      "analyzerId": "text-markers",
+      "file": "docs/notes.md",
+      "line": 3,
+      "messageSubstring": "zero width space"
+    },
+    {
+      "analyzerId": "typographic-markers",
+      "file": "docs/notes.md",
+      "line": 3,
+      "messageSubstring": "em dash"
+    }
+  ],
+  "suppressedGenerated": 0
+}

@@ -104,7 +104,7 @@ func TestSession_ScopeChanged(t *testing.T) {
 	gitInitRepo(t, dir)
 
 	emDash := "\u2014"
-	content := "package x\n\n// bad note " + emDash + " trips no-em-dash\n"
+	content := "package x\n\n// bad note " + emDash + " trips typographic-markers\n"
 	if err := os.WriteFile(
 		filepath.Join(dir, "violation.go"), []byte(content), 0o600,
 	); err != nil {
@@ -130,12 +130,12 @@ func TestSession_ScopeChanged(t *testing.T) {
 				finding.AnalyzerID,
 			)
 		}
-		if finding.AnalyzerID == "no-em-dash" {
+		if finding.AnalyzerID == "typographic-markers" {
 			foundStatic = true
 		}
 	}
 	if !foundStatic {
-		t.Fatal("expected a no-em-dash finding over the changed file")
+		t.Fatal("expected a typographic-markers finding over the changed file")
 	}
 }
 
@@ -146,7 +146,7 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 	gitInitRepo(t, dir)
 
 	emDash := "\u2014"
-	content := "package x\n\n// bad note " + emDash + " trips no-em-dash\n"
+	content := "package x\n\n// bad note " + emDash + " trips typographic-markers\n"
 	writeFileAt(t, dir, "violation.go", content)
 	runGitAt(t, dir, "add", "violation.go")
 	commitAllowEmpty(t, dir, ":sparkles: feat: Add violation.go")
@@ -162,7 +162,7 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 	changedFindings := NewSession(repo, "", nil, cfg).
 		Analyze(ScopeChanged, nil, FileSetChanged).Findings
 	for _, f := range changedFindings {
-		if f.AnalyzerID == "no-em-dash" {
+		if f.AnalyzerID == "typographic-markers" {
 			t.Fatalf(
 				"FileSetChanged on a clean tree must not see committed defects, got %+v",
 				f,
@@ -174,7 +174,7 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 		Analyze(ScopeChanged, nil, FileSetAll).Findings
 	foundAll := false
 	for _, f := range allFindings {
-		if f.AnalyzerID == "no-em-dash" && f.File == "violation.go" {
+		if f.AnalyzerID == "typographic-markers" && f.File == "violation.go" {
 			foundAll = true
 		}
 	}

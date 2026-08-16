@@ -15,8 +15,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/movepurity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/bigcomment"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/filesize"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/noemdash"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/simplificationpath"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/textmarkers"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/topoffile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -26,7 +26,8 @@ import (
 func analyzerSpecs() []analyzerSpec {
 	return append([]analyzerSpec{
 		staticSpec("file-size", filesize.NewAnalyzer),
-		staticSpec("no-em-dash", noemdash.NewAnalyzer),
+		staticSpec("text-markers", textmarkers.NewTextAnalyzer),
+		staticSpec("typographic-markers", textmarkers.NewTypographicAnalyzer),
 		staticSpec("import-groups", imports.NewAnalyzer),
 		staticSpec("naming", naming.NewAnalyzer),
 		langSpec("top-of-file", topoffile.NewAnalyzer),
