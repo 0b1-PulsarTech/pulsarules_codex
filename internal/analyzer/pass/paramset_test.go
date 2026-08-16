@@ -1,6 +1,10 @@
 package pass
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+)
 
 func TestParamSetInt(t *testing.T) {
 	t.Parallel()
@@ -104,6 +108,69 @@ func TestAnalysisContextParams(t *testing.T) {
 					got,
 					testCase.want,
 				)
+			}
+		})
+	}
+}
+
+func TestParamSetSeverity(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		params   ParamSet
+		fallback finding.Severity
+		want     finding.Severity
+	}{
+		{
+			name:     "error",
+			params:   ParamSet{"severity": "error"},
+			fallback: finding.SeverityWarning,
+			want:     finding.SeverityError,
+		},
+		{
+			name:     "warning",
+			params:   ParamSet{"severity": "warning"},
+			fallback: finding.SeverityError,
+			want:     finding.SeverityWarning,
+		},
+		{
+			name:     "info",
+			params:   ParamSet{"severity": "info"},
+			fallback: finding.SeverityError,
+			want:     finding.SeverityInfo,
+		},
+		{
+			name:     "absent key keeps the fallback",
+			params:   ParamSet{},
+			fallback: finding.SeverityError,
+			want:     finding.SeverityError,
+		},
+		{
+			name:     "nil set keeps the fallback",
+			params:   nil,
+			fallback: finding.SeverityError,
+			want:     finding.SeverityError,
+		},
+		{
+			name:     "unrecognized value keeps the fallback",
+			params:   ParamSet{"severity": "fatal"},
+			fallback: finding.SeverityError,
+			want:     finding.SeverityError,
+		},
+		{
+			name:     "non-string value keeps the fallback",
+			params:   ParamSet{"severity": 2},
+			fallback: finding.SeverityError,
+			want:     finding.SeverityError,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := testCase.params.Severity(testCase.fallback); got != testCase.want {
+				t.Errorf("Severity(%v) = %v, want %v", testCase.fallback, got, testCase.want)
 			}
 		})
 	}

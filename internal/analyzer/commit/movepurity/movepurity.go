@@ -33,7 +33,11 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	}
 	params := ctx.Params(a.ID())
 	minSimilarity := params.Int("min_similarity", a.minSimilarity)
-	reporter := finding.NewReporter(analyzerID, resolveSeverity(params), finding.CatCommit)
+	reporter := finding.NewReporter(
+		analyzerID,
+		params.Severity(finding.SeverityWarning),
+		finding.CatCommit,
+	)
 
 	var findings []finding.Finding
 	for _, rename := range ctx.StagedRenames {
@@ -101,11 +105,4 @@ func (a *Analyzer) isPureImportChange(path string) bool {
 		return false
 	}
 	return isImportOnlyDiff(diff)
-}
-
-func resolveSeverity(params pass.ParamSet) finding.Severity {
-	if params.String("severity", "warning") == "error" {
-		return finding.SeverityError
-	}
-	return finding.SeverityWarning
 }

@@ -1,6 +1,10 @@
 package pass
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+)
 
 type ParamSet map[string]any
 
@@ -30,6 +34,13 @@ func (params ParamSet) String(key string, fallback string) string {
 		return fallback
 	}
 	return val
+}
+
+func (params ParamSet) Severity(fallback finding.Severity) finding.Severity {
+	if severity, ok := finding.SeverityByName()[params.String("severity", "")]; ok {
+		return severity
+	}
+	return fallback
 }
 
 func (ctx *Context) Params(analyzerID string) ParamSet {
