@@ -16,8 +16,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/movepurity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/bigcomment"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/filesize"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/noemdash"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/simplificationpath"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/textmarkers"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/topoffile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -38,9 +38,16 @@ var analyzerSpecs = append([]analyzerSpec{
 		scopes: staticScopes,
 	},
 	{
-		id: "no-em-dash",
+		id: "text-markers",
 		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
-			return noemdash.NewAnalyzer()
+			return textmarkers.NewTextAnalyzer()
+		},
+		scopes: staticScopes,
+	},
+	{
+		id: "typographic-markers",
+		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
+			return textmarkers.NewTypographicAnalyzer()
 		},
 		scopes: staticScopes,
 	},

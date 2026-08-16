@@ -35,7 +35,7 @@ func (a *Analyzer) Needs() core.Requirements {
 
 // Analyze reports every "// simplification:" marker that names no upgrade path.
 //
-// simplification: scans only .go files (mirrors noemdash's scope), though
+// simplification: scans only .go files, unlike textmarkers which also reads .md, though
 // markers also exist in opencode-plugin.js (JS shares "//" comments).
 // Upgrade path: route non-Go extensions through core.LanguageRegistry.IsCommentLine.
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {

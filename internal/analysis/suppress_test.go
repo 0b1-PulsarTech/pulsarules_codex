@@ -192,13 +192,13 @@ func TestAnalyzeIncludeGeneratedKeepsEverything(t *testing.T) {
 
 			hasEmDash := false
 			for _, f := range result.Findings {
-				if f.AnalyzerID == "no-em-dash" {
+				if f.AnalyzerID == "typographic-markers" {
 					hasEmDash = true
 				}
 			}
 			if hasEmDash != testCase.wantFindings {
 				t.Fatalf(
-					"no-em-dash finding present = %v, want %v",
+					"typographic-markers finding present = %v, want %v",
 					hasEmDash,
 					testCase.wantFindings,
 				)

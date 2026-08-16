@@ -30,6 +30,10 @@ func TestGolden(t *testing.T) {
 			name: "AST analyzers reach _test.go files, not just production code",
 			dir:  "test-file-blindness",
 		},
+		{
+			name: "markdown reaches the static analyzers, not just Go",
+			dir:  "markers",
+		},
 	}
 
 	for _, testCase := range testCases {
