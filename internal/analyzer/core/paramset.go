@@ -32,6 +32,21 @@ func (params ParamSet) String(key string, fallback string) string {
 	return val
 }
 
+func severityByName() map[string]Severity {
+	return map[string]Severity{
+		"error":   SeverityError,
+		"warning": SeverityWarning,
+		"info":    SeverityInfo,
+	}
+}
+
+func (params ParamSet) Severity(fallback Severity) Severity {
+	if severity, ok := severityByName()[params.String("severity", "")]; ok {
+		return severity
+	}
+	return fallback
+}
+
 func (ctx *AnalysisContext) Params(analyzerID string) ParamSet {
 	if ctx.Config == nil {
 		return nil
