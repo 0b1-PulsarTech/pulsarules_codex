@@ -31,6 +31,7 @@ pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|a
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
 pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
+pulsarules_cli clean [--project DIR] [--write]
 pulsarules_cli evals --artifact FILE [--scenario ID]
 pulsarules_cli version
 ```
@@ -210,6 +211,22 @@ pulsarules_cli governance --project . --all-files
 
 # full sweep, explicit scope:
 pulsarules_cli governance --scope full --all-files
+```
+
+### Clean
+
+Sweep the same file set the governance gate walks and report every AI watermark marker in `.go` and
+`.md`. Reports only, unless `--write` is passed: then it removes the carriers no context can justify
+(zero-width characters, bidi controls, soft hyphens) and folds exotic spaces to a plain space.
+
+It never rewrites an em dash, an ellipsis, a curly quote, or an invisible that may be load-bearing -
+inside a string literal or a fenced block those are data, so they are reported for a human to judge.
+Files under `testdata/` and every extension other than `.go` and `.md` are left alone. There is no
+backup: the change shows up in `git diff`.
+
+```sh
+pulsarules_cli clean --project .            # report
+pulsarules_cli clean --project . --write    # remove the removable ones
 ```
 
 ### Evals

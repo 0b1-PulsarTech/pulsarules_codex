@@ -43,6 +43,8 @@ type Options struct {
 
 	ProjectDir string
 
+	Write bool
+
 	Scenario string
 	Artifact string
 }
