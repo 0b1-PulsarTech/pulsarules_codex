@@ -30,6 +30,22 @@ func TestAnalyzers(t *testing.T) {
 		{"clean file", "a.go", "package a\n", 0, 0},
 		{"unlisted extension", "a.txt", "x\u200By\n", 0, 0},
 		{"fixture under testdata", "testdata/a.md", "x\u200By\u2014z\n", 0, 0},
+		{"ai frontmatter key", "a.md", "---\ngenerator: Claude\n---\n\nbody\n", 1, 0},
+		{
+			"nested key is not provenance",
+			"a.md",
+			"---\nauthor:\n  claude: no\n---\n\nbody\n",
+			0,
+			0,
+		},
+		{
+			"prose naming a vendor is not provenance",
+			"a.md",
+			"We asked Claude about openai today.\n",
+			0,
+			0,
+		},
+		{"frontmatter in go is ignored", "a.go", "---\ngenerator: Claude\n---\n", 0, 0},
 	}
 
 	for _, testCase := range testCases {

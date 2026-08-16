@@ -72,10 +72,12 @@ stable the module pins (source repos use `go 1.26`).
     exotic spaces - are removed by `pulsarules_cli clean --write`, and only the ones no neighbouring
     context can justify. A marker that a test needs as data is written as a Go escape (`\u2014`),
     never as the character, so the fixture never trips the check that validates it.
-13. No `regexp` for simple string work (prefix/suffix/contains/split/trim/case): use the `strings`
+13. No AI provenance key in a markdown frontmatter block (`generator`, `ai_generated`, `claude`,
+    `synthid`, `c2pa`, ...). Prose that merely names a vendor is not provenance and is not flagged.
+14. No `regexp` for simple string work (prefix/suffix/contains/split/trim/case): use the `strings`
     stdlib or a small generic `[T ~string]` helper shared in a `pkg/strutils`-style package. Reserve
     `regexp` for genuinely pattern-based matching.
-14. Model an optional value with its zero value (`0`, `""`, `false`, a nil slice/map), never a
+15. Model an optional value with its zero value (`0`, `""`, `false`, a nil slice/map), never a
     pointer. Reach for `*T` only when a caller must distinguish "never set" from "set to the zero
     value" and that distinction changes behaviour - a partial-update payload, a tri-state flag.
     Optionality alone does not earn a pointer: it costs every reader a nil check, every writer an
@@ -92,8 +94,8 @@ stable the module pins (source repos use `go 1.26`).
 - Re-implementing what the stdlib already does (`slices.Equal`, `min`/`max`, `iter.Seq`).
 - Shadowing an outer `err`/`ctx` with `:=` in an inner scope (govet `shadow`).
 - Spelling out generic type parameters the compiler can infer from an argument.
-- An AI text marker in `.go` or `.md`: typographic punctuation, an invisible carrier, or an exotic
-  space.
+- An AI text marker in `.go` or `.md`: typographic punctuation, an invisible carrier, an exotic
+  space, or an AI provenance key in a markdown frontmatter block.
 - `regexp` for simple string work the `strings` stdlib or a generic `[T ~string]` helper covers.
 - `*T` for an optional field or parameter whose zero value already means "absent".
 {{end}}

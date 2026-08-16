@@ -14,6 +14,7 @@ func defaultRuleMap() map[string]string {
 		"file-size":                "effective-go",
 		"text-markers":             "effective-go",
 		"typographic-markers":      "effective-go",
+		"ai-frontmatter":           "effective-go",
 		"import-groups":            "imports",
 		"naming":                   "naming",
 		"top-of-file":              "effective-go",

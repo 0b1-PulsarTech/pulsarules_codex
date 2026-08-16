@@ -9,8 +9,9 @@ import (
 )
 
 type textReporters struct {
-	carrier    finding.Reporter
-	contextual finding.Reporter
+	carrier     finding.Reporter
+	contextual  finding.Reporter
+	frontmatter finding.Reporter
 }
 
 type TextAnalyzer struct {
@@ -25,7 +26,16 @@ func NewTextAnalyzer() *TextAnalyzer {
 		carrier: finding.NewReporter("text-markers", finding.SeverityError, finding.CatSyntax),
 		// Invisible characters that may be load-bearing (emoji glue, script joiners)
 		// cannot be judged here, so they advise instead of blocking.
-		contextual: finding.NewReporter("text-markers", finding.SeverityWarning, finding.CatSyntax),
+		contextual: finding.NewReporter(
+			"text-markers",
+			finding.SeverityWarning,
+			finding.CatSyntax,
+		),
+		frontmatter: finding.NewReporter(
+			"ai-frontmatter",
+			finding.SeverityError,
+			finding.CatSyntax,
+		),
 	}}
 }
 
@@ -42,7 +52,7 @@ func (a *TextAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 }
 
 func checkCarriers(fc pass.FileChange, src string, reporters textReporters) []finding.Finding {
-	var findings []finding.Finding
+	findings := frontmatterFindings(fc, src, reporters.frontmatter)
 	for _, found := range invisible.Scan(src) {
 		if found.Class == invisible.ClassTypographic {
 			continue
