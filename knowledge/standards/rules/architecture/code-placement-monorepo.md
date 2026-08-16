@@ -39,7 +39,7 @@ Applies to: a monorepo where every deployable app and every shared library is it
    contract carries only Connascence of Name + Type (named interface + typed DTOs), per
    [[module-boundaries]].
 4. Join every module in the ROOT `go.work`; `go.work` declares no out-of-repo packages (private deps
-   via `GOPRIVATE`). Cross-module local deps use a grouped `replace ( … )` block per `go.mod` with
+   via `GOPRIVATE`). Cross-module local deps use a grouped `replace ( ... )` block per `go.mod` with
    clean `../` relative paths (see [[build]]).
 5. `database/` owns schema authoring, migrations, and query files; `build/` owns
    Dockerfiles/entrypoints; `tools/` (Taskfile, linters, codegen) is never a runtime dependency.

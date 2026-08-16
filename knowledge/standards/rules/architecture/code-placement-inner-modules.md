@@ -39,7 +39,7 @@ root module plus a few nested ones) wired by one `go.work`.
    consumer-declared facade port - not a deep import - whose contract carries only Connascence of Name
     + Type (named interface + typed DTOs), per [[module-boundaries]].
 4. A single root `go.work` lists every inner module; it declares no out-of-repo packages (private deps
-   via `GOPRIVATE`). Local cross-module deps use a grouped `replace ( … )` block per `go.mod` with
+   via `GOPRIVATE`). Local cross-module deps use a grouped `replace ( ... )` block per `go.mod` with
    clean `../` relative paths (see [[build]]).
 5. Keep the module set small and intentional - split a new inner module out only when a real boundary
    (separate deploy, separate ownership, or a genuine reuse seam) justifies its own `go.mod`.
@@ -59,7 +59,7 @@ root module plus a few nested ones) wired by one `go.work`.
 
 {{define "validation"}}
 - [ ] Each inner module has its own `go.mod` and `cmd/internal/pkg` layout; joined by one root `go.work`.
-- [ ] Cross-module deps via grouped `replace ( … )` blocks; one-way direction preserved.
+- [ ] Cross-module deps via grouped `replace ( ... )` blocks; one-way direction preserved.
 - [ ] Cross-module calls go through facade ports; non-API under `internal/`.
 - [ ] Module set is minimal and boundary-justified.
 {{end}}

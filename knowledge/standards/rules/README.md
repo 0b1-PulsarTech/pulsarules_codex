@@ -5,7 +5,7 @@ form the engineering contract for any new or modified Go code. Rules are phrased
 principles; where a rule is automateable, the `## Linters` section names the linter.
 
 Rules are grouped into themed subdirectories to reduce directory noise. The ID in each file's
-frontmatter is the canonical reference — file location does not affect how skills compose rules.
+frontmatter is the canonical reference - file location does not affect how skills compose rules.
 
 ## Generic section defines
 
@@ -51,7 +51,7 @@ A skill opts out with `no_merge: true` in `skills.yaml`, which instead groups by
 (`### <Rule>` then `#### <Section>`). The same per-file generic names are the seam for future
 multi-language variants.
 
-## `style/` — how code looks and reads
+## `style/` - how code looks and reads
 
 | Rule                                         | Topic                                          |
 |----------------------------------------------|-------------------------------------------------|
@@ -62,7 +62,7 @@ multi-language variants.
 | [minimalism.md](style/minimalism.md)         | Function-scope decision ladder                 |
 | [flag-arguments.md](style/flag-arguments.md) | No flag/output args; small arity               |
 
-## `architecture/` — where code lives and how layers connect
+## `architecture/` - where code lives and how layers connect
 
 | Rule                                                                             | Topic                                            |
 |-----------------------------------------------------------------------------------|----------------------------------------------------|
@@ -77,7 +77,7 @@ multi-language variants.
 | [module-boundaries.md](architecture/module-boundaries.md)                       | Cohesion, coupling, and the main sequence        |
 | [transport.md](architecture/transport.md)                                       | Transport-agnostic use cases                     |
 
-## `domain/` — Go runtime behavior and cross-cutting concerns
+## `domain/` - Go runtime behavior and cross-cutting concerns
 
 | Rule                                                                   | Topic                                           |
 |------------------------------------------------------------------------|--------------------------------------------------|
@@ -90,7 +90,7 @@ multi-language variants.
 | [security.md](domain/security.md)                                     | Secrets, validation, JWT, SQL, containers      |
 | [startup.md](domain/startup.md)                                       | Zero side effects in `init()`                  |
 
-## `infra/` — specific infrastructure and tooling
+## `infra/` - specific infrastructure and tooling
 
 | Rule                                         | Topic                                            |
 |----------------------------------------------|--------------------------------------------------|
@@ -100,7 +100,7 @@ multi-language variants.
 | [grpc.md](infra/grpc.md)                     | Consuming/serving gRPC against a proto module    |
 | [http-clients.md](infra/http-clients.md)     | One outbound HTTP gateway; per-request timeouts  |
 
-## `process/` — engineering habits and code health
+## `process/` - engineering habits and code health
 
 | Rule                                         | Topic                                                       |
 |----------------------------------------------|-------------------------------------------------------------|

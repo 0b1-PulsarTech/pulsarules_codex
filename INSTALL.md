@@ -216,7 +216,7 @@ pulsarules_cli governance --scope full --all-files
 
 Grade a produced artifact against the embedded skill scenarios and print the machine tally plus
 every assertion that needs a human judge. This is step (3) of the operator procedure in
-ARCHITECTURE.md — the harness deliberately does not invoke a model, so you produce the
+ARCHITECTURE.md - the harness deliberately does not invoke a model, so you produce the
 with-skill and without-skill artifacts yourself and grade each one here. Exits non-zero when any
 machine assertion fails.
 

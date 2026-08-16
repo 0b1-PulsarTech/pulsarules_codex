@@ -9,7 +9,7 @@ Patterns are known-good recipes for recurring problems - mandatory in shape, ada
 They are grouped into themed subdirectories; the ID in each file's frontmatter is the canonical
 reference used in `skills.yaml` composition lists.
 
-## `bootstrap/` — wiring, DI, and app skeleton
+## `bootstrap/` - wiring, DI, and app skeleton
 
 | Pattern                                                    | Topic                                     |
 |------------------------------------------------------------|-------------------------------------------|
@@ -18,7 +18,7 @@ reference used in `skills.yaml` composition lists.
 | [config-layout.md](bootstrap/config-layout.md)             | Typed Config + env binder                 |
 | [embedded-migrations.md](bootstrap/embedded-migrations.md) | Embed SQL + in-house runner               |
 
-## `domain/` — use cases, domain logic, and bounded output shapes
+## `domain/` - use cases, domain logic, and bounded output shapes
 
 | Pattern                                                  | Topic                                        |
 |----------------------------------------------------------|----------------------------------------------|
@@ -29,7 +29,7 @@ reference used in `skills.yaml` composition lists.
 | [template-engine.md](domain/template-engine.md)         | Variable-registry render engine              |
 | [rule-engine.md](domain/rule-engine.md)                 | Data-driven JSON rule selection + registry   |
 
-## `infra/` — persistence, transport, and external integration recipes
+## `infra/` - persistence, transport, and external integration recipes
 
 | Pattern                                                      | Topic                                         |
 |--------------------------------------------------------------|-----------------------------------------------|
@@ -45,14 +45,14 @@ reference used in `skills.yaml` composition lists.
 | [event-sink-worker.md](infra/event-sink-worker.md)           | Relay worker loop + idempotent Sink           |
 | [external-provider.md](infra/external-provider.md)           | Strategy port + per-provider package + DI     |
 
-## `testing/` — test harness and mock patterns
+## `testing/` - test harness and mock patterns
 
 | Pattern                                                        | Topic                                       |
 |----------------------------------------------------------------|---------------------------------------------|
 | [integration-tests.md](testing/integration-tests.md)           | DB-backed test harness + E2E engine factory |
 | [colocated-mocks.md](testing/colocated-mocks.md)               | `<source>_mock_test.go` recipe              |
 
-## `architecture/` — structural and behavioural design patterns
+## `architecture/` - structural and behavioural design patterns
 
 | Pattern                                                      | Topic                                         |
 |--------------------------------------------------------------|-----------------------------------------------|
