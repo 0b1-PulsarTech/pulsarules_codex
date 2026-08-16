@@ -33,8 +33,17 @@ func preEditFileEvent(filePath string) string {
 
 func (d *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) error {
 	filePath := in.ToolInput.FilePath
+
+	// Before the skills gate below, which returns early for any extension
+	// that routes no skill; no trigger names .md, where most markers live.
+	notice := d.autoCleanEdited(filePath)
+
 	relevant := d.router.SkillsForFile(filePath)
 	if len(relevant) == 0 {
+		if notice == "" {
+			return nil
+		}
+		d.emitOutput("PostToolUse", notice)
 		return nil
 	}
 
@@ -59,11 +68,20 @@ func (d *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) error
 		return err
 	}
 
-	if !session.FirstEmission("PostToolUse", text) {
+	// The checklist dedups on content, but a mutation notice must not: a
+	// second cleanup of the same file is a new fact, not a repeat.
+	if !session.FirstEmission("PostToolUse", text) && notice == "" {
 		return nil
 	}
-	d.emitOutput("PostToolUse", text)
+	d.emitOutput("PostToolUse", joinNotice(notice, text))
 	return nil
+}
+
+func joinNotice(notice, text string) string {
+	if notice == "" {
+		return text
+	}
+	return notice + "\n\n" + text
 }
 
 type postEditChecklist struct {
