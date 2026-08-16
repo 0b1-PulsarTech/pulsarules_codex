@@ -7,6 +7,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/clean"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/generate"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
@@ -52,6 +53,8 @@ func Run(inj remy.Injector, opts *version.Options) error {
 		return runCommitLint(inj, opts)
 	case "governance":
 		return runGovernance(inj, opts)
+	case "clean":
+		return clean.RunClean(inj, opts)
 	case "evals":
 		return runEvals(inj, opts)
 	default:
