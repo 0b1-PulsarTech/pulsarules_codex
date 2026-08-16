@@ -56,7 +56,7 @@ func TestDispatchStop(t *testing.T) {
 		dir := t.TempDir()
 		gitInit(t, dir)
 		emDash := "\u2014"
-		content := "package x\n\n// bad note " + emDash + " trips no-em-dash\n"
+		content := "package x\n\n// bad note " + emDash + " trips typographic-markers\n"
 		if err := os.WriteFile(
 			filepath.Join(dir, "violation.go"),
 			[]byte(content),
@@ -71,7 +71,7 @@ func TestDispatchStop(t *testing.T) {
 		ctx := extractContext(t, out.String())
 		for _, want := range []string{
 			"Governance checks:",
-			"no-em-dash",
+			"typographic-markers",
 			"go vet",
 			"violation.go",
 		} {

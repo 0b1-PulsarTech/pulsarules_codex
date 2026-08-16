@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/vacuousdoc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/character"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/banner"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/blocksize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/simplification"
@@ -17,7 +18,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/identifier"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/signature/namedreturns"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/noemdash"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -26,7 +26,8 @@ import (
 func analyzerSpecs() []analyzerSpec {
 	return append([]analyzerSpec{
 		staticSpec("file-size", filesize.NewAnalyzer),
-		staticSpec("no-em-dash", noemdash.NewAnalyzer),
+		staticSpec("text-markers", character.NewTextAnalyzer),
+		staticSpec("typographic-markers", character.NewTypographicAnalyzer),
 		staticSpec("import-groups", importgroup.NewAnalyzer),
 		staticSpec("naming", identifier.NewAnalyzer),
 		langSpec("top-of-file", banner.NewAnalyzer),

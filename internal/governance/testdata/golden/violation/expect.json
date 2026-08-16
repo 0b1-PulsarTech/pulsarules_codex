@@ -1,7 +1,7 @@
 {
   "findings": [
     {
-      "analyzerId": "no-em-dash",
+      "analyzerId": "typographic-markers",
       "file": "note/note.go",
       "line": 13,
       "messageSubstring": "em dash"

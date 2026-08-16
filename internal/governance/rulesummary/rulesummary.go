@@ -12,7 +12,8 @@ func defaultRuleMap() map[string]string {
 	// A new analyzer goes here by exact ID; sub-ID tools also need a lookupRule prefix.
 	return map[string]string{
 		"file-size":                "effective-go",
-		"no-em-dash":               "effective-go",
+		"text-markers":             "effective-go",
+		"typographic-markers":      "effective-go",
 		"import-groups":            "imports",
 		"naming":                   "naming",
 		"top-of-file":              "effective-go",
