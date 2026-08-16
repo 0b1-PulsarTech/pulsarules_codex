@@ -1,15 +1,21 @@
 {
   "findings": [
     {
+      "analyzerId": "ai-frontmatter",
+      "file": "docs/notes.md",
+      "line": 2,
+      "messageSubstring": "generator"
+    },
+    {
       "analyzerId": "text-markers",
       "file": "docs/notes.md",
-      "line": 3,
+      "line": 7,
       "messageSubstring": "zero width space"
     },
     {
       "analyzerId": "typographic-markers",
       "file": "docs/notes.md",
-      "line": 3,
+      "line": 7,
       "messageSubstring": "em dash"
     }
   ],
