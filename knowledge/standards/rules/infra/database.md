@@ -61,6 +61,9 @@ Applies to: persistence. Canonical reference stack: `entgo.io/ent`, `atlasgo.io`
    regardless, so no `tenant_id` predicate appears in any `.sql`. Single write needs no explicit tx;
    multi-write goes through [[transactions]].
 9. Tests: real DB via a test factory, `//go:build integration`, same package - never a SQL mock.
+10. A repository method serving a list MUST batch into one query (`IN (...)`) rather than a use case
+    looping per-entity repo calls (N+1). Any request-scoped cache stays request-scoped - never a
+    package-level cache, which leaks data across requests and users.
 {{end}}
 
 {{define "forbidden"}}
@@ -73,6 +76,8 @@ Applies to: persistence. Canonical reference stack: `entgo.io/ent`, `atlasgo.io`
 - A SQL mock or any in-memory `database/sql` faker.
 - Cross-feature joins into another use case's tables (call via a facade).
 - Importing the ent client at runtime (schema is authoring-only).
+- A use case looping per-entity repo calls where a batched `IN (...)` query would serve the list.
+- A package-level or process-global cache for request-scoped data.
 {{end}}
 
 {{define "validation"}}
@@ -84,4 +89,6 @@ Applies to: persistence. Canonical reference stack: `entgo.io/ent`, `atlasgo.io`
 - [ ] SQL errors wrapped via the DB error mapper; repo asserts the consumer interface.
 - [ ] No `tenant_id` predicate in any query; repo tests use a real-DB factory with the integration
   tag.
+- [ ] List-serving repository methods batch into one `IN (...)` query; no per-entity-call loop (N+1).
+- [ ] Any request-scoped cache stays request-scoped; no package-level cache.
 {{end}}
