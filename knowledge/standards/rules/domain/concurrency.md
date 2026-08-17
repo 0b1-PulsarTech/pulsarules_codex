@@ -44,8 +44,9 @@ Applies to: any concurrent Go code.
    `val, ok := <-ch`. Default to unbuffered channels.
 7. Embed `sync.Mutex` as an unexported field; lock the smallest scope; never call a user callback
    while holding the lock. Use `sync.RWMutex` only when reads vastly outnumber writes.
-8. A supervised worker loop is restarted by its parent on panic (the only sanctioned `recover()`
-   site).
+8. A supervised worker loop is restarted by its parent on panic. `recover()` is sanctioned at
+   exactly two boundaries: this worker-supervisor loop, and transport-level panic-recovery
+   middleware/interceptor - nowhere else.
 9. Run `go test -race ./...`; CI runs with `-race`. Any race is a bug.
 10. To cancel work that must outlive its request, keep a `map[key]context.CancelFunc` owned by the
     worker; store the `CancelFunc`, NEVER the `ctx`.
@@ -68,6 +69,8 @@ Applies to: any concurrent Go code.
 - A blocking producer signal (`ch <- v` with no `default`) where a coalescing non-blocking wake fits.
 - An unbounded in-memory queue/buffer that grows under load instead of bounded-channel backpressure.
 - Silencing the race detector; shipping any `-race` finding.
+- `recover()` anywhere other than the worker-supervisor loop or transport panic-recovery
+  middleware/interceptor.
 {{end}}
 
 {{define "validation"}}
@@ -79,4 +82,6 @@ Applies to: any concurrent Go code.
 - [ ] Channel ownership documented; two-value receive used.
 - [ ] Tests pass under `-race`.
 - [ ] Work that outlives its request is cancelled via a stored `CancelFunc`, never a stored `ctx`.
+- [ ] `recover()` appears only at a worker-supervisor boundary or transport panic-recovery
+  middleware/interceptor.
 {{end}}
