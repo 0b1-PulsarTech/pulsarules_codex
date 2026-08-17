@@ -63,7 +63,10 @@ Applies to: rebuilding a squash or temp history into clean incremental commits.
    version. A commit emptied by folding is dropped.
 2. A step that cannot compile marks itself `[wip]` (see `[[commits]]`) rather than the rewrite
    silently exempting every commit: the log then names which steps are partial. The final tree plus
-   a full build+lint+test sweep is still the gate.
+   a full build+lint+test sweep is still the gate. Run the per-commit sweep in a throwaway
+   worktree; a killed sweep in the main checkout strands it on a detached HEAD.
+3. Never `cherry-pick -x` while rebuilding: it appends a `(cherry picked from commit ...)` line,
+   which is a tool-attribution trailer and blows the body cap. Lint every rewritten message.
 {{end}}
 
 {{define "forbidden"}}
@@ -84,4 +87,5 @@ Applies to: rebuilding a squash or temp history into clean incremental commits.
   commits.
 - [ ] Full sweep green on the final HEAD (build + lint + tests).
 - [ ] Every commit that does not build declares `[wip]`; the series ends unmarked and green.
+- [ ] Every rewritten message linted; no `(cherry picked from commit ...)` line survives.
 {{end}}
