@@ -15,7 +15,9 @@ import (
 var defaultRuleMap = map[string]string{
 	// static analyzers
 	"file-size":           "effective-go",
-	"no-em-dash":          "effective-go",
+	"text-markers":        "effective-go",
+	"typographic-markers": "effective-go",
+	"ai-frontmatter":      "effective-go",
 	"import-groups":       "imports",
 	"naming":              "naming",
 	"top-of-file":         "effective-go",

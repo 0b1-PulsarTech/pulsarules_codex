@@ -33,7 +33,7 @@ func TestIsLoadBearingClause(t *testing.T) {
 		{name: "double-digit numbered leading No", line: "12. No em dash anywhere.", want: true},
 		{
 			name: "arabic-indic numbered marker is not a marker",
-			line: "٣. No dot imports.",
+			line: "\u0663. No dot imports.",
 			want: false,
 		},
 		{
@@ -104,18 +104,18 @@ func TestStripListMarker(t *testing.T) {
 		},
 		{
 			name: "arabic-indic digit is not an ASCII marker",
-			line: "٣. No dot imports.",
-			want: "٣. No dot imports.",
+			line: "\u0663. No dot imports.",
+			want: "\u0663. No dot imports.",
 		},
 		{
 			name: "fullwidth digit is not an ASCII marker",
-			line: "３. No dot imports.",
-			want: "３. No dot imports.",
+			line: "\uFF13. No dot imports.",
+			want: "\uFF13. No dot imports.",
 		},
 		{
 			name: "nbsp separator is not ASCII whitespace",
-			line: "3. No unused imports.",
-			want: "3. No unused imports.",
+			line: "3.\u00A0No unused imports.",
+			want: "3.\u00A0No unused imports.",
 		},
 		{name: "empty line has no marker", line: "", want: ""},
 		{name: "lone dot has no marker", line: ".", want: "."},

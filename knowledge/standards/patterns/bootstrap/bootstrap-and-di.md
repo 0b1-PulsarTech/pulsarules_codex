@@ -143,7 +143,7 @@ svc, err := remy.GetWithContext[contacts.Service](inj, ctx) // factory reads the
 Collaborators take CONCRETE deps. A use case / service / repository constructor takes concrete
 collaborators (`NewUseCase(repo Repository, clk Clock)`), NEVER `remy.Injector` / `DependencyRetriever`;
 those are resolved at the root. The ONE exception is the composition seam itself (`DoInjections`, an app
-`Routers(inj, …)` builder) - that is the root owning wiring, not a collaborator reaching in.
+`Routers(inj, ...)` builder) - that is the root owning wiring, not a collaborator reaching in.
 {{end}}
 
 {{define "forbidden"}}

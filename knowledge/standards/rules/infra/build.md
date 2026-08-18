@@ -53,7 +53,7 @@ Applies to: build, tooling, and code generation.
    return.
 6. Workspace: `go.work` declares NO out-of-repo packages - fetch private modules via `GOPRIVATE` (env),
    never a `go.work use` of an external path. Run the workspace in GOWORK-on mode (do NOT force
-   `GOWORK=off`). Keep per-module `replace` directives in ONE grouped `replace ( … )` block per
+   `GOWORK=off`). Keep per-module `replace` directives in ONE grouped `replace ( ... )` block per
    `go.mod` with clean `../` relative paths (tabs, not leading spaces; never `./../`). `go work sync`
    needs the replaces, and a malformed `go.mod` silently breaks GoLand/gopls symbol resolution.
 7. Container images are multi-stage, distroless-based, CGO-free; the Containerfile is at the repo
@@ -83,6 +83,6 @@ Applies to: build, tooling, and code generation.
   code gofumpt + `ireturn` clean; inline `//nolint` preferred over global excludes; pre-existing debt
   not gating new work.
 - [ ] `go.work` declares no out-of-repo packages (private via `GOPRIVATE`); GOWORK-on; one grouped
-  `replace ( … )` block per `go.mod` with tab-indented clean `../` paths.
+  `replace ( ... )` block per `go.mod` with tab-indented clean `../` paths.
 - [ ] Container multi-stage, distroless, digest-pinned; tools in `tools/go.mod`.
 {{end}}

@@ -168,8 +168,8 @@ Every analyzer implements the small `core.Analyzer` interface (`ID`, `Name`, `De
 file-extension-based dispatch. The families:
 
 - `static/*` - pure text/structure checks needing no parser: `filesize` (line-count ceiling),
-  `noemdash` (rejects U+2014), `topoffile` and `bigcomment` (comment placement and length, both via
-  the `LanguageRegistry`).
+  `textmarkers` (invisible carriers, exotic spaces and AI typographic punctuation), `topoffile` and
+  `bigcomment` (comment placement and length, both via the `LanguageRegistry`).
 - `ast/*` - `go/ast`-based checks: `complexity` (cyclomatic complexity, function size, parameter count,
   flag arguments, magic numbers), `controlflow` (redundant else, deep nesting), `shadowing` (variable/
   builtin shadowing via a scope stack), `imports` (three-group import order), `naming` (identifier
@@ -285,7 +285,7 @@ The governance pipeline (see above) adds its own package set:
 |----------------------------------|-----------------------------------------------------------------------------------------------------|
 | `internal/analysis`               | `session.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`analyzerSpecs`), `runner.go` (`toAnalysisConfig`), `rule_injection.go`, `output.go`, `format.go`, `history.go` |
 | `internal/analyzer/core`          | `Analyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Requirements`, `LanguageRegistry`, `core/astcache` (parsed-AST cache) |
-| `internal/analyzer/static/*`      | `filesize`, `noemdash`, `topoffile`, `bigcomment` - text/structure checks                           |
+| `internal/analyzer/static/*`      | `filesize`, `textmarkers`, `topoffile`, `bigcomment` - text/structure checks                        |
 | `internal/analyzer/ast/*`         | `complexity`, `controlflow`, `shadowing`, `imports`, `naming` - `go/ast`-based checks                |
 | `internal/analyzer/arch`          | `PackageBoundaryAnalyzer`, `ImportCycleAnalyzer` - multi-file architecture checks                   |
 | `internal/analyzer/commit`        | `CommitAnalyzer` - commit-message format, emoji, and trailer rules                                  |

@@ -87,7 +87,7 @@ Constructor DI, concretely: the monolith has ONE composition root (`cmd/<app>`) 
 `RegisterAndInit` once, then each module's `DoInjections`. Collaborator constructors (use cases,
 services, repositories) take CONCRETE deps, never `remy.Injector`/`DependencyRetriever`. The ONE place
 that legitimately reads the injector is the composition seam itself (`DoInjections`, an app
-`Routers(inj, …)` builder) - the root owning wiring, not a collaborator reaching in. See
+`Routers(inj, ...)` builder) - the root owning wiring, not a collaborator reaching in. See
 [[bootstrap-and-di]].
 {{end}}
 

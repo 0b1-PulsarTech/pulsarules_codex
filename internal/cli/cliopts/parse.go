@@ -61,6 +61,9 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 		fs.StringVar(&opts.CommitMsg, "msg", "", "commit message to validate")
 		fs.StringVar(&opts.CommitFile, "file", "", "path to a COMMIT_EDITMSG file")
 		fs.StringVar(&opts.ProjectDir, "project", "", "project dir for git history lookup")
+	case "clean":
+		fs.StringVar(&opts.ProjectDir, "project", "", "project dir to clean")
+		fs.BoolVar(&opts.Write, "write", false, "rewrite files instead of only reporting")
 	case "evals":
 		fs.StringVar(&opts.Artifact, "artifact", "", "path to the produced artifact to grade")
 		fs.StringVar(&opts.Scenario, "scenario", "", "grade only this scenario id")

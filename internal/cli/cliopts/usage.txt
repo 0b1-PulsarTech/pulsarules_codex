@@ -9,6 +9,7 @@ Usage:
   pulsarules_cli package [--root DIR] [--out FILE]
   pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
   pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
+  pulsarules_cli clean [--project DIR] [--write]
   pulsarules_cli hook <mode>
   pulsarules_cli version
 
@@ -150,3 +151,13 @@ path the installed host wrapper supplies via $PULSARULES_LOG_PATH (e.g.
 $PULSARULES_LOG_LEVEL when unset. Logging is off by default and costs nothing (no
 file is created); it also stays off when $PULSARULES_LOG_PATH is unset (an older
 installed wrapper, or the binary run by hand), rather than guessing a location.
+
+clean sweeps the same file set the governance gate walks and reports every AI
+watermark marker it finds in .go and .md. It reports only, unless --write is
+passed: then it removes the carriers no context can justify (zero-width
+characters, bidi controls, soft hyphens) and folds exotic spaces to a plain
+space. It never rewrites an em dash, an ellipsis, a curly quote, or an invisible
+that may be load-bearing - inside a string literal or a fenced block those are
+data, so they are reported for a human to judge. Files under testdata/ and any
+extension other than .go and .md are left alone.
+

@@ -49,7 +49,7 @@ Applies to: wiring services, repositories, facades, and routers. Canonical refer
 {{end}}
 
 {{define "forbidden"}}
-- `RegisterSingleton(func(ret DependencyRetriever)…)` - an opaque factory that defeats the DI graph.
+- `RegisterSingleton(func(ret DependencyRetriever)...)` - an opaque factory that defeats the DI graph.
 - `Get[*concreteType](ret)` inside a registered factory; defeats duck-typing and hides the dep.
 - Service-locator usage outside bootstrap; application code querying the injector instead of
   receiving deps through constructor parameters.

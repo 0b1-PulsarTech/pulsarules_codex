@@ -62,9 +62,9 @@ func TestDispatchStop(t *testing.T) {
 		dir := t.TempDir()
 		gitInit(t, dir)
 		// An em-dash (U+2014, written via escape so this test file itself
-		// carries none) trips the no-em-dash analyzer cheaply and reliably.
+		// carries none) trips the typographic-markers analyzer cheaply and reliably.
 		emDash := "\u2014"
-		content := "package x\n\n// bad note " + emDash + " trips no-em-dash\n"
+		content := "package x\n\n// bad note " + emDash + " trips typographic-markers\n"
 		if err := os.WriteFile(
 			filepath.Join(dir, "violation.go"),
 			[]byte(content),
@@ -77,7 +77,7 @@ func TestDispatchStop(t *testing.T) {
 
 		_ = disp.Dispatch("stop", payload)
 		ctx := extractContext(t, out.String())
-		for _, want := range []string{"Governance checks:", "no-em-dash", "go vet", "violation.go"} {
+		for _, want := range []string{"Governance checks:", "typographic-markers", "go vet", "violation.go"} {
 			if !strings.Contains(ctx, want) {
 				t.Errorf("stop output missing %q:\n%s", want, ctx)
 			}

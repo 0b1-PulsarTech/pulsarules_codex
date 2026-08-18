@@ -3,10 +3,10 @@
   "suppressedGenerated": 1,
   "includeGeneratedFindings": [
     {
-      "analyzerId": "no-em-dash",
+      "analyzerId": "typographic-markers",
       "file": "gen/gen.go",
       "line": 10,
-      "messageSubstring": "em-dash"
+      "messageSubstring": "em dash"
     }
   ]
 }
