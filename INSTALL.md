@@ -103,9 +103,10 @@ merges its `SessionStart`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Sub
 and `SessionEnd` entries into the chosen settings file - preserving existing
 permissions / `enabledMcpjsonServers` / unrelated hooks, never duplicating on re-run. The wired command
 locates the installed hook script via `$CLAUDE_PROJECT_DIR` (a Claude Code variable, legitimately
-named there); the script then exports `PULSARULES_PROJECT_DIR` and `PULSARULES_SKILLS_DIR` - the
-only two variables the binary itself reads - so it survives moving the repo without hardcoding a
-host's own variable name or a host's own skills layout. It also stamps `.claude/.gitignore` with `/bin/` and `/hooks/` (plus the ownership marker
+named there); the script then exports `PULSARULES_PROJECT_DIR`, `PULSARULES_SKILLS_DIR`, and
+`PULSARULES_LOG_PATH` - the only three variables the binary itself reads - so it survives moving the
+repo without hardcoding a host's own variable name, skills layout, or log location. It also stamps
+`.claude/.gitignore` with `/bin/` and `/hooks/` (plus the ownership marker
 `Remove` needs), so the copied binary and hook script stay local while `settings.json` and the
 rendered skills - which carry their own `.gitignore` - remain yours to commit or not.
 
@@ -114,6 +115,14 @@ older `skill-router-reminder.sh` exports neither, so the binary resolves an empt
 the `stop`, `pre-search`, and `post-edit` checks all go silently quiet. The binary now prints a
 one-time stderr warning naming the fix - re-run `install` (this command) to regenerate the hook
 script.
+
+**Upgrading from an install that predates `PULSARULES_LOG_PATH`:** an older `skill-router-reminder.sh`
+(or opencode plugin) exports neither `PULSARULES_PROJECT_DIR`/`PULSARULES_SKILLS_DIR` nor
+`PULSARULES_LOG_PATH`. Unlike the project/skills dir case above, a missing log path is silent by
+design and prints no warning: `--log-level` has nowhere host-provided to write, so the binary disables
+hook-execution logging outright rather than falling back to a guessed location. Logging is opt-in
+diagnostics, not a contract feature, so this degrades safely with no functional loss - re-run `install`
+to pick up the new script if you want the log.
 
 Additional install flags:
 
@@ -213,15 +222,6 @@ go run ./cmd/pulsarules_cli generate --root .
 
 `--root .` reads the on-disk `knowledge/` so changes apply without rebuilding. Omit `--root` to use
 the embedded snapshot (the shipped behavior).
-
-## No-Go fallback
-
-`knowledge/templates/installers/install.sh.tmpl` is a `jq` + `bash` script (no node) that copies
-already-rendered skills (run `generate` first) into a Claude skills directory, wires the hook the same
-way the Go installer does (with `--hooks-scope project|local`), and - when `gopls` is on PATH - wires
-the gopls MCP into `.mcp.json` plus the generated `gopls-navigation` skill (`--no-mcp` to skip). It
-covers the Claude target only; use the Go installer for `--target opencode|cursor` and `--layout`. Strip the
-`.tmpl` suffix to use it.
 
 ## Taskfile targets
 

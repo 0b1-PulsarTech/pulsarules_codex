@@ -1,4 +1,4 @@
-Check project-router ran and its skills are loaded - if so do NOT reload, just apply them to this Go/SQL/proto write. They carry the full contract; what follows is only what nothing else catches later, not a replacement.
+Check project-router ran and its skills are loaded - if so, apply them to this Go/SQL/proto write; they carry the full contract already. What follows is only what nothing else catches later, not a replacement.
 
 Minimalism ladder, stop at the first fit: necessity (must this exist) -> stdlib (slices/maps/cmp, errors.Join, min/max/clear, iter.Seq) -> language/platform feature -> reuse an in-package helper, or one reachable via a facade port (no new deep cross-module import) -> an already-imported dep -> one line -> only then implement.
 New abstraction/interface/option/generic needs >=2 real call sites today or it does not go in.

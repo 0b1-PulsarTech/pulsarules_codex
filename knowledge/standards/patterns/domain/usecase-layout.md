@@ -109,3 +109,7 @@ remy.RegisterConstructorArgs2(inj, remy.Factory[UseCase], New)
 - [ ] No infra/proto/transport types in public signatures.
 - [ ] Constructor registered as `Factory[UseCase]`; `mockgen` directive present.
 {{end}}
+
+{{define "outputs"}}
+- A factory constructor; a `mockgen` directive and a colocated `usecase_test.go`.
+{{end}}

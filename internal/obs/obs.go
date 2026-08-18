@@ -16,26 +16,25 @@ import (
 // ErrInvalidLevel indicates a Config.Level value log/slog does not recognize.
 var ErrInvalidLevel = errors.New("invalid log level")
 
-const (
-	defaultMaxBytes = 256 * 1024
-	defaultLogPath  = ".claude/hook-execution.log"
-)
+const defaultMaxBytes = 256 * 1024
 
-// Config selects where and whether hook telemetry is written.
+// Config selects where and whether hook telemetry is written. obs owns no
+// host layout of its own - a host-neutral default log path would still bake
+// in someone's directory convention - so both fields must be supplied by the
+// caller for logging to activate at all.
 type Config struct {
 	Level    string // "", debug, info, warn, error - empty disables logging entirely
-	Path     string // defaults to <projectDir>/.claude/hook-execution.log
+	Path     string // full log file path; empty disables logging even if Level is set
 	MaxBytes int64  // defaults to 256 KiB
 }
 
 // New returns a logger that writes JSON records at cfg.Level, and a Closer
-// for the underlying file. Disabled is the default and costs nothing: with
-// Level == "" the logger discards everything and the Closer is a no-op, so no
-// file is created, opened, or read - this is what keeps a disabled log from
-// ever growing. A non-empty Level truncates an oversized log to its tail
-// before opening it for append.
+// for the underlying file. Disabled by default and free: empty Level or
+// Path discards everything and Closer no-ops, so nothing is created or
+// written unexpectedly. A set Level and Path truncate an oversized log to
+// its tail before opening for append.
 func New(cfg Config) (*slog.Logger, io.Closer, error) {
-	if cfg.Level == "" {
+	if cfg.Level == "" || cfg.Path == "" {
 		return slog.New(slog.DiscardHandler), noopCloser{}, nil
 	}
 
@@ -45,9 +44,6 @@ func New(cfg Config) (*slog.Logger, io.Closer, error) {
 	}
 
 	path := cfg.Path
-	if path == "" {
-		path = defaultLogPath
-	}
 	maxBytes := cfg.MaxBytes
 	if maxBytes <= 0 {
 		maxBytes = defaultMaxBytes

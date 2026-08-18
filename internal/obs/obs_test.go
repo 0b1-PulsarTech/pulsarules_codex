@@ -30,6 +30,23 @@ func TestNewDisabled(t *testing.T) {
 	}
 }
 
+// TestNewDisabledOnEmptyPath proves the other half of the disabled-by-default
+// contract: a Level without a Path - an older installed host wrapper that
+// never learned PULSARULES_LOG_PATH, or the binary run by hand with
+// --log-level set - must not fall back to a guessed location or crash.
+func TestNewDisabledOnEmptyPath(t *testing.T) {
+	t.Parallel()
+
+	logger, closer, err := New(Config{Level: "debug"})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	logger.Debug("should be discarded", slog.Int("n", 1))
+	if err = closer.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+}
+
 func TestNewValidLevels(t *testing.T) {
 	t.Parallel()
 

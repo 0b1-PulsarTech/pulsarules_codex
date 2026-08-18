@@ -47,6 +47,7 @@ export const PulsarulesGovernance = async ({ directory, worktree, $ }) => {
           ...process.env,
           PULSARULES_PROJECT_DIR: root,
           PULSARULES_SKILLS_DIR: `${root}/.opencode/skills`,
+          PULSARULES_LOG_PATH: `${root}/.opencode/hook-execution.log`,
         })
         .quiet();
       const text = result.stdout?.toString().trim();

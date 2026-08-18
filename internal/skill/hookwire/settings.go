@@ -18,41 +18,6 @@ import (
 // replace) the hook's own entries during an idempotent settings merge.
 const hookScript = "skill-router-reminder.sh"
 
-type hookCommand struct {
-	Type    string `json:"type"`
-	Command string `json:"command"`
-}
-
-type hookGroup struct {
-	Matcher string        `json:"matcher,omitempty"`
-	Hooks   []hookCommand `json:"hooks"`
-}
-
-type hooksBlock struct {
-	Hooks map[string][]hookGroup `json:"hooks"`
-}
-
-// RenderHooksBlock reads the settings hooks template and returns the indented
-// JSON block. The hook command resolves the project root at runtime via
-// $CLAUDE_PROJECT_DIR, so the block is portable (no per-target path baked in).
-// It validates that the result is well-formed JSON before it reaches a settings
-// file.
-func RenderHooksBlock(templates fs.FS) ([]byte, error) {
-	tmpl, err := fs.ReadFile(templates, "hooks/settings.hooks.json.tmpl")
-	if err != nil {
-		return nil, fmt.Errorf("read hooks settings template: %w", err)
-	}
-	var block hooksBlock
-	if err = json.Unmarshal(tmpl, &block); err != nil {
-		return nil, fmt.Errorf("render hooks block: %w", err)
-	}
-	out, err := json.MarshalIndent(block, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal hooks block: %w", err)
-	}
-	return append(out, '\n'), nil
-}
-
 // WireSettings merges the rendered hook entries into <claudeDir>/<settingsFile>
 // (settingsFile is "settings.json" for the project scope or "settings.local.json"
 // for the per-machine scope). It is idempotent: any prior entry whose command

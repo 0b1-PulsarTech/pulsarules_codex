@@ -1,12 +1,7 @@
----
-name: {{.ID}}
-description: {{.Description}}
----
-
+{{template "mdFrontmatter" .}}
 # {{.Name}}
 
-<!-- Installed by pulsarules_cli; re-run install to update, do not hand-edit. -->
-
+{{template "installedComment"}}
 {{.Description}}
 
 ## Steps

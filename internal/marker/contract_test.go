@@ -10,32 +10,24 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-// literalGatedAssets are the embedded templates copied - or text/template
-// rendered outside the skills/ family's shared render.Renderer namespace -
-// verbatim into a file some marker.Check call site inspects for ownership.
-// Deriving this set automatically would need a call-graph trace, for every
-// marker.Check call site across hookwire/opencodehook/agentswire/mcpwire, of
-// which template path feeds the file each one checks; that is not attempted
-// here. TestLiteralGatedAssetsListIsComplete is the fallback this leans on:
-// it fails the day a template gains marker.Installed without being added
-// here, so the list cannot go stale unnoticed the way the old hardcoded
-// table did.
+// literalGatedAssets are embedded templates copied, or rendered outside
+// render.Renderer, verbatim into a file marker.Check inspects for
+// ownership. Deriving this automatically needs a call-graph trace not
+// attempted here; TestLiteralGatedAssetsListIsComplete is the fallback,
+// failing when a template gains marker.Installed without being listed.
 var literalGatedAssets = []string{
-	"hooks/skill-router-reminder.sh",    // hookwire.InstallHook (internal/skill/hookwire/hooks.go)
-	"hooks/README.md",                   // hookwire.InstallHook (internal/skill/hookwire/hooks.go)
-	"docs/AGENTS.md.tmpl",               // agentswire.Write (internal/skill/agentswire/agents.go)
-	"hooks/opencode-plugin.js",          // opencodehook.Install (internal/hook/install/opencodehook/opencodehook.go)
-	"skills/gopls-navigation.header.md", // mcpwire.GenerateGoplsSkill (internal/skill/mcpwire/gopls.go)
+	"hooks/skill-router-reminder.sh.tmpl", // hookwire.InstallHook (internal/skill/hookwire/hooks.go)
+	"hooks/README.md",                     // hookwire.InstallHook (internal/skill/hookwire/hooks.go)
+	"docs/AGENTS.md.tmpl",                 // agentswire.Write (internal/skill/agentswire/agents.go)
+	"hooks/opencode-plugin.js",            // opencodehook.Install (internal/hook/install/opencodehook/opencodehook.go)
+	"skills/gopls-navigation.header.md",   // mcpwire.GenerateGoplsSkill (internal/skill/mcpwire/gopls.go)
 }
 
-// skillsTemplateFamily returns the skills/ templates render.Renderer executes
-// as a whole top-level document (namespace.go's topTemplates): every
-// *.md.tmpl and *.mdc.tmpl directly under skills/. skills/parts.tmpl is
-// excluded on purpose - it holds only {{define}} partials (including the
-// "mdcFrontmatter" block the two .mdc members compose from) and produces no
-// content when executed under its own name. TestGatedAssetsCarryInstalled
-// renders every member of this family; its length assertion there catches a
-// new member immediately instead of the coverage silently going stale.
+// skillsTemplateFamily returns the skills/ templates render.Renderer
+// executes as a whole document: every *.md.tmpl and *.mdc.tmpl under
+// skills/ (parts.tmpl excluded - it holds only {{define}} partials, no
+// content under its own name). TestGatedAssetsCarryInstalled's length
+// assertion on this catches a new member immediately.
 func skillsTemplateFamily(t *testing.T, templates fs.FS) []string {
 	t.Helper()
 
@@ -51,14 +43,10 @@ func skillsTemplateFamily(t *testing.T, templates fs.FS) []string {
 }
 
 // TestGatedAssetsCarryInstalled is the drift test binding Installed to the
-// real embedded skills/ template family (SKILL.md.tmpl, WORKFLOW.md.tmpl,
-// router.md.tmpl and their .mdc cursor counterparts, see
-// skillsTemplateFamily). Every currently loaded skill and workflow, plus
-// project-router's own richer template, is actually RENDERED through
-// render.Renderer - not grepped as raw template source - so a marker line
-// hiding behind a composed partial (the .mdc frontmatter) is proven present
-// in what actually lands on disk, and rewording the marker anywhere in the
-// family fails this test regardless of which skill or workflow renders it.
+// real embedded skills/ template family (see skillsTemplateFamily). Every
+// loaded skill and workflow is actually RENDERED through render.Renderer,
+// not grepped as raw source, so a marker line hiding behind a composed
+// partial (the .mdc frontmatter) is proven present in what lands on disk.
 func TestGatedAssetsCarryInstalled(t *testing.T) {
 	t.Parallel()
 
@@ -149,12 +137,10 @@ func TestLiteralGatedAssetsCarryInstalled(t *testing.T) {
 	}
 }
 
-// TestLiteralGatedAssetsListIsComplete fails when some embedded template
-// outside the skills/ render family carries marker.Installed without being
-// listed in literalGatedAssets, so that hand-listed set - which
-// skillsTemplateFamily's automatic derivation cannot cover, see its doc
-// comment - cannot silently drift out of sync with reality the way the
-// original hardcoded table did.
+// TestLiteralGatedAssetsListIsComplete fails when a template outside the
+// skills/ render family carries marker.Installed without being listed in
+// literalGatedAssets, so that hand-listed set cannot silently drift out of
+// sync with reality.
 func TestLiteralGatedAssetsListIsComplete(t *testing.T) {
 	t.Parallel()
 

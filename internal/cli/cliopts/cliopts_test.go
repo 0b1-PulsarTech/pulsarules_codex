@@ -1,9 +1,9 @@
 package cliopts
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 )
 
@@ -219,51 +219,57 @@ func checkGovernanceIncludeGenerated(t *testing.T, opts *Options) {
 	}
 }
 
-// TestInstallDest covers global, project, and the two invalid combinations.
-func TestInstallDest(t *testing.T) {
+// TestBaseDir covers project, and the two invalid combinations; BaseDir stays
+// host-neutral (a bare project/home path), leaving the ".claude" layout to
+// each target.Strategy that resolves a destination underneath it.
+func TestBaseDir(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name     string
-		opts     Options
-		wantErr  bool
-		wantTail string
+		name    string
+		opts    Options
+		want    string
+		wantErr bool
 	}{
-		{"project", Options{Project: "/repo"}, false, filepath.Join("/repo", ".claude", "skills")},
-		{"both exclusive", Options{Global: true, Project: "/repo"}, true, ""},
-		{"neither", Options{}, true, ""},
+		{name: "project", opts: Options{Project: "/repo"}, want: "/repo"},
+		{name: "both exclusive", opts: Options{Global: true, Project: "/repo"}, wantErr: true},
+		{name: "neither", opts: Options{}, wantErr: true},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			dest, err := testCase.opts.InstallDest()
+			base, err := testCase.opts.BaseDir()
 			if testCase.wantErr {
 				if err == nil {
-					t.Fatalf("expected error, got %q", dest)
+					t.Fatalf("expected error, got %q", base)
 				}
 				return
 			}
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if !strings.HasSuffix(dest, testCase.wantTail) {
-				t.Errorf("dest = %q, want suffix %q", dest, testCase.wantTail)
+			if base != testCase.want {
+				t.Errorf("base = %q, want %q", base, testCase.want)
 			}
 		})
 	}
 }
 
-// TestInstallDest_Global asserts global resolves under the home dir.
-func TestInstallDest_Global(t *testing.T) {
+// TestBaseDir_Global asserts global resolves to the home dir.
+func TestBaseDir_Global(t *testing.T) {
 	t.Parallel()
 
 	opts := Options{Global: true}
-	dest, err := opts.InstallDest()
+	base, err := opts.BaseDir()
 	if err != nil {
-		t.Fatalf("InstallDest: %v", err)
+		t.Fatalf("BaseDir: %v", err)
 	}
-	if !strings.HasSuffix(dest, filepath.Join(".claude", "skills")) {
-		t.Errorf("dest = %q, want .claude/skills suffix", dest)
+	home, homeErr := os.UserHomeDir()
+	if homeErr != nil {
+		t.Fatalf("resolve home: %v", homeErr)
+	}
+	if base != home {
+		t.Errorf("base = %q, want %q", base, home)
 	}
 }
 
