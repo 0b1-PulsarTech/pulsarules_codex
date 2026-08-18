@@ -62,7 +62,7 @@ Applies to: any function that returns an error. Canonical reference: a domain-er
 - `(nil, nil)`-style soft failures instead of an error.
 - `panic` in libraries; `recover()` to mask bugs. The only sanctioned `recover()` sites are a
   worker-supervisor boundary and transport-level panic-recovery middleware/interceptor (see
-  [[concurrency]]) - anywhere else it hides a bug.
+  [[concurrency]], [[rest-adapter]], [[grpc]]) - anywhere else it hides a bug.
 - Comparing errors on `.Error()` strings.
 - Writing an HTTP/gRPC status from inside a use case.
 - `github.com/pkg/errors`.

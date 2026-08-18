@@ -49,7 +49,7 @@ Applies to: any concurrent Go code.
    while holding the lock. Use `sync.RWMutex` only when reads vastly outnumber writes.
 8. A supervised worker loop is restarted by its parent on panic. `recover()` is sanctioned at
    exactly two boundaries: this worker-supervisor loop, and transport-level panic-recovery
-   middleware/interceptor - nowhere else.
+   middleware/interceptor (see [[rest-adapter]], [[grpc]]) - nowhere else.
 9. Run `go test -race ./...`; CI runs with `-race`. Any race is a bug.
 10. To cancel work that must outlive its request, keep a `map[key]context.CancelFunc` owned by the
     worker; store the `CancelFunc`, NEVER the `ctx`.
