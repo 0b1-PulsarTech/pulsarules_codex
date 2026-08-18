@@ -97,12 +97,11 @@ func clauseTestCases() []checkFileTestCase {
 	}
 }
 
-// TestClosuresAreNotDescended pins a KNOWN LIMIT, not a desired behaviour:
-// function literals are not walked. Enabling the walk is a one-line change,
-// but measured against a real monorepo it produced only findings of the shape
-// `if err := f(); err != nil` inside a closure - correct by the spec, useless
-// as advice. Reversing this test is the signal that `err` in an if-init was
-// allowlisted first.
+// TestClosuresAreNotDescended pins a KNOWN LIMIT, not desired behavior:
+// function literals aren't walked. Enabling it is a one-line change, but
+// against a real monorepo it found only `if err := f(); err != nil` inside
+// closures - correct, useless as advice. Reversing this test signals `err`
+// in an if-init was allowlisted first.
 func TestClosuresAreNotDescended(t *testing.T) {
 	t.Parallel()
 

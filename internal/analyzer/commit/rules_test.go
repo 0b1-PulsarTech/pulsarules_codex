@@ -117,12 +117,12 @@ func TestValidateDescriptionNoPeriod(t *testing.T) {
 func TestValidateDescriptionTooLong(t *testing.T) {
 	t.Parallel()
 
-	var bDesc strings.Builder
-	bDesc.WriteString("A")
+	var descBuilder strings.Builder
+	descBuilder.WriteString("A")
 	for range 80 {
-		bDesc.WriteString("x")
+		descBuilder.WriteString("x")
 	}
-	longDesc := bDesc.String()
+	longDesc := descBuilder.String()
 	msg := commitmsg.Parse(":wrench: feat: " + longDesc)
 	findings := Validate(msg, DefaultRuleConfig())
 	finding, ok := findingByID(findings, "commit-desc-length")
@@ -163,11 +163,11 @@ func TestValidateCoAuthorAllowedWhenDisabled(t *testing.T) {
 func TestValidateBodyLineTooLong(t *testing.T) {
 	t.Parallel()
 
-	var bLine strings.Builder
+	var lineBuilder strings.Builder
 	for range 120 {
-		bLine.WriteString("x")
+		lineBuilder.WriteString("x")
 	}
-	longLine := bLine.String()
+	longLine := lineBuilder.String()
 	msg := commitmsg.Parse(":wrench: feat: Add thing\n\n" + longLine)
 	findings := Validate(msg, DefaultRuleConfig())
 	if !hasAnalyzer(findings, "commit-body-length") {

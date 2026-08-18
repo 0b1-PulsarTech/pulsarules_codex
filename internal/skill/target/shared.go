@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/agentswire"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/output"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/slicesx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -22,6 +23,12 @@ func installSkills(ctx Context, dest string, report *Report) error {
 	installed, skipped, backedUp, err := output.Install(
 		ctx.Index, ctx.Renderer, dest, ctx.IDs, ctx.RouterFilter,
 	)
+	// why: output.Install returns the backups it ALREADY made alongside the error, so an id that
+	// fails midway through the batch must not swallow the renames the earlier ids performed - the
+	// user would see only "install failed" while a file of theirs sat renamed away.
+	for _, msg := range backedUp {
+		report.warn("%s", msg)
+	}
 	if err != nil {
 		return fmt.Errorf("render skills to %q: %w", dest, err)
 	}
@@ -31,9 +38,6 @@ func installSkills(ctx Context, dest string, report *Report) error {
 	for _, id := range skipped {
 		report.warn("skipped (unknown skill): %s", id)
 	}
-	for _, msg := range backedUp {
-		report.warn("%s", msg)
-	}
 	return nil
 }
 
@@ -41,21 +45,15 @@ func installSkills(ctx Context, dest string, report *Report) error {
 // skill ids, in insertion order with duplicates removed, so each workflow is
 // installed exactly once regardless of how many skills reference it.
 func workflowsForSkills(idx *knowledge.Index, skillIDs []string) []string {
-	seen := make(map[string]bool)
 	var ids []string
 	for _, sid := range skillIDs {
 		skill, ok := idx.Skill(sid)
 		if !ok {
 			continue
 		}
-		for _, wid := range skill.ComposeWorkflows {
-			if !seen[wid] {
-				seen[wid] = true
-				ids = append(ids, wid)
-			}
-		}
+		ids = append(ids, skill.ComposeWorkflows...)
 	}
-	return ids
+	return slicesx.Dedupe(ids)
 }
 
 // installWorkflows renders the workflows composed by the installed skills to
@@ -73,6 +71,10 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 		dest,
 		wfIDs,
 	)
+	// why: same as installSkills - a backup already made is reported even when a later id fails.
+	for _, msg := range backedUp {
+		report.warn("%s", msg)
+	}
 	if err != nil {
 		return fmt.Errorf("render workflows to %q: %w", dest, err)
 	}
@@ -82,18 +84,14 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 	for _, id := range skipped {
 		report.warn("skipped workflow (unknown): %s", id)
 	}
-	for _, msg := range backedUp {
-		report.warn("%s", msg)
-	}
 	return nil
 }
 
-// removeSkills deletes every skill directory output.RemoveDocs recognizes as
-// ours under dest, recording each removed id in the report, plus a note for
-// every backup output.RemoveDocs restored (see marker.Backup). It is shared
-// by every layout Strategy's Uninstall, mirroring installSkills; it also
-// cleans up the generated gopls-navigation skill, since GenerateGoplsSkill
-// writes it through the same output.WriteDoc fingerprint.
+// removeSkills deletes every skill directory output.RemoveDocs recognizes
+// as ours under dest, recording each removed id and restored backup in the
+// report. Shared by every layout Strategy's Uninstall, mirroring
+// installSkills; it also cleans up the generated gopls-navigation skill,
+// since GenerateGoplsSkill writes it through the same fingerprint.
 func removeSkills(dest string, report *Report) error {
 	removed, restored, err := output.RemoveDocs(dest, "SKILL.md")
 	if err != nil {

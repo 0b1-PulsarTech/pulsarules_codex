@@ -76,12 +76,12 @@ func TestNewValidLevels(t *testing.T) {
 				t.Fatalf("Close: %v", err)
 			}
 
-			data, err := os.ReadFile(path)
+			logged, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatalf("read log: %v", err)
 			}
-			if !bytes.Contains(data, []byte(`"case":"`+testCase.name+`"`)) {
-				t.Fatalf("log missing record: %s", data)
+			if !bytes.Contains(logged, []byte(`"case":"`+testCase.name+`"`)) {
+				t.Fatalf("log missing record: %s", logged)
 			}
 		})
 	}
@@ -239,12 +239,12 @@ func writeLines(t *testing.T, path string, n int) []byte {
 	return buf.Bytes()
 }
 
-// assertLineBoundary fails the test if any line in data is not a complete
+// assertLineBoundary fails the test if any line in log is not a complete
 // JSON record, which is what a mid-line cut would produce.
-func assertLineBoundary(t *testing.T, data []byte) {
+func assertLineBoundary(t *testing.T, log []byte) {
 	t.Helper()
 
-	for line := range bytes.SplitSeq(bytes.TrimRight(data, "\n"), []byte("\n")) {
+	for line := range bytes.SplitSeq(bytes.TrimRight(log, "\n"), []byte("\n")) {
 		var rec map[string]int
 		if err := json.Unmarshal(line, &rec); err != nil {
 			t.Fatalf("line is not a whole record (mid-line cut): %q: %v", line, err)

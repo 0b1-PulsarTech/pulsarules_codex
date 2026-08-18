@@ -21,7 +21,6 @@ func NewStageRunner(cfg *core.AnalysisConfig) *StageRunner {
 	}
 }
 
-// Register adds an analyzer to its stage. Called once per analyzer at boot.
 func (r *StageRunner) Register(a core.Analyzer) {
 	r.stages[a.Stage()] = append(r.stages[a.Stage()], a)
 }

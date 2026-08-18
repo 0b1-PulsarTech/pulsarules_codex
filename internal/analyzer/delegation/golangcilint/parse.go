@@ -5,21 +5,35 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
+var staleCacheReporter = core.NewReporter(
+	"golangci-lint", core.SeverityWarning, core.CatSyntax,
+)
+
 func parseOutput(out []byte, cmdErr error) []core.Finding {
 	if cmdErr != nil {
 		var exitErr *exec.ExitError
-		if errors.As(cmdErr, &exitErr) {
+		switch {
+		case errors.As(cmdErr, &exitErr):
 			if !isLintExit(exitErr.ExitCode()) {
 				return []core.Finding{
 					golangciLintReporter.New(
 						fmt.Sprintf("golangci-lint failed: %s", string(exitErr.Stderr)),
 					),
 				}
+			}
+		default:
+			// why: a non-ExitError (e.g. *exec.Error from a missing binary,
+			// or a permission error) means the command never produced
+			// stdout to parse; report the real cause instead of falling
+			// through to a JSON parse failure on empty output.
+			return []core.Finding{
+				golangciLintReporter.New(fmt.Sprintf("golangci-lint failed: %s", cmdErr)),
 			}
 		}
 	}
@@ -47,7 +61,12 @@ func parseOutput(out []byte, cmdErr error) []core.Finding {
 	}
 
 	var findings []core.Finding
+	var escaped int
 	for _, issue := range result.Issues {
+		if escapesProject(issue.Pos.Filename) {
+			escaped++
+			continue
+		}
 		sev := core.SeverityWarning
 		if strings.Contains(issue.Severity, "error") {
 			sev = core.SeverityError
@@ -62,7 +81,23 @@ func parseOutput(out []byte, cmdErr error) []core.Finding {
 		})
 	}
 
+	if escaped > 0 {
+		// why: a stale cache is the environment's problem, not the code's, so it
+		// warns instead of failing the gate the way a real lint finding does.
+		findings = append(findings, staleCacheReporter.NewWithSuggestion(
+			fmt.Sprintf("dropped %d finding(s) naming files outside the analysed project", escaped),
+			"run `golangci-lint cache clean`; a stale cache reports paths from a directory that is gone",
+		))
+	}
 	return findings
+}
+
+// why: golangci-lint is run with cmd.Dir set to the project, so every honest
+// finding is inside it. A path that climbs out comes from a stale cache keyed to
+// a directory that no longer exists, and printing it as real sent four separate
+// measurements in this repo chasing files nobody could open.
+func escapesProject(path string) bool {
+	return strings.HasPrefix(filepath.ToSlash(filepath.Clean(path)), "../")
 }
 
 // golangci-lint's own pkg/exitcodes reserves these two codes for "the tool

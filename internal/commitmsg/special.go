@@ -32,6 +32,7 @@ func isFooterLine(line string) bool {
 	return false
 }
 
+// footer ::= footerkey (": " | " #") footervalue
 func parseFooter(line string) Footer {
 	for _, sep := range []string{": ", " #"} {
 		if idx := strings.Index(line, sep); idx > 0 {

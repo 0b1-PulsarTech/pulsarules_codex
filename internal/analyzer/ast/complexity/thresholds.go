@@ -4,9 +4,17 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"math"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
+
+// testFuncLinesMultiplier is the allowance a _test.go function gets over
+// max_func_lines. why: a table-driven test carries a literal case table with
+// no code counterpart, the same reason filesize relaxes its whole-file limit
+// for tests; complexity/param-count stay unrelaxed since those measure real
+// branching. 1.5x clears this repo's worst pre-fix overage (85/80) with headroom.
+const testFuncLinesMultiplier = 1.5
 
 // thresholds bundles the three configurable limits so they thread through
 // checkFile/checkFuncDecl as one parameter instead of three.
@@ -14,6 +22,15 @@ type thresholds struct {
 	maxComplexity int
 	maxFuncLines  int
 	maxParams     int
+}
+
+// maxFuncLinesFor reads as a lookup on the file rather than a boolean handed
+// to a function (see static/filesize.lineLimits.forFile for the same shape).
+func (th thresholds) maxFuncLinesFor(fc core.FileChange) int {
+	if fc.IsTest {
+		return int(math.Round(float64(th.maxFuncLines) * testFuncLinesMultiplier))
+	}
+	return th.maxFuncLines
 }
 
 func (th thresholds) checkFile(
@@ -60,13 +77,14 @@ func (th thresholds) checkFuncDecl(
 	startLine := fset.Position(fn.Body.Lbrace).Line
 	endLine := fset.Position(fn.Body.Rbrace).Line
 	funcLines := endLine - startLine + 1
-	if funcLines > th.maxFuncLines {
+	maxFuncLines := th.maxFuncLinesFor(fc)
+	if funcLines > maxFuncLines {
 		findings = append(findings, complexityWarnReporter.At(
 			fc.Path,
 			fset.Position(fn.Pos()).Line,
 			fmt.Sprintf(
 				"%s is %d lines, max %d",
-				fn.Name.Name, funcLines, th.maxFuncLines,
+				fn.Name.Name, funcLines, maxFuncLines,
 			),
 			"extract helper functions to reduce size",
 		))

@@ -131,12 +131,10 @@ type removeTestCase struct {
 }
 
 // TestRemove covers stripping matched entries (and markerLine) while
-// preserving the rest, the no-op when nothing matches (or the file is
-// absent), and the branch that deletes the whole .gitignore once removing
-// the entries leaves it empty. It also pins the fix for the defect where a
-// hand-authored .gitignore that Ensure never touched - even one that
-// happens to hold the exact same entries - must survive Remove untouched,
-// since there is no marker proving those entries are ours to strip.
+// preserving the rest, the no-op when nothing matches or the file is
+// absent, and deleting the .gitignore once removal leaves it empty. It also
+// pins the fix for a hand-authored file (even with identical entries)
+// surviving Remove untouched, since there is no marker proving it is ours.
 func TestRemove(t *testing.T) {
 	t.Parallel()
 
@@ -247,9 +245,9 @@ func TestRemove_Idempotent(t *testing.T) {
 
 func readFile(tb testing.TB, path string) string {
 	tb.Helper()
-	data, err := os.ReadFile(path) //nolint:gosec // temp dir.
+	raw, err := os.ReadFile(path) //nolint:gosec // temp dir.
 	if err != nil {
 		tb.Fatalf("read %q: %v", path, err)
 	}
-	return string(data)
+	return string(raw)
 }

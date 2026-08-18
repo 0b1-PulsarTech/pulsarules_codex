@@ -41,12 +41,9 @@ type Repository interface {
 
 // why: every method shells out to git rather than reading .git's object
 // store directly, so it sees exactly what the git binary sees. A go-git
-// backend was built first and rejected: it recognises pack files only when
-// they are named pack-*, and `git maintenance` on 2.55 had written this
-// repository's objects into loose-<hash>.pack. It reported 219 changed files
-// where git reported 19, and an empty log, while every fixture test passed --
-// the divergence only appears against a real repository, so the port stays on
-// the binary that defines the truth.
+// backend was rejected: it missed pack files not named pack-*, and
+// `git maintenance` had written loose-<hash>.pack objects; it reported 219
+// changed files where git reported 19, diverging only against a real repo.
 type repository struct {
 	root string
 }
@@ -54,9 +51,8 @@ type repository struct {
 var _ Repository = (*repository)(nil)
 
 // Open opens the git repository containing dir, walking up through parent
-// directories to find it (including resolving a linked worktree to the main
-// repository's root). It returns ErrNoRepository when dir is not inside a
-// repository.
+// directories (including resolving a linked worktree to the main
+// repository's root). Returns ErrNoRepository when dir is not inside one.
 //
 //nolint:ireturn // factory constructor returns the consumer-declared interface
 func Open(dir string) (Repository, error) {
@@ -70,7 +66,6 @@ func Open(dir string) (Repository, error) {
 	return &repository{root: root}, nil
 }
 
-// Root returns the worktree's root directory.
 func (r *repository) Root() string {
 	return r.root
 }

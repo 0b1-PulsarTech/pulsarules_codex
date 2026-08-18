@@ -12,7 +12,6 @@ type Analyzer struct{}
 
 var noEmDashReporter = core.NewReporter("no-em-dash", core.SeverityWarning, core.CatSyntax)
 
-// NewAnalyzer creates a no-em-dash analyzer.
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }

@@ -126,8 +126,8 @@ func TestCheckFile(t *testing.T) {
 func runCheckFile(t *testing.T, a *Analyzer, source string, expect int) {
 	t.Helper()
 
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "foo.go")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo.go")
 	if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}

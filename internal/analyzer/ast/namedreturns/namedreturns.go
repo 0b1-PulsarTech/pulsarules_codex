@@ -20,7 +20,6 @@ var namedReturnsReporter = core.NewReporter(
 	core.CatAST,
 )
 
-// NewAnalyzer creates a named-results analyzer.
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
@@ -37,16 +36,9 @@ func (a *Analyzer) Needs() core.Requirements {
 }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if ctx.ASTCache == nil {
-		return nil
-	}
-
-	fset := ctx.ASTCache.FileSet()
-	var findings []core.Finding
-	for fc, f := range ctx.ChangedGoASTs() {
-		findings = append(findings, checkFile(fset, fc, f)...)
-	}
-	return findings
+	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
+		return checkFile(ctx.ASTCache.FileSet(), fc, f)
+	})
 }
 
 func checkFile(fset *token.FileSet, fc core.FileChange, f *ast.File) []core.Finding {

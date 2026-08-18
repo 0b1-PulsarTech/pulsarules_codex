@@ -343,8 +343,10 @@ artifact string and reports `pass`/`fail`; `judge` assertions report `needs_judg
 without-skill artifacts a scenario is graded against is an operator procedure, not something this
 binary runs: (1) start two sessions on the same scenario's `prompt`, one with the target skill loaded
 (or its knowledge composed into context) and one without any of this repo's guidance; (2) save each
-session's produced code/transcript as a plain-text artifact; (3) call `evals.Grade(scenario, artifact)`
-on both and diff the `machine` tallies (`ScenarioResult.MachineTally`); (4) read every `needs_judge`
+session's produced code/transcript as a plain-text artifact; (3) run
+`pulsarules_cli evals --artifact <file>` on both and diff the `machine` tallies (the command is the
+one call site of `evals.Grade`, so this step is executable rather than a Go snippet the reader has to
+write); (4) read every `needs_judge`
 assertion against both artifacts and score it by hand (or via a separate LLM-judge call this repo does
 not provide); (5) aggregate pass/fail across the scenarios run so far into a with-score, a without-score,
 and a delta - and flag the same two anomalies `cc-skills-golang` does: low delta with a high

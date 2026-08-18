@@ -15,17 +15,11 @@ const (
 	generatedSuffix = " DO NOT EDIT."
 )
 
-// IsGeneratedSource reports whether src carries the Go generated-code marker
-// ahead of its package clause, so analyzers can skip output no human can fix.
-//
-// It works on bytes rather than on go/ast because the pipeline must judge
-// files it never parses: the AST cache holds no test file, yet mockgen writes
-// its mocks to _test.go and the file-size analyzer reads them.
-//
-// It mirrors go/ast.IsGenerated: a `/* ... */` block comment ahead of the
-// marker does not end the scan, it is skipped through like Go itself does,
-// so a license block followed by the marker still counts. A marker WRITTEN
-// inside a block comment does not count - only a `//` line comment does.
+// IsGeneratedSource reports whether src carries the Go generated-code
+// marker ahead of the package clause, so analyzers can skip files no
+// human can fix. It scans bytes, not go/ast, because mockgen writes
+// mocks to _test.go, unparsed by the AST cache; it mirrors
+// go/ast.IsGenerated - a marker inside a block comment doesn't count.
 func IsGeneratedSource(src []byte) bool {
 	inBlock := false
 	for line := range bytes.Lines(src) {

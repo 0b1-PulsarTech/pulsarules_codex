@@ -43,11 +43,10 @@ type Anchor struct {
 }
 
 // Anchors returns the keyword-area to emoji-family table backing emoji
-// selection, in the same specificity order themeMatches searches (most
-// specific first). It is the single source the commits skill's emoji
-// guidance renders from, so the prose and the matcher cannot drift apart. A
-// malformed data/themes.txt is a build-time defect, so Anchors reports the
-// error rather than rendering guidance from an empty table.
+// selection, in the same specificity order themeMatches searches. It is the
+// single source the commits skill's guidance renders from, so prose and
+// matcher cannot drift apart. A malformed data/themes.txt is a build-time
+// defect, so Anchors errors rather than rendering from an empty table.
 func Anchors() ([]Anchor, error) {
 	themes, err := loadThemes()
 	if err != nil {
@@ -60,16 +59,11 @@ func Anchors() ([]Anchor, error) {
 	return anchors, nil
 }
 
-// themeMatches returns the shortcodes whose area matches the words in text,
-// most specific theme first. Matching is on whole-ish word prefixes so
-// "refactoring" hits "refactor" and "tests" hits "test".
-//
-// simplification: Catalog.Suggest, themeMatches' only caller, has no error
-// return in its contract, so a malformed data/themes.txt here degrades to no
-// theme match rather than failing the suggestion outright. The same defect
-// still surfaces loudly through Anchors and through NewCatalog's callers
-// (validate, the commits skill render). Upgrade path: give Suggest an error
-// return if a silent theme-match miss ever proves insufficient.
+// themeMatches returns the shortcodes whose area matches words in text,
+// most specific theme first (so "refactoring" hits "refactor").
+// simplification: Suggest, its only caller, has no error return, so a bad
+// data/themes.txt degrades to no match here instead of failing; Anchors and
+// NewCatalog's callers still surface it. Upgrade path: revisit if needed.
 func themeMatches(text string) []string {
 	themes, err := loadThemes()
 	if err != nil {

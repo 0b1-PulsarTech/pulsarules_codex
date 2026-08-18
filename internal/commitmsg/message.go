@@ -24,7 +24,7 @@ type Message struct {
 	Footers []Footer
 	// IsMerge is true for ":volcano: Merge ..." messages (no type required).
 	IsMerge bool
-	// IsInitial is true for ":ghost: Initial Commit" messages.
+	// IsInitial is true for ":ghost: Initial Commit" messages (no type required).
 	IsInitial bool
 	// IsWIP is true when the description starts with [wip] or [WIP].
 	IsWIP bool

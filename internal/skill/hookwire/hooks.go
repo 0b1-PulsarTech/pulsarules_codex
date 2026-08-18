@@ -32,13 +32,13 @@ const (
 	logFileName = "hook-execution.log"
 )
 
+const reminderScriptAsset = "skill-router-reminder.sh"
+
 // hookAssets are the files installed from templates/hooks into
 // <claudeDir>/hooks. reminderScriptAsset is rendered through text/template
 // (its two Claude-layout paths come from RootDir/SkillsSubdir/binSubdir
 // rather than being baked into the template source); README.md is copied
 // verbatim. The script is made executable; the README carries its WHY.
-const reminderScriptAsset = "skill-router-reminder.sh"
-
 var hookAssets = []struct {
 	templateName string
 	destName     string
@@ -56,10 +56,9 @@ var hookAssets = []struct {
 
 // InstallHook copies the hook script (executable) and its README from the
 // embedded templates into <claudeDir>/hooks, then installs the binary the
-// orchestrator script forwards to. An asset already at one of those paths
-// that was NOT written by an earlier InstallHook (no marker.Installed) is
-// renamed to a numbered ".pulsarules-backup" slot rather than destroyed;
-// backedUp reports each such rename as a ready-to-print message.
+// orchestrator script forwards to. An asset not written by an earlier
+// InstallHook is renamed to a numbered ".pulsarules-backup" slot rather
+// than destroyed; backedUp reports each rename as a printable message.
 func InstallHook(templates fs.FS, claudeDir string) (backedUp []string, err error) {
 	hooksDir := filepath.Join(claudeDir, "hooks")
 	if err = os.MkdirAll(hooksDir, fsperm.DirPrivate); err != nil {
@@ -110,11 +109,10 @@ func installBinary(claudeDir string) error {
 }
 
 // reminderScriptValues are the Claude-layout paths the reminder script needs,
-// relative to $CLAUDE_PROJECT_DIR - the values generic Go must never
-// hardcode (see internal/hook/dispatcher_deps.go's resolveSkillsDir and
-// internal/cli/cli.go's resolveLogPath), drawn here from this package's own
-// RootDir/SkillsSubdir/binSubdir/binaryName/logFileName instead of being
-// baked into the template source.
+// relative to $CLAUDE_PROJECT_DIR - values generic Go must never hardcode
+// (see dispatcher_deps.go's resolveSkillsDir and cli.go's resolveLogPath),
+// drawn from this package's own Root/Skills/bin/binaryName/logFileName
+// constants instead of being baked into the template source.
 type reminderScriptValues struct {
 	BinaryRelPath string
 	SkillsRelPath string
@@ -122,11 +120,10 @@ type reminderScriptValues struct {
 }
 
 // renderReminderScript executes the named template against
-// reminderScriptValues, the same text/template convention
-// internal/hook/emit_edit.go's renderPostEditChecklist uses for the
-// post-edit checklist. path.Join (not filepath.Join) keeps the rendered
-// paths forward-slashed regardless of the host OS running the installer,
-// since the result is embedded in a bash script, not used as an OS path.
+// reminderScriptValues, the same convention renderPostEditChecklist uses
+// for the post-edit checklist. It uses path.Join, not filepath.Join, since
+// the result is embedded in a bash script rather than used as an OS path,
+// so paths must stay forward-slashed regardless of host OS.
 func renderReminderScript(name string, body []byte) ([]byte, error) {
 	tmpl, err := template.New(name).Parse(string(body))
 	if err != nil {

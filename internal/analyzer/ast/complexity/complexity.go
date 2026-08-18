@@ -1,6 +1,8 @@
 package complexity
 
 import (
+	"go/ast"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
@@ -44,16 +46,10 @@ func (a *Analyzer) Needs() core.Requirements {
 }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if ctx.ASTCache == nil {
-		return nil
-	}
 	th := a.resolveThresholds(ctx)
-	fset := ctx.ASTCache.FileSet()
-	var findings []core.Finding
-	for fc, f := range ctx.ChangedGoASTs() {
-		findings = append(findings, th.checkFile(fset, fc, f)...)
-	}
-	return findings
+	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
+		return th.checkFile(ctx.ASTCache.FileSet(), fc, f)
+	})
 }
 
 // resolveThresholds overlays the runtime analyzer params onto the compiled-in

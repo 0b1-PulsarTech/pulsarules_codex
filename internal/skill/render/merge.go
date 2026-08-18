@@ -80,7 +80,9 @@ func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error)
 		id, _, _ := strings.Cut(entry, "#")
 		rule, ok := idx.Rule(id)
 		if !ok {
-			return nil, fmt.Errorf("skill %q composes unknown rule %q", skill.ID, id)
+			return nil, fmt.Errorf(
+				"%w: skill %q composes unknown rule %q", ErrUnknownComposition, skill.ID, id,
+			)
 		}
 		if err := add("rules", entry, rule.Name); err != nil {
 			return nil, err
@@ -90,7 +92,9 @@ func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error)
 		id, _, _ := strings.Cut(entry, "#")
 		pattern, ok := idx.Pattern(id)
 		if !ok {
-			return nil, fmt.Errorf("skill %q composes unknown pattern %q", skill.ID, id)
+			return nil, fmt.Errorf(
+				"%w: skill %q composes unknown pattern %q", ErrUnknownComposition, skill.ID, id,
+			)
 		}
 		if err := add("patterns", entry, pattern.Name); err != nil {
 			return nil, err
@@ -103,71 +107,3 @@ func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error)
 // (what a skill's consumer must, must not, or must check) rather than merely
 // describe or demonstrate one.
 var normativeSectionKeys = []string{"must", "forbidden", "validation"}
-
-// HasNormativeSection reports whether skill renders at least one non-empty
-// "must", "forbidden", or "validation" section across its composed rules and
-// patterns. A skill with none is documentation only - it states no obligation
-// a caller can be held to.
-func HasNormativeSection(idx *knowledge.Index, skill knowledge.Skill) (bool, error) {
-	sources, err := mergeSources(idx, skill)
-	if err != nil {
-		return false, fmt.Errorf("skill %q: %w", skill.ID, err)
-	}
-	for _, key := range normativeSectionKeys {
-		for _, src := range sources {
-			if src.sections[key] != "" {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
-
-type source struct {
-	name     string
-	sections map[string]string
-}
-
-// mergeSections groups the sources' sections under one heading per canonical key,
-// keeping each source's contribution as a `### Name` subheading.
-func mergeSections(sources []source) []mergedSection {
-	var merged []mergedSection
-	for _, canonical := range canonicalSections {
-		var items []contribution
-		for _, src := range sources {
-			if body := src.sections[canonical.Key]; body != "" {
-				items = append(items, contribution{Name: src.name, Body: body})
-			}
-		}
-		if len(items) > 0 {
-			merged = append(merged, mergedSection{Heading: canonical.Heading, Items: items})
-		}
-	}
-	return merged
-}
-
-type sectionDoc struct {
-	Heading string
-	Body    string
-}
-
-type sourceDoc struct {
-	Name     string
-	Sections []sectionDoc
-}
-
-// sourceDocs renders each source's own sections in canonical order, for the
-// non-merged (opt-out) layout where every rule keeps its sections together.
-func sourceDocs(sources []source) []sourceDoc {
-	docs := make([]sourceDoc, 0, len(sources))
-	for _, src := range sources {
-		var sections []sectionDoc
-		for _, canonical := range canonicalSections {
-			if body := src.sections[canonical.Key]; body != "" {
-				sections = append(sections, sectionDoc{Heading: canonical.Heading, Body: body})
-			}
-		}
-		docs = append(docs, sourceDoc{Name: src.name, Sections: sections})
-	}
-	return docs
-}

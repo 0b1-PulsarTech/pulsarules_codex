@@ -87,11 +87,11 @@ func TestLineLimits(t *testing.T) {
 func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
 	t.Parallel()
 
-	tmp := t.TempDir()
+	dir := t.TempDir()
 	write := func(name string, lines int) {
 		t.Helper()
 		body := "package foo\n" + strings.Repeat("// filler\n", lines-1)
-		if err := os.WriteFile(filepath.Join(tmp, name), []byte(body), fsperm.File); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), fsperm.File); err != nil {
 			t.Fatalf("write %s: %v", name, err)
 		}
 	}
@@ -100,7 +100,7 @@ func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
 	write("huge_test.go", 500)
 
 	a := NewAnalyzer()
-	srcs := core.NewSourceProvider(tmp)
+	srcs := core.NewSourceProvider(dir)
 
 	testCases := []struct {
 		name   string
@@ -127,7 +127,7 @@ func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			got := a.Analyze(&core.AnalysisContext{
-				ProjectDir:   tmp,
+				ProjectDir:   dir,
 				Sources:      srcs,
 				ChangedFiles: []core.FileChange{testCase.change},
 			})

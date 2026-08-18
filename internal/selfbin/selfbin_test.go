@@ -53,12 +53,12 @@ func TestCopy(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Copy: %v", err)
 			}
-			info, statErr := os.Stat(dst)
+			stat, statErr := os.Stat(dst)
 			if statErr != nil {
 				t.Fatalf("stat dst: %v", statErr)
 			}
-			if info.Mode()&0o111 == 0 {
-				t.Errorf("copied binary not executable: mode %v", info.Mode())
+			if stat.Mode()&0o111 == 0 {
+				t.Errorf("copied binary not executable: mode %v", stat.Mode())
 			}
 		})
 	}

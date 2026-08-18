@@ -44,8 +44,8 @@ func TestParseErrorCached(t *testing.T) {
 
 	// A second parse of the same broken file should return the same error
 	// without re-parsing (cached).
-	_, err2 := c.Parse("broken.go", src)
-	if err2 == nil {
+	_, cachedErr := c.Parse("broken.go", src)
+	if cachedErr == nil {
 		t.Fatal("expected cached parse error on second call")
 	}
 }

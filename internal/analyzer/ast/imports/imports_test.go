@@ -12,8 +12,7 @@ import (
 func TestAnalyze(t *testing.T) {
 	t.Parallel()
 
-	modPath := "github.com/0b1-PulsarTech/pulsarules_codex"
-	a := NewAnalyzer(modPath)
+	a := NewAnalyzer()
 
 	testCases := []struct {
 		name   string
@@ -46,7 +45,8 @@ func TestAnalyze(t *testing.T) {
 func TestCheckFile(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer("github.com/0b1-PulsarTech/pulsarules_codex")
+	a := NewAnalyzer()
+	const modPath = "github.com/0b1-PulsarTech/pulsarules_codex"
 
 	testCases := []struct {
 		name   string
@@ -97,8 +97,8 @@ func TestCheckFile(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			tmp := t.TempDir()
-			path := filepath.Join(tmp, "foo.go")
+			dir := t.TempDir()
+			path := filepath.Join(dir, "foo.go")
 			if err := os.WriteFile(path, []byte(testCase.source), 0o644); err != nil {
 				t.Fatal(err)
 			}
@@ -114,10 +114,50 @@ func TestCheckFile(t *testing.T) {
 			}
 
 			fc := core.FileChange{Path: "foo.go", Extension: ".go"}
-			got := a.checkFile(cache.FileSet(), fc, f)
+			got := a.checkFile(cache.FileSet(), modPath, fc, f)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d", len(got), testCase.expect)
 			}
 		})
+	}
+}
+
+// TestAnalyze_ForeignModule is the wiring test the old hardcoded-module-path
+// design could not have: TestAnalyze/TestCheckFile pin the algorithm to this
+// repo's own path and can't catch it. `std, module, ext` is the
+// discriminating shape - a real violation with the right module path, but
+// silently accepted (reads as std, ext, ext) with the wrong one.
+func TestAnalyze_ForeignModule(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	const modPath = "example.com/other"
+	writeSource(t, filepath.Join(projectDir, "go.mod"), "module "+modPath+"\n\ngo 1.26\n")
+
+	src := "package foo\n\nimport (\n\t\"fmt\"\n\n\t\"" + modPath +
+		"/bar\"\n\n\t\"github.com/x/y\"\n)\n\nvar _ = fmt.Sprint\n"
+	path := filepath.Join(projectDir, "foo.go")
+	writeSource(t, path, src)
+
+	cache := astcache.New()
+	if _, err := cache.Parse(path, []byte(src)); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	got := NewAnalyzer().Analyze(&core.AnalysisContext{
+		ProjectDir:   projectDir,
+		ASTCache:     cache,
+		ChangedFiles: []core.FileChange{{Path: path, Extension: ".go"}},
+	})
+	if len(got) == 0 {
+		t.Fatal("a local import grouped before the external one went unreported: the analyzer " +
+			"did not recognise " + modPath + " as this project's own module")
+	}
+}
+
+func writeSource(tb testing.TB, path, body string) {
+	tb.Helper()
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		tb.Fatalf("write %s: %v", path, err)
 	}
 }

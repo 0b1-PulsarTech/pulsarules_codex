@@ -6,6 +6,9 @@ import (
 	"os"
 )
 
+// ParseArgs binds the CLI flags for the chosen subcommand onto opts and applies
+// defaults. A parse failure wraps flag.ErrHelp, which main detects with
+// errors.Is so it can print usage cleanly instead of an error.
 func ParseArgs(args []string) (*Options, error) {
 	opts := &Options{}
 	if len(args) == 0 {
@@ -58,6 +61,9 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 		fs.StringVar(&opts.CommitMsg, "msg", "", "commit message to validate")
 		fs.StringVar(&opts.CommitFile, "file", "", "path to a COMMIT_EDITMSG file")
 		fs.StringVar(&opts.ProjectDir, "project", "", "project dir for git history lookup")
+	case "evals":
+		fs.StringVar(&opts.Artifact, "artifact", "", "path to the produced artifact to grade")
+		fs.StringVar(&opts.Scenario, "scenario", "", "grade only this scenario id")
 	case "governance":
 		fs.StringVar(&opts.ProjectDir, "project", "", "project dir to analyze")
 		fs.StringVar(

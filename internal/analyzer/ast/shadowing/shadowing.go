@@ -8,17 +8,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-// Analyzer detects variable and builtin shadowing in Go functions.
-// It walks each function body with a scope stack and flags any declaration
-// whose name is already visible from an enclosing scope. It also reports the
-// narrower case Go allows silently: a `:=` that reassigns a name bound by the
-// function signature rather than declaring a new one.
+// Analyzer detects variable/builtin shadowing: names already visible from
+// an enclosing scope, plus a `:=` that silently reassigns a signature-bound name.
 //
-// Known limit: function literals are not descended into, so a closure that
-// re-binds an outer name is not reported. Walking them is a one-line change
-// (a FuncLit branch in walkStmt) but it surfaces the idiomatic
-// `if err := f(); err != nil` inside a closure, which is not worth reporting
-// until `err` in an if-init is allowlisted.
+// Known limit: function literals aren't walked - doing so mostly finds
+// `if err := f(); err != nil` in closures, not worth reporting yet.
 type Analyzer struct{}
 
 var (
@@ -30,7 +24,6 @@ var (
 	reuseReporter = core.NewReporter("short-decl-reuse", core.SeverityWarning, core.CatAST)
 )
 
-// NewAnalyzer creates a shadowing analyzer.
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
@@ -47,16 +40,9 @@ func (a *Analyzer) Needs() core.Requirements {
 }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if ctx.ASTCache == nil {
-		return nil
-	}
-
-	fset := ctx.ASTCache.FileSet()
-	var findings []core.Finding
-	for fc, f := range ctx.ChangedGoASTs() {
-		findings = append(findings, a.checkFile(fset, fc, f)...)
-	}
-	return findings
+	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
+		return a.checkFile(ctx.ASTCache.FileSet(), fc, f)
+	})
 }
 
 // shadowAllowlist are names that are conventionally shadowed in idiomatic

@@ -61,7 +61,6 @@ func ValidPreset(name string) bool {
 	return ok
 }
 
-// Presets returns the list of available preset names in display order.
 func Presets() []string {
 	return []string{PresetRecommended, PresetStrict, PresetMinimal}
 }

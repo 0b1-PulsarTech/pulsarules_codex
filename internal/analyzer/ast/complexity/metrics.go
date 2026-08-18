@@ -8,12 +8,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-// valueArgNames are bool parameter names that name a returned DEFAULT VALUE
-// rather than a mode switch branched on to select behavior (e.g.
-// ParamSet.Bool(key string, fallback bool)). Telling the two apart in
-// general needs data-flow analysis this AST-only pass does not do, so this
-// is a heuristic: a bool parameter whose name is in this small set is
-// assumed to be a value, not a flag, and is not reported.
+// valueArgNames are bool parameter names that name a returned DEFAULT
+// VALUE, not a mode switch (e.g. ParamSet.Bool(key string, fallback bool)).
+// Telling the two apart needs data-flow analysis this AST-only pass lacks,
+// so a bool param named in this small set is assumed a value and unreported.
 var valueArgNames = map[string]bool{
 	"fallback":     true,
 	"def":          true,

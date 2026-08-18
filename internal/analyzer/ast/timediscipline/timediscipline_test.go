@@ -160,8 +160,8 @@ func checkFileCleanCases() []checkFileTestCase {
 func analyzeSource(t *testing.T, source string) []core.Finding {
 	t.Helper()
 
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "foo.go")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo.go")
 	if err := os.WriteFile(path, []byte(source), fsperm.File); err != nil {
 		t.Fatal(err)
 	}

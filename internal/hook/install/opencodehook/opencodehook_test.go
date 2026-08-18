@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -28,27 +29,27 @@ func testTemplates(t *testing.T) fs.FS {
 // need the bytes, and integration-tests requires unit tests to stay I/O-free.
 func pluginScriptSource(t *testing.T) string {
 	t.Helper()
-	data, err := fs.ReadFile(testTemplates(t), pluginTemplate)
+	raw, err := fs.ReadFile(testTemplates(t), pluginTemplate)
 	if err != nil {
 		t.Fatalf("read plugin template: %v", err)
 	}
-	return string(data)
+	return string(raw)
 }
 
 func TestInstall(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := Install(dir, testTemplates(t)); err != nil {
+	if _, err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
 	pluginPath := filepath.Join(dir, ".opencode", "plugins", pluginName)
-	data, err := os.ReadFile(pluginPath)
+	installed, err := os.ReadFile(pluginPath)
 	if err != nil {
 		t.Fatalf("read plugin: %v", err)
 	}
-	if string(data) != pluginScriptSource(t) {
+	if string(installed) != pluginScriptSource(t) {
 		t.Error("installed plugin does not match the embedded template")
 	}
 }
@@ -57,15 +58,15 @@ func TestInstall_BinaryPresent(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := Install(dir, testTemplates(t)); err != nil {
+	if _, err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 	binPath := filepath.Join(dir, ".opencode", "bin", "pulsarules_cli")
-	info, err := os.Stat(binPath)
+	stat, err := os.Stat(binPath)
 	if err != nil {
 		t.Fatalf("binary not installed: %v", err)
 	}
-	if info.Mode()&0o111 == 0 {
+	if stat.Mode()&0o111 == 0 {
 		t.Error("binary not executable")
 	}
 }
@@ -74,15 +75,15 @@ func TestInstall_GitignoreIgnoresBin(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := Install(dir, testTemplates(t)); err != nil {
+	if _, err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 	giPath := filepath.Join(dir, ".opencode", ".gitignore")
-	data, err := os.ReadFile(giPath)
+	giContent, err := os.ReadFile(giPath)
 	if err != nil {
 		t.Fatalf("read .gitignore: %v", err)
 	}
-	if !strings.Contains(string(data), "/bin/") {
+	if !strings.Contains(string(giContent), "/bin/") {
 		t.Error(".gitignore missing /bin/ entry")
 	}
 }
@@ -93,7 +94,7 @@ func TestUninstall(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if err := Install(dir, testTemplates(t)); err != nil {
+	if _, err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
@@ -141,17 +142,60 @@ func TestInstall_MissingTemplate(t *testing.T) {
 
 	dir := t.TempDir()
 	empty := os.DirFS(t.TempDir())
-	if err := Install(dir, empty); err == nil {
+	if _, err := Install(dir, empty); err == nil {
 		t.Fatal("expected an error when the plugin template is missing")
 	}
 }
 
+// TestInstall_BacksUpForeignFile asserts a hand-authored file already at the
+// plugin path survives Install: it is renamed to a ".pulsarules-backup" slot
+// instead of being silently overwritten, and Install reports the rename so
+// the caller's report channel can surface it (see marker.Backup and
+// internal/skill/hookwire's InstallHook, the pattern this mirrors).
+func TestInstall_BacksUpForeignFile(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
+	if err := os.MkdirAll(pluginsDir, fsperm.DirPrivate); err != nil {
+		t.Fatalf("mkdir plugins: %v", err)
+	}
+	pluginPath := filepath.Join(pluginsDir, pluginName)
+	const foreignContent = "// hand-authored plugin, not ours\n"
+	if err := os.WriteFile(pluginPath, []byte(foreignContent), fsperm.File); err != nil {
+		t.Fatalf("seed foreign plugin: %v", err)
+	}
+
+	backedUp, err := Install(dir, testTemplates(t))
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if len(backedUp) != 1 {
+		t.Fatalf("backedUp = %v, want exactly one backup message", backedUp)
+	}
+
+	backupData, err := os.ReadFile(pluginPath + ".pulsarules-backup")
+	if err != nil {
+		t.Fatalf("read backup: %v", err)
+	}
+	if string(backupData) != foreignContent {
+		t.Errorf("backup content = %q, want %q", backupData, foreignContent)
+	}
+
+	installedData, err := os.ReadFile(pluginPath)
+	if err != nil {
+		t.Fatalf("read installed plugin: %v", err)
+	}
+	if string(installedData) != pluginScriptSource(t) {
+		t.Error("installed plugin does not match the embedded template")
+	}
+}
+
 // TestPluginScript pins the production script's content against every
-// verified opencode plugin-API fact this redesign relies on: it registers
-// only hook names opencode's trigger() actually dispatches, and it does NOT
-// register session.created/session.idle/session.deleted - bus-event names
-// that look like hooks but never fire, which is the regression this test
-// suite exists to catch.
+// verified opencode plugin-API fact this redesign relies on: only hook
+// names opencode's trigger() actually dispatches are registered, never
+// session.created/session.idle/session.deleted - bus-event names that look
+// like hooks but never fire, the regression this suite exists to catch.
 func TestPluginScript(t *testing.T) {
 	t.Parallel()
 	script := pluginScriptSource(t)

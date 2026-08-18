@@ -38,6 +38,12 @@ type Result struct {
 	// restored to its original path, undoing a prior Install-time backup
 	// (see Context.Warn).
 	Restored []string
+	// SettingsChanged reports whether Uninstall actually unwired the specific
+	// settings file named by UninstallContext.SettingsFile, distinct from a
+	// shared one-time cleanup Removed may also carry (claudeInstaller's
+	// gitignore entries). A caller looping over multiple files must key its
+	// report off this, not len(Removed). Only claudeInstaller sets it.
+	SettingsChanged bool
 }
 
 // Installer is the consumer-declared port every hook target implements. It
@@ -95,7 +101,6 @@ func (r *Registry) Uninstall(name string, ctx UninstallContext) (Result, error) 
 	return result, nil
 }
 
-// Has reports whether a hook installer is registered.
 func (r *Registry) Has(name string) bool {
 	_, ok := r.byName[name]
 	return ok

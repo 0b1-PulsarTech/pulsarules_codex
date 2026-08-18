@@ -13,7 +13,6 @@ type Analyzer struct{}
 
 var namingReporter = core.NewReporter("naming", core.SeverityWarning, core.CatSyntax)
 
-// NewAnalyzer creates a naming-convention analyzer.
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
@@ -30,16 +29,9 @@ func (a *Analyzer) Needs() core.Requirements {
 }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if ctx.ASTCache == nil {
-		return nil
-	}
-
-	fset := ctx.ASTCache.FileSet()
-	var findings []core.Finding
-	for fc, f := range ctx.ChangedGoASTs() {
-		findings = append(findings, a.checkFile(fset, fc, f)...)
-	}
-	return findings
+	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
+		return a.checkFile(ctx.ASTCache.FileSet(), fc, f)
+	})
 }
 
 func (a *Analyzer) checkFile(

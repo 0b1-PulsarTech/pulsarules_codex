@@ -27,7 +27,6 @@ func NewSessionTrackerFromID(sessionID string) *SessionTracker {
 	return &SessionTracker{sessionID: sessionID}
 }
 
-// SessionID returns the session identifier this tracker was built from.
 func (s *SessionTracker) SessionID() string { return s.sessionID }
 
 // OncePerSession records that an event fired for this session and reports
@@ -63,19 +62,11 @@ func (s *SessionTracker) FirstEmission(event, content string) bool {
 	return true
 }
 
-// Cleanup removes all per-session marker files for this session ID so a
-// finished session leaves nothing behind in the temp directory. It scans the
-// temp dir because each Dispatch call creates a fresh SessionTracker - the
-// markers were recorded on prior instances that are no longer reachable.
+// Cleanup removes every per-session marker file for this session ID,
+// scanning the temp dir since each Dispatch builds a fresh SessionTracker.
 //
-// simplification: Cleanup only runs when Dispatch receives "session-end"
-// (see hook.go). opencode's trigger() has no session-lifecycle hook name to
-// send that from (see knowledge/templates/hooks/opencode-plugin.js's file
-// header), so under opencode these markers accumulate in os.TempDir() for
-// the life of the machine. Ceiling: no automatic reclamation for opencode
-// sessions. Upgrade path: if opencode ever adds a session-end-equivalent
-// hook, wire it to dispatch "session-end" the same way Claude Code's
-// SessionEnd mode already does.
+// simplification: runs only on "session-end" - opencode's trigger() can't
+// send it, so markers accumulate for the machine's life. Upgrade path: wire an opencode equivalent.
 func (s *SessionTracker) Cleanup() {
 	entries, err := os.ReadDir(os.TempDir())
 	if err != nil {

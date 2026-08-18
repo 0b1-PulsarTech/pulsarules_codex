@@ -58,7 +58,7 @@ func TestWriteMCP_PreservesExisting(t *testing.T) {
 		SomeTopLevel json.RawMessage            `json:"someTopLevel"`
 		MCPServers   map[string]json.RawMessage `json:"mcpServers"`
 	}
-	if err := json.Unmarshal(raw, &config); err != nil {
+	if err = json.Unmarshal(raw, &config); err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	if len(config.SomeTopLevel) == 0 {
@@ -83,12 +83,12 @@ func TestWriteMCP_GitignoresMCPJSON(t *testing.T) {
 	if err := WriteMCP(fakeTemplates(), repoDir); err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
-	data, err := os.ReadFile(filepath.Join(repoDir, ".gitignore")) //nolint:gosec // temp dir.
+	giContent, err := os.ReadFile(filepath.Join(repoDir, ".gitignore")) //nolint:gosec // temp dir.
 	if err != nil {
 		t.Fatalf("read .gitignore: %v", err)
 	}
-	if !strings.Contains(string(data), ".mcp.json") {
-		t.Errorf(".gitignore missing .mcp.json entry, got %q", data)
+	if !strings.Contains(string(giContent), ".mcp.json") {
+		t.Errorf(".gitignore missing .mcp.json entry, got %q", giContent)
 	}
 }
 
@@ -106,7 +106,7 @@ func readServer(tb testing.TB, repoDir, name string) mcpServer {
 	var config struct {
 		MCPServers map[string]mcpServer `json:"mcpServers"`
 	}
-	if err := json.Unmarshal(raw, &config); err != nil {
+	if err = json.Unmarshal(raw, &config); err != nil {
 		tb.Fatalf("parse .mcp.json: %v", err)
 	}
 	server, ok := config.MCPServers[name]

@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -231,5 +232,43 @@ func TestRun_ReturnsErrorOnGitHookFailure(t *testing.T) {
 	opts := &cliopts.Options{Command: "uninstall", Project: projectDir}
 	if err := Run(inj, opts); err == nil {
 		t.Fatal("expected a non-nil error when git hook removal fails")
+	}
+}
+
+// TestRun_TargetErrorNotDoubled reproduces a hard failure inside the
+// "claude" target's Uninstall (settings.json replaced by a directory, so
+// UnwireSettings's ReadFile hits a real I/O error, not the "absent file"
+// no-op): target.Registry.Uninstall already wraps it as `uninstall target
+// %q: %w`, so Run must not wrap it again with the same format.
+func TestRun_TargetErrorNotDoubled(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+	installOpts := &cliopts.Options{
+		Command: "install", Project: projectDir, Skills: "go-style", NoMCP: true,
+	}
+	if err := install.Run(inj, installOpts); err != nil {
+		t.Fatalf("install.Run: %v", err)
+	}
+
+	settingsPath := filepath.Join(projectDir, ".claude", "settings.json")
+	if err := os.Remove(settingsPath); err != nil {
+		t.Fatalf("remove settings.json: %v", err)
+	}
+	if err := os.MkdirAll(settingsPath, 0o750); err != nil {
+		t.Fatalf("replace settings.json with a directory: %v", err)
+	}
+
+	uninstallOpts := &cliopts.Options{Command: "uninstall", Project: projectDir}
+	err := Run(inj, uninstallOpts)
+	if err == nil {
+		t.Fatal("expected an error when settings.json cannot be read")
+	}
+	if strings.Count(err.Error(), `uninstall target "claude"`) > 1 {
+		t.Errorf("error = %q, wraps `uninstall target %q` more than once", err.Error(), "claude")
 	}
 }

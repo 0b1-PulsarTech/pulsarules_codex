@@ -21,7 +21,6 @@ type opencodeTarget struct{}
 
 var _ Target = opencodeTarget{}
 
-// Name is the layout key for the opencode layout.
 func (opencodeTarget) Name() string { return "opencode" }
 
 // Present reports whether base holds anything Install could have written for
@@ -47,7 +46,7 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 	gopls := opencodewire.WithoutGopls
 	if !ctx.NoMCP {
 		if mcpwire.GoplsOnPath() {
-			if err := generateGoplsSkill(ctx.Templates, dest); err != nil {
+			if err := generateGoplsSkill(ctx.Templates, dest, &report); err != nil {
 				return report, err
 			}
 			gopls = opencodewire.WithGopls
@@ -68,6 +67,7 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 		installErr := ctx.HookInstallers.Install("opencode", install.Context{
 			Dir:       ctx.Base,
 			Templates: ctx.Templates,
+			Warn:      report.warn,
 		})
 		if installErr != nil {
 			report.warn("opencode plugin: %v", installErr)
@@ -82,12 +82,11 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 	return report, nil
 }
 
-// Uninstall removes the rendered skills and the root AGENTS.md (unless
+// Uninstall removes the rendered skills and root AGENTS.md (unless
 // ctx.KeepSkills), the opencode.json wiring, and the governance plugin
-// Install wrote under ctx.Base, reversing Install. AGENTS.md is gated on
-// ctx.KeepSkills exactly like the skill docs, and removal is further gated
-// on agentswire's ownership marker: a root AGENTS.md is a name a user very
-// plausibly owns already, so only a file this tool actually wrote is removed.
+// Install wrote, reversing Install. AGENTS.md removal is further gated on
+// agentswire's ownership marker, since a root AGENTS.md is a name a user
+// very plausibly owns already; only a file this tool actually wrote goes.
 func (opencodeTarget) Uninstall(ctx UninstallContext) (Report, error) {
 	var report Report
 	if !ctx.KeepSkills {

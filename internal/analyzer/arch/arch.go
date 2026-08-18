@@ -1,25 +1,44 @@
 package arch
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
-
-const modulePath = "github.com/0b1-PulsarTech/pulsarules_codex"
 
 var (
 	archBoundaryReporter = core.NewReporter("arch-boundary", core.SeverityError, core.CatArch)
 	importCycleReporter  = core.NewReporter("import-cycle", core.SeverityError, core.CatArch)
 )
 
+// why: a missing go.mod means "not a Go project here" (same convention as
+// the pre-search hook), so it returns no finding, like ctx.ProjectDir == "".
+// Any other failure - unreadable/malformed go.mod - is a broken environment:
+// silently reporting zero would hide it, the exact defect the hardcoded
+// modulePath constant caused - so this returns a Finding instead.
+func resolveModulePathOrFindings(
+	reporter core.Reporter,
+	projectDir string,
+) (string, []core.Finding) {
+	modulePath, err := core.ModulePath(projectDir)
+	if err == nil {
+		return modulePath, nil
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	}
+	return "", []core.Finding{reporter.New(
+		fmt.Sprintf("cannot determine the project's module path: %s", err),
+	)}
+}
+
 // PackageBoundaryAnalyzer checks that inner-layer packages (domain) do not
 // import outer-layer packages (infra, transport, cmd).
 type PackageBoundaryAnalyzer struct{}
 
-// NewPackageBoundaryAnalyzer creates an analyzer that checks inner-layer packages
-// do not import outer-layer packages.
 func NewPackageBoundaryAnalyzer() *PackageBoundaryAnalyzer {
 	return &PackageBoundaryAnalyzer{}
 }
@@ -40,10 +59,14 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Find
 		return nil
 	}
 
+	modulePath, findings := resolveModulePathOrFindings(archBoundaryReporter, ctx.ProjectDir)
+	if modulePath == "" {
+		return findings
+	}
+
 	idx := loadProjectIndex(ctx.ProjectDir, modulePath)
 	violations := checkBoundaries(idx.graph, modulePath)
 
-	var findings []core.Finding
 	for _, v := range violations {
 		findings = append(findings, archBoundaryReporter.At(
 			".",
@@ -58,8 +81,6 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Find
 // ImportCycleAnalyzer detects cycles in the project's import graph.
 type ImportCycleAnalyzer struct{}
 
-// NewImportCycleAnalyzer creates an analyzer that detects cycles in the
-// project's package import graph.
 func NewImportCycleAnalyzer() *ImportCycleAnalyzer {
 	return &ImportCycleAnalyzer{}
 }
@@ -80,10 +101,14 @@ func (a *ImportCycleAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding 
 		return nil
 	}
 
+	modulePath, findings := resolveModulePathOrFindings(importCycleReporter, ctx.ProjectDir)
+	if modulePath == "" {
+		return findings
+	}
+
 	idx := loadProjectIndex(ctx.ProjectDir, modulePath)
 	cycles := findCycles(idx.graph)
 
-	var findings []core.Finding
 	for _, cycle := range cycles {
 		var b strings.Builder
 		for i, p := range cycle {

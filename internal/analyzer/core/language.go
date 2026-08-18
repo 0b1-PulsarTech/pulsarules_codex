@@ -28,7 +28,6 @@ type LanguageRegistry struct {
 	byExt map[string]Language
 }
 
-// NewLanguageRegistry creates an empty registry.
 func NewLanguageRegistry() *LanguageRegistry {
 	return &LanguageRegistry{byExt: map[string]Language{}}
 }
@@ -41,9 +40,6 @@ func (r *LanguageRegistry) Register(lang Language) {
 	}
 }
 
-// Lookup returns the language handler for a file extension, or nil when no
-// handler is registered.
-//
 //nolint:ireturn // registry lookup returns interface by design
 func (r *LanguageRegistry) Lookup(ext string) Language {
 	return r.byExt[ext]

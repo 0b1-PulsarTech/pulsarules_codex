@@ -64,7 +64,7 @@ func TestWireConfig_PreservesExisting(t *testing.T) {
 		t.Fatalf("read: %v", err)
 	}
 	var top map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &top); err != nil {
+	if err = json.Unmarshal(raw, &top); err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	if _, ok := top["theme"]; !ok {
@@ -153,7 +153,7 @@ func readConfig(tb testing.TB, projectDir string) opencodeConfig {
 		tb.Fatalf("read opencode.json: %v", err)
 	}
 	var config opencodeConfig
-	if err := json.Unmarshal(raw, &config); err != nil {
+	if err = json.Unmarshal(raw, &config); err != nil {
 		tb.Fatalf("parse opencode.json: %v", err)
 	}
 	return config

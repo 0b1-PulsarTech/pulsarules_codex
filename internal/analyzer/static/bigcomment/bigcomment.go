@@ -7,7 +7,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-const defaultMaxCommentLines = 20
+// why: 20 let every comment in this repo pass, so the rule "explain why, do not
+// narrate what" had no machine behind it. Measured cost of the bar: 35 blocks
+// at 5, 67 at 4. Five keeps a rationale that needs a sentence, refuses a
+// paragraph.
+const defaultMaxCommentLines = 5
 
 var bigCommentReporter = core.NewReporter("big-comment", core.SeverityWarning, core.CatSyntax)
 
@@ -17,8 +21,6 @@ type Analyzer struct {
 	maxLines int
 }
 
-// NewAnalyzer creates an Analyzer with the default
-// threshold and the given language registry.
 func NewAnalyzer(langs *core.LanguageRegistry) *Analyzer {
 	return &Analyzer{langs: langs, maxLines: defaultMaxCommentLines}
 }
@@ -26,7 +28,7 @@ func NewAnalyzer(langs *core.LanguageRegistry) *Analyzer {
 func (a *Analyzer) ID() string   { return "big-comment" }
 func (a *Analyzer) Name() string { return "Big comment" }
 func (a *Analyzer) Description() string {
-	return "Reports comment blocks that exceed the configured line count"
+	return "Reports comment blocks longer than " + strconv.Itoa(defaultMaxCommentLines) + " lines"
 }
 func (a *Analyzer) Stage() core.StageID     { return core.StageStatic }
 func (a *Analyzer) Category() core.Category { return core.CatSyntax }

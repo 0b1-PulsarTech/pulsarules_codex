@@ -135,7 +135,7 @@ func TestRender_UnknownComposition(t *testing.T) {
 		t.Fatalf("NewRenderer: %v", err)
 	}
 
-	if _, err := rnd.Render(
+	if _, err = rnd.Render(
 		idx,
 		knowledge.Skill{ID: "x", ComposeRules: []string{"nope"}},
 	); err == nil {

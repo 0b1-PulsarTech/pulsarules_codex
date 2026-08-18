@@ -9,5 +9,8 @@ type Label struct {
 
 // Render returns the label text for display — matches the generator template.
 func (l Label) Render() string {
+	if l.Text == "" {
+		return "(empty)"
+	}
 	return l.Text
 }

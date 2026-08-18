@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
@@ -19,11 +18,10 @@ import (
 const hookScript = "skill-router-reminder.sh"
 
 // WireSettings merges the rendered hook entries into <claudeDir>/<settingsFile>
-// (settingsFile is "settings.json" for the project scope or "settings.local.json"
-// for the per-machine scope). It is idempotent: any prior entry whose command
-// references the hook script is dropped before the fresh entries are appended, so
-// re-running never duplicates. Existing permissions, enabledMcpjsonServers, and
-// unrelated hooks are preserved.
+// ("settings.json" project-scope, "settings.local.json" per-machine). It is
+// idempotent: any prior entry whose command references the hook script is
+// dropped before fresh entries are appended, so re-running never duplicates.
+// Existing permissions, enabledMcpjsonServers, and unrelated hooks are kept.
 func WireSettings(templates fs.FS, claudeDir, settingsFile string) error {
 	block, err := renderBlock(templates)
 	if err != nil {
@@ -91,24 +89,24 @@ func mergeSettings(existing []byte, block hooksBlock) (map[string]json.RawMessag
 	return settings, nil
 }
 
-// withoutHookScript drops every group that has any hook command referencing the
-// hook script, mirroring the idempotent jq filter used by the bash fallback.
+// withoutHookScript drops the hook script's own commands from every group.
+// why: a host/user may append another command inside our group, so this
+// filters at the COMMAND level (like unwireGroups) instead of dropping the
+// whole group and losing that neighbour. Unlike removal, an emptied group
+// here IS ours to drop, since the fresh group replaces it.
 func withoutHookScript(groups []hookGroup) []hookGroup {
 	kept := make([]hookGroup, 0, len(groups))
 	for _, group := range groups {
-		if groupReferencesHook(group) {
+		cmds, removed := withoutHookCommand(group.Hooks)
+		if !removed {
+			kept = append(kept, group)
 			continue
 		}
+		if len(cmds) == 0 {
+			continue
+		}
+		group.Hooks = cmds
 		kept = append(kept, group)
 	}
 	return kept
-}
-
-func groupReferencesHook(group hookGroup) bool {
-	for _, cmd := range group.Hooks {
-		if strings.Contains(cmd.Command, hookScript) {
-			return true
-		}
-	}
-	return false
 }

@@ -20,8 +20,9 @@ func TestRun_NoBinary(t *testing.T) {
 func TestRun_MissingBinary(t *testing.T) {
 	t.Parallel()
 
-	// A binary path guaranteed not to resolve fails the exec, so the runner
-	// gets no JSON to parse and must report that as a single finding.
+	// A binary path guaranteed not to resolve fails the exec before any
+	// stdout exists, so the runner must report the real exec failure -
+	// never a misleading "failed to parse ... output" on empty JSON.
 	r := NewRunner("/nonexistent/golangci-lint")
 	findings := r.Run(".", "")
 
@@ -32,8 +33,14 @@ func TestRun_MissingBinary(t *testing.T) {
 	if got.AnalyzerID != "golangci-lint" {
 		t.Errorf("AnalyzerID = %q, want %q", got.AnalyzerID, "golangci-lint")
 	}
-	if !strings.Contains(got.Message, "failed to parse golangci-lint output") {
-		t.Errorf("Message = %q, want it to mention a parse failure", got.Message)
+	if strings.Contains(got.Message, "failed to parse golangci-lint output") {
+		t.Errorf("Message = %q, must not claim a JSON parse failure", got.Message)
+	}
+	if !strings.Contains(got.Message, "/nonexistent/golangci-lint") {
+		t.Errorf(
+			"Message = %q, want it to name the real exec failure (missing binary path)",
+			got.Message,
+		)
 	}
 }
 
@@ -233,5 +240,33 @@ func TestIsLintExit(t *testing.T) {
 		if got := isLintExit(testCase.code); got != testCase.want {
 			t.Errorf("isLintExit(%d) = %v, want %v", testCase.code, got, testCase.want)
 		}
+	}
+}
+
+// TestEscapesProject pins the filter that stopped a stale golangci-lint cache from
+// reporting files in a deleted worktree as real findings - it poisoned four separate
+// measurements in this repo before anything caught it.
+func TestEscapesProject(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		path string
+		want bool
+	}{
+		{"inside the project", "internal/analyzer/arch/imports.go", false},
+		{"dot-slash prefixed", "./internal/foo.go", false},
+		{"climbs out once", "../other/foo.go", true},
+		{"climbs out many times", "../../../../tmp/wt-final/internal/foo.go", true},
+		{"climbs out then back in", "../project/internal/foo.go", true},
+		{"normalises to inside", "internal/../internal/foo.go", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := escapesProject(testCase.path); got != testCase.want {
+				t.Errorf("escapesProject(%q) = %v, want %v", testCase.path, got, testCase.want)
+			}
+		})
 	}
 }

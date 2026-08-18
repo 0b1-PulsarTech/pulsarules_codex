@@ -21,7 +21,7 @@ func TestGenerate(t *testing.T) {
 	if len(written) != len(idx.Skills) {
 		t.Errorf("written %d skills, want %d", len(written), len(idx.Skills))
 	}
-	if _, err := os.Stat(filepath.Join(out, "skills", "project-router", "SKILL.md")); err != nil {
+	if _, err = os.Stat(filepath.Join(out, "skills", "project-router", "SKILL.md")); err != nil {
 		t.Errorf("router not generated: %v", err)
 	}
 }

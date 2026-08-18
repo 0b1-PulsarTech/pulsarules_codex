@@ -13,12 +13,10 @@ import (
 )
 
 // RemoveMCP removes the managed servers (gopls) from <repoDir>/.mcp.json,
-// undoing WriteMCP. It drops the mcpServers key once it is left empty, and
-// deletes the file (plus the ".mcp.json" gitignore entry WriteMCP added) once
-// removing our servers leaves the config with nothing else in it. It wraps
-// fsx.ErrUnparseableJSON and leaves the file untouched when the JSON does not
-// parse, and is a no-op when the file, or mcpServers, or our servers are
-// already absent, so re-running is never an error.
+// undoing WriteMCP. It drops the mcpServers key once empty, and deletes the
+// file (plus the ".mcp.json" gitignore entry) once nothing else remains.
+// Invalid JSON leaves the file untouched (wraps fsx.ErrUnparseableJSON);
+// an already-absent file, key, or server makes re-running a no-op.
 func RemoveMCP(repoDir string) error {
 	path := filepath.Join(repoDir, ".mcp.json")
 	existing, err := os.ReadFile(path) //nolint:gosec // path is the caller's project root.
@@ -43,12 +41,12 @@ func RemoveMCP(repoDir string) error {
 	if !changed {
 		return nil
 	}
-	removed, err := fsx.SaveOrRemove(path, config)
-	if err != nil {
+	// why: the gitignore entry is stripped whenever mcpServers changed, not
+	// only when the whole file was deleted - a surviving .mcp.json (the
+	// user's own mcpServers entries kept it alive) would otherwise leave the
+	// entry and marker comment orphaned in .gitignore forever.
+	if _, err = fsx.SaveOrRemove(path, config); err != nil {
 		return fmt.Errorf("write mcp config: %w", err)
-	}
-	if !removed {
-		return nil
 	}
 	if _, err = gitignore.Remove(repoDir, ".mcp.json"); err != nil {
 		return fmt.Errorf("remove mcp gitignore entry: %w", err)
