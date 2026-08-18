@@ -54,7 +54,8 @@ reference used in `skills.yaml` composition lists.
 
 ## `architecture/` - structural and behavioural design patterns
 
-| Pattern                                                      | Topic                                         |
-|--------------------------------------------------------------|-----------------------------------------------|
-| [design-patterns.md](architecture/design-patterns.md)       | Which classic patterns used / avoided         |
-| [observer-weakptr.md](architecture/observer-weakptr.md)     | `weak.Pointer` observer registry              |
+| Pattern                                                   | Topic                                          |
+|-----------------------------------------------------------|------------------------------------------------|
+| [design-patterns.md](architecture/design-patterns.md)     | Which classic patterns used / avoided          |
+| [observer-weakptr.md](architecture/observer-weakptr.md)   | `weak.Pointer` observer registry               |
+| [gradual-migration.md](architecture/gradual-migration.md) | Optional type-alias relocation across packages |

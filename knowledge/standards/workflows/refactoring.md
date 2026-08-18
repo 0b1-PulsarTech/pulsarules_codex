@@ -10,7 +10,7 @@ steps:
     - put on one hat - refactoring XOR adding behavior, never both at once
     - identify the smell from the code-smells catalog (or a failing structure linter)
     - gate on blast-radius coverage - high refactor freely, medium test the disturbed paths first, low write characterization tests first
-    - make one small behavior-preserving change
+    - make one small behavior-preserving change; a risky relocation may use the optional gradual type-alias migration
     - run go test ./... -race; it must stay green before the next step
     - repeat until the smell is gone; squash the micro-steps into one reviewable refactor commit
     - zoom out and sweep every touched file/function for the same naming, error-wrapping, and guard-clause shape
@@ -20,6 +20,8 @@ composes_rules:
     - effective-go
     - testing
     - commits
+composes_patterns:
+    - gradual-migration
 ---
 
 # Refactoring workflow
@@ -55,7 +57,10 @@ composes_rules:
    80%/40% mark well-tested / partially-tested / effectively-untested, so the new-test effort tracks
    the actual risk of the change instead of a blanket "write more tests" instinct.
 4. **Small step.** Make one behavior-preserving change (extract a function, invert to guard clauses,
-   introduce a named struct/domain type, replace a repeated switch with Strategy+Registry).
+   introduce a named struct/domain type, replace a repeated switch with Strategy+Registry). Relocating
+   an exported type/symbol across a package boundary is a small step too - for a small move with few
+   callers, do it in one commit; when the blast radius makes a flag-day move risky, use the optional
+   gradual type-alias migration instead (see [[gradual-migration]]).
 5. **Stay green.** Run `go test ./... -race`; it must pass before the next step. A red bar means the
    step changed behavior - back it out (see [[testing]]).
 6. **Repeat**, then squash the local micro-steps into one reviewable commit.
@@ -72,4 +77,5 @@ the feature on the cleaned structure - preparatory refactoring, not a mixed comm
 ## References
 
 - rules: [[code-smells]], [[effective-go]], [[testing]], [[commits]]
+- patterns: [[gradual-migration]]
 - skill: `refactoring`

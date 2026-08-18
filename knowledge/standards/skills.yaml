@@ -329,6 +329,8 @@ skills:
     order: 79
     compose_rules:
       - code-smells
+    compose_patterns:
+      - gradual-migration
     compose_workflows:
       - refactoring
   - id: rest-adapter
