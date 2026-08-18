@@ -21,12 +21,6 @@ dependencies:
 Reference tools: a bitwise, reflection-free permission engine (`permitek`); Go 1.26 recursive
 generic types.
 
-{{define "when"}}
-- A module declaring its own permission schema.
-- Granting/revoking permissions.
-- Marshalling permissions for the DB column or the JWT claim.
-{{end}}
-
 {{define "recipe"}}
 ```go
 package thing
@@ -111,20 +105,4 @@ if err != nil {
 }
 b64 := base64.StdEncoding.EncodeToString(raw) // JWT "perm" claim
 ```
-{{end}}
-
-{{define "forbidden"}}
-- `reflect` anywhere in permission handling.
-- Constructing `Permission[M]` by hand; reordering/removing/renumbering schema names or module ids.
-- A package-level/global `Registry`; more than 64 permissions in one module.
-- A permission check inside the use case, or an unused `associatedUser` field; gate at the call site.
-- `isAdmin` boolean/column.
-{{end}}
-
-{{define "validation"}}
-- [ ] Module has a zero-size marker with stable `ID()`; schema is `DefineModule` and append-only.
-- [ ] Handles minted via `Schema.Perm`; permission enforced at the call site via the `access` gate;
-  the use case is pure (no `Has`/`associatedUser`).
-- [ ] Registry built at boot and injected; no `reflect`; no `isAdmin`.
-- [ ] One marshal format for both the DB column and the JWT claim.
 {{end}}
