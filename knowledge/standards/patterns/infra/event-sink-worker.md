@@ -97,15 +97,5 @@ Ephemeral fan-out (weak-pointer bus) - see [[observer-weakptr]] for the registry
 {{end}}
 
 {{define "forbidden"}}
-- A non-idempotent sink; deduping with an in-memory `seen` set.
-- Swallowing a sink error to mark a row sent.
 - `time.Sleep` pacing; an unsupervised worker without a `ctx.Done()` exit.
-- Routing a durable side effect through the ephemeral bus.
-{{end}}
-
-{{define "validation"}}
-- [ ] Relay loop selects on `ctx.Done()` + ticker; claims due rows; marks sent/retry with backoff.
-- [ ] Every sink is idempotent, enrich/notify-only, returns an error for retry.
-- [ ] Sink dedupe is a DB unique index recorded in the sink's tx; survives restart.
-- [ ] Worker supervised; `recover()` only at the supervisor; one owner per goroutine.
 {{end}}
