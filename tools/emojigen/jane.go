@@ -25,6 +25,15 @@ type janeUsage struct {
 // fraction of the real one.
 const gitMaxCount = "--max-count=1000000"
 
+// estimatedEmojiVocabulary and estimatedTypeVocabulary size the usage maps
+// to roughly how many distinct shortcodes a reference repository's history
+// uses overall, and per Conventional Commit type, so tallying it doesn't
+// rehash as the maps grow.
+const (
+	estimatedEmojiVocabulary = 512
+	estimatedTypeVocabulary  = 64
+)
+
 // why: shells out to git rather than internal/vcs - this scans --all
 // --max-count=1000000 (a reference clone's entire history), which go-git
 // would walk orders of magnitude slower, and tools/ is not a runtime
@@ -41,7 +50,7 @@ func readJaneUsage(dir string) (janeUsage, error) {
 	}
 
 	usage := janeUsage{
-		byEmoji: make(map[string]int, 512),
+		byEmoji: make(map[string]int, estimatedEmojiVocabulary),
 		byType:  make(map[string]map[string]int, len(commitmsg.AllowedTypes)),
 	}
 	for subject := range strings.SplitSeq(string(out), "\n") {
@@ -66,7 +75,7 @@ func (u *janeUsage) add(msg commitmsg.Message) {
 	u.typed++
 	bucket, ok := u.byType[msg.Type]
 	if !ok {
-		bucket = make(map[string]int, 64)
+		bucket = make(map[string]int, estimatedTypeVocabulary)
 		u.byType[msg.Type] = bucket
 	}
 	bucket[shortcode]++
