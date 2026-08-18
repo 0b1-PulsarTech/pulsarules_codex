@@ -29,6 +29,8 @@ Applies to: any function that returns an error. Canonical reference: a domain-er
 - Forwarding an error across a package boundary.
 - Defining a sentinel error callers branch on.
 - Creating a domain error that maps to an HTTP/gRPC status code.
+- Writing a wrapped-error message that will be logged or displayed.
+- Adding transport-level panic-recovery middleware/interceptor.
 {{end}}
 
 {{define "must"}}
@@ -45,15 +47,26 @@ Applies to: any function that returns an error. Canonical reference: a domain-er
    manual `errors.As` + type switch. Never write an HTTP status from a use case.
 5. Use `errors.Join` to fold multiple errors (e.g. rollback + primary).
 6. Use `fmt.Errorf` + `errors.New` + `errors.Join`; never `github.com/pkg/errors`.
+7. Error message text is fully lowercase, including acronyms (`http`, `json`, `id`), with no
+   trailing punctuation.
+8. A custom error type that wraps another error MUST implement `Unwrap() error` so `errors.Is`/
+   `errors.As` see through it.
+9. Error messages MUST be low-cardinality: variable data (ids, paths, user input) goes in
+   structured `slog` attributes at the log site, never interpolated into the wrapped message text.
+   `err.Error()` flows into the log line, and high-cardinality text destroys log grouping.
 {{end}}
 
 {{define "forbidden"}}
 - `(nil, nil)`-style soft failures instead of an error.
-- `panic` in libraries; `recover()` to mask bugs (only at a worker-supervisor boundary).
+- `panic` in libraries; `recover()` to mask bugs. The ONLY sanctioned `recover()` sites are a
+  worker-supervisor boundary and transport-level panic-recovery middleware/interceptor (see
+  [[concurrency]], [[rest-adapter]], [[grpc]]) - anywhere else it hides a bug.
 - Comparing errors on `.Error()` strings.
 - Writing an HTTP/gRPC status from inside a use case.
 - `github.com/pkg/errors`.
 - Logging an error AND returning it (log OR return; see [[logging]]).
+- Interpolating ids/paths/user input into a wrapped error message instead of a structured
+  `slog` attribute.
 {{end}}
 
 {{define "validation"}}
@@ -63,4 +76,9 @@ Applies to: any function that returns an error. Canonical reference: a domain-er
 - [ ] Status mapping uses `errors.AsType[statusCoder](err)`, not a manual `errors.As` + type switch.
 - [ ] `errors.Join` used to fold multiple errors.
 - [ ] No `pkg/errors`; no `panic` in libraries.
+- [ ] Error message text is lowercase (including acronyms) with no trailing punctuation.
+- [ ] A wrapping custom error type implements `Unwrap() error`.
+- [ ] Error messages carry no variable data; ids/paths/input go in structured `slog` attributes.
+- [ ] `recover()` appears only at a worker-supervisor boundary or transport panic-recovery
+  middleware/interceptor.
 {{end}}

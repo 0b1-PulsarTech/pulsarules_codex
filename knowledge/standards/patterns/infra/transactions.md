@@ -39,6 +39,11 @@ Reference tools: `sqlc` `Queries.WithTx`; a small tx helper package.
 6. Fold the rollback error with `errors.Join`; ignore `sql.ErrTxDone` on rollback.
 7. Register a tx-carrying repo as a `Factory`, never a singleton (it holds swap-in-place or tx state).
 8. Cover commit and rollback paths with integration tests against a real DB.
+9. Use `BeginTx(ctx, opts *sql.TxOptions)`'s options: `SELECT ... FOR UPDATE` when reading rows the
+   same transaction will modify (prevents lost-update races), and `Serializable` for money/ledger
+   operations. On a Postgres serialization failure (SQLSTATE `40001`), retry the WHOLE transaction,
+   never just the failing statement, using the same bounded `Policy` shape as [[retry-backoff]]
+   (`IsRetryable` matching `40001`, backoff waiting on context).
 {{end}}
 
 {{define "recipe"}}
@@ -92,6 +97,26 @@ func (uc UseCase) Move(ctx context.Context, in MoveInput) (entities.Thing, error
 Form B - unit-of-work `Tx` port for multi-step flows: the repo's `Begin(ctx)` returns a domain `Tx`
 interface (declared by the consuming use case) exposing only the writes it performs plus
 `Commit`/`Rollback`. Register a tx-carrying repo as a `Factory`, never a singleton.
+
+Isolation options and retry on serialization failure:
+
+```go
+onFinish, err := uc.repo.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+```
+
+```go
+policy := backoff.Policy{
+    MaxAttempts: 5,
+    BaseDelay:   50 * time.Millisecond,
+    IsRetryable: func(err error) bool {
+        var pgErr *pgconn.PgError
+        return errors.As(err, &pgErr) && pgErr.Code == "40001" // retry the WHOLE tx, not the statement
+    },
+}
+_, err := backoff.Do(ctx, policy, func(ctx context.Context) (entities.Ledger, error) {
+    return uc.Move(ctx, in) // re-runs BeginTx and every statement inside it
+})
+```
 {{end}}
 
 {{define "forbidden"}}
@@ -101,6 +126,10 @@ interface (declared by the consuming use case) exposing only the writes it perfo
 - Returning `*dbgen.Queries` or `*sql.Tx` from a repository.
 - Sharing a swap-in-place `Transactioner` repo as a process singleton.
 - Swallowing the rollback error (fold with `errors.Join`; ignore `sql.ErrTxDone`).
+- Retrying only the failing statement on a `40001` serialization failure instead of the whole
+  transaction.
+- Default/`ReadCommitted` isolation for a money/ledger write with no `SELECT ... FOR UPDATE` or
+  `Serializable` justification.
 {{end}}
 
 {{define "validation"}}
@@ -110,4 +139,8 @@ interface (declared by the consuming use case) exposing only the writes it perfo
 - [ ] Outbox event published inside the same transaction.
 - [ ] Tx-carrying repository registered as a factory, not a singleton.
 - [ ] Commit and rollback paths covered by integration tests (real DB).
+- [ ] Reads intended for same-tx modification use `SELECT ... FOR UPDATE`; money/ledger operations
+  use `Serializable`.
+- [ ] A `40001` serialization failure retries the whole transaction, via a bounded policy, not the
+  failing statement alone.
 {{end}}

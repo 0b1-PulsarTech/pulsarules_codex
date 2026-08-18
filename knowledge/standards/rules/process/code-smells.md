@@ -59,6 +59,8 @@ Applies to: spotting and clearing structural debt. This rule is the trigger list
    commit (see [[refactoring]]).
 4. Review-only smells (feature envy, repeated switch, primitive obsession) still count - name them in
    review even though no linter fires.
+5. After the local fixes land, zoom out one level: sweep every file and function the change touched
+   for the same shape - naming, error wrapping, guard-clause style - so the diff reads as one hand.
 {{end}}
 
 {{define "forbidden"}}
@@ -67,6 +69,8 @@ Applies to: spotting and clearing structural debt. This rule is the trigger list
 - "Fixing" a duplicated/repeated-switch smell by copying the patch into every site.
 - Mixing a behavior change into a refactor commit.
 - A "refactor" with no tests green between steps.
+- Stopping at the first fixed spot while sibling files/functions the change touched keep the old
+  naming, error-wrapping, or guard-clause shape.
 {{end}}
 
 {{define "validation"}}
@@ -76,4 +80,6 @@ Applies to: spotting and clearing structural debt. This rule is the trigger list
 - [ ] One hat per edit; no refactor mixed with a behavior change.
 - [ ] Tests green (`-race`) between every step.
 - [ ] Review-only smells called out even without a linter hit.
+- [ ] Every file/function the change touched was swept for the same naming, error-wrapping, and
+  guard-clause shape.
 {{end}}

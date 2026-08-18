@@ -60,6 +60,33 @@ Applies to: build, tooling, and code generation.
    root; base images pinned by digest.
 8. Tool dependencies come from a `tools/go.mod` (or `//go:build tools` file); no build-time
    `curl | sh` downloads.
+9. A rule this knowledge base ships is a suggestion, not a guardrail, until an analyzer enforces it
+   (see [[skill-authoring]]). `internal/analyzer/delegation/golangcilint` runs golangci-lint against
+   a TARGET project using THAT project's own discovered config, so a linter enabled only in this
+   repo's `.golangci.yml` never governs a consumer. The delegation runner forces a small baseline
+   via `-E` on every delegated run - `nolintlint`, `paralleltest`, `tparallel`, `thelper`,
+   `forcetypeassert`, `nilerr` - on top of whatever the target's own config already enables
+   (`golangci-lint run -E foo` adds `foo`, it does not replace the config's enabled set; verified
+   against golangci-lint v2.12.2). The forcing has ONE hole, and it is not "non-negotiable": a
+   target that names a forced linter under `linters.disable` WINS over `-E`, and the run then
+   reports zero findings for it with no indication the guard was switched off (verified on v2.12.2
+   under both `default: standard` and `default: all`). Merely omitting the linter from an `enable:`
+   list does NOT do this - `-E` still adds it. So the baseline is forced against silence, not
+   against a consumer who explicitly opted out; the delegation runner reads the target's config and
+   WARNS when it finds a forced linter disabled, because a guard that reports nothing must never be
+   indistinguishable from a guard that found nothing. This is how `nolintlint` enforces "every `//nolint`
+   names its linter and carries a reason" (this rule, above) and how the testing rule's
+   `t.Parallel()`/`t.Helper()` obligations become machine-checked in every consumer, not just here.
+   `nolintlint`'s own `require-explanation`/`require-specific` settings cannot be forced through
+   `-E` - it only enables the linter at its permissive defaults - so a consumer wanting that
+   stricter enforcement sets those two settings itself; without them, the forced `nolintlint` still
+   catches unused and malformed `//nolint` directives, just not a bare unqualified one.
+   `bodyclose` and `sqlclosecheck` are RECOMMENDED, not forced: forcing them can flood a legacy
+   project that never ran them, and a gate that floods is a gate people switch off. `revive` is
+   RECOMMENDED with its `defer` rule and the `loop` argument, which is what catches the
+   defer-inside-a-loop clause in `[[safety]]`. It cannot be forced: `-E` enables a linter but its
+   settings come from the target's own config, and `defer` is not in revive's defaults, so forcing
+   revive would list a guard that catches nothing. Enable it locally to get that clause enforced.
 {{end}}
 
 {{define "forbidden"}}
@@ -85,4 +112,8 @@ Applies to: build, tooling, and code generation.
 - [ ] `go.work` declares no out-of-repo packages (private via `GOPRIVATE`); GOWORK-on; one grouped
   `replace ( ... )` block per `go.mod` with tab-indented clean `../` paths.
 - [ ] Container multi-stage, distroless, digest-pinned; tools in `tools/go.mod`.
+- [ ] The golangci-lint delegation runner forces `nolintlint`, `paralleltest`, `tparallel`,
+  `thelper`, `forcetypeassert`, `nilerr` via `-E` on every target project, and WARNS when the
+  target's own config disables one of them (the one case `-E` loses); `bodyclose` and
+  `sqlclosecheck` are documented as recommended, not forced.
 {{end}}

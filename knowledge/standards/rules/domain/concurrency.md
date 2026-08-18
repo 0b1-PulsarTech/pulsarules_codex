@@ -26,6 +26,9 @@ Applies to: any concurrent Go code.
 - Working with channels, `sync.Mutex`, or `sync.WaitGroup`.
 - Designing a long-running worker/relay loop.
 - Propagating or honoring context cancellation/timeouts.
+- Starting owned background work that must outlive the request that triggered it.
+- Defining or reading a context value key.
+- Bounding fan-out concurrency with no per-key ordering requirement.
 {{end}}
 
 {{define "must"}}
@@ -44,8 +47,9 @@ Applies to: any concurrent Go code.
    `v, ok := <-ch`. Default to unbuffered channels.
 7. Embed `sync.Mutex` as an unexported field; lock the smallest scope; never call a user callback
    while holding the lock. Use `sync.RWMutex` only when reads vastly outnumber writes.
-8. A supervised worker loop is restarted by its parent on panic (the only sanctioned `recover()`
-   site).
+8. A supervised worker loop is restarted by its parent on panic. `recover()` is sanctioned at
+   exactly two boundaries: this worker-supervisor loop, and transport-level panic-recovery
+   middleware/interceptor (see [[rest-adapter]], [[grpc]]) - nowhere else.
 9. Run `go test -race ./...`; CI runs with `-race`. Any race is a bug.
 10. To cancel work that must outlive its request, keep a `map[key]context.CancelFunc` owned by the
     worker; store the `CancelFunc`, NEVER the `ctx`.
@@ -56,6 +60,15 @@ Applies to: any concurrent Go code.
     pool (see `[[dispatch-pool]]`): bounded queues are the backpressure, per-key sharding keeps a key
     ordered while different keys parallelize, and the sole sender closes the queues on cancel so
     workers drain in-flight items.
+12. For owned background work that must outlive the request that started it, derive the worker's
+    context with `context.WithoutCancel(ctx)`. Never `context.Background()` (it loses trace/request
+    values carried on `ctx`) and never the live request `ctx` (it gets cancelled when the request
+    ends, killing the background work with it).
+13. Context value keys MUST be an unexported type (`type ctxKey struct{}` or an unexported named
+    type), never a bare `string`/`int`, so keys cannot collide across packages.
+14. For simple bounded fan-out with no per-key ordering requirement, cap concurrency with
+    `errgroup.SetLimit(n)`. Reach for the heavier `[[dispatch-pool]]` only when work must stay
+    ordered per key or needs a durable backlog.
 {{end}}
 
 {{define "forbidden"}}
@@ -68,6 +81,11 @@ Applies to: any concurrent Go code.
 - A blocking producer signal (`ch <- v` with no `default`) where a coalescing non-blocking wake fits.
 - An unbounded in-memory queue/buffer that grows under load instead of bounded-channel backpressure.
 - Silencing the race detector; shipping any `-race` finding.
+- `context.Background()` for owned background work that must outlive the request (loses
+  trace/request values); the live request `ctx` for the same (gets cancelled with the request).
+- A bare `string`/`int` context value key instead of an unexported type.
+- `recover()` anywhere other than the worker-supervisor loop or transport panic-recovery
+  middleware/interceptor.
 {{end}}
 
 {{define "validation"}}
@@ -79,4 +97,11 @@ Applies to: any concurrent Go code.
 - [ ] Channel ownership documented; two-value receive used.
 - [ ] Tests pass under `-race`.
 - [ ] Work that outlives its request is cancelled via a stored `CancelFunc`, never a stored `ctx`.
+- [ ] Owned background work uses `context.WithoutCancel(ctx)`, not `context.Background()` or the
+  live request `ctx`.
+- [ ] Context value keys are an unexported type, never a bare `string`/`int`.
+- [ ] Bounded fan-out with no per-key ordering uses `errgroup.SetLimit(n)`; ordered/durable
+  fan-out uses `[[dispatch-pool]]` instead.
+- [ ] `recover()` appears only at a worker-supervisor boundary or transport panic-recovery
+  middleware/interceptor.
 {{end}}

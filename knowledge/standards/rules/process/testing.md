@@ -68,6 +68,10 @@ Applies to: all test code.
     the barrier the goroutines can run serially and the test passes even against broken code. Assert
     the observable invariant (exactly one winner, no double effect) and run these under
     `go test -race`.
+11. `testing/synctest` governs goroutines inside its bubble but proves nothing about a `Stop()` that
+    leaves goroutines running outside one. A package that owns a worker, pool, or relay MUST prove
+    its shutdown releases every goroutine it started; `go.uber.org/goleak`'s
+    `VerifyTestMain`/`VerifyNone` is one way to satisfy this.
 {{end}}
 
 {{define "examples"}}
@@ -129,6 +133,8 @@ synctest.Test(t, func(t *testing.T) {
 - A race / at-most-once test with no `close(start)` release barrier - it can pass against broken code.
 - Package-level `var db = ...`; cross-test shared state via globals.
 - Tests touching real external systems without isolation (use interfaces + fakes).
+- A worker/pool/relay package with a shutdown path and no test proving every started goroutine
+  actually exits.
 {{end}}
 
 {{define "validation"}}
@@ -144,4 +150,6 @@ synctest.Test(t, func(t *testing.T) {
 - [ ] Fixtures used; per-test DB isolation; `t.Cleanup` for goroutines.
 - [ ] Concurrency / at-most-once tests gate goroutines on a `close(start)` barrier and run under
   `-race`.
+- [ ] A package owning a worker, pool, or relay proves its shutdown releases every goroutine it
+  started.
 {{end}}

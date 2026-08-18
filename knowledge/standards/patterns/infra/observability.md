@@ -37,6 +37,9 @@ Reference tools: a tracer abstraction package; OpenTelemetry wired only at the i
 6. For OTel-only features (span links, baggage), `Unwrap()` the span in the `cmd/infra` layer only -
    never in domain code.
 7. Propagate context across goroutines so no span is lost.
+8. Metric labels MUST be low-cardinality: never a user ID, full URL path, or request ID as a label
+   value - use route templates (e.g. `/users/{id}`) instead. Rule of thumb: a label taking more than
+   ~100 distinct values is too many.
 {{end}}
 
 {{define "recipe"}}
@@ -91,6 +94,12 @@ if os, ok := span.Unwrap().(oteltrace.Span); ok {
     os.AddLink(link)
 }
 ```
+
+Low-cardinality metric labels - a route template, not the raw path or ID:
+
+```go
+requestsTotal.With(metric.String("route", "/users/{id}")).Inc() // not r.URL.Path or userID
+```
 {{end}}
 
 {{define "forbidden"}}
@@ -99,6 +108,7 @@ if os, ok := span.Unwrap().(oteltrace.Span); ok {
 - Calling `Unwrap()` in domain code.
 - Logging and recording the same error at every layer.
 - Losing a span across goroutines by not propagating context.
+- A metric label carrying a user ID, full URL path, or request ID (unbounded cardinality).
 {{end}}
 
 {{define "validation"}}
@@ -108,4 +118,6 @@ if os, ok := span.Unwrap().(oteltrace.Span); ok {
 - [ ] Logs correlated via `WithSpan`; error recorded once, not at every layer.
 - [ ] Concrete tracer chosen at cmd/infra; OTel imports confined to the adapter.
 - [ ] `Unwrap()` used only in cmd/infra, never in the domain.
+- [ ] Metric labels are low-cardinality (route templates, not raw user IDs/paths/request IDs); no
+  label exceeds ~100 distinct values.
 {{end}}
