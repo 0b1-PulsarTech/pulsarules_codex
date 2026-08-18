@@ -90,6 +90,10 @@ stable the module pins (source repos use `go 1.26`).
     value" and that distinction changes behaviour - a partial-update payload, a tri-state flag.
     Optionality alone does not earn a pointer: it costs every reader a nil check, every writer an
     allocation, and turns a missing value into a panic instead of a harmless default.
+16. The nil-slice zero value is right in general and wrong on a REST `Output` DTO: `encoding/json`
+    serialises a nil slice as `null`, not `[]`, surprising a consumer expecting an array. A DTO
+    field crossing a JSON boundary initialises its slice fields explicitly (`[]T{}` or a mapped
+    result), even when the general zero-value principle above would otherwise leave it nil.
 {{end}}
 
 {{define "forbidden"}}
@@ -106,6 +110,7 @@ stable the module pins (source repos use `go 1.26`).
   space, or an AI provenance key in a markdown frontmatter block.
 - `regexp` for simple string work the `strings` stdlib or a generic `[T ~string]` helper covers.
 - `*T` for an optional field or parameter whose zero value already means "absent".
+- A nil slice field left unset on a REST `Output` DTO, serialising as `null` instead of `[]`.
 {{end}}
 
 {{define "validation"}}
@@ -120,4 +125,5 @@ stable the module pins (source repos use `go 1.26`).
 - [ ] Optional values carry the zero value, not `*T`, unless "unset" must differ from zero.
 - [ ] Inferable generic type params omitted; no AI text marker in `.go` or `.md`; no `regexp` for
   simple string work (use `strings`/a generic `[T ~string]` helper).
+- [ ] Output DTO slice fields crossing a JSON boundary are initialised explicitly, not left nil.
 {{end}}
