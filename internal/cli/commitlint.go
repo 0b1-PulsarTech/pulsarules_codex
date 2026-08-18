@@ -21,11 +21,11 @@ func runCommitLint(inj remy.Injector, opts *cliopts.Options) error {
 	msg := opts.CommitMsg
 	if msg == "" && opts.CommitFile != "" {
 		//nolint:gosec // CLI flag value, user intentionally specifying path
-		data, err := os.ReadFile(opts.CommitFile)
+		msgBytes, err := os.ReadFile(opts.CommitFile)
 		if err != nil {
 			return fmt.Errorf("read commit file: %w", err)
 		}
-		msg = string(data)
+		msg = string(msgBytes)
 	}
 	if msg == "" {
 		return fmt.Errorf("provide --msg or --file")

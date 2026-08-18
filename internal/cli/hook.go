@@ -15,12 +15,11 @@ import (
 )
 
 func runHook(inj remy.Injector, opts *cliopts.Options) error {
-	// simplification: every lookup below degrades to a no-op (log, then
-	// return nil) rather than a returned error, because a hook must never
-	// block the caller's turn over a governance-loading or logger-setup
-	// hiccup. The ceiling: a corrupt knowledge base, a bad --log-level, or
-	// unreadable stdin degrades to a no-op hook instead of surfacing the
-	// failure.
+	// simplification: every lookup below degrades to a no-op (log, return
+	// nil) instead of an error, because a hook must never block the caller's
+	// turn over a governance-load or logger-setup hiccup. Ceiling: a corrupt
+	// knowledge base, a bad --log-level, or unreadable stdin all degrade
+	// silently. Upgrade path: revisit if a no-op ever hides a failure operators need paged on.
 	idx, err := remy.Get[*knowledge.Index](inj)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "hook: get knowledge index:", err)
@@ -47,7 +46,8 @@ func runHook(inj remy.Injector, opts *cliopts.Options) error {
 		Logger:     logger,
 		Index:      idx,
 		Out:        os.Stdout,
-		ProjectDir: os.Getenv("CLAUDE_PROJECT_DIR"),
+		ProjectDir: os.Getenv("PULSARULES_PROJECT_DIR"),
+		SkillsDir:  os.Getenv("PULSARULES_SKILLS_DIR"),
 	})
 
 	if dispatchErr := disp.Dispatch(opts.Mode, payload); dispatchErr != nil {

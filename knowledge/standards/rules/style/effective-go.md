@@ -22,6 +22,12 @@ linters:
     - predeclared
     - godoclint
     - forbidigo
+analyzers:
+    - file-size
+    - no-em-dash
+    - top-of-file
+    - big-comment
+    - shadowing
 ---
 
 # Effective Go subset
@@ -42,10 +48,12 @@ newest stable the module pins (source repos use `go 1.26`).
 1. Format with the project formatter (gofumpt + goimports + golines) before finishing; never hand-format.
 2. Use early returns over deep nesting; keep functions under ~80 lines and cyclomatic complexity under ~15.
 3. Doc-comment every exported symbol, starting with its name, describing behaviour not signature.
+   No `// Package foo` package docstrings. No doc comments on unexported symbols; add a single-line
+   `// why` only when non-obvious (hidden constraint, workaround, non-obvious invariant).
 4. Comments explain WHY, not WHAT; the code shows what. Do not narrate the obvious.
 5. Reach for the newest fitting stdlib: `slices`/`maps`/`cmp`, `errors.Join`, `min`/`max`/`clear`,
    `for range int`, `iter.Seq` (range-over-func), typed atomics, generic type aliases. Prefer
-   `slices.Equal` over hand-rolled comparison.
+   `slices.Equal` over hand-rolled comparison. Target the module's pinned Go version.
 6. Pick value or pointer receivers and apply consistently per type. Design zero values to be safe.
 7. Use `any`, never `interface{}`.
 8. Add a compile-time `var _ Iface = (*impl)(nil)` assertion to any file whose type implements an interface.
@@ -70,7 +78,9 @@ newest stable the module pins (source repos use `go 1.26`).
 - Hand-formatting code or bypassing the formatter.
 - Deep nesting where an early return flattens it; functions past ~80 lines without justification.
 - `interface{}` instead of `any`; mixed value/pointer receivers on the same type.
-- Exported symbols without doc comments; comments that restate the signature.
+- `fmt.Println`/`log.Println` in non-test code.
+- Exported symbols without doc comments; comments that restate the signature; package docstrings;
+  doc comments on unexported symbols.
 - Re-implementing what the stdlib already does (`slices.Equal`, `min`/`max`, `iter.Seq`).
 - Shadowing an outer `err`/`ctx` with `:=` in an inner scope (govet `shadow`).
 - Spelling out generic type parameters the compiler can infer from an argument.
@@ -82,7 +92,8 @@ newest stable the module pins (source repos use `go 1.26`).
 {{define "validation"}}
 - [ ] Formatter run; no manual formatting remains.
 - [ ] Functions under ~80 lines, complexity under ~15; early returns used.
-- [ ] Every exported symbol has a doc comment beginning with its name.
+- [ ] Every exported symbol has a doc comment beginning with its name; no package docstrings; no doc
+  comments on unexported symbols.
 - [ ] Newest fitting stdlib used; no hand-rolled equivalents.
 - [ ] Receivers consistent; `any` used; zero values safe.
 - [ ] Interface-implementing types carry `var _ Iface = (*impl)(nil)`.

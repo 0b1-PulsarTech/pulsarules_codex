@@ -27,6 +27,19 @@ Reference tools: a rule-engine library.
 - Coalescing bursts of inputs before evaluation.
 {{end}}
 
+{{define "must"}}
+1. Compose selectors with `AndSelector`/`OrSelector` (Composite); model branching with a `RuleTree`
+   (`on_success`/`on_failure` branches and actions).
+2. Implement each domain rule type against the library's `Rule` interface:
+   `Run(ctx context.Context, ev Evaluator) (bool, error)` and `Decode(map[string]any) error`.
+3. Register each rule type as a typed constructor in the `Registry` at boot; the registry is the
+   allow-list the whole tree is decoded against.
+4. Validate a stored rule tree against the registry at author/save time via `DecodeTree`, rather than
+   lazily at evaluation time.
+5. Inject a `RunObserver` to audit why a rule did/didn't fire, and a `Debouncer` to coalesce rapid
+   inputs before evaluation.
+{{end}}
+
 {{define "recipe"}}
 The lib is domain-agnostic; rules read facts only through the `Evaluator`:
 
@@ -94,5 +107,6 @@ matched, err := tree.Evaluate(ctx, evaluator, rules.WithObserver(auditor))
   no `reflect`).
 - [ ] Stored trees decoded at author/save time; unknown type anywhere returns `ErrUnknownRuleType`.
 - [ ] Action rules call a use case/facade and emit events; they do not mutate state directly.
-- [ ] Rule-run audit via an injected `RunObserver` (no global).
+- [ ] Rule-run audit via an injected `RunObserver` (no global); bursts coalesced via an injected
+  `Debouncer`.
 {{end}}

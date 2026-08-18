@@ -23,6 +23,11 @@ dependencies:
 - Choosing DI vs singleton, inheritance vs composition, reflection vs type-safety.
 {{end}}
 
+{{define "must"}}
+1. Use an Observer with weak pointers for ephemeral in-process fan-out (live subscribers); the caller
+   holds the strong ref.
+{{end}}
+
 {{define "approved"}}
 | Pattern   | Use it for                                                             | Reference                                                 |
 |-----------|------------------------------------------------------------------------|-----------------------------------------------------------|
@@ -103,4 +108,5 @@ that legitimately reads the injector is the composition seam itself (`DoInjectio
 - [ ] No singletons/globals; collaborators take CONCRETE deps via constructors (only the composition
   seam reads the injector); one composition root with `DoInjections` seams.
 - [ ] Composition over inheritance; typed enums over FSM objects; no reflection dispatch.
+- [ ] Ephemeral fan-out uses a weak-pointer Observer; durable side effects do not.
 {{end}}

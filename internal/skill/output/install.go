@@ -2,7 +2,7 @@ package output
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -11,14 +11,15 @@ import (
 // Install renders each selected skill in-memory and writes it to
 // <dest>/<id>/SKILL.md plus a sibling .gitignore (see WriteDoc). Unknown ids
 // are skipped and reported. routerFilter trims the rendered project-router to
-// those skills (empty = the full router).
+// those skills (empty = the full router). backedUp carries a ready-to-print
+// message for every foreign file WriteDoc backed up rather than overwrote.
 func Install(
 	idx *knowledge.Index,
 	rnd *render.Renderer,
 	dest string,
 	ids []string,
 	routerFilter []string,
-) (installed, skipped []string, err error) {
+) (installed, skipped, backedUp []string, err error) {
 	return installDocs(dest, "SKILL.md", ids, func(id string) (string, bool, error) {
 		skill, ok := idx.Skill(id)
 		if !ok {
@@ -34,13 +35,14 @@ func Install(
 
 // InstallWorkflows renders each workflow whose id is in wfIDs and writes it to
 // <dest>/<id>/WORKFLOW.md plus a sibling .gitignore (see WriteDoc). Unknown
-// ids are skipped and reported.
+// ids are skipped and reported. backedUp carries a ready-to-print message for
+// every foreign file WriteDoc backed up rather than overwrote.
 func InstallWorkflows(
 	idx *knowledge.Index,
 	rnd *render.Renderer,
 	dest string,
 	wfIDs []string,
-) (installed, skipped []string, err error) {
+) (installed, skipped, backedUp []string, err error) {
 	return installDocs(dest, "WORKFLOW.md", wfIDs, func(id string) (string, bool, error) {
 		wf, ok := idx.Workflow(id)
 		if !ok {
@@ -63,20 +65,22 @@ func installDocs(
 	dest, docName string,
 	ids []string,
 	render func(id string) (body string, ok bool, err error),
-) (installed, skipped []string, err error) {
+) (installed, skipped, backedUp []string, err error) {
 	for _, id := range ids {
 		body, ok, renderErr := render(id)
 		if renderErr != nil {
-			return installed, skipped, renderErr
+			return installed, skipped, backedUp, renderErr
 		}
 		if !ok {
 			skipped = append(skipped, id)
 			continue
 		}
-		if writeErr := WriteDoc(path.Join(dest, id), docName, body); writeErr != nil {
-			return installed, skipped, fmt.Errorf("install %q: %w", id, writeErr)
+		docBackups, writeErr := WriteDoc(filepath.Join(dest, id), docName, body)
+		if writeErr != nil {
+			return installed, skipped, backedUp, fmt.Errorf("install %q: %w", id, writeErr)
 		}
+		backedUp = append(backedUp, docBackups...)
 		installed = append(installed, id)
 	}
-	return installed, skipped, nil
+	return installed, skipped, backedUp, nil
 }

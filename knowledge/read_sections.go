@@ -83,13 +83,11 @@ func readProfiles(standards fs.FS, idx *Index) error {
 	return nil
 }
 
-// readSkillSidecars loads the curated per-skill sidecar bodies from
-// standards/skills/<id>.md (or any subdirectory under skills/). A sidecar carries
-// the skill's curated Mandatory workflow, consolidated checklists, forbidden
-// actions, and expected outputs; the renderer transcludes it as the skill head,
-// with the composed rule/pattern bodies as the reference detail. Sidecars are
-// optional at load time (validate enforces coverage); a sidecar whose id matches
-// no declared skill is an error so a stale sidecar cannot drift from skills.yaml.
+// readSkillSidecars loads per-skill sidecar bodies from
+// standards/skills/<id>.md: orientation text - what a skill governs, when
+// to reach for it - transcluded as the skill head above the composed
+// clauses. Optional at load time; an id matching no declared skill errors,
+// so a stale sidecar cannot drift from skills.yaml unnoticed.
 func readSkillSidecars(standards fs.FS, idx *Index) error {
 	paths, pathsErr := markdownPaths(standards, "skills")
 	if pathsErr != nil {

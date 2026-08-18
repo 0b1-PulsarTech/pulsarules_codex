@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/contract"
 )
 
 // Dispatch reads the event mode, executes the matching handler, and records
@@ -16,6 +18,7 @@ import (
 func (d *Dispatcher) Dispatch(mode string, payload []byte) error {
 	in := decodeHookPayload(payload)
 	session := NewSessionTrackerFromID(in.SessionID)
+	d.warnMissingProjectDir(session)
 	start := time.Now()
 
 	var (
@@ -32,14 +35,18 @@ func (d *Dispatcher) Dispatch(mode string, payload []byte) error {
 	case "pre-search":
 		err = d.emitPreSearch(session, in)
 	case "user-prompt":
-		err = d.emitUserPrompt(session)
+		err = d.emitUserPrompt()
 	case "stop":
 		findings, err = d.emitStop("Stop", session)
+	case "subagent-start":
+		err = d.emitSubagentStart()
 	case "subagent-stop":
 		// Deliberately silent. A subagent must not commit (git stays in the
 		// main session, per the agent-orchestration skill), so a dirty-tree
-		// block aimed at it only derails the work it was spawned to do. The
-		// mode stays registered because installed settings still call it.
+		// block aimed at it only derails the work it was spawned to do. Not
+		// wired into the installed settings template - Claude Code fires no
+		// SubagentStop event, so nothing ever dispatches this mode today.
+		// The case stays as a defensive no-op against a future/legacy caller.
 	case "session-end":
 		session.Cleanup()
 	}
@@ -52,7 +59,25 @@ func (d *Dispatcher) emitSessionStart(session *SessionTracker) error {
 	if !session.OncePerSession("session-start") {
 		return nil
 	}
-	return d.emitContext("hooks/session-start.txt", "SessionStart")
+	text, err := contract.Session(d.templates)
+	if err != nil {
+		return fmt.Errorf("session contract: %w", err)
+	}
+	d.emitOutput("SessionStart", text)
+	return nil
+}
+
+// why: no OncePerSession gate here. A subagent inherits its parent session's
+// id, so gating on that id would let a marker the parent already burned
+// suppress the contract for every subagent it spawns - the exact bug this
+// mode exists to fix. Every subagent gets the contract fresh, every time.
+func (d *Dispatcher) emitSubagentStart() error {
+	text, err := contract.Subagent(d.templates)
+	if err != nil {
+		return fmt.Errorf("subagent contract: %w", err)
+	}
+	d.emitOutput("SubagentStart", text)
+	return nil
 }
 
 func (d *Dispatcher) emitContext(asset, event string) error {
@@ -90,7 +115,7 @@ func (d *Dispatcher) record(
 func filterInstalled(ids []string, skillsDir string) []string {
 	out := make([]string, 0, len(ids))
 	for _, id := range ids {
-		//nolint:gosec // path is under CLAUDE_PROJECT_DIR's .claude/skills.
+		//nolint:gosec // path is under PULSARULES_SKILLS_DIR, a hook-provided skills root.
 		if _, err := os.Stat(filepath.Join(skillsDir, id, "SKILL.md")); err == nil {
 			out = append(out, id)
 		}

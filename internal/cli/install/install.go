@@ -18,18 +18,11 @@ import (
 
 func Run(inj remy.Injector, opts *cliopts.Options) error {
 	targets := opts.Targets()
-	projectDir, err := opts.BaseDir()
+	cfg, err := resolveInstallConfig(opts)
 	if err != nil {
-		return fmt.Errorf("base dir: %w", err)
+		return err
 	}
-	absBase, err := filepath.Abs(projectDir)
-	if err != nil {
-		return fmt.Errorf("resolve install base: %w", err)
-	}
-	settingsFile, err := opts.SettingsFileName()
-	if err != nil {
-		return fmt.Errorf("settings file: %w", err)
-	}
+	absBase, settingsFile, gitHooks := cfg.absBase, cfg.settingsFile, cfg.gitHooks
 	deps, err := resolveInstallCollaborators(inj)
 	if err != nil {
 		return err
@@ -87,24 +80,63 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 		}
 	}
 
-	return installPostTargets(opts, absBase, templates, hookReg)
+	return installPostTargets(opts, absBase, templates, hookReg, gitHooks)
+}
+
+// installConfig groups the small derived values Run resolves before touching
+// any collaborator, so a single err check replaces four.
+type installConfig struct {
+	absBase      string
+	settingsFile string
+	gitHooks     []string
+}
+
+// resolveInstallConfig resolves the install base dir, the hook settings file,
+// and the validated --git-hooks list from opts.
+func resolveInstallConfig(opts *cliopts.Options) (installConfig, error) {
+	projectDir, err := opts.BaseDir()
+	if err != nil {
+		return installConfig{}, fmt.Errorf("base dir: %w", err)
+	}
+	absBase, err := filepath.Abs(projectDir)
+	if err != nil {
+		return installConfig{}, fmt.Errorf("resolve install base: %w", err)
+	}
+	settingsFile, err := opts.SettingsFileName()
+	if err != nil {
+		return installConfig{}, fmt.Errorf("settings file: %w", err)
+	}
+	gitHooks, err := resolveGitHooks(opts)
+	if err != nil {
+		return installConfig{}, err
+	}
+	return installConfig{absBase: absBase, settingsFile: settingsFile, gitHooks: gitHooks}, nil
 }
 
 // installPostTargets runs the post-target wiring: git hooks, governance
 // config, and binary copy. The binary is always copied so it is available
-// even when --no-git-hooks is set. hookReg is resolved once by runInstall and
+// even when --no-git-hooks is set. hookReg is resolved once by Run and
 // threaded in rather than constructed here.
 func installPostTargets(
 	opts *cliopts.Options,
 	projectDir string,
 	templates fs.FS,
 	hookReg *install.Registry,
+	gitHooks []string,
 ) error {
 	if !opts.NoGitHooks {
-		if hookErr := hookReg.Install("git", projectDir, templates, ""); hookErr != nil {
+		hookErr := hookReg.Install("git", install.Context{
+			Dir:       projectDir,
+			Templates: templates,
+			GitHooks:  gitHooks,
+			Warn: func(format string, args ...any) {
+				_, _ = fmt.Fprintf(os.Stderr, "warning: "+format+"\n", args...)
+			},
+		})
+		if hookErr != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "warning: git hooks: %v\n", hookErr)
 		} else {
-			_, _ = fmt.Printf("installed git hooks: %s\n", opts.GitHooks)
+			_, _ = fmt.Printf("installed git hooks: %s\n", strings.Join(gitHooks, ","))
 		}
 	}
 

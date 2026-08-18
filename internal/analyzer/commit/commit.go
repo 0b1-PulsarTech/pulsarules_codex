@@ -28,21 +28,16 @@ func NewAnalyzer(catalog *emoji.Catalog) *Analyzer {
 	}
 }
 
-// ID returns the analyzer's unique identifier.
 func (a *Analyzer) ID() string { return "commit-lint" }
 
-// Name returns a short human-readable label.
 func (a *Analyzer) Name() string { return "Commit lint" }
 
-// Description returns a one-line explanation.
 func (a *Analyzer) Description() string {
 	return "Validates commit message format, emoji catalog, repetition window, and trailer rules"
 }
 
-// Stage returns the pipeline stage.
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
-// Category returns the analysis category.
 func (a *Analyzer) Category() core.Category { return core.CatCommit }
 
 // Needs declares what the analyzer requires from the pipeline context. Git
@@ -63,7 +58,7 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	msg := commitmsg.Parse(ctx.CommitMsg)
 	windowCfg := a.windowCfg.merge(ctx.Params(a.ID()))
 
-	findings := make([]core.Finding, 0, 8)
+	findings := make([]core.Finding, 0, typicalFindingCapacity)
 	findings = append(findings, Validate(msg, a.ruleCfg)...)
 	findings = append(findings, EmojiCheck{
 		Message: msg,

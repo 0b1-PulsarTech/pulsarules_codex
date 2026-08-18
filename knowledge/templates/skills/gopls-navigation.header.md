@@ -5,6 +5,8 @@ description: Navigate and edit Go with the gopls MCP (go_search, go_file_context
 
 # gopls navigation
 
+<!-- Installed by pulsarules_cli; re-run install to update, do not hand-edit. -->
+
 The gopls MCP is Go-aware (types, references, build/analysis diagnostics), so it beats `grep` and raw
 file reads for anything semantic. Use it for Go navigation and editing.
 

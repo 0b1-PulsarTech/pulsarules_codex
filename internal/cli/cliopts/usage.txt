@@ -4,17 +4,27 @@ Usage:
   pulsarules_cli generate [--root DIR] [--out DIR]
   pulsarules_cli validate [--root DIR]
   pulsarules_cli list [skills|rules|patterns|workflows] [--root DIR]
-  pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--git-hooks commit-msg,pre-commit] [--no-git-hooks]
+  pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--git-hooks commit-msg,pre-commit] [--no-git-hooks]
+  pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
   pulsarules_cli package [--root DIR] [--out FILE]
   pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
   pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
+  pulsarules_cli hook <mode>
   pulsarules_cli version
 
 --target is repeatable (default claude); pass it twice (--target claude --target
-opencode) to install both layouts in one run. The opencode target renders skills
-into <target>/.opencode/skills, writes <target>/.opencode/AGENTS.md (carrying the
-routing contract), and wires <target>/opencode.json (skills as instructions + the
-gopls MCP server).
+opencode) to install more than one layout in one run. The opencode target renders
+skills into <target>/.opencode/skills and wires <target>/opencode.json (skills as
+instructions + the gopls MCP server). Both opencode and the agents target write
+<target>/AGENTS.md at the project root (carrying the routing contract) from the
+same builder, so the file never diverges between them; agents writes nothing
+else, for the AI coding agents (Codex, Gemini CLI, Zed, Amp, JetBrains Junie,
+Jules, and others) that read a repo-root AGENTS.md and nothing else. The cursor
+target renders skills into <target>/.cursor/rules as one .mdc file per skill,
+each alwaysApply:false so Cursor pulls it in on demand by matching its
+description, plus one small alwaysApply:true pointer rule carrying the routing
+contract - Cursor injects every alwaysApply:true rule into EVERY request, so
+the full skill set (tens of KB) never goes on that path.
 
 --layout applies a customization profile (e.g. monorepo | inner-modules) that
 overrides which rules a skill composes; --interactive prompts for it when unset.
@@ -37,11 +47,15 @@ install renders the selected skills into <target>/.claude/skills, installs the
 skill-router reminder hook into <target>/.claude/hooks, and idempotently wires it
 into the chosen settings file. --hooks-scope project (the default) wires into
 <target>/.claude/settings.json; --hooks-scope local wires into
-settings.local.json. The wired hook command resolves the project root at runtime
-via $CLAUDE_PROJECT_DIR. Unless --no-mcp is given and when gopls is on PATH, it
-also merges the gopls server into <target>/.mcp.json and regenerates the
-gopls-navigation skill from "gopls mcp -instructions". Use --no-hooks for skills
-only, or --print-hooks to inspect the resolved hooks block without writing.
+settings.local.json. The wired hook command locates the installed hook script
+via $CLAUDE_PROJECT_DIR (a Claude Code variable, legitimately named there);
+the script then exports PULSARULES_PROJECT_DIR and PULSARULES_SKILLS_DIR, the
+only variables the binary itself reads, so generic Go stays host-neutral.
+Unless --no-mcp is given and when gopls is on PATH, it also merges the gopls
+server into <target>/.mcp.json and regenerates the gopls-navigation skill from
+"gopls mcp -instructions". Use --no-hooks to skip the Claude hook script and settings wiring (git
+hooks have their own --no-git-hooks), or --print-hooks to
+inspect the resolved hooks block without writing.
 
 Choosing which skills to install requires exactly one of --all, --skills, or
 --router-only. With none given on an interactive terminal, install prompts with
@@ -55,8 +69,41 @@ skill whose compose_skills names another skill pulls that skill in too
 required it, e.g. "pulled in by dependency: usecase-layout (required by
 rest-adapter)".
 
---git-hooks installs git hook scripts into <target>/.git/hooks/ that delegate to
-the installed binary. Default: commit-msg,pre-commit. Use --no-git-hooks to skip.
+--git-hooks installs git hook scripts into <target>/.git/hooks/ that delegate
+to the installed binary; valid names are commit-msg, pre-commit, and
+pre-push. Default: commit-msg,pre-commit. An unrecognized name fails the
+whole install command before anything is written, naming the valid set. Use
+--no-git-hooks skips the git hook scripts; the binary is still copied to
+.git/hooks/ so a hook added later works.
+
+uninstall reverses install. Unlike install, it does not default to the
+"claude" target: with no --target it probes the project for every layout it
+can detect on disk (a .claude dir, a .opencode dir / opencode.json, a root
+AGENTS.md, or a .cursor/rules dir) and reverses all of them, since uninstall's
+contract is to leave nothing behind rather than do the minimum asked; pass
+--target to narrow it to one layout. It removes the hook wiring from both
+settings.json and settings.local.json by default, since it cannot recover
+which --hooks-scope install used; pass --hooks-scope to narrow to just one
+file. The removal is
+command-level, so an unrelated command sharing the same hook matcher group
+survives (unlike the group-level filter the install-time merge uses, which is
+safe there only because it always re-appends the group right after). It also
+removes the gopls entry from .mcp.json, the opencode plugin plus its
+opencode.json wiring, and the git hooks install wrote into .git/hooks/. The
+root AGENTS.md is removed only when its content still carries the marker
+Install wrote it with - a root AGENTS.md is a name a user very plausibly owns
+already, so a hand-authored one is never touched even when the agents or
+opencode target is detected. Unless --keep-skills is given, it also removes
+every rendered skill and workflow doc install wrote (recognized by the exact
+SKILL.md/WORKFLOW.md + .gitignore pair WriteDoc writes, so a user's own
+directory under .claude/skills - and anything else placed inside a rendered
+skill's own directory - is never touched); --keep-skills keeps those docs
+(and AGENTS.md) but still removes the hook wiring. A merged config file
+(settings.json, .mcp.json, opencode.json) uninstall cannot parse as JSON is
+left untouched with a warning rather than risking corruption. Running
+uninstall against a project install never touched, or running it twice, is
+not an error; every step is idempotent, so a partial failure can always be
+fixed by re-running.
 
 commitlint validates a commit message against the emoji, format, type, scope, and
 body rules. Use --msg "..." for a direct string, --file PATH to read from a
@@ -86,6 +133,13 @@ filter off. It does not disable the per-line exemptions individual analyzers
 carry for legitimate machine headers (top-of-file and big-comment still accept
 a `// Code generated` line above the package clause, because that line is
 correct Go, not a defect to report).
+
+hook dispatches a single Claude Code (or opencode) hook event by mode, reading
+the tool/session JSON payload from stdin and writing the hookSpecificOutput
+JSON to stdout. Modes: session-start, pre-edit, post-edit, pre-search,
+user-prompt, stop, subagent-start, subagent-stop, session-end. install wires
+this invocation into the target's hook script automatically; there is
+normally no reason to invoke it by hand.
 
 With no --root, the binary reads the embedded knowledge snapshot. Pass --root DIR
 to read <DIR>/knowledge from disk (dev edits without rebuild).

@@ -10,7 +10,13 @@ import (
 )
 
 // topTemplates are the executable entry points parsed into the shared namespace.
-var topTemplates = []string{"SKILL.md.tmpl", "WORKFLOW.md.tmpl", "router.md.tmpl"}
+// SKILL.mdc.tmpl and router.mdc.tmpl are the Cursor rule variants of
+// SKILL.md.tmpl/router.md.tmpl: same body, Cursor's own frontmatter (see the
+// "mdcFrontmatter" partial in parts.tmpl).
+var topTemplates = []string{
+	"SKILL.md.tmpl", "WORKFLOW.md.tmpl", "router.md.tmpl",
+	"SKILL.mdc.tmpl", "router.mdc.tmpl",
+}
 
 // funcs is the shared template FuncMap; every namespace member sees it.
 func funcs() template.FuncMap {

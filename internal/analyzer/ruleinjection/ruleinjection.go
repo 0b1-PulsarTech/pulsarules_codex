@@ -7,19 +7,20 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-// defaultRuleMap maps analyzer IDs to knowledge-base rule IDs for rule-body
+// defaultRuleMap maps analyzer IDs to knowledge-base rule IDs for rule-summary
 // injection at StageRuleInjection. Entries cover both exact analyzer IDs and
 // the prefix-matching patterns for delegated tools that inject linter-specific
 // sub-IDs. This table is the contract between the pipeline and the knowledge
 // base - adding a new analyzer should include a mapping entry.
 var defaultRuleMap = map[string]string{
 	// static analyzers
-	"file-size":     "effective-go",
-	"no-em-dash":    "effective-go",
-	"import-groups": "imports",
-	"naming":        "naming",
-	"top-of-file":   "effective-go",
-	"big-comment":   "effective-go",
+	"file-size":           "effective-go",
+	"no-em-dash":          "effective-go",
+	"import-groups":       "imports",
+	"naming":              "naming",
+	"top-of-file":         "effective-go",
+	"big-comment":         "effective-go",
+	"simplification-path": "minimalism",
 	// commit-lint sub-rules (each has its own AnalyzerID)
 	"commit-lint":              "commits",
 	"commit-initial":           "commits",
@@ -58,14 +59,14 @@ var defaultRuleMap = map[string]string{
 	"gopls":         "effective-go",
 }
 
-// Analyzer injects embedded rule markdown bodies into findings
-// at StageRuleInjection. It maps each finding's AnalyzerID to a knowledge-base
-// rule ID via the defaultRuleMap and looks up the body from the Index.
+// Analyzer injects rule summaries into findings at StageRuleInjection. It
+// maps each finding's AnalyzerID to a knowledge-base rule ID via the
+// defaultRuleMap and looks up the summary from the Index.
 type Analyzer struct {
 	index *knowledge.Index
 }
 
-// NewAnalyzer creates a Analyzer that reads rule bodies
+// NewAnalyzer creates a Analyzer that reads rule summaries
 // from the given knowledge index. Pass nil to skip injection.
 func NewAnalyzer(index *knowledge.Index) *Analyzer {
 	return &Analyzer{index: index}
@@ -74,36 +75,36 @@ func NewAnalyzer(index *knowledge.Index) *Analyzer {
 func (a *Analyzer) ID() string   { return "rule-injection" }
 func (a *Analyzer) Name() string { return "Rule injection" }
 func (a *Analyzer) Description() string {
-	return "Attaches rule markdown bodies to findings"
+	return "Attaches rule summaries to findings"
 }
 func (a *Analyzer) Stage() core.StageID      { return core.StageRuleInjection }
 func (a *Analyzer) Category() core.Category  { return core.CatCommit }
 func (a *Analyzer) Needs() core.Requirements { return core.Requirements{} }
 
-// Analyze delegates to injectRuleBodies, which operates on the full set of
+// Analyze delegates to injectRuleSummaries, which operates on the full set of
 // findings accumulated by earlier pipeline stages.
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	injectRuleBodies(ctx.Findings, a.index)
+	injectRuleSummaries(ctx.Findings, a.index)
 	return nil
 }
 
-// injectRuleBodies applies rule-body injection to a finding slice using the
-// default rule map and the given knowledge index. It is the same logic that
-// Analyzer applies in StageRuleInjection, exposed for use outside
+// injectRuleSummaries applies rule-summary injection to a finding slice using
+// the default rule map and the given knowledge index. It is the same logic
+// that Analyzer applies in StageRuleInjection, exposed for use outside
 // a full pipeline run. Pass nil index to skip injection.
-func injectRuleBodies(findings []core.Finding, index *knowledge.Index) {
+func injectRuleSummaries(findings []core.Finding, index *knowledge.Index) {
 	if index == nil {
 		return
 	}
 	for i := range findings {
-		if findings[i].RuleBody != "" {
+		if findings[i].RuleSummary != "" {
 			continue
 		}
 		if findings[i].RuleID == "" {
 			findings[i].RuleID = lookupRule(findings[i].AnalyzerID)
 		}
 		if findings[i].RuleID != "" {
-			findings[i].RuleBody = index.Body("rules", findings[i].RuleID)
+			findings[i].RuleSummary = index.Summary("rules", findings[i].RuleID)
 		}
 	}
 }

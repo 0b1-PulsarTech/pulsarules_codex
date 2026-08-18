@@ -53,10 +53,9 @@ func (r *repository) StagedDiff(path string) (string, error) {
 
 // StagedRenameDiff returns the unified diff body for a staged rename pair
 // (oldPath deleted, newPath added), scored at or above minScore, so a
-// caller can inspect what changed within the move itself rather than
-// seeing newPath's full content as a fresh addition. A pathspec naming only
-// newPath hides the paired deletion from git's own rename detection, so
-// both paths are required to get the delta rather than the whole file.
+// caller sees what changed within the move rather than newPath's full
+// content as a fresh addition. A pathspec naming only newPath hides the
+// paired deletion from git's rename detection, so both paths are required.
 func (r *repository) StagedRenameDiff(oldPath, newPath string, minScore int) (string, error) {
 	out, err := runGit(
 		r.root, "diff", "--cached", fmt.Sprintf("--find-renames=%d%%", minScore),
@@ -68,9 +67,14 @@ func (r *repository) StagedRenameDiff(oldPath, newPath string, minScore int) (st
 	return out, nil
 }
 
+// renameLineFieldCount is the number of tab-separated fields git's
+// `diff --name-status` emits for a rename line: the R<score> status,
+// the old path, and the new path.
+const renameLineFieldCount = 3
+
 func parseRenameLine(line string) (Rename, bool) {
 	fields := strings.Split(line, "\t")
-	if len(fields) != 3 || !strings.HasPrefix(fields[0], "R") {
+	if len(fields) != renameLineFieldCount || !strings.HasPrefix(fields[0], "R") {
 		return Rename{}, false
 	}
 	score, err := strconv.Atoi(fields[0][1:])

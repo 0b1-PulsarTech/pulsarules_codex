@@ -28,7 +28,8 @@ render). Bodies are logic-free named text rendered with `missingkey=error`.
 
 ## Merged composition
 
-The skill's curated sidecar is the `##`-level head (the actionable synthesis). Below it, when a skill
+The skill's sidecar is the untitled orientation head - what the skill governs and when to reach for
+it. The actionable synthesis is what follows: when a skill
 composes several rules/patterns, the renderer's controller parses each body (one namespace per file,
 so the repeated `must`/`forbidden` names do not collide) and **merges same-keyed sections** as the
 source detail, under a single `## Applicable rules and patterns` parent (`### <Section>` then
@@ -110,5 +111,5 @@ multi-language variants.
 ## How rules relate to skills
 
 Rules are the knowledge; skills are generated. A skill composes one or more rules (and patterns) -
-see `skills.yaml` and `pulsarules_codex-installer list skills`. Multiple rules can collapse into one
+see `skills.yaml` and `pulsarules_cli list skills`. Multiple rules can collapse into one
 capability skill (e.g. `effective-go` + `naming` + `imports` + `types` -> `go-style`).

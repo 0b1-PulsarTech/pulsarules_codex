@@ -4,22 +4,52 @@ import (
 	"fmt"
 	"io/fs"
 	"slices"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/gitignore"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install/githook"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install/opencodehook"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/hookwire"
 )
 
+// Context carries the resolved inputs a hook Installer's Install needs,
+// mirroring target.Context in internal/skill/target.
+type Context struct {
+	Dir          string
+	Templates    fs.FS
+	SettingsFile string
+	GitHooks     []string
+	// Warn, if set, receives a formatted non-fatal notice - such as a
+	// foreign file backed up before being overwritten - so the caller's own
+	// report channel surfaces it instead of the message being dropped. A nil
+	// Warn silently discards the notice.
+	Warn func(format string, args ...any)
+}
+
+// UninstallContext carries the resolved inputs a hook Installer's Uninstall
+// needs, the reversal counterpart of Context.
+type UninstallContext struct {
+	Dir          string
+	SettingsFile string
+}
+
+// Result reports what an Installer's Uninstall actually removed from disk,
+// the reversal counterpart of what Install wrote. Removed is empty when
+// there was nothing of this installer's to remove - a no-op against a
+// directory Install never touched - so a caller can tell a real removal
+// from a no-op instead of assuming success from a nil error.
+type Result struct {
+	Removed []string
+	// Restored carries a ready-to-print message for every backup Uninstall
+	// restored to its original path, undoing a prior Install-time backup
+	// (see Context.Warn).
+	Restored []string
+}
+
 // Installer is the consumer-declared port every hook target implements. It
-// installs the hook infrastructure for one target type into the given project
-// directory. templates is the embedded templates filesystem; settingsFile is
-// the target-specific settings file name (empty when not applicable).
+// installs the hook infrastructure for one target type into ctx.Dir.
 type Installer interface {
 	// Name is the target identifier (e.g. "claude", "opencode", "git").
 	Name() string
-	// Install writes hooks, binaries, and config into dir.
-	Install(dir string, templates fs.FS, settingsFile string) error
+	// Install writes hooks, binaries, and config into ctx.Dir.
+	Install(ctx Context) error
+	// Uninstall removes what Install wrote from ctx.Dir, reversing Install. It
+	// is idempotent: a dir Install never touched, or a second run, is a no-op.
+	Uninstall(ctx UninstallContext) (Result, error)
 }
 
 // Registry maps target names to their hook installers. Build it once at boot
@@ -40,15 +70,29 @@ func NewRegistry() *Registry {
 
 // Install dispatches to the named installer. It errors when the name is not
 // registered.
-func (r *Registry) Install(name, dir string, templates fs.FS, settingsFile string) error {
+func (r *Registry) Install(name string, ctx Context) error {
 	inst, ok := r.byName[name]
 	if !ok {
 		return fmt.Errorf("unknown hook installer %q", name)
 	}
-	if err := inst.Install(dir, templates, settingsFile); err != nil {
+	if err := inst.Install(ctx); err != nil {
 		return fmt.Errorf("install %s: %w", inst.Name(), err)
 	}
 	return nil
+}
+
+// Uninstall dispatches to the named installer's Uninstall, returning its
+// Result. It errors when the name is not registered.
+func (r *Registry) Uninstall(name string, ctx UninstallContext) (Result, error) {
+	inst, ok := r.byName[name]
+	if !ok {
+		return Result{}, fmt.Errorf("unknown hook installer %q", name)
+	}
+	result, err := inst.Uninstall(ctx)
+	if err != nil {
+		return result, fmt.Errorf("uninstall %s: %w", inst.Name(), err)
+	}
+	return result, nil
 }
 
 // Has reports whether a hook installer is registered.
@@ -65,52 +109,4 @@ func (r *Registry) Names() []string {
 	}
 	slices.Sort(names)
 	return names
-}
-
-// claudeInstaller installs the Claude Code hook: shell script + binary +
-// settings.json wiring + .gitignore.
-type claudeInstaller struct{}
-
-func (claudeInstaller) Name() string { return "claude" }
-
-func (claudeInstaller) Install(dir string, templates fs.FS, settingsFile string) error {
-	claudeDir := dir
-	if settingsFile == "" {
-		settingsFile = "settings.json"
-	}
-	if err := hookwire.InstallHook(templates, claudeDir); err != nil {
-		return fmt.Errorf("install claude hook: %w", err)
-	}
-	if err := hookwire.WireSettings(templates, claudeDir, settingsFile); err != nil {
-		return fmt.Errorf("wire claude settings: %w", err)
-	}
-	if err := gitignore.Ensure(claudeDir, "/bin/", "/hooks/"); err != nil {
-		return fmt.Errorf("ensure claude gitignore: %w", err)
-	}
-	return nil
-}
-
-// opencodeInstaller installs the opencode governance plugin + binary +
-// .gitignore.
-type opencodeInstaller struct{}
-
-func (opencodeInstaller) Name() string { return "opencode" }
-
-func (opencodeInstaller) Install(dir string, _ fs.FS, _ string) error {
-	if err := opencodehook.Install(dir); err != nil {
-		return fmt.Errorf("install opencode hook: %w", err)
-	}
-	return nil
-}
-
-// gitInstaller installs git hook scripts into .git/hooks/.
-type gitInstaller struct{}
-
-func (gitInstaller) Name() string { return "git" }
-
-func (gitInstaller) Install(dir string, _ fs.FS, _ string) error {
-	if err := githook.Install(dir, []string{"commit-msg", "pre-commit"}); err != nil {
-		return fmt.Errorf("install git hooks: %w", err)
-	}
-	return nil
 }

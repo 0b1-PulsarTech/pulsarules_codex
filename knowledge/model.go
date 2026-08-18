@@ -8,7 +8,12 @@ type Rule struct {
 	Tags         []string `yaml:"tags,omitempty"`
 	Dependencies []string `yaml:"dependencies,omitempty"`
 	Linters      []string `yaml:"linters,omitempty"`
-	References   []string `yaml:"references,omitempty"`
+	// Analyzers lists the ids of this repo's own analyzers (registered under
+	// internal/analysis) that enforce this rule, as opposed to Linters, which
+	// names external golangci-lint linters. A rule with neither carries no
+	// machine-checked enforcement.
+	Analyzers  []string `yaml:"analyzers,omitempty"`
+	References []string `yaml:"references,omitempty"`
 }
 
 // Pattern is an implementation recipe that shows how to apply the rules.
@@ -64,7 +69,6 @@ type Skill struct {
 	NoMerge bool `yaml:"no_merge,omitempty"`
 }
 
-// Merged reports whether the skill merges composed rules/patterns by section.
 func (s Skill) Merged() bool { return !s.NoMerge }
 
 type skillsFile struct {

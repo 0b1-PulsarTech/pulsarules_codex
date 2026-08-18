@@ -1,8 +1,8 @@
 package core
 
 // Finding is a single issue reported by an analyzer. It carries enough context
-// for the pipeline to inject the corresponding embedded rule markdown body
-// (via RuleBody, filled in the StageRuleInjection stage).
+// for the pipeline to inject the corresponding rule's distilled summary (via
+// RuleSummary, filled in the StageRuleInjection stage).
 type Finding struct {
 	// AnalyzerID is the ID of the analyzer that produced this finding.
 	AnalyzerID string
@@ -20,11 +20,12 @@ type Finding struct {
 	// Suggestion is an optional fix suggestion, or empty if none.
 	Suggestion string
 	// RuleID is the knowledge-base rule ID that this finding corresponds to.
-	// Used by StageRuleInjection to attach the full rule markdown body.
+	// Used by StageRuleInjection to attach the rule's distilled summary.
 	RuleID string
-	// RuleBody is the embedded rule markdown body corresponding to this
-	// finding, injected by the StageRuleInjection stage. Empty until then.
-	RuleBody string
+	// RuleSummary is the rule's distilled one-paragraph summary corresponding
+	// to this finding, injected by the StageRuleInjection stage. Empty until
+	// then.
+	RuleSummary string
 }
 
 // Reporter stamps the AnalyzerID, Severity and Category that are constant for
@@ -38,8 +39,6 @@ type Reporter struct {
 	category   Category
 }
 
-// NewReporter creates a Reporter that stamps analyzerID, severity and
-// category onto every Finding it builds.
 func NewReporter(analyzerID string, severity Severity, category Category) Reporter {
 	return Reporter{analyzerID: analyzerID, severity: severity, category: category}
 }

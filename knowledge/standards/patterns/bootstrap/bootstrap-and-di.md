@@ -19,7 +19,7 @@ composes:
 
 # Bootstrap & DI
 
-> The composition root: a thin `main()` wires config -> DB -> injector -> migrations -> server;
+> The composition root: a thin `main()` wires config -> DB -> migrations -> injector -> server;
 > per-layer `Register*` functions register infra (singletons) then domain (factories) then interop
 > (facades); the bootstrap is the only switchboard for config-driven impl selection.
 
@@ -161,7 +161,7 @@ those are resolved at the root. The ONE exception is the composition seam itself
 {{end}}
 
 {{define "validation"}}
-- [ ] `main()` is thin and follows config -> DB -> injector -> migrations -> server.
+- [ ] `main()` is thin and follows config -> DB -> migrations -> injector -> server.
 - [ ] One injector; infra/domain/interop registered in order via `DoInjections`.
 - [ ] Singletons vs factories chosen correctly; constructors take CONCRETE deps (never the injector).
 - [ ] One composition root (`cmd/<app>`); apps expose `DoInjections`/`Routers` from their root package.

@@ -23,6 +23,22 @@ Reference tools: `text/template`; a variable-registry engine package.
 - Compiling a template to a positional external format (e.g. an HSM with numbered slots).
 {{end}}
 
+{{define "must"}}
+1. Treat variables as DATA, not code: build the registry from stored `VariableDef` rows (names are
+   author-chosen data, never hardcoded enums or message text in Go).
+2. Build the engine from defs + a resolver: `tplate.New().FromDefs(defs, resolver)`. Make `Resolver`
+   lookups lazy; resolve by an explicit `Resolver.Resolve(source)`, never by reflection.
+3. Render via `text/template` with `missingkey=error`: a missing variable surfaces as a render error
+   (`engine.ApplyTemplateOnMessage`), not a silent blank.
+4. Resolve hidden/metadata variables separately via `RetrieveHiddenVariables`; never inline them into
+   the visible body. Never evaluate callbacks eagerly.
+5. For positional external targets, compile named `{{"{{"}}vars}}` to positional `{{"{{"}}1}},{{"{{"}}2}}`
+   with `CompileToPositional`; reject conditions/logic the target does not support.
+6. Validate at save, render at send. Keep the engine a library; per-target formats (system render vs
+   positional/structured external) are per-target adapters.
+7. Keep the engine instance per use, not a package-level cache.
+{{end}}
+
 {{define "recipe"}}
 Variables are DATA, not code:
 

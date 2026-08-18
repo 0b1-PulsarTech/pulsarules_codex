@@ -18,12 +18,12 @@ func (d *Dispatcher) emitPreSearch(session *SessionTracker, in hookPayload) erro
 	if projectDir == "" {
 		return nil
 	}
-	//nolint:gosec // path is under CLAUDE_PROJECT_DIR, a hook-provided project root.
+	//nolint:gosec // path is under PULSARULES_PROJECT_DIR, a hook-provided project root.
 	if _, err := os.Stat(filepath.Join(projectDir, "go.mod")); err != nil {
 		return nil
 	}
-	skillsDir := filepath.Join(projectDir, ".claude", "skills")
-	if len(filterInstalled([]string{"gopls-navigation"}, skillsDir)) == 0 {
+	skillsDir := d.resolveSkillsDir()
+	if skillsDir == "" || len(filterInstalled([]string{"gopls-navigation"}, skillsDir)) == 0 {
 		return nil
 	}
 	if !session.OncePerSession("pre-search") {
@@ -57,10 +57,9 @@ func searchTargetsGo(in hookPayload) bool {
 	}
 }
 
-func (d *Dispatcher) emitUserPrompt(session *SessionTracker) error {
-	if !session.OncePerSession("prompt") {
-		return nil
-	}
+// why: no OncePerSession gate - the digest must fire every turn, since
+// session drift back off the router happens on turn twenty, not turn one.
+func (d *Dispatcher) emitUserPrompt() error {
 	return d.emitContext("hooks/user-prompt.txt", "UserPromptSubmit")
 }
 

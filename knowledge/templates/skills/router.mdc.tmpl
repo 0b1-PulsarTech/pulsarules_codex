@@ -1,0 +1,85 @@
+{{template "mdcFrontmatter" .Description}}
+# {{.Name}} (MANDATORY orchestrator)
+
+<!-- Installed by pulsarules_cli; re-run install to update, do not hand-edit. -->
+
+This is the entry point for working in any project that follows these standards. The engineering
+contract lives in `standards/rules/`, `standards/patterns/`, and `standards/workflows/`, distilled
+here into composable skills. This router decides WHICH skills apply to the task and in what ORDER,
+then enforces that they were applied. Prefer routing over implementing directly - a skipped skill is
+a skipped rule.
+
+## 0. Mandatory entry rule
+Before writing or editing any Go / SQL / config:
+1. Classify the task (match it against the dispatch table below; a task often matches several rows).
+2. Load the matched skills (the always-load baseline + every dispatch match) by invoking each via the
+   Skill tool, in the composition order in section 3.
+3. Implement with the loaded skills' rules ACTIVE while you write (not as an afterthought); then run
+   each loaded skill's Validation checklist and confirm none of its Forbidden actions were taken.
+Do NOT implement directly without routing first.
+
+{{- if .ShowTestCallout}}
+> **Tests are not optional routing.** If your change will add or edit ANY `_test.go` - including
+> tests written alongside a feature, a lib, or a bugfix - you are doing TEST WORK: load
+> `integration-tests` BEFORE you write the test, so its table-driven `testCases`/`testCase` shape,
+> its "cover every failure path" rule, and the `testing/synctest` time rule (no `now func()`
+> clock-injection fields, no `time.Sleep`) shape the code as you write it - not a cleanup pass after.
+> Loading a skill is step one; its rules are meant to run continuously during authoring, and its
+> Validation checklist is a pre-commit gate you MUST actually run.
+{{- end}}
+
+## 1. Always-load baseline (every Go change)
+{{- range .Baseline.Always}}
+- `{{.Skill}}` - {{.Note}}
+{{- end}}
+{{- range .Baseline.CommitLast}}
+- `{{.Skill}}` - {{.Note}}
+{{- end}}
+{{- if .Baseline.Conditional}}
+Load conditionally when signals are present:
+{{- range .Baseline.Conditional}}
+- `{{.Skill}}` - {{.Note}}
+{{- end}}
+{{- end}}
+
+## 2. Dispatch table (task signal -> skills, beyond the baseline)
+| Task signal | Load these skills |
+|---|---|
+{{- range .Dispatch}}
+| {{.Signal}} | {{range $i, $skill := .Skills}}{{if $i}}, {{end}}`{{$skill}}`{{end}}{{if .Note}} ({{.Note}}){{end}} |
+{{- end}}
+
+When a task spans areas, UNION the matched rows.
+
+## 3. Composition order
+Apply skills in this order so each layer's outputs feed the next:
+{{- range $i, $step := .Order}}
+{{inc $i}}. {{range $j, $skill := $step.Skills}}{{if $j}} / {{end}}`{{$skill}}`{{end}} - {{$step.Note}}
+{{- end}}
+
+Conflict resolution: the MOST SPECIFIC skill wins on a detail it owns (e.g. `transactions` owns the
+multi-write defer pattern). The baseline skills are never skipped. If two skills seem to conflict,
+the domain feature defines WHAT, the pattern skill defines HOW, and the rule/baseline skill is the
+non-negotiable floor.
+
+## 4. Enforcement checklist (run before declaring the task done)
+- [ ] Task classified; every matching dispatch row's skills were loaded (not just read - invoked).
+- [ ] Baseline loaded (`go-style`, `errors-logging`, `code-placement`; `concurrency`/`security` if
+  signalled).
+- [ ] Each loaded skill's Validation checklist run and satisfied.
+- [ ] No loaded skill's Forbidden action was taken.
+- [ ] Stop signs respected: no globals; no `init()`/package-load side effects; no cross-app imports;
+  no `panic` outside `main`; no raw SQL in handlers/use cases; no generated row types out of repos;
+  no direct cross-module calls (use facades); no transport imports in domain; no silent error
+  swallowing.
+- [ ] `task tools:lint` and `task main:test` pass.
+- [ ] `commits` skill applied to the commit message.
+
+## How to load a skill
+Invoke the skill by name. Load all matched skills up front in composition order so their rules are
+in context before you write code; re-open any whose checklist you are verifying at the end.
+
+## Available skills
+{{- range .AvailableSkills}}
+- `{{.ID}}` - {{.Description}}
+{{- end}}

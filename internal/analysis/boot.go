@@ -19,8 +19,13 @@ type analyzerBuilder func(
 	repo vcs.Repository,
 ) core.Analyzer
 
-// analyzerSpec pairs an analyzer builder with the scopes it runs under.
+// analyzerSpec pairs an analyzer builder with the scopes it runs under. id is
+// declared here rather than derived by constructing the analyzer and calling
+// ID(): one builder (the commit emoji analyzer) does real I/O and returns nil
+// on failure, which would silently drop it from any id-collecting code that
+// had to construct first and ask second.
 type analyzerSpec struct {
+	id     string
 	build  analyzerBuilder
 	scopes []Scope
 }
@@ -56,4 +61,17 @@ func (r *StageRunner) registerForScope(index *knowledge.Index, repo vcs.Reposito
 			r.Register(a)
 		}
 	}
+}
+
+// RegisteredAnalyzerIDs returns the id of every analyzer declared in
+// analyzerSpecs, across every scope. It reads the spec table directly rather
+// than constructing each analyzer and calling ID(): one builder (the commit
+// emoji analyzer) does real I/O and can return nil, which would silently drop
+// that id from any collection built by constructing first and asking second.
+func RegisteredAnalyzerIDs() []string {
+	ids := make([]string, len(analyzerSpecs))
+	for i, spec := range analyzerSpecs {
+		ids[i] = spec.id
+	}
+	return ids
 }

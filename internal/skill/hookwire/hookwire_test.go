@@ -8,8 +8,12 @@ import (
 // against: the hook script, its README, and the settings block template.
 func fakeTemplates() fstest.MapFS {
 	return fstest.MapFS{
-		"hooks/skill-router-reminder.sh": {Data: []byte("#!/usr/bin/env bash\nexit 0\n")},
-		"hooks/README.md":                {Data: []byte("# why\n")},
+		"hooks/skill-router-reminder.sh": {
+			Data: []byte("#!/usr/bin/env bash\n# Installed by pulsarules_cli\nexit 0\n"),
+		},
+		"hooks/README.md": {
+			Data: []byte("<!-- Installed by pulsarules_cli -->\n# why\n"),
+		},
 		"hooks/settings.hooks.json.tmpl": {Data: []byte(`{
   "hooks": {
     "SessionStart": [

@@ -65,6 +65,15 @@ func (s *SessionTracker) FirstEmission(event, content string) bool {
 // finished session leaves nothing behind in the temp directory. It scans the
 // temp dir because each Dispatch call creates a fresh SessionTracker - the
 // markers were recorded on prior instances that are no longer reachable.
+//
+// simplification: Cleanup only runs when Dispatch receives "session-end"
+// (see hook.go). opencode's trigger() has no session-lifecycle hook name to
+// send that from (see knowledge/templates/hooks/opencode-plugin.js's file
+// header), so under opencode these markers accumulate in os.TempDir() for
+// the life of the machine. Ceiling: no automatic reclamation for opencode
+// sessions. Upgrade path: if opencode ever adds a session-end-equivalent
+// hook, wire it to dispatch "session-end" the same way Claude Code's
+// SessionEnd mode already does.
 func (s *SessionTracker) Cleanup() {
 	entries, err := os.ReadDir(os.TempDir())
 	if err != nil {

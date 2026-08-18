@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
@@ -13,20 +15,27 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
+var errProjectDirRequired = errors.New(
+	"governance requires --project DIR or PULSARULES_PROJECT_DIR",
+)
+
 // runGovernance runs the full analyzer pipeline against the project via
 // Session and prints findings to stderr. It returns an *ExitError{Code: 1} if
 // any error-severity finding is produced; main is the only caller that turns
 // that into os.Exit.
 func runGovernance(inj remy.Injector, opts *cliopts.Options) error {
-	if opts.ProjectDir == "" && os.Getenv("CLAUDE_PROJECT_DIR") == "" {
-		return fmt.Errorf("governance requires --project DIR or CLAUDE_PROJECT_DIR")
+	if opts.ProjectDir == "" && os.Getenv("PULSARULES_PROJECT_DIR") == "" {
+		return errProjectDirRequired
 	}
 
 	repo, err := remy.Get[vcs.Repository](inj)
 	if err != nil {
 		return fmt.Errorf("open repository: %w", err)
 	}
-	cfg := governanceConfig(opts)
+	cfg, err := governanceConfig(opts)
+	if err != nil {
+		return err
+	}
 
 	idx, err := remy.Get[*knowledge.Index](inj)
 	if err != nil {
@@ -76,10 +85,17 @@ func suppressedClause(suppressed int) string {
 }
 
 // governanceConfig builds the run config from the preset and the optional
-// golangci-lint config override.
-func governanceConfig(opts *cliopts.Options) *config.GovernanceConfig {
+// golangci-lint config override. It rejects an unrecognized --preset by name
+// before doing any work, instead of ApplyPreset silently no-oping and the
+// run falling back to the default preset.
+func governanceConfig(opts *cliopts.Options) (*config.GovernanceConfig, error) {
 	cfg := config.Defaults()
 	if opts.Preset != "" {
+		if !config.ValidPreset(opts.Preset) {
+			return nil, fmt.Errorf(
+				"invalid --preset %q (want %s)", opts.Preset, strings.Join(config.Presets(), "|"),
+			)
+		}
 		cfg.Preset = opts.Preset
 	}
 	cfg.ApplyPreset()
@@ -88,5 +104,5 @@ func governanceConfig(opts *cliopts.Options) *config.GovernanceConfig {
 	if opts.GolangciConfig != "" {
 		cfg.SetParam("golangci-lint", "config_path", opts.GolangciConfig)
 	}
-	return cfg
+	return cfg, nil
 }

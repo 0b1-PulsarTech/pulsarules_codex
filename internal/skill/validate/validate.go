@@ -7,7 +7,6 @@ type Result struct {
 	Errors []string
 }
 
-// OK reports whether validation found no problems.
 func (r Result) OK() bool { return len(r.Errors) == 0 }
 
 // Check reports the problems it found, or nothing when the index satisfies it.
@@ -15,6 +14,7 @@ type Check func(*knowledge.Index) []string
 
 // validationPipeline is the built-in set of checks Validate always runs.
 var validationPipeline = []Check{
+	ruleSummaries,
 	ruleDependencies,
 	patternDependencies,
 	patternComposes,
@@ -22,6 +22,7 @@ var validationPipeline = []Check{
 	skillCompositions,
 	skillBodies,
 	skillSidecars,
+	skillNormativeSections,
 	profileOverrides,
 	routerPresent,
 	emojiThemeShortcodes,

@@ -14,7 +14,7 @@ func TestGenerateGoplsSkill(t *testing.T) {
 
 	skillsDir := t.TempDir()
 	const instructions = "# The gopls MCP server\n\nUse go_search to find symbols.\n"
-	if err := GenerateGoplsSkill(fakeTemplates(), skillsDir, instructions); err != nil {
+	if _, err := GenerateGoplsSkill(fakeTemplates(), skillsDir, instructions); err != nil {
 		t.Fatalf("GenerateGoplsSkill: %v", err)
 	}
 
@@ -41,7 +41,7 @@ func TestGenerateGoplsSkill_Gitignore(t *testing.T) {
 	t.Parallel()
 
 	skillsDir := t.TempDir()
-	if err := GenerateGoplsSkill(fakeTemplates(), skillsDir, "instructions"); err != nil {
+	if _, err := GenerateGoplsSkill(fakeTemplates(), skillsDir, "instructions"); err != nil {
 		t.Fatalf("GenerateGoplsSkill: %v", err)
 	}
 	//nolint:gosec // temp dir.

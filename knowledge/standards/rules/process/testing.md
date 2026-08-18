@@ -140,4 +140,6 @@ synctest.Test(t, func(t *testing.T) {
 - [ ] Repo tests use a real-DB factory + `//go:build integration`; no SQL mock.
 - [ ] E2E uses the engine factory + `TestMain`; gRPC on `bufconn`.
 - [ ] Fixtures used; per-test DB isolation; `t.Cleanup` for goroutines.
+- [ ] Concurrency / at-most-once tests gate goroutines on a `close(start)` barrier and run under
+  `-race`.
 {{end}}

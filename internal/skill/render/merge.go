@@ -61,7 +61,7 @@ func bodySections(body string) (map[string]string, error) {
 
 // mergeSources resolves a skill's composed rules and patterns to named sources in
 // composition order, each carrying its parsed sections.
-func (r *Renderer) mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error) {
+func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error) {
 	var sources []source
 	add := func(kind, entry, name string) error {
 		id, _, _ := strings.Cut(entry, "#")
@@ -93,6 +93,30 @@ func (r *Renderer) mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]
 		}
 	}
 	return sources, nil
+}
+
+// normativeSectionKeys are the composed section keys that state an obligation
+// (what a skill's consumer must, must not, or must check) rather than merely
+// describe or demonstrate one.
+var normativeSectionKeys = []string{"must", "forbidden", "validation"}
+
+// HasNormativeSection reports whether skill renders at least one non-empty
+// "must", "forbidden", or "validation" section across its composed rules and
+// patterns. A skill with none is documentation only - it states no obligation
+// a caller can be held to.
+func HasNormativeSection(idx *knowledge.Index, skill knowledge.Skill) (bool, error) {
+	sources, err := mergeSources(idx, skill)
+	if err != nil {
+		return false, fmt.Errorf("skill %q: %w", skill.ID, err)
+	}
+	for _, key := range normativeSectionKeys {
+		for _, src := range sources {
+			if src.sections[key] != "" {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 type source struct {

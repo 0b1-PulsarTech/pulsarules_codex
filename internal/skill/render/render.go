@@ -24,9 +24,27 @@ func NewRenderer(templates fs.FS) (*Renderer, error) {
 	return &Renderer{base: base}, nil
 }
 
-// Render produces one skill, merging its composed rules/patterns section-by-section
-// (or rendering them per-source when the skill opts out of merging).
+// Render produces one skill as SKILL.md, merging its composed rules/patterns
+// section-by-section (or rendering them per-source when the skill opts out of
+// merging).
 func (r *Renderer) Render(idx *knowledge.Index, skill knowledge.Skill) (string, error) {
+	return r.renderSkill(idx, skill, "SKILL.md.tmpl")
+}
+
+// RenderCursorRule produces one skill as a Cursor .mdc rule: the same body
+// Render produces, wrapped in Cursor's description/globs/alwaysApply
+// frontmatter (the "mdcFrontmatter" partial) instead of SKILL.md's
+// name/description block, so a skill's content never diverges between
+// hosts - only the frontmatter adapts to the target.
+func (r *Renderer) RenderCursorRule(idx *knowledge.Index, skill knowledge.Skill) (string, error) {
+	return r.renderSkill(idx, skill, "SKILL.mdc.tmpl")
+}
+
+// renderSkill is the shared body behind Render and RenderCursorRule, which
+// differ only in which top-level template renders the shared skillDoc.
+func (r *Renderer) renderSkill(
+	idx *knowledge.Index, skill knowledge.Skill, tmplName string,
+) (string, error) {
 	sidecar, err := renderSidecar(idx.Body("skills", skill.ID))
 	if err != nil {
 		return "", fmt.Errorf("skill %q sidecar: %w", skill.ID, err)
@@ -38,7 +56,7 @@ func (r *Renderer) Render(idx *knowledge.Index, skill knowledge.Skill) (string, 
 		Sidecar:       sidecar,
 		Linters:       composedLinters(idx, skill),
 	}
-	sources, err := r.mergeSources(idx, skill)
+	sources, err := mergeSources(idx, skill)
 	if err != nil {
 		return "", err
 	}
@@ -54,38 +72,8 @@ func (r *Renderer) Render(idx *knowledge.Index, skill knowledge.Skill) (string, 
 		return "", err
 	}
 	var buf bytes.Buffer
-	if execErr := r.base.ExecuteTemplate(&buf, "SKILL.md.tmpl", doc); execErr != nil {
+	if execErr := r.base.ExecuteTemplate(&buf, tmplName, doc); execErr != nil {
 		return "", fmt.Errorf("render skill %q: %w", skill.ID, execErr)
-	}
-	return buf.String(), nil
-}
-
-// RenderRouter produces the project-router skill filtered to installed skills;
-// an empty installed list renders the full router.
-func (r *Renderer) RenderRouter(idx *knowledge.Index, installed []string) (string, error) {
-	router, ok := idx.Skill("project-router")
-	if !ok {
-		return "", fmt.Errorf("missing project-router skill")
-	}
-	keep := installFilter(installed)
-	doc := routerDoc{
-		ID: router.ID, Name: router.Name, Description: router.Description,
-		Baseline:        filterBaseline(idx.Router.Baseline, keep),
-		Dispatch:        filterDispatch(idx.Router.Dispatch, keep),
-		Order:           filterOrder(idx.Router.Order, keep),
-		ShowTestCallout: keep("integration-tests"),
-	}
-	for _, skill := range idx.SkillsOrdered() {
-		if skill.ID == "project-router" || !keep(skill.ID) {
-			continue
-		}
-		doc.AvailableSkills = append(doc.AvailableSkills, skillSummary{
-			ID: skill.ID, Description: knowledge.FirstSentence(skill.Description),
-		})
-	}
-	var buf bytes.Buffer
-	if err := r.base.ExecuteTemplate(&buf, "router.md.tmpl", doc); err != nil {
-		return "", fmt.Errorf("render router: %w", err)
 	}
 	return buf.String(), nil
 }
@@ -100,6 +88,19 @@ func (r *Renderer) RenderSkill(
 		return r.RenderRouter(idx, installed)
 	}
 	return r.Render(idx, skill)
+}
+
+// RenderSkillCursor is RenderSkill's Cursor counterpart: it dispatches to
+// RenderCursorRouter for project-router and RenderCursorRule for all others.
+func (r *Renderer) RenderSkillCursor(
+	idx *knowledge.Index,
+	skill knowledge.Skill,
+	installed []string,
+) (string, error) {
+	if skill.ID == "project-router" {
+		return r.RenderCursorRouter(idx, installed)
+	}
+	return r.RenderCursorRule(idx, skill)
 }
 
 // RenderWorkflow renders one workflow into a WORKFLOW.md string.
@@ -140,13 +141,16 @@ func (r *Renderer) RenderWorkflow(idx *knowledge.Index, wf knowledge.Workflow) (
 	return buf.String(), nil
 }
 
-// composedLinters gathers the linters of a skill's composed rules for the footer.
+// composedLinters gathers the linters of a skill's composed rules for the
+// footer, de-duplicated in first-seen order via appendUnseen (compose.go):
+// two composed rules commonly name the same linter.
 func composedLinters(idx *knowledge.Index, skill knowledge.Skill) []string {
 	var linters []string
+	seen := map[string]bool{}
 	for _, entry := range skill.ComposeRules {
 		id, _, _ := strings.Cut(entry, "#")
 		if rule, ok := idx.Rule(id); ok {
-			linters = append(linters, rule.Linters...)
+			linters = appendUnseen(linters, seen, rule.Linters)
 		}
 	}
 	return linters

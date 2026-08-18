@@ -22,12 +22,23 @@ type RuleConfig struct {
 	RejectToolTrailers bool
 }
 
+const (
+	defaultMaxSubjectLen  = 72
+	defaultMaxBodyLineLen = 100
+	defaultMaxBodyLen     = 150
+
+	// typicalFindingCapacity sizes a findings slice for the common case: a
+	// commit trips at most a handful of the rule/emoji checks, so this
+	// avoids slice growth without over-allocating for the rare bad commit.
+	typicalFindingCapacity = 8
+)
+
 // DefaultRuleConfig returns the default commit validation thresholds.
 func DefaultRuleConfig() RuleConfig {
 	return RuleConfig{
-		MaxSubjectLen:      72,
-		MaxBodyLineLen:     100,
-		MaxBodyLen:         150,
+		MaxSubjectLen:      defaultMaxSubjectLen,
+		MaxBodyLineLen:     defaultMaxBodyLineLen,
+		MaxBodyLen:         defaultMaxBodyLen,
 		RequireEmoji:       true,
 		RejectToolTrailers: true,
 	}
@@ -102,7 +113,7 @@ var (
 // findings. Special cases (initial commit, merge, WIP) are exempt from
 // type/emoji requirements.
 func Validate(msg commitmsg.Message, cfg RuleConfig) []core.Finding {
-	findings := make([]core.Finding, 0, 8)
+	findings := make([]core.Finding, 0, typicalFindingCapacity)
 
 	rawAfterEmoji := strings.TrimSpace(msg.Raw)
 	for _, e := range msg.Emojis {

@@ -24,6 +24,23 @@ Reference tools: `sqlc` `Queries.WithTx`; a small tx helper package.
 - Implementing a unit-of-work `Tx` port.
 {{end}}
 
+{{define "must"}}
+1. Run any use case doing two or more writes (including a business write plus its outbox event) in
+   exactly one transaction - either all land or none. A single write uses the implicit per-statement
+   transaction.
+2. Publish the outbox event in the SAME transaction as the business write (see [[eventing-outbox]]).
+3. Form A (simple `Transactioner`, one repo, a couple of writes): the repo's `BeginTx` swaps its
+   `*Queries` onto the tx and returns a finisher `func(commit bool) error` that restores the saved
+   queries and commits or rolls back. Assert `var _ tx.Transactioner = (*Repo)(nil)`.
+4. In the use case, drive commit-on-success / rollback-on-error with `defer` keyed on the named return
+   error: `defer func() { err = errors.Join(err, onFinish(err == nil)) }()`.
+5. Form B (multi-step flows): the repo's `Begin(ctx)` returns a domain `Tx` interface (declared by the
+   consuming use case) exposing only the writes it performs plus `Commit`/`Rollback`.
+6. Fold the rollback error with `errors.Join`; ignore `sql.ErrTxDone` on rollback.
+7. Register a tx-carrying repo as a `Factory`, never a singleton (it holds swap-in-place or tx state).
+8. Cover commit and rollback paths with integration tests against a real DB.
+{{end}}
+
 {{define "recipe"}}
 Form A - simple `Transactioner` (one repo, a couple of writes). The repo swaps its queries onto the
 tx and returns a finisher:

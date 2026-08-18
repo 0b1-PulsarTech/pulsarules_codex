@@ -33,7 +33,6 @@ type Status struct {
 	Changes []Change
 }
 
-// IsClean reports whether no path differs from HEAD.
 func (s Status) IsClean() bool {
 	return len(s.Changes) == 0
 }
@@ -72,6 +71,11 @@ func (r *repository) WorktreeStatus() (Status, error) {
 	return parseStatus(out), nil
 }
 
+// porcelainPrefixLength is the width of the "XY " status-code prefix that
+// `git status --porcelain` puts before every path: two status bytes plus one
+// separating space.
+const porcelainPrefixLength = 3
+
 func parseStatus(out string) Status {
 	if out == "" {
 		return Status{}
@@ -80,7 +84,7 @@ func parseStatus(out string) Status {
 	lines := strings.Split(out, "\n")
 	changes := make([]Change, 0, len(lines))
 	for _, line := range lines {
-		if len(line) < 3 {
+		if len(line) < porcelainPrefixLength {
 			continue
 		}
 		changes = append(changes, parseStatusLine(line))
@@ -92,7 +96,7 @@ func parseStatus(out string) Status {
 // the plain "XY path" form, so the split-on-arrow branch below is required.
 func parseStatusLine(line string) Change {
 	staging, worktree := line[0], line[1]
-	path, oldPath := line[3:], ""
+	path, oldPath := line[porcelainPrefixLength:], ""
 	if before, after, found := strings.Cut(path, " -> "); found {
 		oldPath, path = before, after
 	}

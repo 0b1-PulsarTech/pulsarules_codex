@@ -1,5 +1,7 @@
 # AGENTS.md - {{.ProjectName}}
 
+<!-- Installed by pulsarules_cli; re-run install to update, do not hand-edit. -->
+
 Entry point for human contributors and AI agents working on this repository.
 
 > **Rules tell you what. Patterns show you how.**
@@ -11,20 +13,20 @@ Entry point for human contributors and AI agents working on this repository.
 ## Engineering standards
 
 This project follows the cross-project engineering standards from `pulsarules_codex` (rules,
-patterns, workflows), rendered as skills under `{{.SkillsDir}}/`. When a rule or pattern is
-ambiguous, fall back to the Effective Go / Code Review Comments baseline.
+patterns, workflows), summarized as the skill list below. When this project also installs a
+tool-specific layout (`pulsarules_cli install --target claude` renders `.claude/skills/`,
+`--target opencode` renders `.opencode/skills/`), each skill's full instructions live there as
+`<id>/SKILL.md`. When a rule or pattern is ambiguous, fall back to the Effective Go / Code Review
+Comments baseline.
 
 ## Mandatory routing contract (read before any Go/SQL/config change)
 
-opencode has no SessionStart hook, so this contract is stated here instead: ANY Go/SQL/config change
-MUST begin by consulting the `project-router` skill (`{{.SkillsDir}}/project-router/SKILL.md`):
-classify the task against its dispatch table, LOAD every matched skill, and APPLY each skill's rules
-WHILE writing (not as an afterthought). Baseline always applies: `go-style`, `errors-logging`,
-`code-placement`, `code-minimalism`. Load `integration-tests` for ANY `_test.go`. Tests are
-same-package, one `_test.go` per source file, table-driven (`testCases`/`testCase`, never `tt`),
-cover every failure path, and use `testing/synctest` for time (never a `now func()` clock field). No
-em dash (U+2014) in `.go`. Before committing, run each loaded skill's Validation checklist and the
-verify suite (`go build && go vet && go test -race`, golangci-lint, `gofmt -l`).
+This contract is stated here directly, not just left inside the skills, because AGENTS.md may be
+the only file a given host agent reads at all. It is rendered from the exact same source as the
+`SessionStart` and `SubagentStart` hooks' contract text, so this copy cannot drift from what an
+agent sees at runtime:
+
+> {{.Contract}}
 
 ## Available skills
 {{- range .Skills}}

@@ -84,27 +84,27 @@ func parseLevel(raw string) (slog.Level, error) {
 // missing file is not an error - New goes on to create it fresh.
 func truncateToTail(path string, maxBytes int64) error {
 	//nolint:gosec // path is caller-controlled, under .claude by convention.
-	data, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}
 		return fmt.Errorf("read log file: %w", err)
 	}
-	if int64(len(data)) <= maxBytes {
+	if int64(len(raw)) <= maxBytes {
 		return nil
 	}
 
-	keepFrom := max(len(data)-int(maxBytes/2), 0)
-	idx := bytes.IndexByte(data[keepFrom:], '\n')
+	keepFrom := max(len(raw)-int(maxBytes/2), 0)
+	idx := bytes.IndexByte(raw[keepFrom:], '\n')
 	if idx == -1 {
 		// simplification: the kept region has no newline (its one line is
 		// larger than maxBytes/2); keep the whole file rather than cut it
-		// mid-line. The upgrade path is a byte-budget line splitter, not
-		// needed while hook records stay one compact JSON line each.
+		// mid-line. Upgrade path: add a byte-budget line splitter if hook
+		// records stop being one compact JSON line each.
 		return nil
 	}
-	tail := data[keepFrom+idx+1:]
+	tail := raw[keepFrom+idx+1:]
 	//nolint:gosec // path is caller-controlled, under .claude by convention.
 	if err = os.WriteFile(path, tail, fsperm.FilePrivate); err != nil {
 		return fmt.Errorf("write truncated log file: %w", err)

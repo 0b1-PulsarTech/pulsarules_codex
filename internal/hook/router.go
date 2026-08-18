@@ -78,6 +78,8 @@ func (r *Router) dispatchSkills(keyword string) []string {
 // contains ext as a prefix (".sql" inside a hypothetical ".sqlite" trigger);
 // the ceiling is acceptable while triggers stay hand-authored prose. A skill
 // needing precise disambiguation should phrase its trigger to avoid it.
+// Upgrade path: revisit if prefix collisions become common enough that
+// authors can't phrase around them; switch to exact suffix/word matching.
 func triggersName(triggers []string, ext string) bool {
 	for _, trigger := range triggers {
 		if strings.Contains(strings.ToLower(trigger), ext) {

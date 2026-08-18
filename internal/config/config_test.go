@@ -18,9 +18,6 @@ func TestDefaults(t *testing.T) {
 	if cfg.Emoji.SoftWindowSize <= cfg.Emoji.WindowSize {
 		t.Error("the advisory window must reach past the blocking one")
 	}
-	if !cfg.Hooks.InstallCommitMsg {
-		t.Error("InstallCommitMsg should be true by default")
-	}
 }
 
 func TestIsEnabled(t *testing.T) {

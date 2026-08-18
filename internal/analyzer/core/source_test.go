@@ -30,6 +30,7 @@ func TestFileSourceProvider_WalkSkipsExcludedDirs(t *testing.T) {
 	writeTestFile(t, dir, "generated/claude/skills/foo/SKILL.md", "# foo\n")
 	writeTestFile(t, dir, "build/bin/tool", "binary\n")
 	writeTestFile(t, dir, "vendor/pkg/pkg.go", "package pkg\n")
+	writeTestFile(t, dir, "testdata/golden/case/fixture.go", "package fixture\n")
 	writeTestFile(t, dir, "internal/real.go", "package internal\n")
 
 	provider := NewSourceProvider(dir)

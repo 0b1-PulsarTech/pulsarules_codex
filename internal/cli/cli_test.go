@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -51,6 +52,25 @@ func TestRunCommitLint_ReturnsExitError(t *testing.T) {
 	}
 	if exitErr.Code != 1 {
 		t.Fatalf("Code = %d, want 1", exitErr.Code)
+	}
+}
+
+// TestRun_UninstallDispatch proves Run wires "uninstall" to uninstall.Run
+// (not just "install"): a missing --global/--project fails through the same
+// BaseDir validation install uses, wrapped with the "uninstall:" prefix.
+func TestRun_UninstallDispatch(t *testing.T) {
+	t.Parallel()
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+	err := Run(inj, &cliopts.Options{Command: "uninstall"})
+	if err == nil {
+		t.Fatal("expected an error: uninstall requires --global or --project")
+	}
+	if !strings.HasPrefix(err.Error(), "uninstall:") {
+		t.Errorf("error should carry the uninstall: prefix, got %v", err)
 	}
 }
 
@@ -127,7 +147,7 @@ func TestResolveProjectDir(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Setenv("CLAUDE_PROJECT_DIR", testCase.envDir)
+			t.Setenv("PULSARULES_PROJECT_DIR", testCase.envDir)
 			if got := resolveProjectDir(testCase.opts); got != testCase.want {
 				t.Errorf("resolveProjectDir() = %q, want %q", got, testCase.want)
 			}
@@ -137,13 +157,13 @@ func TestResolveProjectDir(t *testing.T) {
 
 func TestResolveLogPath(t *testing.T) {
 	t.Run("unset env leaves the path to obs", func(t *testing.T) {
-		t.Setenv("CLAUDE_PROJECT_DIR", "")
+		t.Setenv("PULSARULES_PROJECT_DIR", "")
 		if got := resolveLogPath(); got != "" {
 			t.Errorf("resolveLogPath() = %q, want empty", got)
 		}
 	})
 	t.Run("set env lands under .claude", func(t *testing.T) {
-		t.Setenv("CLAUDE_PROJECT_DIR", "/proj")
+		t.Setenv("PULSARULES_PROJECT_DIR", "/proj")
 		want := filepath.Join("/proj", ".claude", "hook-execution.log")
 		if got := resolveLogPath(); got != want {
 			t.Errorf("resolveLogPath() = %q, want %q", got, want)

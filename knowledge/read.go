@@ -21,6 +21,7 @@ func readIndex(standards fs.FS) (*Index, error) {
 		profileByID:   map[string]Profile{},
 		referenceByID: map[string]Reference{},
 		bodies:        map[string]string{},
+		summaries:     map[string]string{},
 	}
 	kindLoaders := []struct {
 		kind string
@@ -28,17 +29,20 @@ func readIndex(standards fs.FS) (*Index, error) {
 	}{
 		{"rules", func(fsys fs.FS) error {
 			return readKind(fsys, "rules", kindSink[Rule]{
-				items: &idx.Rules, byID: idx.ruleByID, bodies: idx.bodies, idOf: ruleID,
+				items: &idx.Rules, byID: idx.ruleByID,
+				bodies: idx.bodies, summaries: idx.summaries, idOf: ruleID,
 			})
 		}},
 		{"patterns", func(fsys fs.FS) error {
 			return readKind(fsys, "patterns", kindSink[Pattern]{
-				items: &idx.Patterns, byID: idx.patternByID, bodies: idx.bodies, idOf: patternID,
+				items: &idx.Patterns, byID: idx.patternByID,
+				bodies: idx.bodies, summaries: idx.summaries, idOf: patternID,
 			})
 		}},
 		{"workflows", func(fsys fs.FS) error {
 			return readKind(fsys, "workflows", kindSink[Workflow]{
-				items: &idx.Workflows, byID: idx.workflowByID, bodies: idx.bodies, idOf: workflowID,
+				items: &idx.Workflows, byID: idx.workflowByID,
+				bodies: idx.bodies, summaries: idx.summaries, idOf: workflowID,
 			})
 		}},
 	}

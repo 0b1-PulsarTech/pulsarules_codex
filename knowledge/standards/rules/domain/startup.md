@@ -49,7 +49,7 @@ Applies to: process startup and package initialization.
 
 {{define "validation"}}
 - [ ] No side effects at import/`init()`; only driver registration / interface assertions.
-- [ ] `main()` is thin and follows the config -> DB -> injector -> migrations -> server sequence.
+- [ ] `main()` is thin and follows the config -> DB -> migrations -> injector -> server sequence.
 - [ ] No package-level mutable state; singletons in the injector.
 - [ ] `slog.SetDefault` set in `main()` first.
 {{end}}

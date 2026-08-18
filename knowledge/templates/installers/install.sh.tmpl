@@ -3,9 +3,9 @@
 # into a project's .claude/skills, installs the skill-router reminder hook into
 # .claude/hooks, idempotently wires it into a settings file, and (when gopls is on
 # PATH) wires the gopls MCP into .mcp.json plus a generated gopls-navigation skill.
-# Prefer the Go installer (`pulsarules_codex-installer install`), which renders
+# Prefer the Go installer (`pulsarules_cli install`), which renders
 # skills from the knowledge base; this script only copies already-generated output
-# (run `pulsarules_codex-installer generate` first, or use the committed output).
+# (run `pulsarules_cli generate` first, or use the committed output).
 #
 # Requires: bash, jq, cp, chmod. No node.
 set -euo pipefail
@@ -55,7 +55,7 @@ while [ $# -gt 0 ]; do
 done
 
 [ -n "$CLAUDE_DIR" ] || usage
-[ -d "$SRC" ] || { echo "missing $SRC - run 'pulsarules_codex-installer generate' first"; exit 1; }
+[ -d "$SRC" ] || { echo "missing $SRC - run 'pulsarules_cli generate' first"; exit 1; }
 case "$HOOKS_SCOPE" in
   project) SETTINGS_FILE="settings.json";;
   local)   SETTINGS_FILE="settings.local.json";;
@@ -113,7 +113,10 @@ cp "$HOOKS_SRC/README.md" "$hooks_dst/"
 
 # Merge the hooks block idempotently: drop any prior skill-router-reminder entries,
 # then append the fresh ones, preserving permissions / enabledMcpjsonServers /
-# unrelated hooks. The hook command resolves the project root via $CLAUDE_PROJECT_DIR.
+# unrelated hooks. The wired command locates the hook script via
+# $CLAUDE_PROJECT_DIR (a Claude Code variable); the script itself exports
+# PULSARULES_PROJECT_DIR and PULSARULES_SKILLS_DIR, the only variables the
+# binary reads.
 hooks_json="$(jq -c '.' "$HOOKS_SRC/settings.hooks.json.tmpl")"
 settings="$CLAUDE_DIR/$SETTINGS_FILE"
 if [ -f "$settings" ]; then

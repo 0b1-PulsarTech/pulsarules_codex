@@ -1,0 +1,12 @@
+{
+  "findings": [],
+  "suppressedGenerated": 1,
+  "includeGeneratedFindings": [
+    {
+      "analyzerId": "no-em-dash",
+      "file": "gen/gen.go",
+      "line": 10,
+      "messageSubstring": "em-dash"
+    }
+  ]
+}

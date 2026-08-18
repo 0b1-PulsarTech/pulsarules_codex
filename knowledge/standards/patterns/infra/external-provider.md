@@ -26,8 +26,24 @@ Reference tools: the HTTP gateway pattern ([[http-clients]]); `remy` DI; an ID g
 - Onboarding a Strategy implementation behind a port.
 {{end}}
 
+{{define "must"}}
+1. Implement the external integration as a `Strategy` port: the concrete HTTP implementation
+   satisfies `domain.Strategy`, the only integration point the use case depends on.
+2. Place the provider package under `internal/infra/fetchers/<name>fetch/` (or
+   `internal/infra/providers/<name>/`) with the fixed file set: `fetcher.go`, `client.go`, `url.go`,
+   `dto.go`, `mapper.go`, `di.go`, `doc.go`.
+3. Keep the provider's API DTOs (`dto.go`) package-local; never export them.
+4. Isolate DTO-to-domain conversion in `mapper.go`.
+5. Register both the concrete `*Fetcher` and the `domain.Strategy` binding it satisfies in `di.go`.
+6. Declare each provider through a `[[providers]]` config table (`code`, `enabled`, `base_url`,
+   `language`) instead of wiring it in code.
+7. List the provider's endpoints in `doc.go`'s package comment.
+8. Wrap the provider's calls with a retry/backoff Decorator over the port when it can fail transiently
+   (see [[retry-backoff]]); keep the use case unaware of retry.
+{{end}}
+
 {{define "recipe"}}
-Package layout:
+Package layout (or `internal/infra/providers/<name>/` in a single-module repo):
 
 ```
 internal/infra/fetchers/<name>fetch/
@@ -109,12 +125,14 @@ language = "en"
 - Hardcoded URLs or language outside `url.go`/config.
 - Exported DTOs; mapping outside `mapper.go`.
 - A `switch code` inside the fetcher package (bootstrap owns it).
-- HTTP calls outside the gateway.
+- HTTP calls outside the gateway; retries hidden inside the gateway/fetcher.
+- Leaking provider DTOs into the domain.
 {{end}}
 
 {{define "validation"}}
 - [ ] Fixed file set; DTOs unexported; mapping in `mapper.go`; `doc.go` lists endpoints.
 - [ ] DI registers concrete + Strategy bindings; bootstrap switches on code.
 - [ ] `mapper.go` has table-driven tests (happy path + one edge case).
-- [ ] No hardcoded URL/language; HTTP only via the gateway.
+- [ ] No hardcoded URL/language; HTTP only via the gateway; cache consulted at the call site.
+- [ ] Transient failures handled by a retry Decorator over the port, not inside the fetcher.
 {{end}}

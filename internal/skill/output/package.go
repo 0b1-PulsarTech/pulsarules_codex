@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
@@ -16,7 +17,7 @@ import (
 // then removes the partial file so a failed run never leaves a corrupt zip
 // behind at outPath.
 func Package(idx *knowledge.Index, rnd *render.Renderer, outPath string) (err error) {
-	if mkdirErr := os.MkdirAll(path.Dir(outPath), fsperm.DirPrivate); mkdirErr != nil {
+	if mkdirErr := os.MkdirAll(filepath.Dir(outPath), fsperm.DirPrivate); mkdirErr != nil {
 		return fmt.Errorf("mkdir: %w", mkdirErr)
 	}
 	//nolint:gosec // outPath is a caller-supplied output destination.
@@ -43,6 +44,8 @@ func Package(idx *knowledge.Index, rnd *render.Renderer, outPath string) (err er
 		if renderErr != nil {
 			return fmt.Errorf("render %q: %w", skill.ID, renderErr)
 		}
+		// why: a zip entry name must use forward slashes regardless of OS, so
+		// this join stays "path", not "path/filepath".
 		entry, entryErr := writer.Create(path.Join(skill.ID, "SKILL.md"))
 		if entryErr != nil {
 			return fmt.Errorf("create entry %q: %w", skill.ID, entryErr)
