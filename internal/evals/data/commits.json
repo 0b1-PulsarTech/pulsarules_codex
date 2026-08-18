@@ -1,0 +1,98 @@
+{
+  "skill": "commits",
+  "version": "1.0.0",
+  "scenarios": [
+    {
+      "id": "co-authored-trailer",
+      "description": "AI-assisted commits get no exception from the no-tool-attribution-trailer rule.",
+      "prompt": "Write the commit message for a change that fixes a nil-pointer panic in internal/billing/invoice.go when the customer record is missing. This change was AI-assisted.",
+      "trap": "Model appends a Co-Authored-By: Claude <...> or Claude-Session: trailer because the change was AI-assisted, even though the commits rule forbids any tool-attribution trailer unconditionally, with no AI exception.",
+      "assertions": [
+        {
+          "id": "1.1",
+          "text": "No Co-Authored-By trailer is appended",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "Co-Authored-By" }
+        },
+        {
+          "id": "1.2",
+          "text": "No Claude-Session trailer is appended",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "Claude-Session" }
+        },
+        {
+          "id": "1.3",
+          "text": "The subject line matches :emoji: type: Uppercase-subject, using the fix type",
+          "kind": "machine",
+          "check": { "type": "regex_match", "pattern": "^:\\w+:\\s+fix(\\([\\w-]+\\))?:\\s+[A-Z]" }
+        },
+        {
+          "id": "1.4",
+          "text": "The chosen emoji is from the fix-area family (e.g. :bug:, :ambulance:, :beetle:, :skull:), not an arbitrary or prohibited one",
+          "kind": "judge"
+        }
+      ]
+    },
+    {
+      "id": "prohibited-emoji",
+      "description": "The obvious test emoji is on the prohibited list; the catalog's test family must be used instead.",
+      "prompt": "Write the commit message for adding the first batch of unit tests to the previously-untested pricing package.",
+      "trap": "Model reaches for :test_tube: (visually the obvious 'test' emoji), or :sparkles:/:robot:/:compass:, all of which are explicitly prohibited by the catalog regardless of how well they fit the change.",
+      "assertions": [
+        {
+          "id": "2.1",
+          "text": "The message does not use :test_tube:",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": ":test_tube:" }
+        },
+        {
+          "id": "2.2",
+          "text": "The message does not use :robot:",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": ":robot:" }
+        },
+        {
+          "id": "2.3",
+          "text": "The message does not use :sparkles:",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": ":sparkles:" }
+        },
+        {
+          "id": "2.4",
+          "text": "The message does not use :compass:",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": ":compass:" }
+        },
+        {
+          "id": "2.5",
+          "text": "The message uses an emoji from the test-area family instead (:tea:, :microscope:, :hourglass:, :white_check_mark:, :telescope:)",
+          "kind": "judge"
+        }
+      ]
+    },
+    {
+      "id": "mixed-move-and-edit",
+      "description": "A rename plus a behavior change must split into a pure move commit first, then the edit.",
+      "prompt": "You renamed internal/notify/sender.go to internal/notify/dispatcher.go AND changed Sender.Send to also retry once on a transient error, in the same working-tree diff. Describe how to commit this.",
+      "trap": "Model proposes committing the rename and the retry-logic edit together in one commit, instead of splitting: a pure move/rename commit first (package clause/import-path fixes only), then a separate commit for the retry-logic edit.",
+      "assertions": [
+        {
+          "id": "3.1",
+          "text": "No tool-attribution trailer is proposed for either commit",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "Co-Authored-By" }
+        },
+        {
+          "id": "3.2",
+          "text": "Recommends two commits: a pure rename first, then a separate commit for the retry logic",
+          "kind": "judge"
+        },
+        {
+          "id": "3.3",
+          "text": "States why: a mixed diff hides the edit inside the rename and degrades git's rename detection",
+          "kind": "judge"
+        }
+      ]
+    }
+  ]
+}

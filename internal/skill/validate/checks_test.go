@@ -49,12 +49,12 @@ func TestRuleSummaries(t *testing.T) {
 // backs the "passing" row of every fabricated-failing/passing check test: the
 // embedded base is the project's own clean contract, so a check that stays
 // silent on it is proven not to false-positive on legitimate data.
-func embeddedIndex(t testing.TB) *knowledge.Index {
-	t.Helper()
+func embeddedIndex(tb testing.TB) *knowledge.Index {
+	tb.Helper()
 
 	idx, _, err := knowledge.Load("")
 	if err != nil {
-		t.Fatalf("Load: %v", err)
+		tb.Fatalf("Load: %v", err)
 	}
 	return idx
 }

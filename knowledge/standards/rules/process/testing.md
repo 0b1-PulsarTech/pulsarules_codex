@@ -5,6 +5,8 @@ description: Colocated same-package tests (no black-box _test packages), one _te
 tags:
     - go
     - testing
+analyzers:
+    - time-discipline
 ---
 
 # Testing

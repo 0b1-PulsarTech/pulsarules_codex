@@ -41,12 +41,11 @@ func (d *Dispatcher) Dispatch(mode string, payload []byte) error {
 	case "subagent-start":
 		err = d.emitSubagentStart()
 	case "subagent-stop":
-		// Deliberately silent. A subagent must not commit (git stays in the
-		// main session, per the agent-orchestration skill), so a dirty-tree
-		// block aimed at it only derails the work it was spawned to do. Not
-		// wired into the installed settings template - Claude Code fires no
-		// SubagentStop event, so nothing ever dispatches this mode today.
-		// The case stays as a defensive no-op against a future/legacy caller.
+		// Deliberately silent: a subagent must not commit (git stays in the
+		// main session), so a dirty-tree block aimed at it only derails its
+		// work. Not wired into settings - Claude Code fires no SubagentStop
+		// event, so nothing dispatches this mode today; kept as a defensive
+		// no-op against a future/legacy caller.
 	case "session-end":
 		session.Cleanup()
 	}
@@ -115,7 +114,7 @@ func (d *Dispatcher) record(
 func filterInstalled(ids []string, skillsDir string) []string {
 	out := make([]string, 0, len(ids))
 	for _, id := range ids {
-		//nolint:gosec // path is under PULSARULES_SKILLS_DIR, a hook-provided skills root.
+		// why: skillsDir is under PULSARULES_SKILLS_DIR, a hook-provided skills root.
 		if _, err := os.Stat(filepath.Join(skillsDir, id, "SKILL.md")); err == nil {
 			out = append(out, id)
 		}

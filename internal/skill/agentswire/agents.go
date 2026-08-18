@@ -23,16 +23,11 @@ type skillRef struct {
 	ID, Description string
 }
 
-// simplification: the template's "## Stop signs" section still hardcodes
-// nine prohibitions by hand, duplicating `forbidden` clauses that already
-// live across knowledge/standards/rules/**, instead of deriving from them
-// like the routing contract above now does. Deriving it needs a renderer
-// that walks every rule's forbidden section, selects the stop-sign-worthy
-// subset, and dedupes wording - a bigger change than unifying the routing
-// contract this package renders. Upgrade path: build that renderer (likely
-// in internal/skill/render, which already walks rule bodies for clauselint)
-// once the two copies are caught disagreeing, or once a second stop-sign
-// consumer needs the same list.
+// simplification: "## Stop signs" hardcodes nine prohibitions instead of
+// deriving them from `forbidden` clauses across knowledge/standards/rules/**,
+// since that needs a renderer walking every rule's forbidden section.
+// Upgrade path: build that renderer (internal/skill/render) once the two
+// copies disagree or a second stop-sign consumer needs the list.
 type agentsDoc struct {
 	ProjectName        string
 	ProjectDescription string
@@ -40,16 +35,11 @@ type agentsDoc struct {
 	Skills             []skillRef
 }
 
-// WriteAgents renders the AGENTS.md template into <projectDir>/AGENTS.md,
-// listing the selected skills (ids) and folding in the mandatory routing
-// contract. It is the one builder every install target that wants AGENTS.md
-// at the project root calls (opencode's and the thin agents-only layout), so
-// the file can never diverge between them: one root AGENTS.md, not one per
-// layout. It reports whether it wrote the file: a root AGENTS.md already
-// present without marker.Installed is a user's own file - a name they very
-// plausibly own already - so WriteAgents leaves it untouched rather than
-// clobbering it, the same ownership discipline RemoveAgents applies to
-// deletion.
+// WriteAgents renders AGENTS.md into <projectDir>/AGENTS.md, listing the
+// selected skills and folding in the mandatory routing contract. Every
+// target wanting a root AGENTS.md calls this one builder so it can never
+// diverge between layouts. An existing AGENTS.md without marker.Installed
+// is the user's own file and is left untouched, per RemoveAgents.
 func WriteAgents(
 	templates fs.FS, projectDir string, idx *knowledge.Index, ids []string,
 ) (wrote bool, err error) {
@@ -87,20 +77,18 @@ func WriteAgents(
 	if err = os.MkdirAll(projectDir, fsperm.DirPrivate); err != nil {
 		return false, fmt.Errorf("mkdir %q: %w", projectDir, err)
 	}
-	//nolint:gosec // path is under the caller's project dir.
+	// why: path is under the caller's project dir.
 	if err = os.WriteFile(path, buf.Bytes(), fsperm.FilePrivate); err != nil {
 		return false, fmt.Errorf("write %q: %w", path, err)
 	}
 	return true, nil
 }
 
-// skillRefs lists the selected skills (ids) in composition order, each
-// reduced to its id and the first sentence of its description. It is scoped
-// to ids rather than the whole catalog: AGENTS.md now lives at the project
-// root, where a skill listed but never rendered anywhere on disk (the thin
-// agents target writes nothing else) would be a dead reference no host could
-// follow, and the scoping also keeps the file honest about what a --skills
-// subset actually installed.
+// skillRefs reduces the selected skills to id and description's first
+// sentence, in composition order. Scoped to ids rather than the whole
+// catalog: since AGENTS.md lives at the project root, a skill listed but
+// never rendered elsewhere would be a dead reference, and scoping keeps the
+// file honest about what a --skills subset installed.
 func skillRefs(idx *knowledge.Index, ids []string) []skillRef {
 	selected := make(map[string]bool, len(ids))
 	for _, id := range ids {

@@ -66,18 +66,18 @@ func TestProfileOverrides(t *testing.T) {
 // with an empty body ("hollow-rule"), and two profiles overriding base-skill:
 // "good" to solid-rule (resolves cleanly) and "empty-ref" to hollow-rule
 // (composes a rule loaded with no body).
-func newProfileOverridesFixture(t testing.TB) *knowledge.Index {
-	t.Helper()
+func newProfileOverridesFixture(tb testing.TB) *knowledge.Index {
+	tb.Helper()
 
-	root := t.TempDir()
+	root := tb.TempDir()
 	standards := filepath.Join(root, "knowledge", "standards")
 	for _, dir := range []string{"rules", "patterns", "workflows"} {
 		if err := os.MkdirAll(filepath.Join(standards, dir), 0o755); err != nil {
-			t.Fatalf("mkdir %s: %v", dir, err)
+			tb.Fatalf("mkdir %s: %v", dir, err)
 		}
 	}
 
-	writeFixtureFile(t, filepath.Join(standards, "rules", "solid-rule.md"), `---
+	writeFixtureFile(tb, filepath.Join(standards, "rules", "solid-rule.md"), `---
 id: solid-rule
 name: Solid Rule
 description: fixture rule carrying a real body
@@ -92,18 +92,18 @@ Do the fixture thing.
 	// hollow-rule ends on the closing frontmatter fence with no body content,
 	// so idx.Body("rules", "hollow-rule") loads as "" - a rule that exists but
 	// carries nothing to compose.
-	writeFixtureFile(t, filepath.Join(standards, "rules", "hollow-rule.md"), `---
+	writeFixtureFile(tb, filepath.Join(standards, "rules", "hollow-rule.md"), `---
 id: hollow-rule
 name: Hollow Rule
 description: fixture rule carrying an empty body
 ---`)
-	writeFixtureFile(t, filepath.Join(standards, "skills.yaml"), `skills:
+	writeFixtureFile(tb, filepath.Join(standards, "skills.yaml"), `skills:
   - id: base-skill
     name: Base Skill
     description: fixture skill a profile overrides
     compose_rules: [solid-rule]
 `)
-	writeFixtureFile(t, filepath.Join(standards, "profiles.yaml"), `profiles:
+	writeFixtureFile(tb, filepath.Join(standards, "profiles.yaml"), `profiles:
   - id: good
     axis: fixture-axis
     description: overrides base-skill to a rule with a real body
@@ -120,7 +120,7 @@ description: fixture rule carrying an empty body
 
 	idx, _, err := knowledge.Load(root)
 	if err != nil {
-		t.Fatalf("Load fixture: %v", err)
+		tb.Fatalf("Load fixture: %v", err)
 	}
 	return idx
 }

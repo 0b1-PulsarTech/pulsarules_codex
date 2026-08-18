@@ -99,6 +99,7 @@ func TestCheckFile(t *testing.T) {
 
 	for _, testCase := range checkFileTestCases() {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			cache, f := parseSourceFile(t, testCase.source)
 			fc := core.FileChange{Path: "foo.go", Extension: ".go"}
 			got := th.checkFile(cache.FileSet(), fc, f)
@@ -222,8 +223,12 @@ func TestCyclomaticComplexity(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			_, f := parseSourceFile(t, testCase.source)
-			fn := f.Decls[0].(*ast.FuncDecl)
+			fn, ok := f.Decls[0].(*ast.FuncDecl)
+			if !ok {
+				t.Fatalf("Decls[0] = %T, want *ast.FuncDecl", f.Decls[0])
+			}
 			got := cyclomaticComplexity(fn)
 			if got != testCase.want {
 				t.Fatalf("got complexity %d, want %d", got, testCase.want)
@@ -247,8 +252,12 @@ func TestCountParams(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			_, f := parseSourceFile(t, testCase.source)
-			fn := f.Decls[0].(*ast.FuncDecl)
+			fn, ok := f.Decls[0].(*ast.FuncDecl)
+			if !ok {
+				t.Fatalf("Decls[0] = %T, want *ast.FuncDecl", f.Decls[0])
+			}
 			got := countParams(fn.Type.Params)
 			if got != testCase.want {
 				t.Fatalf("got %d params, want %d", got, testCase.want)

@@ -44,6 +44,13 @@ tasks:
     cmds:
       - go run golang.org/x/vuln/cmd/govulncheck@{{.GOVULNCHECK_VERSION}} ./...
 
+  tools:tidy:
+    desc: verify go.mod/go.sum are tidy and every module checksum verifies
+    cmds:
+      - go mod tidy
+      - git diff --exit-code -- go.mod go.sum
+      - go mod verify
+
   tools:mocks:
     desc: regenerate colocated mocks (no-op until a go:generate mockgen directive exists)
     cmds:

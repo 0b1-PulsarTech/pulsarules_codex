@@ -299,6 +299,7 @@ The governance pipeline (see above) adds its own package set:
 | `internal/emoji`                  | `Catalog`, `Anchors`/`themes.go`, `data/{catalog,types,themes}.txt`                                  |
 | `internal/gitignore`              | `Ensure` - idempotent `.gitignore` entries                                                           |
 | `internal/selfbin`                | `Copy` - copies the running executable to install it as a hook/plugin binary                         |
+| `internal/evals`                  | `model.go`/`load.go` (embedded eval scenarios, `data/<skill>.json`), `validate.go` (`ValidateCheck`), `grade.go` (`Grade`) |
 
 ## The router skill
 
@@ -310,6 +311,46 @@ multi-write tx, outbox event, worker, permission, external provider, template/ru
 test, module boundary, refactoring, architecture review). The vertical Dependency Rule
 (`dependency-rule`) and architecture fitness functions (`fitness-functions`) govern layer direction
 and CI enforcement; an `architecture-decision-records` workflow records significant decisions.
+
+## Skill-effectiveness evals
+
+Rendering a skill and having an analyzer catch violations both prove the pipeline is stable; neither
+proves a skill's *text* changes what an agent produces. `internal/evals` measures that, for a starting
+set of four skills (`code-minimalism`, `integration-tests`, `commits`, and the `safety` rule composed
+into `go-style`), following the eval-scenario method `samber/cc-skills-golang` documents: per skill,
+a handful of scenarios, each a realistic `prompt`, the specific `trap` the skill exists to prevent, and
+plain-English `assertions` a produced artifact is graded against.
+
+**Format and placement.** Scenarios live under `internal/evals/data/<skill>.json`, embedded via
+`//go:embed` like `internal/emoji/data/*.txt` - not under `knowledge/standards/`, because they are not
+rendered into a `SKILL.md`; they only drive this package's own validation and grading, so they stay
+colocated with the code that reads them. Every assertion in `model.go`'s `Assertion` carries a `Kind`:
+`"machine"` assertions carry a `Check` (`contains`/`not_contains`/`regex_match`/`regex_absent`) `Grade`
+runs directly against an artifact's text; `"judge"` assertions carry none and are left for a human or
+LLM reader.
+
+**Validation.** `evals.ValidateCheck` matches `validate.Check`'s `func(*knowledge.Index) []string`
+shape and is injected via the same `extra` seam `analysis.RuleAnalyzersCheck` uses
+(`internal/cli/validate.go`): every scenario's `skill` must resolve against `skills.yaml`
+(`idx.SkillExists`), every scenario must declare a non-empty `trap` and at least one assertion, and
+every assertion's `Kind` must be `machine` (with a `Check`) or `judge` (without one).
+
+**Grading.** `evals.Grade(scenario, artifact)` scores every `machine` assertion's `Check` against the
+artifact string and reports `pass`/`fail`; `judge` assertions report `needs_judge` untouched -
+`Grade` has no model to read the artifact with.
+
+**What this harness does NOT do.** It does not invoke a model. Producing the with-skill and
+without-skill artifacts a scenario is graded against is an operator procedure, not something this
+binary runs: (1) start two sessions on the same scenario's `prompt`, one with the target skill loaded
+(or its knowledge composed into context) and one without any of this repo's guidance; (2) save each
+session's produced code/transcript as a plain-text artifact; (3) call `evals.Grade(scenario, artifact)`
+on both and diff the `machine` tallies (`ScenarioResult.MachineTally`); (4) read every `needs_judge`
+assertion against both artifacts and score it by hand (or via a separate LLM-judge call this repo does
+not provide); (5) aggregate pass/fail across the scenarios run so far into a with-score, a without-score,
+and a delta - and flag the same two anomalies `cc-skills-golang` does: low delta with a high
+without-score (the skill may not be earning its bytes) and a low with-score (the skill's own text needs
+rewriting). A harness that faked step (1)-(2) would be exactly the kind of guard that looks like it
+proves something and does not; this one stops at the boundary it can actually verify.
 
 ## Portability
 

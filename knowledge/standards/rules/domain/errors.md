@@ -12,6 +12,8 @@ linters:
     - wrapcheck
     - staticcheck
     - forbidigo
+analyzers:
+    - golangci-lint
 ---
 
 # Errors

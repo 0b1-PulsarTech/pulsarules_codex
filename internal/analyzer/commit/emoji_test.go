@@ -18,11 +18,11 @@ func subjects(shortcodes ...string) []string {
 	return history
 }
 
-func checkFor(t testing.TB, msg commitmsg.Message, history []string) EmojiCheck {
-	t.Helper()
+func checkFor(tb testing.TB, msg commitmsg.Message, history []string) EmojiCheck {
+	tb.Helper()
 	catalog, err := emoji.NewCatalog()
 	if err != nil {
-		t.Fatalf("NewCatalog: %v", err)
+		tb.Fatalf("NewCatalog: %v", err)
 	}
 	return EmojiCheck{
 		Message: msg,

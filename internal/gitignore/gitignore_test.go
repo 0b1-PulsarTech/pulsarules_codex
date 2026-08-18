@@ -14,25 +14,25 @@ import (
 // empty) and then, if seedEntries is non-empty, runs Ensure over it - so a
 // case can seed a hand-authored (unmarked) file, a marked one, or both in
 // sequence, without every TestRemove case branching on it inline.
-func seedGitignore(t testing.TB, dir, rawSeed string, seedEntries []string) {
-	t.Helper()
+func seedGitignore(tb testing.TB, dir, rawSeed string, seedEntries []string) {
+	tb.Helper()
 	if rawSeed != "" {
 		if err := os.MkdirAll(dir, 0o750); err != nil {
-			t.Fatalf("mkdir: %v", err)
+			tb.Fatalf("mkdir: %v", err)
 		}
 		if err := os.WriteFile(
 			filepath.Join(dir, ".gitignore"),
 			[]byte(rawSeed),
 			0o600,
 		); err != nil {
-			t.Fatalf("seed: %v", err)
+			tb.Fatalf("seed: %v", err)
 		}
 	}
 	if len(seedEntries) == 0 {
 		return
 	}
 	if err := Ensure(dir, seedEntries...); err != nil {
-		t.Fatalf("Ensure seed: %v", err)
+		tb.Fatalf("Ensure seed: %v", err)
 	}
 }
 
@@ -200,25 +200,25 @@ func TestRemove(t *testing.T) {
 // assertRemoveResult checks the reported removed entries against
 // testCase.wantRemoved, then either that dir/.gitignore is absent
 // (wantAbsent) or that it survives with wantContent.
-func assertRemoveResult(t testing.TB, dir string, removed []string, testCase removeTestCase) {
-	t.Helper()
+func assertRemoveResult(tb testing.TB, dir string, removed []string, testCase removeTestCase) {
+	tb.Helper()
 	if !slices.Equal(removed, testCase.wantRemoved) {
-		t.Errorf("removed = %v, want %v", removed, testCase.wantRemoved)
+		tb.Errorf("removed = %v, want %v", removed, testCase.wantRemoved)
 	}
 
 	path := filepath.Join(dir, ".gitignore")
 	_, statErr := os.Stat(path)
 	if testCase.wantAbsent {
 		if !errors.Is(statErr, fs.ErrNotExist) {
-			t.Errorf("expected %q to be absent, stat err = %v", path, statErr)
+			tb.Errorf("expected %q to be absent, stat err = %v", path, statErr)
 		}
 		return
 	}
 	if statErr != nil {
-		t.Fatalf("expected %q to survive, stat err = %v", path, statErr)
+		tb.Fatalf("expected %q to survive, stat err = %v", path, statErr)
 	}
-	if got := readFile(t, path); got != testCase.wantContent {
-		t.Errorf("content = %q, want %q", got, testCase.wantContent)
+	if got := readFile(tb, path); got != testCase.wantContent {
+		tb.Errorf("content = %q, want %q", got, testCase.wantContent)
 	}
 }
 
@@ -245,11 +245,11 @@ func TestRemove_Idempotent(t *testing.T) {
 	}
 }
 
-func readFile(t testing.TB, path string) string {
-	t.Helper()
+func readFile(tb testing.TB, path string) string {
+	tb.Helper()
 	data, err := os.ReadFile(path) //nolint:gosec // temp dir.
 	if err != nil {
-		t.Fatalf("read %q: %v", path, err)
+		tb.Fatalf("read %q: %v", path, err)
 	}
 	return string(data)
 }

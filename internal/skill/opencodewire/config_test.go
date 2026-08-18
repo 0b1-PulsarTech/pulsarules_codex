@@ -146,15 +146,15 @@ type mcpServer struct {
 	Enabled bool     `json:"enabled"`
 }
 
-func readConfig(t testing.TB, projectDir string) opencodeConfig {
-	t.Helper()
+func readConfig(tb testing.TB, projectDir string) opencodeConfig {
+	tb.Helper()
 	raw, err := os.ReadFile(filepath.Join(projectDir, "opencode.json")) //nolint:gosec // temp dir.
 	if err != nil {
-		t.Fatalf("read opencode.json: %v", err)
+		tb.Fatalf("read opencode.json: %v", err)
 	}
 	var config opencodeConfig
 	if err := json.Unmarshal(raw, &config); err != nil {
-		t.Fatalf("parse opencode.json: %v", err)
+		tb.Fatalf("parse opencode.json: %v", err)
 	}
 	return config
 }

@@ -1,0 +1,97 @@
+{
+  "skill": "integration-tests",
+  "version": "1.0.0",
+  "scenarios": [
+    {
+      "id": "rate-limiter-fake-clock",
+      "description": "Deterministic time for a window-reset test must use testing/synctest, never a clock-injection field or a real sleep.",
+      "prompt": "Here is an existing RateLimiter:\n\nfunc NewRateLimiter(limit int, window time.Duration) *RateLimiter { ... resetAt: time.Now().Add(window) }\nfunc (r *RateLimiter) Allow() bool { now := time.Now(); if now.After(r.resetAt) { r.count = 0; r.resetAt = now.Add(r.window) }; ...}\n\nWrite tests verifying Allow() returns true under the limit, false when exceeded, and that the counter resets after the window expires. Tests must run in milliseconds, not seconds. You may modify the implementation if needed.",
+      "trap": "Model adds a `now func() time.Time` field to RateLimiter for test seams, or uses time.Sleep(window + margin) to wait out the window, instead of driving the existing wall-clock code through testing/synctest's fake-time bubble.",
+      "assertions": [
+        {
+          "id": "1.1",
+          "text": "No now func() time.Time (or similarly named) clock-injection field is added to RateLimiter",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "now\\s+func\\(\\)\\s+time\\.Time" }
+        },
+        {
+          "id": "1.2",
+          "text": "Any time.Sleep in the test only advances testing/synctest's fake clock inside the bubble; it never blocks the actual test for real wall-clock time",
+          "kind": "judge"
+        },
+        {
+          "id": "1.3",
+          "text": "The window-reset assertion runs inside synctest.Test",
+          "kind": "machine",
+          "check": { "type": "contains", "pattern": "synctest.Test(" }
+        },
+        {
+          "id": "1.4",
+          "text": "The reset assertion is proven inside the synctest bubble (e.g. via synctest.Wait) rather than by sleeping in real time",
+          "kind": "judge"
+        }
+      ]
+    },
+    {
+      "id": "table-driven-naming",
+      "description": "Table-driven tests must use the testCases/testCase shape, not tt/tests, with parallelism at both levels.",
+      "prompt": "Write table-driven unit tests for ParseStatus(input string) (Status, error), covering every known status string and at least two invalid inputs.",
+      "trap": "Model names the table-driven slice/row `tests`/`tt` instead of `testCases`/`testCase`, and/or omits t.Parallel() on the outer test function and each t.Run subtest.",
+      "assertions": [
+        {
+          "id": "2.1",
+          "text": "The table slice is named testCases",
+          "kind": "machine",
+          "check": { "type": "contains", "pattern": "testCases" }
+        },
+        {
+          "id": "2.2",
+          "text": "The table row loop variable is not named tt",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "\\btt\\s*:=|range\\s+tt\\b" }
+        },
+        {
+          "id": "2.3",
+          "text": "t.Parallel() is called at least once",
+          "kind": "machine",
+          "check": { "type": "contains", "pattern": "t.Parallel()" }
+        },
+        {
+          "id": "2.4",
+          "text": "Both the outer test function and every inner t.Run subtest call t.Parallel(), not just one of them",
+          "kind": "judge"
+        },
+        {
+          "id": "2.5",
+          "text": "Covers the success path and every invalid-input branch, checked via errors.Is/errors.As against a sentinel",
+          "kind": "judge"
+        }
+      ]
+    },
+    {
+      "id": "unexported-helper-black-box",
+      "description": "Testing an unexported helper requires a colocated same-package test, not a black-box _test package.",
+      "prompt": "Add unit tests for the unexported `normalizeStatus` helper declared in status.go, package billing.",
+      "trap": "Model writes the test file as `package billing_test` (black-box), which cannot reach the unexported helper at all, instead of colocating it as `package billing` in status_test.go.",
+      "assertions": [
+        {
+          "id": "3.1",
+          "text": "The test file does not declare package billing_test",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "package\\s+billing_test\\b" }
+        },
+        {
+          "id": "3.2",
+          "text": "The test file declares package billing (same-package, colocated test)",
+          "kind": "machine",
+          "check": { "type": "regex_match", "pattern": "package\\s+billing\\b" }
+        },
+        {
+          "id": "3.3",
+          "text": "The test file is named status_test.go, colocated next to status.go",
+          "kind": "judge"
+        }
+      ]
+    }
+  ]
+}

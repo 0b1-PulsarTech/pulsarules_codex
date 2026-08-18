@@ -1,0 +1,62 @@
+{
+  "skill": "go-style",
+  "version": "1.0.0",
+  "scenarios": [
+    {
+      "id": "typed-nil-error-return",
+      "description": "Targets the newly-added safety rule composed into go-style: a nil *T boxed into an interface-typed return is not == nil. These scenarios exercise that rule specifically, not the whole go-style skill.",
+      "prompt": "Write func validate(input Input) error, where a *ValidationError (a pointer type implementing error) is returned when validation fails, and no error otherwise. Sketch the implementation, including how the function's local error variable is declared and returned.",
+      "trap": "Model declares `var verr *ValidationError` at the top of the function, conditionally assigns it in failing branches, and does a bare `return verr` at the end - a nil *ValidationError boxed into the error interface is not == nil, so a caller's `if err != nil` check fires even on a successful validation.",
+      "assertions": [
+        {
+          "id": "1.1",
+          "text": "The success path returns the untyped nil literal for the error result, not a *ValidationError variable that may itself be nil",
+          "kind": "judge"
+        },
+        {
+          "id": "1.2",
+          "text": "No bare `return verr` (or similarly named *Error pointer variable) stands in for the success-path error return",
+          "kind": "machine",
+          "check": { "type": "regex_absent", "pattern": "return\\s+verr\\b" }
+        }
+      ]
+    },
+    {
+      "id": "defer-in-loop-file-copy",
+      "description": "Targets the safety rule's loop-defer footgun: defer inside a for body waits for the function, not the iteration.",
+      "prompt": "Write a function that opens N files by path and copies each to a backup directory, closing each file when done, given paths []string.",
+      "trap": "Model places `defer f.Close()` directly inside the for _, path := range paths loop body, so every opened file accumulates open until the function returns instead of closing per iteration; with many paths this exhausts file descriptors before the function ever returns.",
+      "assertions": [
+        {
+          "id": "2.1",
+          "text": "No defer statement sits directly inside the for/range loop body; per-iteration cleanup is extracted into a helper function or an immediately-invoked closure so each file closes at the end of its own iteration",
+          "kind": "judge"
+        },
+        {
+          "id": "2.2",
+          "text": "Each file is explicitly closed (via Close, not left to defer accumulation) before or at the end of its own loop iteration",
+          "kind": "judge"
+        }
+      ]
+    },
+    {
+      "id": "narrowing-conversion-no-bounds-check",
+      "description": "Targets the safety rule's narrowing-integer-conversion footgun.",
+      "prompt": "Write func toPageSize(n int) int32 that converts a caller-provided int page-size to the int32 a pagination protobuf field expects.",
+      "trap": "Model writes a bare `return int32(n)` with no bounds check against the int32 range, silently truncating an out-of-range value instead of erroring or clamping.",
+      "assertions": [
+        {
+          "id": "3.1",
+          "text": "The conversion is bounds-checked against int32's range (e.g. via math.MaxInt32 or math.MinInt32) before converting",
+          "kind": "machine",
+          "check": { "type": "contains", "pattern": "MaxInt32" }
+        },
+        {
+          "id": "3.2",
+          "text": "An out-of-range input produces an error or is clamped, rather than being silently truncated",
+          "kind": "judge"
+        }
+      ]
+    }
+  ]
+}

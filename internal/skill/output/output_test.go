@@ -8,15 +8,15 @@ import (
 )
 
 // loadFixture loads the embedded index + renderer shared by the output tests.
-func loadFixture(t testing.TB) (*knowledge.Index, *render.Renderer) {
-	t.Helper()
+func loadFixture(tb testing.TB) (*knowledge.Index, *render.Renderer) {
+	tb.Helper()
 	idx, templates, err := knowledge.Load("")
 	if err != nil {
-		t.Fatalf("Load: %v", err)
+		tb.Fatalf("Load: %v", err)
 	}
 	rnd, err := render.NewRenderer(templates)
 	if err != nil {
-		t.Fatalf("NewRenderer: %v", err)
+		tb.Fatalf("NewRenderer: %v", err)
 	}
 	return idx, rnd
 }

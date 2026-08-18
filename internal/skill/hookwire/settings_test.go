@@ -153,19 +153,19 @@ func TestWireSettings_Idempotent(t *testing.T) {
 	}
 }
 
-func readHooks(t testing.TB, claudeDir, settingsFile string) map[string][]hookGroup {
-	t.Helper()
+func readHooks(tb testing.TB, claudeDir, settingsFile string) map[string][]hookGroup {
+	tb.Helper()
 	raw, err := os.ReadFile(
 		filepath.Join(claudeDir, settingsFile),
 	) //nolint:gosec // temp dir.
 	if err != nil {
-		t.Fatalf("read settings: %v", err)
+		tb.Fatalf("read settings: %v", err)
 	}
 	var settings struct {
 		Hooks map[string][]hookGroup `json:"hooks"`
 	}
 	if err := json.Unmarshal(raw, &settings); err != nil {
-		t.Fatalf("parse settings: %v", err)
+		tb.Fatalf("parse settings: %v", err)
 	}
 	return settings.Hooks
 }

@@ -9,13 +9,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
 )
 
-// RulesDir is where Cursor project rules live, relative to the project root:
-// one flat .mdc file per rule, unlike the nested <id>/SKILL.md + .gitignore
-// convention output.WriteDoc uses for Claude and opencode. Cursor has no
-// per-id directory, so ownership of a file is proven the same way
-// agentswire proves it owns AGENTS.md: a marker comment baked into the
-// rendered body (the "mdcFrontmatter" partial in
-// knowledge/templates/skills/parts.tmpl), not a sibling file.
+// RulesDir is where Cursor project rules live: one flat .mdc file per rule,
+// unlike the nested <id>/SKILL.md + .gitignore convention output.WriteDoc
+// uses elsewhere. Cursor has no per-id directory, so ownership is proven
+// like agentswire proves it owns AGENTS.md: a marker comment baked into the
+// rendered body (the "mdcFrontmatter" partial), not a sibling file.
 const RulesDir = ".cursor/rules"
 
 // PointerID is the filename (minus .mdc) of the always-on pointer rule: the
@@ -41,7 +39,7 @@ func WriteRule(projectDir, id, body string) (wrote bool, err error) {
 	if err = os.MkdirAll(filepath.Dir(path), fsperm.DirPrivate); err != nil {
 		return false, fmt.Errorf("mkdir: %w", err)
 	}
-	//nolint:gosec // path is under the caller's project dir.
+	// why: path is under the caller's project dir.
 	if err = os.WriteFile(path, []byte(body), fsperm.FilePrivate); err != nil {
 		return false, fmt.Errorf("write %q: %w", path, err)
 	}

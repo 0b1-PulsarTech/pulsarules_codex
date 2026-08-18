@@ -42,8 +42,8 @@ func loadProjectIndex(projectDir, modulePath string) *projectIndex {
 	fileCount := countGoFiles(projectDir)
 
 	if entry, ok := indexCache.Load(projectDir); ok {
-		cached := entry.(*cacheEntry)
-		if cached.goModHash == goModHash &&
+		if cached, ok := entry.(*cacheEntry); ok &&
+			cached.goModHash == goModHash &&
 			cached.fileCount == fileCount &&
 			time.Since(cached.builtAt) < cacheTTL {
 			return cached.index
@@ -81,7 +81,7 @@ func countGoFiles(projectDir string) int {
 	count := 0
 	_ = filepath.WalkDir(projectDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // WalkDir callback: skip the bad entry, keep walking.
 		}
 		if d.IsDir() {
 			name := d.Name()
