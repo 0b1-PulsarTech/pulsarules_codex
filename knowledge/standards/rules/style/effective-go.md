@@ -51,9 +51,15 @@ stable the module pins (source repos use `go 1.26`).
 2. Use early returns over deep nesting; keep functions under ~80 lines and cyclomatic complexity under ~15.
    `else` is fine when both branches do genuinely different work; when one branch only holds a default
    that a condition overrides, assign the default value directly and drop the `else`.
-3. Doc-comment every exported symbol, starting with its name, describing behaviour not signature. No
-   `// Package foo` package docstrings. No doc comments on unexported symbols; add a single-line
-   `// why` only when non-obvious (hidden constraint, workaround, non-obvious invariant).
+3. A comment earns its place by saying why. Doc-comment an exported symbol only when its name and
+   signature leave something out - a constraint, an invariant, a non-obvious bound or format, a
+   reason the simpler-looking implementation is wrong. Delete the ones that restate the signature:
+   `// ID returns the analyzer's unique identifier` above `func (a *A) ID() string` costs a reader a
+   pause and repays nothing. Any comment kept on an exported symbol still starts with its name
+   (staticcheck ST1020-ST1022 enforce that, and only that). No `// Package foo` docstrings, and no
+   doc comments on unexported symbols beyond a `// why` when it is non-obvious. Cap any block at 5
+   lines (`big-comment`); `vacuous-doc` flags a doc comment on a function whose whole body is one
+   return of a literal or field, unless it carries a `why:` marker or a second sentence.
 4. Comments explain why, not what; the code shows what. Do not narrate the obvious.
 5. Reach for the newest fitting stdlib: `slices`/`maps`/`cmp`, `errors.Join`, `min`/`max`/`clear`,
    `for range int`, `iter.Seq` (range-over-func), typed atomics, generic type aliases. Prefer
@@ -91,8 +97,8 @@ stable the module pins (source repos use `go 1.26`).
 - Deep nesting where an early return flattens it; functions past ~80 lines without justification.
 - `interface{}` instead of `any`; mixed value/pointer receivers on the same type.
 - `fmt.Println`/`log.Println` in non-test code.
-- Exported symbols without doc comments; comments that restate the signature; package docstrings;
-  doc comments on unexported symbols.
+- A comment that restates the signature; a comment block over 5 lines; package docstrings; doc
+  comments on unexported symbols beyond a non-obvious `// why`.
 - Re-implementing what the stdlib already does (`slices.Equal`, `min`/`max`, `iter.Seq`).
 - Shadowing an outer `err`/`ctx` with `:=` in an inner scope (govet `shadow`).
 - Spelling out generic type parameters the compiler can infer from an argument.
@@ -105,8 +111,8 @@ stable the module pins (source repos use `go 1.26`).
 {{define "validation"}}
 - [ ] Formatter run; no manual formatting remains.
 - [ ] Functions under ~80 lines, complexity under ~15; early returns used.
-- [ ] Every exported symbol has a doc comment beginning with its name; no package docstrings; no doc
-  comments on unexported symbols.
+- [ ] No comment restates its signature; every kept doc comment begins with its symbol's name and
+  fits in 5 lines; no package docstrings; no doc comments on unexported symbols.
 - [ ] Newest fitting stdlib used; no hand-rolled equivalents.
 - [ ] Receivers consistent; `any` used; zero values safe.
 - [ ] Interface-implementing types carry `var _ Iface = (*impl)(nil)`.
