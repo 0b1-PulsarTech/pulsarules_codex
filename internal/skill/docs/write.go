@@ -7,7 +7,10 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/gitignore"
 )
+
+const gitignoreName = ".gitignore"
 
 func writeFile(filePath, content string) error {
 	if err := os.MkdirAll(filepath.Dir(filePath), disk.DirPrivate); err != nil {
@@ -32,7 +35,7 @@ func backupIfPresent(filePath string) (backedUp string, err error) {
 
 func Write(dir, docName, body string) (backedUp []string, err error) {
 	docPath := filepath.Join(dir, docName)
-	gitignorePath := filepath.Join(dir, ".gitignore")
+	gitignorePath := filepath.Join(dir, gitignoreName)
 	if !isOwnedDoc(dir, docName) {
 		for _, path := range []string{docPath, gitignorePath} {
 			msg, backupErr := backupIfPresent(path)
@@ -47,8 +50,7 @@ func Write(dir, docName, body string) (backedUp []string, err error) {
 	// The ignore lands first: writing the doc first and failing here
 	// would leave untracked output on disk; reversed, a failure leaves at
 	// worst an orphaned .gitignore that ignores itself.
-	gitignoreBody := docName + "\n.gitignore\n"
-	if err = writeFile(gitignorePath, gitignoreBody); err != nil {
+	if err = gitignore.Ensure(dir, docName, gitignoreName); err != nil {
 		return backedUp, fmt.Errorf("gitignore for %q: %w", docName, err)
 	}
 	if err = writeFile(docPath, body); err != nil {
