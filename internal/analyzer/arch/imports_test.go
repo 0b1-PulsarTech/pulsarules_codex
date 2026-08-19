@@ -104,7 +104,7 @@ func TestClassifyLayer(t *testing.T) {
 		{"example.com/rest/v1", "transport"},
 		{"example.com/grpc/v1", "transport"},
 		{"example.com/cmd/server", "cmd"},
-		{"example.com/internal/util", "other"},
+		{"example.com/internal/util", layerUnclassified},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.pkg, func(t *testing.T) {
@@ -147,6 +147,30 @@ func TestCheckBoundaries(t *testing.T) {
 				"example.com/internal/domain": {"example.com/transport/rest"},
 			},
 			want: 1,
+		},
+		{
+			name: "unclassified importer (apps/+libs/+proto/ " +
+				"layout) reports nothing, not an inward violation",
+			graph: depGraph{
+				"example.com/apps/api": {"example.com/domain/thing"},
+			},
+			want: 0,
+		},
+		{
+			name: "unclassified dependency reports nothing",
+			graph: depGraph{
+				"example.com/internal/domain": {"example.com/libs/store"},
+			},
+			want: 0,
+		},
+		{
+			name: "an entirely unrecognized layout reports nothing",
+			graph: depGraph{
+				"example.com/apps/api":    {"example.com/libs/store", "example.com/proto/apiv1"},
+				"example.com/libs/store":  {"example.com/proto/apiv1"},
+				"example.com/proto/apiv1": nil,
+			},
+			want: 0,
 		},
 	}
 	for _, testCase := range testCases {
