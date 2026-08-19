@@ -53,12 +53,16 @@ func WriteDoc(dir, docName, body string) (backedUp []string, err error) {
 			}
 		}
 	}
-	if err = writeFile(docPath, body); err != nil {
-		return backedUp, fmt.Errorf("write %q: %w", docName, err)
-	}
+	// why: the ignore lands FIRST. Writing the doc first and failing here left
+	// generated output on disk with nothing ignoring it - untracked in git,
+	// which is the exact state this pair exists to prevent. Reversed, a failure
+	// leaves at worst an orphaned .gitignore that ignores itself.
 	gitignoreBody := docName + "\n.gitignore\n"
 	if err = writeFile(gitignorePath, gitignoreBody); err != nil {
 		return backedUp, fmt.Errorf("gitignore for %q: %w", docName, err)
+	}
+	if err = writeFile(docPath, body); err != nil {
+		return backedUp, fmt.Errorf("write %q: %w", docName, err)
 	}
 	return backedUp, nil
 }

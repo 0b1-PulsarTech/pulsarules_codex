@@ -199,3 +199,38 @@ func TestWriteDoc_LegacyGitignoreOwnershipStillRecognized(t *testing.T) {
 		)
 	}
 }
+
+// TestWriteDoc_GitignoreFailureLeavesTheDocUntouched pins the write ORDER. The
+// target dir is read-only, so CREATING the .gitignore fails while overwriting the
+// already-present doc still succeeds - dir write permission gates creation, not
+// writing through an existing file. The old order rewrote the doc first.
+func TestWriteDoc_GitignoreFailureLeavesTheDocUntouched(t *testing.T) {
+	t.Parallel()
+
+	target := filepath.Join(t.TempDir(), "skill")
+	if err := os.MkdirAll(target, 0o700); err != nil {
+		t.Fatalf("mkdir target: %v", err)
+	}
+	// The marker makes the doc owned, so WriteDoc skips the backup step and
+	// goes straight to the writes this test is about.
+	const sentinel = "# " + marker.Installed + "\nprevious body\n"
+	docPath := filepath.Join(target, "SKILL.md")
+	if err := os.WriteFile(docPath, []byte(sentinel), 0o600); err != nil {
+		t.Fatalf("seed doc: %v", err)
+	}
+	if err := os.Chmod(target, 0o500); err != nil {
+		t.Fatalf("chmod read-only: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(target, 0o700) })
+
+	if _, err := WriteDoc(target, "SKILL.md", "new body"); err == nil {
+		t.Skip("directory permissions are not enforced for this user")
+	}
+	got, err := os.ReadFile(docPath) //nolint:gosec // test fixture path.
+	if err != nil {
+		t.Fatalf("read doc: %v", err)
+	}
+	if string(got) != sentinel {
+		t.Errorf("doc was rewritten before the ignore landed: content = %q, want %q", got, sentinel)
+	}
+}
