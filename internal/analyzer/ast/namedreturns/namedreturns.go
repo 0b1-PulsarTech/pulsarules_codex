@@ -30,34 +30,28 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 }
 
 func checkFile(
-	fset *token.FileSet, fc core.FileChange, f *ast.File, reporter core.Reporter,
+	fset *token.FileSet, fc core.FileChange, file *ast.File, reporter core.Reporter,
 ) []core.Finding {
 	var findings []core.Finding
 
-	ast.Inspect(f, func(n ast.Node) bool {
-		switch node := n.(type) {
+	ast.Inspect(file, func(node ast.Node) bool {
+		switch typed := node.(type) {
 		case *ast.FuncDecl:
-			findings = append(
-				findings,
-				checkResults(fset, fc, node.Name.Name, node.Pos(), node.Type.Results, reporter)...,
-			)
+			site := declSite{name: typed.Name.Name, pos: typed.Pos(), results: typed.Type.Results}
+			findings = append(findings, checkResults(fset, fc, site, reporter)...)
 		case *ast.InterfaceType:
-			for _, field := range node.Methods.List {
+			for _, field := range typed.Methods.List {
 				funcType, ok := field.Type.(*ast.FuncType)
 				if !ok || len(field.Names) == 0 {
+					// Embedded interface: no method name of its own to report.
 					continue
 				}
-				findings = append(
-					findings,
-					checkResults(
-						fset,
-						fc,
-						field.Names[0].Name,
-						field.Pos(),
-						funcType.Results,
-						reporter,
-					)...,
-				)
+				site := declSite{
+					name:    field.Names[0].Name,
+					pos:     field.Pos(),
+					results: funcType.Results,
+				}
+				findings = append(findings, checkResults(fset, fc, site, reporter)...)
 			}
 		}
 		return true
@@ -66,20 +60,25 @@ func checkFile(
 	return findings
 }
 
+type declSite struct {
+	name    string
+	pos     token.Pos
+	results *ast.FieldList
+}
+
 func checkResults(
-	fset *token.FileSet, fc core.FileChange, name string, pos token.Pos, results *ast.FieldList,
-	reporter core.Reporter,
+	fset *token.FileSet, fc core.FileChange, site declSite, reporter core.Reporter,
 ) []core.Finding {
-	dup, found := duplicateResultType(results)
+	dup, found := duplicateResultType(site.results)
 	if !found {
 		return nil
 	}
 	return []core.Finding{reporter.At(
 		fc.Path,
-		fset.Position(pos).Line,
+		fset.Position(site.pos).Line,
 		fmt.Sprintf(
 			"%s returns more than one unnamed %s, so only the order tells them apart",
-			name,
+			site.name,
 			dup,
 		),
 		"name the results so the signature says which is which",

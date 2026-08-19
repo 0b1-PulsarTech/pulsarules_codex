@@ -48,6 +48,7 @@ func (reps fileReporters) forFunc(
 	// same advice at every `:=` in the body buries the other findings.
 	return reporter{
 		shadow: func(pos token.Pos, name, kind string) {
+			// Only shadowing exempts "ok"; short-decl-reuse still reports it.
 			if name == "ok" {
 				return
 			}
