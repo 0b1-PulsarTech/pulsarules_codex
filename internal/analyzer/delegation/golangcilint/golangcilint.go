@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
@@ -24,13 +25,18 @@ func forcedLinters() []string {
 
 type Runner struct {
 	path    string
+	timeout time.Duration
 	failure pass.Reporter
 	warning pass.Reporter
 }
 
 func NewRunner(golangciLintPath string) *Runner {
+	const golangciLintTimeout = 2 * time.Minute
 	return &Runner{
-		path:    golangciLintPath,
+		path: golangciLintPath,
+		// Per call, not aggregated over runPerModule's loop: modules vary in size,
+		// so sharing one budget would starve a large one.
+		timeout: golangciLintTimeout,
 		failure: pass.NewReporter("golangci-lint", pass.SeverityError, pass.CatSyntax),
 		warning: pass.NewReporter("golangci-lint", pass.SeverityWarning, pass.CatSyntax),
 	}
@@ -80,9 +86,10 @@ func (r *Runner) runSingle(projectDir, configPath string) []pass.Finding {
 
 func (r *Runner) run(projectDir string, args []string) (process.Result, error) {
 	result, err := process.Run(context.Background(), process.Command{
-		Name: r.path,
-		Args: args,
-		Dir:  projectDir,
+		Name:    r.path,
+		Args:    args,
+		Dir:     projectDir,
+		Timeout: r.timeout,
 	})
 	if err != nil {
 		// %w keeps *execx.Error (and the *exec.ExitError it wraps) reachable through
