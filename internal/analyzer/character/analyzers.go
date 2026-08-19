@@ -92,11 +92,11 @@ func (a *TypographicAnalyzer) Stage() pass.StageID { return pass.StageStatic }
 func (a *TypographicAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	reporter := pass.ResolveReporter(a.reporter, ctx)
 	return eachMarkedFile(ctx, func(fc pass.FileChange, src string) []pass.Finding {
-		return checkTypographic(reporter, fc, src)
+		return checkTypographic(fc, src, reporter)
 	})
 }
 
-func checkTypographic(reporter pass.Reporter, fc pass.FileChange, src string) []pass.Finding {
+func checkTypographic(fc pass.FileChange, src string, reporter pass.Reporter) []pass.Finding {
 	var findings []pass.Finding
 	for _, found := range invisible.Scan(src) {
 		if found.Class != invisible.ClassTypographic {

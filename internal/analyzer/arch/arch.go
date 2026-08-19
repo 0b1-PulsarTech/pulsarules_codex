@@ -93,8 +93,8 @@ func (a *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 
 	for _, cycle := range cycles {
 		var b strings.Builder
-		for i, p := range cycle {
-			if i > 0 {
+		for hop, p := range cycle {
+			if hop > 0 {
 				b.WriteString(" → ")
 			}
 			b.WriteString(stripModule(p, modulePath))
