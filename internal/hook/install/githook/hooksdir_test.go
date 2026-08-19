@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
 )
 
 // runGitOrFatal runs one git subcommand in dir, failing the test on error.
@@ -108,5 +110,62 @@ func TestUninstall_LinkedWorktree(t *testing.T) {
 		fs.ErrNotExist,
 	) {
 		t.Errorf("shared hook still present, lstat err = %v", err)
+	}
+}
+
+// TestOrphans_SurviveUninstall walks the only sequence that strands a backup: a
+// foreign hook is displaced twice, so the second rename takes the .1 slot, and
+// uninstall restores just the base one. Before this reported, the .1 file sat in
+// .git/hooks with nothing telling the operator it existed.
+func TestOrphans_SurviveUninstall(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	hooksPath := filepath.Join(dir, ".git", "hooks")
+	if err := os.MkdirAll(hooksPath, 0o750); err != nil {
+		t.Fatalf("mkdir hooks: %v", err)
+	}
+	hookPath := filepath.Join(hooksPath, "commit-msg")
+	writeForeign := func(body string) {
+		t.Helper()
+		// Install leaves the hook read-only (0o500), so replacing it means
+		// unlinking first - exactly what a person editing it by hand would hit.
+		_ = os.Remove(hookPath)
+		if err := os.WriteFile(hookPath, []byte(body), 0o700); err != nil {
+			t.Fatalf("seed foreign hook: %v", err)
+		}
+	}
+
+	writeForeign("#!/bin/sh\n# first hand-written hook\n")
+	if _, err := Install(dir, []string{"commit-msg"}); err != nil {
+		t.Fatalf("first Install: %v", err)
+	}
+	writeForeign("#!/bin/sh\n# second hand-written hook\n")
+	if _, err := Install(dir, []string{"commit-msg"}); err != nil {
+		t.Fatalf("second Install: %v", err)
+	}
+
+	if _, _, err := Uninstall(dir); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	notes, err := Orphans(dir)
+	if err != nil {
+		t.Fatalf("Orphans: %v", err)
+	}
+	if len(notes) != 1 {
+		t.Fatalf("notes = %v, want exactly one", notes)
+	}
+	if !strings.Contains(notes[0], "commit-msg") {
+		t.Errorf("note = %q, want it to name the hook", notes[0])
+	}
+	// The stranded slot must still hold the content, not just be mentioned.
+	stranded, err := os.ReadFile(
+		hookPath + marker.BackupSuffix + ".1",
+	) //nolint:gosec // test fixture.
+	if err != nil {
+		t.Fatalf("read stranded slot: %v", err)
+	}
+	if !strings.Contains(string(stranded), "hand-written hook") {
+		t.Errorf("stranded slot content = %q, want the displaced hook", stranded)
 	}
 }

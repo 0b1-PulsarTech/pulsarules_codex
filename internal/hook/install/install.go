@@ -38,6 +38,9 @@ type Result struct {
 	// restored to its original path, undoing a prior Install-time backup
 	// (see Context.Warn).
 	Restored []string
+	// Notes carries ready-to-print observations an uninstall could not act on
+	// itself - a leftover an operator has to reconcile by hand.
+	Notes []string
 	// SettingsChanged reports whether Uninstall actually unwired the specific
 	// settings file named by UninstallContext.SettingsFile, distinct from a
 	// shared one-time cleanup Removed may also carry (claudeInstaller's

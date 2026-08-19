@@ -29,14 +29,21 @@ func (gitInstaller) Install(ctx Context) error {
 	return nil
 }
 
-// Uninstall removes the git hook scripts and installer binary Install wrote
-// into ctx.Dir/.git/hooks/, reporting which hook names were actually removed
-// and which backups (see marker.Backup) were restored to their original path.
+// Uninstall removes the git hook scripts and installer binary Install wrote into
+// the repository's shared hooks dir, reporting which hook names were removed,
+// which backups were restored, and which earlier backup slots were left behind.
 func (gitInstaller) Uninstall(ctx UninstallContext) (Result, error) {
 	removed, restored, err := githook.Uninstall(ctx.Dir)
 	result := Result{Removed: removed, Restored: restored}
 	if err != nil {
 		return result, fmt.Errorf("uninstall git hooks: %w", err)
 	}
+	// Queried after the removal: Restore consumes only the base backup slot, so
+	// any earlier one is still there and nothing else would ever mention it.
+	notes, notesErr := githook.Orphans(ctx.Dir)
+	if notesErr != nil {
+		return result, fmt.Errorf("list leftover git hook backups: %w", notesErr)
+	}
+	result.Notes = notes
 	return result, nil
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
 )
 
 // BackupSuffix names the sibling file Backup renames a foreign (not-ours)
@@ -67,4 +68,28 @@ func BackupMessage(original, backup string) string {
 
 func RestoreMessage(path string) string {
 	return fmt.Sprintf("restored backup to %s", path)
+}
+
+// Orphans returns the numbered backup slots sitting beside path - the ones
+// Restore deliberately leaves behind, since a numbered slot is not provably the
+// antecedent of the file being uninstalled. The base slot is excluded: Restore
+// consumes that one.
+func Orphans(path string) (slots []string, err error) {
+	for n := 1; ; n++ {
+		candidate := fmt.Sprintf("%s.%d", path+BackupSuffix, n)
+		if _, statErr := os.Lstat(candidate); statErr != nil {
+			if errors.Is(statErr, fs.ErrNotExist) {
+				return slots, nil
+			}
+			return slots, fmt.Errorf("stat %q: %w", candidate, statErr)
+		}
+		slots = append(slots, candidate)
+	}
+}
+
+// OrphanMessage names the leftover slots for a person to reconcile by hand.
+func OrphanMessage(path string, slots []string) string {
+	return fmt.Sprintf(
+		"left %d earlier backup(s) of %s in place: %s", len(slots), path, strings.Join(slots, ", "),
+	)
 }

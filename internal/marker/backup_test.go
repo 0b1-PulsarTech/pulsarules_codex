@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -167,5 +168,58 @@ func TestBackupMessage_RestoreMessage(t *testing.T) {
 	}
 	if got, want := RestoreMessage("/a/b"), "restored backup to /a/b"; got != want {
 		t.Errorf("RestoreMessage = %q, want %q", got, want)
+	}
+}
+
+// TestOrphans asserts only the NUMBERED slots are reported: Restore consumes the
+// base one, so listing it would name a backup that is about to disappear.
+func TestOrphans(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		seedBackups []string
+		wantCount   int
+	}{
+		{name: "no backups at all"},
+		{name: "base slot alone is not an orphan", seedBackups: []string{BackupSuffix}},
+		{
+			name:        "numbered slot is an orphan",
+			seedBackups: []string{BackupSuffix, BackupSuffix + ".1"},
+			wantCount:   1,
+		},
+		{
+			name:        "consecutive numbered slots are all orphans",
+			seedBackups: []string{BackupSuffix, BackupSuffix + ".1", BackupSuffix + ".2"},
+			wantCount:   2,
+		},
+		{
+			name:        "a gap stops the walk",
+			seedBackups: []string{BackupSuffix, BackupSuffix + ".2"},
+			wantCount:   0,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			path := filepath.Join(dir, "pre-commit")
+			for _, suffix := range testCase.seedBackups {
+				if err := os.WriteFile(path+suffix, []byte("x"), 0o600); err != nil {
+					t.Fatalf("seed %q: %v", suffix, err)
+				}
+			}
+			got, err := Orphans(path)
+			if err != nil {
+				t.Fatalf("Orphans: %v", err)
+			}
+			if len(got) != testCase.wantCount {
+				t.Errorf("Orphans() = %v, want %d slot(s)", got, testCase.wantCount)
+			}
+			if len(got) > 0 && !strings.Contains(OrphanMessage(path, got), path) {
+				t.Errorf("OrphanMessage does not name %q", path)
+			}
+		})
 	}
 }
