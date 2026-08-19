@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/branch"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
@@ -26,6 +27,12 @@ func resolveGitHooks(opts *version.Options) ([]string, error) {
 	// would fail every commit from inside the hook, where the flag is not visible.
 	if err := pass.ValidateSeverityName(opts.TypographicSeverity); err != nil {
 		return nil, fmt.Errorf("invalid --typographic-severity: %w", err)
+	}
+	// The value is written into a generated shell script, so an entry
+	// outside the allowed alphabet is refused here rather than quoted and hoped
+	// for at the point it runs.
+	if err := branch.ValidateExtraTypes(opts.BranchExtraTypes); err != nil {
+		return nil, err
 	}
 	return hooks, nil
 }
@@ -53,6 +60,7 @@ func installPostTargets(
 			Templates:           templates,
 			GitHooks:            gitHooks,
 			TypographicSeverity: opts.TypographicSeverity,
+			BranchExtraTypes:    opts.BranchExtraTypes,
 			Warn: func(format string, args ...any) {
 				_, _ = fmt.Fprintf(os.Stderr, "warning: "+format+"\n", args...)
 			},

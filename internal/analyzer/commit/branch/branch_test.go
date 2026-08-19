@@ -126,6 +126,11 @@ func TestValidExtraTypes(t *testing.T) {
 		{name: "a leading comma leaves an empty entry", spec: ",release"},
 		{name: "spaces are refused rather than trimmed", spec: "spike, experiment"},
 		{name: "uppercase is refused", spec: "Release"},
+		{name: "a command substitution is refused", spec: "release;rm -rf /"},
+		{name: "a backtick is refused", spec: "a`id`"},
+		{name: "a quote is refused", spec: `a"b`},
+		{name: "a dollar sign is refused", spec: "a$HOME"},
+		{name: "a newline is refused", spec: "release\nhotfix"},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

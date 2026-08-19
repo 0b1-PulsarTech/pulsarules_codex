@@ -12,6 +12,7 @@ type Context struct {
 	SettingsFile        string
 	GitHooks            []string
 	TypographicSeverity string
+	BranchExtraTypes    string
 	Warn                func(format string, args ...any)
 }
 
