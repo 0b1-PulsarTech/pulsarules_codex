@@ -41,7 +41,14 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 		return fmt.Errorf("get knowledge index: %w", err)
 	}
 	sess := governance.NewSession(repo, msg, idx, nil)
-	findingsItem := sess.Analyze(governance.ScopeCommit, nil, governance.FileSetChanged).Findings
+	// An explicit empty status keeps this a pure message linter. A nil
+	// status would have discovery read the worktree, and content findings from
+	// unrelated dirty files would fail a commit whose message is fine.
+	findingsItem := sess.Analyze(
+		governance.ScopeCommit,
+		&vcs.Status{},
+		governance.FileSetChanged,
+	).Findings
 
 	if len(findingsItem) == 0 {
 		_, _ = fmt.Fprintln(os.Stderr, "commit message is valid")
