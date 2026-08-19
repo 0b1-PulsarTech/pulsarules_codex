@@ -27,11 +27,7 @@ func ResolveInside(root, path string) (string, error) {
 	if realRoot, evalErr := filepath.EvalSymlinks(absRoot); evalErr == nil {
 		absRoot = realRoot
 	}
-	// why: the file itself may not exist yet, so a failed EvalSymlinks is not
-	// fatal here - the containment test below still runs on the cleaned path.
-	if realPath, evalErr := filepath.EvalSymlinks(absPath); evalErr == nil {
-		absPath = realPath
-	}
+	absPath = resolveExisting(absPath)
 
 	rel, err := filepath.Rel(absRoot, absPath)
 	if err != nil {
@@ -41,4 +37,24 @@ func ResolveInside(root, path string) (string, error) {
 		return "", fmt.Errorf("%w: %q", ErrOutsideRoot, path)
 	}
 	return absPath, nil
+}
+
+// resolveExisting returns path with its deepest EXISTING ancestor resolved
+// through symlinks and the not-yet-created remainder appended back.
+// why: EvalSymlinks fails when the leaf does not exist, the normal case for a
+// file about to be written. Resolving only the root then compares two spellings
+// of one tree - on darwin (/var -> /private/var) every new file reads as escape.
+func resolveExisting(path string) string {
+	remainder := ""
+	for current := path; ; {
+		if resolved, err := filepath.EvalSymlinks(current); err == nil {
+			return filepath.Join(resolved, remainder)
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return path
+		}
+		remainder = filepath.Join(filepath.Base(current), remainder)
+		current = parent
+	}
 }
