@@ -492,7 +492,7 @@ skills:
       - grilling
   - id: agent-orchestration
     name: Agent orchestration
-    description: Split work across agents safely - the main session orchestrates and integrates, implementation runs a separate-agent loop (implement, review, fix, test) before returning, scouts are read-only, parallel writers get isolated worktrees verified via git reflog, and git-history operations are never delegated.
+    description: Split work across agents safely - the main session orchestrates and integrates, implementation runs a separate-agent loop (implement, review, fix, test) before returning, scouts are read-only, parallel writers get isolated worktrees, and git-history operations are never delegated.
     triggers:
       - delegating implementation or review to subagents
       - running agents in parallel against a working tree
