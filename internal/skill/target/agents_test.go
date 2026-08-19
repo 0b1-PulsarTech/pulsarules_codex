@@ -45,6 +45,23 @@ func TestAgentsTargetPresent(t *testing.T) {
 	}
 }
 
+func TestAgentsTargetPresent_DefersToOpencode(t *testing.T) {
+	t.Parallel()
+
+	base := t.TempDir()
+	agentsPath := filepath.Join(base, "AGENTS.md")
+	if err := os.WriteFile(agentsPath, []byte("# AGENTS.md\n"), 0o600); err != nil {
+		t.Fatalf("seed AGENTS.md: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(base, ".opencode"), 0o750); err != nil {
+		t.Fatalf("mkdir .opencode: %v", err)
+	}
+
+	if got := (agentsTarget{}).Present(base); got {
+		t.Error("Present() = true, want false (opencode already owns this AGENTS.md)")
+	}
+}
+
 func TestAgentsTargetInstall(t *testing.T) {
 	t.Parallel()
 
@@ -109,7 +126,7 @@ func TestAgentsUninstall_KeepSkills(t *testing.T) {
 		t.Fatalf("Uninstall: %v", err)
 	}
 	if _, statErr := os.Stat(agentsDoc); statErr != nil {
-		t.Errorf("KeepSkills should have kept %q, stat err = %v", agentsDoc, statErr)
+		t.Errorf("--keep-skills should have kept %q, stat err = %v", agentsDoc, statErr)
 	}
 }
 
