@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 )
 
 // writeTestFile writes content at dir/relPath, creating parent directories as
@@ -19,7 +20,7 @@ func writeTestFile(t *testing.T, dir, relPath, content string) {
 	}
 }
 
-func TestFileSourceProvider_WalkSkipsExcludedDirs(t *testing.T) {
+func TestFSSourceProvider_WalkSkipsExcludedDirs(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -54,7 +55,7 @@ func TestFileSourceProvider_WalkSkipsExcludedDirs(t *testing.T) {
 	}
 }
 
-func TestFileSourceProvider_WalkStopsOnFalse(t *testing.T) {
+func TestFSSourceProvider_WalkStopsOnFalse(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -74,7 +75,7 @@ func TestFileSourceProvider_WalkStopsOnFalse(t *testing.T) {
 	}
 }
 
-func TestFileSourceProvider_WalkLowercasesExtension(t *testing.T) {
+func TestFSSourceProvider_WalkLowercasesExtension(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -89,5 +90,33 @@ func TestFileSourceProvider_WalkLowercasesExtension(t *testing.T) {
 
 	if gotExt != ".md" {
 		t.Fatalf("ext = %q, want %q", gotExt, ".md")
+	}
+}
+
+// TestFSSourceProvider_VirtualFS pins the seam NewFSSourceProvider exists for:
+// an analyzer input served from an in-memory fs.FS, no disk or TempDir needed.
+func TestFSSourceProvider_VirtualFS(t *testing.T) {
+	t.Parallel()
+
+	provider := NewFSSourceProvider(fstest.MapFS{
+		"a.go":           &fstest.MapFile{Data: []byte("package a\n")},
+		"generated/b.go": &fstest.MapFile{Data: []byte("package b\n")},
+	}, "")
+
+	content, ok := provider.Read("a.go")
+	if !ok || string(content) != "package a\n" {
+		t.Fatalf("Read(a.go) = %q, %v, want the file's bytes", content, ok)
+	}
+	if _, ok = provider.Read("/abs/outside.go"); ok {
+		t.Error("Read of an absolute path on a virtual fs must report not found")
+	}
+
+	var walked []string
+	provider.Walk(func(path, _ string) bool {
+		walked = append(walked, path)
+		return true
+	})
+	if len(walked) != 1 || walked[0] != "a.go" {
+		t.Errorf("Walk = %v, want only a.go (generated/ is skipped)", walked)
 	}
 }

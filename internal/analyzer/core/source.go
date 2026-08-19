@@ -1,6 +1,7 @@
 package core
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,37 +20,53 @@ type SourceProvider interface {
 	Walk(fn func(path string, ext string) bool)
 }
 
-// fileSourceProvider is the default SourceProvider. It reads files from disk
-// via os.ReadFile, caching contents in a map so repeated reads are free.
-type fileSourceProvider struct {
+// fsSourceProvider is the default SourceProvider: any fs.FS with contents
+// cached in a map so repeated reads are free.
+type fsSourceProvider struct {
+	fsys       fs.FS
 	projectDir string
 	mu         sync.RWMutex
 	cache      map[string][]byte
 }
 
-// NewSourceProvider creates a SourceProvider rooted at projectDir. Files read
-// via Read are cached for the lifetime of the provider.
+// NewSourceProvider creates a SourceProvider rooted at projectDir on disk.
 //
 //nolint:ireturn // factory constructor returns interface
 func NewSourceProvider(projectDir string) SourceProvider {
-	return &fileSourceProvider{
+	return NewFSSourceProvider(os.DirFS(projectDir), projectDir)
+}
+
+// NewFSSourceProvider creates a SourceProvider over fsys - os.DirFS in
+// production, fstest.MapFS in tests. projectDir names the on-disk root fsys
+// was carved from ("" for a virtual fs), used only to relativize abs paths.
+//
+//nolint:ireturn // factory constructor returns interface
+func NewFSSourceProvider(fsys fs.FS, projectDir string) SourceProvider {
+	return &fsSourceProvider{
+		fsys:       fsys,
 		projectDir: projectDir,
 		cache:      make(map[string][]byte),
 	}
 }
 
-func (p *fileSourceProvider) Read(path string) ([]byte, bool) {
+func (p *fsSourceProvider) Read(path string) ([]byte, bool) {
 	p.mu.RLock()
 	content, ok := p.cache[path]
 	p.mu.RUnlock()
 	if ok {
 		return content, true
 	}
-	abs := path
-	if !filepath.IsAbs(abs) {
-		abs = filepath.Join(p.projectDir, path)
+	rel := path
+	if filepath.IsAbs(rel) {
+		if p.projectDir == "" {
+			return nil, false
+		}
+		var relErr error
+		if rel, relErr = filepath.Rel(p.projectDir, rel); relErr != nil {
+			return nil, false
+		}
 	}
-	content, err := os.ReadFile(abs) //nolint:gosec // project file path.
+	content, err := fs.ReadFile(p.fsys, filepath.ToSlash(rel))
 	if err != nil {
 		return nil, false
 	}
@@ -74,24 +91,20 @@ var walkSkipDirs = map[string]bool{
 	"testdata":  true,
 }
 
-func (p *fileSourceProvider) Walk(fn func(path string, ext string) bool) {
-	_ = filepath.WalkDir(p.projectDir, func(full string, d os.DirEntry, err error) error {
+func (p *fsSourceProvider) Walk(fn func(path string, ext string) bool) {
+	_ = fs.WalkDir(p.fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil //nolint:nilerr // WalkDir callback: skip the bad entry, keep walking.
 		}
 		if d.IsDir() {
-			if full != p.projectDir && walkSkipDirs[d.Name()] {
-				return filepath.SkipDir
+			if path != "." && walkSkipDirs[d.Name()] {
+				return fs.SkipDir
 			}
 			return nil
 		}
-		rel, relErr := filepath.Rel(p.projectDir, full)
-		if relErr != nil {
-			return nil //nolint:nilerr // unrelatable entry: skip it, keep walking.
-		}
-		ext := strings.ToLower(filepath.Ext(full))
-		if !fn(rel, ext) {
-			return filepath.SkipAll
+		ext := strings.ToLower(filepath.Ext(path))
+		if !fn(path, ext) {
+			return fs.SkipAll
 		}
 		return nil
 	})
