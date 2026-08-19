@@ -1,14 +1,13 @@
 package vcs
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 )
 
 type gitError struct {
@@ -27,21 +26,25 @@ func (e *gitError) Unwrap() error {
 
 func runGit(dir string, args ...string) (string, error) {
 	const gitTimeout = 2 * time.Second
-	// A hung git (e.g. a credential prompt) must not block the pipeline.
-	ctx, cancel := context.WithTimeout(context.Background(), gitTimeout)
-	defer cancel()
-
 	full := append([]string{"-C", dir}, args...)
-	//nolint:gosec // Fixed git subcommands over an operator-supplied local path, never user input.
-	cmd := exec.CommandContext(ctx, "git", full...)
-	cmd.Env = append(os.Environ(), "LC_ALL=C")
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return "", &gitError{args: full, stderr: strings.TrimSpace(stderr.String()), err: err}
+	// Shell out to git: this package must match git's own status, rename and listing output.
+	result, err := execx.Run(context.Background(), execx.Command{
+		Name:    "git",
+		Args:    full,
+		Timeout: gitTimeout,
+		// Git translates diagnostics per locale; LC_ALL=C keeps stderr in
+		// the language isEmptyRepoError's match was written against.
+		Env: []string{"LC_ALL=C"},
+	})
+	if err != nil {
+		// Unwrap to execx.Error's own cause and stderr so gitError.Error() stays terse.
+		cause, stderr := err, ""
+		if execErr, ok := errors.AsType[*execx.Error](err); ok {
+			cause, stderr = execErr.Err, execErr.Stderr
+		}
+		return "", &gitError{args: full, stderr: stderr, err: cause}
 	}
-	return strings.TrimRight(stdout.String(), "\n"), nil
+	return strings.TrimRight(result.Stdout, "\n"), nil
 }
 
 func isEmptyRepoError(err error) bool {

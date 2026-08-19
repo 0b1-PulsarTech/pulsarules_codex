@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 )
 
 type janeUsage struct {
@@ -20,16 +20,19 @@ type janeUsage struct {
 func readJaneUsage(dir string) (janeUsage, error) {
 	const (
 		gitMaxCount              = "--max-count=1000000"
+		janeGitTimeout           = 2 * time.Minute
 		estimatedEmojiVocabulary = 512
 	)
 
 	allowedTypes := commitmsg.AllowedTypes()
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
-
-	//nolint:gosec // dir is an operator-supplied path to a local clone.
-	cmd := exec.CommandContext(ctx, "git", "-C", dir, "log", "--format=%s", "--all", gitMaxCount)
-	out, err := cmd.Output()
+	// Calls git directly, not internal/vcs: tools/ is no runtime dependency that package
+	// must cover. A large history walked with --all can take a while, hence the timeout.
+	result, err := execx.Run(context.Background(), execx.Command{
+		Name:    "git",
+		Args:    []string{"log", "--format=%s", "--all", gitMaxCount},
+		Dir:     dir,
+		Timeout: janeGitTimeout,
+	})
 	if err != nil {
 		return janeUsage{}, fmt.Errorf("read git log of %s: %w", dir, err)
 	}
@@ -38,7 +41,7 @@ func readJaneUsage(dir string) (janeUsage, error) {
 		byEmoji: make(map[string]int, estimatedEmojiVocabulary),
 		byType:  make(map[string]map[string]int, len(allowedTypes)),
 	}
-	for subject := range strings.SplitSeq(string(out), "\n") {
+	for subject := range strings.SplitSeq(result.Stdout, "\n") {
 		usage.add(commitmsg.Parse(subject), allowedTypes)
 	}
 	if len(usage.byEmoji) == 0 {

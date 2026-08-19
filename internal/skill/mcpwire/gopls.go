@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/output"
 )
 
@@ -19,11 +20,14 @@ func GoplsOnPath() bool {
 }
 
 func GoplsInstructions(ctx context.Context) (string, error) {
-	out, err := exec.CommandContext(ctx, goplsBinary, "mcp", "-instructions").Output()
+	result, err := execx.Run(
+		ctx,
+		execx.Command{Name: goplsBinary, Args: []string{"mcp", "-instructions"}},
+	)
 	if err != nil {
 		return "", fmt.Errorf("run gopls mcp -instructions: %w", err)
 	}
-	return string(out), nil
+	return result.Stdout, nil
 }
 
 func GenerateGoplsSkill(

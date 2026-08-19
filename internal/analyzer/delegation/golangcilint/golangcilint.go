@@ -1,11 +1,12 @@
 package golangcilint
 
 import (
+	"context"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 )
 
 func forcedLinters() []string {
@@ -60,27 +61,30 @@ func (r *Runner) runPerModule(projectDir, configPath string) []core.Finding {
 	allFindings := r.forcedBaselineFindings(configFlag)
 	for _, mod := range modules {
 		modDir := filepath.Join(projectDir, mod)
-		out, err := r.run(projectDir, lintArgs(modDir+"/...", configFlag))
-		allFindings = append(allFindings, r.parseOutput(out, err)...)
+		result, err := r.run(projectDir, lintArgs(modDir+"/...", configFlag))
+		allFindings = append(allFindings, r.parseOutput(result, err)...)
 	}
 	return allFindings
 }
 
 func (r *Runner) runSingle(projectDir, configPath string) []core.Finding {
 	configFlag := resolvedConfigFlag(projectDir, configPath)
-	out, err := r.run(projectDir, lintArgs("./...", configFlag))
-	return append(r.forcedBaselineFindings(configFlag), r.parseOutput(out, err)...)
+	result, err := r.run(projectDir, lintArgs("./...", configFlag))
+	return append(r.forcedBaselineFindings(configFlag), r.parseOutput(result, err)...)
 }
 
-func (r *Runner) run(projectDir string, args []string) ([]byte, error) {
-	//nolint:gosec,noctx // r.path is the configured golangci-lint binary, and Run has no context.
-	cmd := exec.Command(r.path, args...)
-	cmd.Dir = projectDir
-	out, err := cmd.Output()
+func (r *Runner) run(projectDir string, args []string) (execx.Result, error) {
+	result, err := execx.Run(context.Background(), execx.Command{
+		Name: r.path,
+		Args: args,
+		Dir:  projectDir,
+	})
 	if err != nil {
-		return out, fmt.Errorf("run golangci-lint: %w", err)
+		// %w keeps *execx.Error (and the *exec.ExitError it wraps) reachable through
+		// parseOutput's errors.As.
+		return result, fmt.Errorf("run golangci-lint: %w", err)
 	}
-	return out, nil
+	return result, nil
 }
 
 func lintArgs(target, configFlag string) []string {
