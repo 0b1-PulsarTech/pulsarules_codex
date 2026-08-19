@@ -162,6 +162,12 @@ func TestRegistryDetectTargets(t *testing.T) {
 			want:  []string{"agents"},
 		},
 		{
+			name:  "AGENTS.md written alongside opencode dir",
+			dirs:  []string{".opencode"},
+			files: []string{"AGENTS.md"},
+			want:  []string{"opencode"},
+		},
+		{
 			name: "cursor rules only",
 			dirs: []string{filepath.Join(".cursor", "rules")},
 			want: []string{"cursor"},
