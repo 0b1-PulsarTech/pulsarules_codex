@@ -31,24 +31,14 @@ func Install(dir string, hooks []string, opts Options) (backedUp []string, err e
 			)
 		}
 		path := filepath.Join(dest, name)
-		exists, ours, checkErr := marker.Check(path)
-		if checkErr != nil {
-			return backedUp, fmt.Errorf("check %q: %w", path, checkErr)
-		}
-		if exists && !ours {
-			backupPath, backupErr := marker.Backup(path)
-			if backupErr != nil {
-				return backedUp, fmt.Errorf("back up %q: %w", path, backupErr)
-			}
-			backedUp = append(backedUp, marker.BackupMessage(path, backupPath))
-		} else {
-			// An owned or absent file is removed so mode always applies, even over a
-			// read-only prior install; the error adds nothing the write would not say.
-			_ = os.Remove(path)
-		}
 		const hookMode = 0o500
-		if writeErr := os.WriteFile(path, []byte(script), hookMode); writeErr != nil {
-			return backedUp, fmt.Errorf("write hook %q: %w", name, writeErr)
+		// The tightest mode that still lets git execute the hook script.
+		note, installErr := marker.InstallFile(path, []byte(script), hookMode)
+		if installErr != nil {
+			return backedUp, fmt.Errorf("install hook %q: %w", name, installErr)
+		}
+		if note != "" {
+			backedUp = append(backedUp, note)
 		}
 	}
 	return backedUp, nil
