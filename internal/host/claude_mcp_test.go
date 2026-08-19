@@ -3,10 +3,62 @@ package host
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
+
+func TestUnwireClaudeMCP_NoNoteWhenNothingChanged(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		seedMCP string
+	}{
+		{name: "absent .mcp.json"},
+		{name: "present .mcp.json with no gopls entry", seedMCP: `{"mcpServers": {"other": {}}}`},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			repoDir := t.TempDir()
+			if testCase.seedMCP != "" {
+				path := filepath.Join(repoDir, ".mcp.json")
+				if err := os.WriteFile(path, []byte(testCase.seedMCP), 0o600); err != nil {
+					t.Fatalf("seed .mcp.json: %v", err)
+				}
+			}
+
+			var report Report
+			if err := unwireClaudeMCP(repoDir, &report); err != nil {
+				t.Fatalf("unwireClaudeMCP: %v", err)
+			}
+			if len(report.Notes) != 0 {
+				t.Errorf("Notes = %v, want none (nothing was unwired)", report.Notes)
+			}
+		})
+	}
+}
+
+func TestUnwireClaudeMCP_NotesWhenGoplsRemoved(t *testing.T) {
+	t.Parallel()
+
+	repoDir := t.TempDir()
+	seed := `{"mcpServers": {"gopls": {"command": "gopls", "args": ["mcp"]}}}`
+	path := filepath.Join(repoDir, ".mcp.json")
+	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+		t.Fatalf("seed .mcp.json: %v", err)
+	}
+
+	var report Report
+	if err := unwireClaudeMCP(repoDir, &report); err != nil {
+		t.Fatalf("unwireClaudeMCP: %v", err)
+	}
+	if !strings.Contains(strings.Join(report.Notes, "\n"), "unwired gopls") {
+		t.Errorf("Notes = %v, want an 'unwired gopls' entry", report.Notes)
+	}
+}
 
 //nolint:paralleltest // fakeGoplsOnPath needs t.Setenv, which bars t.Parallel.
 func TestGenerateGoplsSkill_ForeignBackup(t *testing.T) {

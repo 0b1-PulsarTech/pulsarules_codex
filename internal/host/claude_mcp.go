@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -32,18 +31,17 @@ func wireClaudeMCP(templates fs.FS, repoDir, skillsDir string, report *Report) e
 }
 
 func unwireClaudeMCP(repoDir string, report *Report) error {
-	mcpPath := filepath.Join(repoDir, ".mcp.json")
-	if _, statErr := os.Stat(mcpPath); errors.Is(statErr, fs.ErrNotExist) {
-		return nil
-	}
-	if err := mcp.Remove(repoDir); err != nil {
+	changed, err := mcp.Remove(repoDir)
+	if err != nil {
 		if errors.Is(err, jsondoc.ErrUnparseableJSON) {
 			report.warn("%v", err)
 			return nil
 		}
 		return fmt.Errorf("remove mcp: %w", err)
 	}
-	report.note("unwired gopls from %s", mcpPath)
+	if changed {
+		report.note("unwired gopls from %s", filepath.Join(repoDir, ".mcp.json"))
+	}
 	return nil
 }
 
