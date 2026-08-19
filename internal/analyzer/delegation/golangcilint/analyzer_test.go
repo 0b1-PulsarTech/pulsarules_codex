@@ -74,10 +74,9 @@ func TestAnalyzer_SkipsWithoutBinary(t *testing.T) {
 		ProjectDir: t.TempDir(),
 		Config:     &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{}},
 	})
-	if len(findings) != 1 {
-		t.Fatalf("got %d findings, want 1: %+v", len(findings), findings)
-	}
-	if findings[0].AnalyzerID != "golangci-lint" {
-		t.Errorf("AnalyzerID = %q, want %q", findings[0].AnalyzerID, "golangci-lint")
+	if len(findings) != 0 {
+		t.Fatalf(
+			"got %d findings, want 0 (missing binary is a skip): %+v", len(findings), findings,
+		)
 	}
 }

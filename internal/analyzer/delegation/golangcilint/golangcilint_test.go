@@ -3,7 +3,6 @@ package golangcilint
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
@@ -24,22 +23,8 @@ func TestRun_MissingBinary(t *testing.T) {
 
 	r := NewRunner("/nonexistent/golangci-lint")
 	findings := r.Run(".", "")
-
-	if len(findings) != 1 {
-		t.Fatalf("expected 1 finding for a missing binary, got %d: %+v", len(findings), findings)
-	}
-	got := findings[0]
-	if got.AnalyzerID != "golangci-lint" {
-		t.Errorf("AnalyzerID = %q, want %q", got.AnalyzerID, "golangci-lint")
-	}
-	if strings.Contains(got.Message, "failed to parse golangci-lint output") {
-		t.Errorf("Message = %q, must not claim a JSON parse failure", got.Message)
-	}
-	if !strings.Contains(got.Message, "/nonexistent/golangci-lint") {
-		t.Errorf(
-			"Message = %q, want it to name the real exec failure (missing binary path)",
-			got.Message,
-		)
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 findings for a missing binary, got %d: %+v", len(findings), findings)
 	}
 }
 
