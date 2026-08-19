@@ -40,7 +40,7 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		if !ok {
 			continue
 		}
-		if isExemptHeader(line) {
+		if core.IsExemptHeaderLine(line) {
 			continue
 		}
 		if lang.IsCommentLine(line) && !lang.IsPackageDeclaration(line) {
@@ -53,13 +53,6 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		}
 	}
 	return findings
-}
-
-func isExemptHeader(line string) bool {
-	trimmed := strings.TrimSpace(line)
-	return strings.HasPrefix(trimmed, "// Code generated") ||
-		strings.HasPrefix(trimmed, "//go:build") ||
-		strings.HasPrefix(trimmed, "// +build")
 }
 
 func firstNonBlank(src []byte) (string, int, bool) {

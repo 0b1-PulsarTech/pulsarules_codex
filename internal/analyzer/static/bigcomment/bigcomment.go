@@ -60,7 +60,7 @@ func scanFile(
 		if lang.IsCommentLine(line) {
 			if blockLines == 0 {
 				blockStart = lineNum
-				exempt = isGeneratedHeader(line) || isBuildTag(line)
+				exempt = core.IsExemptHeaderLine(line)
 			}
 			blockLines++
 			continue
@@ -85,15 +85,6 @@ func scanFile(
 		))
 	}
 	return findings
-}
-
-func isGeneratedHeader(line string) bool {
-	return strings.HasPrefix(strings.TrimSpace(line), "// Code generated")
-}
-
-func isBuildTag(line string) bool {
-	trimmed := strings.TrimSpace(line)
-	return strings.HasPrefix(trimmed, "//go:build") || strings.HasPrefix(trimmed, "// +build")
 }
 
 func (a *Analyzer) resolveMaxLines(ctx *core.AnalysisContext) int {
