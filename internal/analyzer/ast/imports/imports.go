@@ -21,9 +21,6 @@ func NewAnalyzer() *Analyzer {
 
 func (a *Analyzer) ID() string          { return "import-groups" }
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	modulePath, err := core.ModulePath(ctx.ProjectDir)

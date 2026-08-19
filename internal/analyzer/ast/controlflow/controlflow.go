@@ -23,9 +23,6 @@ func NewAnalyzer() *Analyzer {
 
 func (a *Analyzer) ID() string          { return "control-flow" }
 func (a *Analyzer) Stage() core.StageID { return core.StageAST }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{NeedsAST: true}
-}
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {

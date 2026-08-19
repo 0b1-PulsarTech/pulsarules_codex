@@ -17,9 +17,6 @@ func NewGolangcilintAnalyzer(path string) *GolangcilintAnalyzer {
 
 func (a *GolangcilintAnalyzer) ID() string          { return golangciLintID }
 func (a *GolangcilintAnalyzer) Stage() core.StageID { return core.StageStatic }
-func (a *GolangcilintAnalyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
 
 func (a *GolangcilintAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	configPath := extractGolangciConfigPath(ctx)

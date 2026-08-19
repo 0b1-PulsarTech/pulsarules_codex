@@ -20,9 +20,6 @@ func TestAnalyzer_Identity(t *testing.T) {
 	if a.Stage() != core.StageStatic {
 		t.Fatalf("Stage() = %d, want StageStatic", a.Stage())
 	}
-	if needs := a.Needs(); needs.NeedsAST || needs.NeedsGitHistory {
-		t.Fatalf("Needs() = %+v, want no requirements", needs)
-	}
 }
 
 type movePurityCase struct {

@@ -34,8 +34,6 @@ func (a *TextAnalyzer) ID() string { return "text-markers" }
 
 func (a *TextAnalyzer) Stage() core.StageID { return core.StageStatic }
 
-func (a *TextAnalyzer) Needs() core.Requirements { return core.Requirements{} }
-
 func (a *TextAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	return eachMarkedFile(ctx, func(fc core.FileChange, src string) []core.Finding {
 		return checkCarriers(fc, src, a.reporters)
@@ -77,8 +75,6 @@ func NewTypographicAnalyzer() *TypographicAnalyzer { return &TypographicAnalyzer
 func (a *TypographicAnalyzer) ID() string { return "typographic-markers" }
 
 func (a *TypographicAnalyzer) Stage() core.StageID { return core.StageStatic }
-
-func (a *TypographicAnalyzer) Needs() core.Requirements { return core.Requirements{} }
 
 func (a *TypographicAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	reporter := core.NewReporter(

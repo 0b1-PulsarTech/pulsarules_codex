@@ -29,10 +29,8 @@ func NewAnalyzer(repo branchReader) *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string { return analyzerID }
-
-func (a *Analyzer) Stage() core.StageID      { return core.StageStatic }
-func (a *Analyzer) Needs() core.Requirements { return core.Requirements{} }
+func (a *Analyzer) ID() string          { return analyzerID }
+func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if a.repo == nil {

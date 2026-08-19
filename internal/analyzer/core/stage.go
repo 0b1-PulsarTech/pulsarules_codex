@@ -28,8 +28,3 @@ const (
 	StageRuleInjection
 	StageOutput
 )
-
-type Requirements struct {
-	NeedsAST        bool
-	NeedsGitHistory bool
-}

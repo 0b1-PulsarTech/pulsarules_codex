@@ -25,9 +25,6 @@ func NewAnalyzer(langs *core.LanguageRegistry) *Analyzer {
 
 func (a *Analyzer) ID() string          { return "big-comment" }
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if a.langs == nil || ctx.Sources == nil {

@@ -23,9 +23,6 @@ func NewAnalyzer() *Analyzer {
 
 func (a *Analyzer) ID() string          { return "file-size" }
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	limits := newLineLimits(a.resolveMaxLines(ctx))

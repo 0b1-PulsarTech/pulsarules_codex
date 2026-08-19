@@ -12,9 +12,8 @@ type stubAnalyzer struct {
 	findings []core.Finding
 }
 
-func (s stubAnalyzer) ID() string               { return s.id }
-func (s stubAnalyzer) Stage() core.StageID      { return s.stage }
-func (s stubAnalyzer) Needs() core.Requirements { return core.Requirements{} }
+func (s stubAnalyzer) ID() string          { return s.id }
+func (s stubAnalyzer) Stage() core.StageID { return s.stage }
 func (s stubAnalyzer) Analyze(_ *core.AnalysisContext) []core.Finding {
 	return s.findings
 }

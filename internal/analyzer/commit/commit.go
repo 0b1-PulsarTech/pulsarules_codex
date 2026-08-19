@@ -32,10 +32,6 @@ func (a *Analyzer) ID() string { return "commit-lint" }
 
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
-
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if ctx.CommitMsg == "" {
 		return nil

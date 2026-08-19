@@ -14,8 +14,7 @@ func NewAnalyzer() *Analyzer { return &Analyzer{} }
 
 func (a *Analyzer) ID() string { return "output" }
 
-func (a *Analyzer) Stage() core.StageID      { return core.StageOutput }
-func (a *Analyzer) Needs() core.Requirements { return core.Requirements{} }
+func (a *Analyzer) Stage() core.StageID { return core.StageOutput }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if len(ctx.Findings) == 0 {

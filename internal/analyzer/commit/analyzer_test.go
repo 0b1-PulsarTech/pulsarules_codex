@@ -39,14 +39,6 @@ func TestCommitAnalyzerID(t *testing.T) {
 	}
 }
 
-func TestCommitAnalyzerDoesNotRequireGitHistory(t *testing.T) {
-	t.Parallel()
-
-	if newTestAnalyzer(t).Needs().NeedsGitHistory {
-		t.Fatal("commit lint must run without git history")
-	}
-}
-
 type analyzeCase struct {
 	name        string
 	commitMsg   string
