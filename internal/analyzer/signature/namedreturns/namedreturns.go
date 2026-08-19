@@ -23,8 +23,9 @@ func (a *Analyzer) ID() string          { return "named-returns" }
 func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	reporter := pass.ResolveReporter(a.reporter, ctx)
 	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
-		return checkFile(ctx.ASTCache.FileSet(), fc, f, a.reporter)
+		return checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
 	})
 }
 

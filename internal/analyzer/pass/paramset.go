@@ -38,6 +38,8 @@ func (params ParamSet) String(key string, fallback string) string {
 	return val
 }
 
+const paramSeverity = "severity"
+
 func severityByName() map[string]Severity {
 	return map[string]Severity{
 		"error":   SeverityError,
@@ -65,7 +67,7 @@ func validSeverityName(name string) bool {
 }
 
 func (params ParamSet) Severity(fallback Severity) Severity {
-	if severity, ok := severityByName()[params.String("severity", "")]; ok {
+	if severity, ok := severityByName()[params.String(paramSeverity, "")]; ok {
 		return severity
 	}
 	return fallback

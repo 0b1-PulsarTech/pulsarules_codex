@@ -46,7 +46,7 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if hasAllowedType(branch, allowed) {
 		return nil
 	}
-	return []pass.Finding{a.reporter.New(fmt.Sprintf(
+	return []pass.Finding{pass.ResolveReporter(a.reporter, ctx).New(fmt.Sprintf(
 		"branch %q does not start with a type prefix (want <type>/<description>, type one of %s)",
 		branch, strings.Join(allowed, "|"),
 	))}

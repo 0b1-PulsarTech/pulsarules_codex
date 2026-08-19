@@ -22,6 +22,12 @@ func NewReporter(analyzerID string, severity Severity, category Category) Report
 	return Reporter{analyzerID: analyzerID, severity: severity, category: category}
 }
 
+func ResolveReporter(r Reporter, ctx *Context) Reporter {
+	// Shared reporters are built once; severity is per-run policy, so each run resolves a copy.
+	r.severity = ctx.Params(r.analyzerID).Severity(r.severity)
+	return r
+}
+
 func (r Reporter) At(file string, line int, message, suggestion string) Finding {
 	return Finding{
 		AnalyzerID: r.analyzerID,

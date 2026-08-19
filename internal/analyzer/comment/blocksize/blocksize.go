@@ -31,6 +31,7 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 		return nil
 	}
 	ml := a.resolveMaxLines(ctx)
+	reporter := pass.ResolveReporter(a.reporter, ctx)
 	var findings []pass.Finding
 	for _, fc := range ctx.ChangedFiles {
 		lang := a.langs.Lookup(fc.Extension)
@@ -41,7 +42,7 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 		if !ok {
 			continue
 		}
-		findings = append(findings, scanFile(src, fc, lang, ml, a.reporter)...)
+		findings = append(findings, scanFile(src, fc, lang, ml, reporter)...)
 	}
 	return findings
 }

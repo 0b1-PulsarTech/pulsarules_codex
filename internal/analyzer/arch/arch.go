@@ -43,8 +43,9 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if ctx.ProjectDir == "" {
 		return nil
 	}
+	reporter := pass.ResolveReporter(a.reporter, ctx)
 
-	modulePath, findings := resolveModuleOrFindings(a.reporter, ctx.ProjectDir)
+	modulePath, findings := resolveModuleOrFindings(reporter, ctx.ProjectDir)
 	if modulePath == "" {
 		return findings
 	}
@@ -53,7 +54,7 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	violations := checkBoundaries(idx.graph, modulePath)
 
 	for _, v := range violations {
-		findings = append(findings, a.reporter.At(
+		findings = append(findings, reporter.At(
 			".",
 			0,
 			v,
@@ -80,8 +81,9 @@ func (a *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if ctx.ProjectDir == "" {
 		return nil
 	}
+	reporter := pass.ResolveReporter(a.reporter, ctx)
 
-	modulePath, findings := resolveModuleOrFindings(a.reporter, ctx.ProjectDir)
+	modulePath, findings := resolveModuleOrFindings(reporter, ctx.ProjectDir)
 	if modulePath == "" {
 		return findings
 	}
@@ -98,7 +100,7 @@ func (a *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 			b.WriteString(stripModule(p, modulePath))
 		}
 		path := b.String()
-		findings = append(findings, a.reporter.At(
+		findings = append(findings, reporter.At(
 			".",
 			0,
 			fmt.Sprintf("import cycle: %s", path),

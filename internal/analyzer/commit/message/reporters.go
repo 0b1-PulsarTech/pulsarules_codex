@@ -42,6 +42,24 @@ func defaultRuleReporters() ruleReporters {
 	}
 }
 
+func (rr ruleReporters) resolved(ctx *pass.Context) ruleReporters {
+	rr.initial = pass.ResolveReporter(rr.initial, ctx)
+	rr.merge = pass.ResolveReporter(rr.merge, ctx)
+	rr.emojiRequired = pass.ResolveReporter(rr.emojiRequired, ctx)
+	rr.emojiCount = pass.ResolveReporter(rr.emojiCount, ctx)
+	rr.typeRequired = pass.ResolveReporter(rr.typeRequired, ctx)
+	rr.typeEnum = pass.ResolveReporter(rr.typeEnum, ctx)
+	rr.scopeCharset = pass.ResolveReporter(rr.scopeCharset, ctx)
+	rr.descRequired = pass.ResolveReporter(rr.descRequired, ctx)
+	rr.descLength = pass.ResolveReporter(rr.descLength, ctx)
+	rr.descCapitalize = pass.ResolveReporter(rr.descCapitalize, ctx)
+	rr.descNoPeriod = pass.ResolveReporter(rr.descNoPeriod, ctx)
+	rr.bodyLength = pass.ResolveReporter(rr.bodyLength, ctx)
+	rr.bodyTotalLength = pass.ResolveReporter(rr.bodyTotalLength, ctx)
+	rr.noCoauthor = pass.ResolveReporter(rr.noCoauthor, ctx)
+	return rr
+}
+
 type emojiReporters struct {
 	prohibited pass.Reporter
 	catalog    pass.Reporter
@@ -58,4 +76,12 @@ func defaultEmojiReporters() emojiReporters {
 			"commit-emoji-soft-repeat", pass.SeverityInfo, pass.CatCommit,
 		),
 	}
+}
+
+func (er emojiReporters) resolved(ctx *pass.Context) emojiReporters {
+	er.prohibited = pass.ResolveReporter(er.prohibited, ctx)
+	er.catalog = pass.ResolveReporter(er.catalog, ctx)
+	er.repeat = pass.ResolveReporter(er.repeat, ctx)
+	er.softRepeat = pass.ResolveReporter(er.softRepeat, ctx)
+	return er
 }

@@ -25,8 +25,9 @@ func (a *Analyzer) ID() string          { return "control-flow" }
 func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	reporter := pass.ResolveReporter(a.reporter, ctx)
 	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
-		return a.checkFile(ctx.ASTCache.FileSet(), fc, f)
+		return a.checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
 	})
 }
 
@@ -34,13 +35,14 @@ func (a *Analyzer) checkFile(
 	fset *token.FileSet,
 	fc pass.FileChange,
 	f *ast.File,
+	reporter pass.Reporter,
 ) []pass.Finding {
 	var findings []pass.Finding
 
 	emit := func(pos token.Pos, msg, suggestion string) {
 		findings = append(
 			findings,
-			a.reporter.At(fc.Path, fset.Position(pos).Line, msg, suggestion),
+			reporter.At(fc.Path, fset.Position(pos).Line, msg, suggestion),
 		)
 	}
 

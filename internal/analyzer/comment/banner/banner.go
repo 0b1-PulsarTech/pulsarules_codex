@@ -25,6 +25,7 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if a.langs == nil || ctx.Sources == nil {
 		return nil
 	}
+	reporter := pass.ResolveReporter(a.reporter, ctx)
 	var findings []pass.Finding
 	for _, fc := range ctx.ChangedFiles {
 		lang := a.langs.Lookup(fc.Extension)
@@ -43,7 +44,7 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 			continue
 		}
 		if lang.IsCommentLine(line) && !lang.IsPackageDeclaration(line) {
-			findings = append(findings, a.reporter.At(
+			findings = append(findings, reporter.At(
 				fc.Path,
 				lineNum,
 				"file starts with a comment before the package declaration",

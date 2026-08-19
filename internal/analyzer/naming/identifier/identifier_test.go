@@ -187,5 +187,5 @@ func analyzeSource(t *testing.T, a *Analyzer, source string) []pass.Finding {
 	}
 
 	fc := pass.FileChange{Path: "foo.go", Extension: ".go"}
-	return a.checkFile(cache.FileSet(), fc, f)
+	return a.checkFile(cache.FileSet(), fc, f, a.reporter)
 }

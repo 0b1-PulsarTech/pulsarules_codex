@@ -35,8 +35,13 @@ func (a *TextAnalyzer) ID() string { return "text-markers" }
 func (a *TextAnalyzer) Stage() pass.StageID { return pass.StageStatic }
 
 func (a *TextAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	reporters := textReporters{
+		carrier:     pass.ResolveReporter(a.reporters.carrier, ctx),
+		contextual:  pass.ResolveReporter(a.reporters.contextual, ctx),
+		frontmatter: pass.ResolveReporter(a.reporters.frontmatter, ctx),
+	}
 	return eachMarkedFile(ctx, func(fc pass.FileChange, src string) []pass.Finding {
-		return checkCarriers(fc, src, a.reporters)
+		return checkCarriers(fc, src, reporters)
 	})
 }
 
@@ -68,20 +73,24 @@ func carrierAdvice(class invisible.Class) string {
 	return "run `pulsarules_cli clean --write`, which removes this class"
 }
 
-type TypographicAnalyzer struct{}
+type TypographicAnalyzer struct {
+	reporter pass.Reporter
+}
 
-func NewTypographicAnalyzer() *TypographicAnalyzer { return &TypographicAnalyzer{} }
+func NewTypographicAnalyzer() *TypographicAnalyzer {
+	return &TypographicAnalyzer{
+		// Blocks by default; a project that treats ASCII punctuation as house style
+		// lowers it through the analyzer's "severity" param.
+		reporter: pass.NewReporter("typographic-markers", pass.SeverityError, pass.CatSyntax),
+	}
+}
 
 func (a *TypographicAnalyzer) ID() string { return "typographic-markers" }
 
 func (a *TypographicAnalyzer) Stage() pass.StageID { return pass.StageStatic }
 
 func (a *TypographicAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	reporter := pass.NewReporter(
-		a.ID(),
-		ctx.Params(a.ID()).Severity(pass.SeverityError),
-		pass.CatSyntax,
-	)
+	reporter := pass.ResolveReporter(a.reporter, ctx)
 	return eachMarkedFile(ctx, func(fc pass.FileChange, src string) []pass.Finding {
 		return checkTypographic(reporter, fc, src)
 	})
