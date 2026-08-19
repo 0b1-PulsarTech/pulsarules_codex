@@ -221,6 +221,11 @@ content-hashed `FirstEmission` deduplicate repeat emissions within one session; 
 removes them at `session-end`. `checklist.go`'s `TypedChecklist` and `checks.go`'s
 `RunGovernanceCheck` are what the `stop` handler calls into the governance pipeline through: the
 latter opens a `Session` at `analysis.ScopeChanged` and formats findings with `analysis.StyleHook`.
+`drift.go` runs once per session at `session-start`: it compares `knowledge.Fingerprint()` (the
+digest of the standards the binary embeds, see `knowledge/fingerprint.go`) against the project's
+`knowledge/` tree on disk and warns when the binary trails the source it was built from. This is a
+guard for the development repo itself - a consumer project has no `knowledge/` tree and stays
+silent.
 
 ### internal/config
 

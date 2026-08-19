@@ -55,6 +55,7 @@ func (d *Dispatcher) emitSessionStart(session *SessionTracker) error {
 		return fmt.Errorf("session contract: %w", err)
 	}
 	d.emitOutput("SessionStart", text)
+	d.emitKnowledgeDrift()
 	return nil
 }
 
