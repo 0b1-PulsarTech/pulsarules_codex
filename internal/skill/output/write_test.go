@@ -187,3 +187,34 @@ func TestWriteDoc_PreMarkerDoc(t *testing.T) {
 		t.Errorf("doc backup content = %q, want %q", got, legacyDoc)
 	}
 }
+
+func TestWriteDoc_GitignoreFailure(t *testing.T) {
+	t.Parallel()
+
+	target := filepath.Join(t.TempDir(), "skill")
+	if err := os.MkdirAll(target, 0o700); err != nil {
+		t.Fatalf("mkdir target: %v", err)
+	}
+	const sentinel = "# " + marker.Installed + "\nprevious body\n"
+	docPath := filepath.Join(target, "SKILL.md")
+	if err := os.WriteFile(docPath, []byte(sentinel), 0o600); err != nil {
+		t.Fatalf("seed doc: %v", err)
+	}
+	if err := os.Chmod(target, 0o500); err != nil {
+		t.Fatalf("chmod read-only: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(target, 0o700) })
+
+	if _, err := WriteDoc(target, "SKILL.md", "new body"); err == nil {
+		t.Skip("directory permissions are not enforced for this user")
+	}
+	got, err := os.ReadFile(docPath) //nolint:gosec // test fixture path.
+	if err != nil {
+		t.Fatalf("read doc: %v", err)
+	}
+	if string(got) != sentinel {
+		t.Errorf(
+			"doc was rewritten before the ignore landed: content = %q, want %q", got, sentinel,
+		)
+	}
+}
