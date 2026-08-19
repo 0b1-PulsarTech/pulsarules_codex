@@ -7,6 +7,7 @@ import (
 type hookSpec struct {
 	description string
 	command     string
+	governed    bool
 }
 
 func hookSpecs() map[string]hookSpec {
@@ -18,18 +19,36 @@ func hookSpecs() map[string]hookSpec {
 		"pre-commit": {
 			description: "runs governance checks on staged changes",
 			command:     `governance --project "$PROJECT_DIR" --scope commit`,
+			governed:    true,
 		},
 		"pre-push": {
 			description: "runs governance checks before pushing",
 			command:     `governance --project "$PROJECT_DIR"`,
+			governed:    true,
 		},
 	}
 }
 
-func hookScript(name string) (string, bool) {
+type Options struct {
+	TypographicSeverity string
+}
+
+func (opts Options) typographicFlag() string {
+	if opts.TypographicSeverity == "" {
+		return ""
+	}
+	return " --typographic-severity " + opts.TypographicSeverity
+}
+
+func hookScript(name string, opts Options) (string, bool) {
 	spec, ok := hookSpecs()[name]
 	if !ok {
 		return "", false
+	}
+	// Policy is baked in at install: a git hook gets no arguments from the committer.
+	command := spec.command
+	if spec.governed {
+		command += opts.typographicFlag()
 	}
 	const scriptPreamble = `PROJECT_DIR=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 cd "$PROJECT_DIR" || exit 0
@@ -47,5 +66,5 @@ BINARY="$COMMON_DIR/hooks/` + binaryName + `"
 	return "#!/bin/sh\n" +
 		"# pulsarules_codex " + name + " hook - " + spec.description + ".\n" +
 		"# " + marker.Installed + "; remove or edit this file to disable.\n" +
-		scriptPreamble + `exec "$BINARY" ` + spec.command + "\n", true
+		scriptPreamble + `exec "$BINARY" ` + command + "\n", true
 }

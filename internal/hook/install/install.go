@@ -7,11 +7,12 @@ import (
 )
 
 type Context struct {
-	Dir          string
-	Templates    fs.FS
-	SettingsFile string
-	GitHooks     []string
-	Warn         func(format string, args ...any)
+	Dir                 string
+	Templates           fs.FS
+	SettingsFile        string
+	GitHooks            []string
+	TypographicSeverity string
+	Warn                func(format string, args ...any)
 }
 
 type UninstallContext struct {
