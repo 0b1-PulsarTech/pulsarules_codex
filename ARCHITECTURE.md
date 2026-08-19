@@ -155,7 +155,7 @@ whose `Needs()` (`NeedsAST`, `NeedsGitHistory`) are not met by the current conte
 `analyzerBuilder` with the scopes it runs under (`staticScopes` = Full+Commit+Changed for static/AST/
 commit/rule-injection/output work that stays useful with only a commit message or only changed files;
 `archScopes` = Full+Changed for the architecture analyzers, which need a source set; `delegationScopes`
-= Full only, since only a full run pays the cost of spawning golangci-lint or gopls). Adding an analyzer
+= Full only, since only a full run pays the cost of spawning golangci-lint). Adding an analyzer
 is one entry in this table. `registerForScope` builds the `core.LanguageRegistry` (Go registered via
 `internal/analyzer/golang`) once and registers only the specs whose scopes contain the requested
 scope.
@@ -180,7 +180,7 @@ file-extension-based dispatch. The families:
   window, tool-attribution trailers, delegating emoji lookups to `internal/emoji`.
 - `movepurity` - flags a staged rename below the configured git rename-similarity score, or one
   staged alongside unrelated edits, as not a pure move.
-- `delegation/{golangcilint,gopls}` - shell out to an external tool and translate its output into
+- `delegation/golangcilint` - shells out to an external tool and translates its output into
   `core.Finding`s; both are gated to `delegationScopes` (`ScopeFull`) since spawning a process is only
   worth the cost on a full run.
 - `core/astcache` - a per-invocation cache of parsed Go ASTs, populated once in `Session.Load` so
@@ -290,7 +290,7 @@ The governance pipeline (see above) adds its own package set:
 | `internal/analyzer/arch`          | `PackageBoundaryAnalyzer`, `ImportCycleAnalyzer` - multi-file architecture checks                   |
 | `internal/analyzer/commit`        | `CommitAnalyzer` - commit-message format, emoji, and trailer rules                                  |
 | `internal/analyzer/movepurity`    | flags a staged rename that is not a pure move                                                       |
-| `internal/analyzer/delegation/*`  | `golangcilint`, `gopls` - shell out to an external tool, gated to `ScopeFull`                       |
+| `internal/analyzer/delegation/*`  | `golangcilint` - shells out to an external tool, gated to `ScopeFull`                              |
 | `internal/analyzer/golang`        | the `Language` handler for `.go` files                                                              |
 | `internal/vcs`                    | `Repository` port, `Open`, `Status`/`Rename` types, `gitcmd.go`'s `runGit` (the one git-exec point)  |
 | `internal/hook`                   | `dispatcher.go` (`Dispatcher`), `router.go` (`Router`), `session.go` (`SessionTracker`), `checklist.go`, `checks.go` (`RunGovernanceCheck`), `install/*` (per-target hook installers) |

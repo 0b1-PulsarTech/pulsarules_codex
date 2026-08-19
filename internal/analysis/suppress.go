@@ -17,7 +17,7 @@ type Result struct {
 
 // splitGenerated partitions findings by whether they land in a generated file.
 //
-// It filters findings, not ChangedFiles: golangci-lint/gopls run as external
+// It filters findings, not ChangedFiles: golangci-lint runs as an external
 // processes and arch analyzers walk the tree themselves, so a file-level
 // filter wouldn't reach them; this also yields the exact suppressed count.
 func splitGenerated(ctx *core.AnalysisContext, findings []core.Finding) Result {

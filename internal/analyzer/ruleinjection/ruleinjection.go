@@ -60,7 +60,6 @@ var defaultRuleMap = map[string]string{
 	"import-cycle":  "module-boundaries",
 	// delegated tool analyzers
 	"golangci-lint": "code-smells",
-	"gopls":         "effective-go",
 }
 
 // Analyzer injects rule summaries into findings at StageRuleInjection. It
