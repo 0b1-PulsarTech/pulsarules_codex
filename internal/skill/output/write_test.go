@@ -218,3 +218,37 @@ func TestWriteDoc_GitignoreFailure(t *testing.T) {
 		)
 	}
 }
+
+func TestWriteDoc_KeepsUserGitignoreLines(t *testing.T) {
+	t.Parallel()
+
+	dir := filepath.Join(t.TempDir(), "go-style")
+	body := "# go-style\n" + marker.Installed + "\n"
+	if _, err := WriteDoc(dir, "SKILL.md", body); err != nil {
+		t.Fatalf("first WriteDoc: %v", err)
+	}
+	ignorePath := filepath.Join(dir, ".gitignore")
+	rendered, err := os.ReadFile(ignorePath) //nolint:gosec // test fixture.
+	if err != nil {
+		t.Fatalf("read gitignore: %v", err)
+	}
+	userLines := string(rendered) + "mine/\n"
+	if err = os.WriteFile(ignorePath, []byte(userLines), 0o600); err != nil {
+		t.Fatalf("add user line: %v", err)
+	}
+
+	backedUp, err := WriteDoc(dir, "SKILL.md", body)
+	if err != nil {
+		t.Fatalf("second WriteDoc: %v", err)
+	}
+	if len(backedUp) != 0 {
+		t.Errorf("backedUp = %v, want none", backedUp)
+	}
+	got, err := os.ReadFile(ignorePath) //nolint:gosec // test fixture.
+	if err != nil {
+		t.Fatalf("reread gitignore: %v", err)
+	}
+	if string(got) != userLines {
+		t.Errorf("gitignore = %q, want %q", got, userLines)
+	}
+}

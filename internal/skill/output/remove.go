@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/gitignore"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
 )
 
@@ -48,11 +49,16 @@ func removeOwnedDoc(dir, docName string) (restored []string, err error) {
 	if err = os.Remove(docPath); err != nil {
 		return nil, fmt.Errorf("remove %q: %w", docPath, err)
 	}
-	gitignorePath := filepath.Join(dir, ".gitignore")
-	if rmErr := os.Remove(gitignorePath); rmErr != nil && !errors.Is(rmErr, fs.ErrNotExist) {
-		return nil, fmt.Errorf("remove %q: %w", gitignorePath, rmErr)
+	if _, err = gitignore.Remove(dir, docName, gitignoreName); err != nil {
+		return nil, fmt.Errorf("remove gitignore entries in %q: %w", dir, err)
 	}
+	gitignorePath := filepath.Join(dir, gitignoreName)
+	// Restore skips a path gitignore.Remove left standing, so a surviving
+	// user gitignore is never clobbered by a backup.
 	for _, path := range []string{docPath, gitignorePath} {
+		if _, statErr := os.Lstat(path); statErr == nil {
+			continue
+		}
 		restoredOK, restoreErr := marker.Restore(path)
 		if restoreErr != nil {
 			return restored, fmt.Errorf("restore backup: %w", restoreErr)

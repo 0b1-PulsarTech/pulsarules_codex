@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
 )
 
 func TestGenerateGoplsSkill_LiveInstructions(t *testing.T) {
@@ -45,7 +47,7 @@ func TestGenerateGoplsSkill_Gitignore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read .gitignore: %v", err)
 	}
-	if want := "SKILL.md\n.gitignore\n"; string(raw) != want {
+	if want := "# " + marker.Installed + "\nSKILL.md\n.gitignore\n"; string(raw) != want {
 		t.Errorf(".gitignore content = %q, want %q", raw, want)
 	}
 }

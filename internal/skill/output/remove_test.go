@@ -207,3 +207,45 @@ func TestRemoveDocs_RemovesWithoutGitignore(t *testing.T) {
 		t.Errorf("expected dir to be removed, stat err = %v", statErr)
 	}
 }
+
+func TestRemoveDocs_LeavesUserGitignoreAndSkipsRestore(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	dir := filepath.Join(root, "security")
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	ignorePath := filepath.Join(dir, ".gitignore")
+	if err := os.WriteFile(ignorePath, []byte("keep-me\n"), 0o600); err != nil {
+		t.Fatalf("seed gitignore: %v", err)
+	}
+	if _, err := WriteDoc(dir, "SKILL.md", "body\n"+marker.Installed+"\n"); err != nil {
+		t.Fatalf("WriteDoc: %v", err)
+	}
+	backupPath := ignorePath + marker.BackupSuffix
+	rendered, err := os.ReadFile(ignorePath) //nolint:gosec // test fixture.
+	if err != nil {
+		t.Fatalf("read gitignore: %v", err)
+	}
+	if err = os.WriteFile(ignorePath, append(rendered, "mine/\n"...), 0o600); err != nil {
+		t.Fatalf("add user line: %v", err)
+	}
+
+	_, restored, err := RemoveDocs(root, "SKILL.md")
+	if err != nil {
+		t.Fatalf("RemoveDocs: %v", err)
+	}
+	if len(restored) != 0 {
+		t.Errorf("restored = %v, want none while a user gitignore stands", restored)
+	}
+	for path, want := range map[string]string{ignorePath: "mine/\n", backupPath: "keep-me\n"} {
+		got, readErr := os.ReadFile(path) //nolint:gosec // test fixture.
+		if readErr != nil {
+			t.Fatalf("read %q: %v", path, readErr)
+		}
+		if string(got) != want {
+			t.Errorf("%q content = %q, want %q", path, got, want)
+		}
+	}
+}
