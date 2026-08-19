@@ -123,13 +123,16 @@ func retireLegacyAgents(base string, report *Report) error {
 }
 
 func unwireOpencodeConfig(projectDir string, report *Report) error {
-	if err := opencodewire.UnwireConfig(projectDir); err != nil {
+	changed, err := opencodewire.UnwireConfig(projectDir)
+	if err != nil {
 		if errors.Is(err, fsx.ErrUnparseableJSON) {
 			report.warn("%v", err)
 			return nil
 		}
 		return fmt.Errorf("unwire opencode config: %w", err)
 	}
-	report.note("unwired %s", filepath.Join(projectDir, "opencode.json"))
+	if changed {
+		report.note("unwired %s", filepath.Join(projectDir, "opencode.json"))
+	}
 	return nil
 }

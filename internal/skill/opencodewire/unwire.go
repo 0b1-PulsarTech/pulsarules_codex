@@ -11,44 +11,47 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsonconfig"
 )
 
-func UnwireConfig(projectDir string) error {
+func UnwireConfig(projectDir string) (changed bool, err error) {
 	path := filepath.Join(projectDir, configFile)
-	existing, err := jsonconfig.Read(path)
+	var existing []byte
+	existing, err = jsonconfig.Read(path)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if existing == nil {
-		return nil
+		return false, nil
 	}
 
 	config := map[string]json.RawMessage{}
 	if err = json.Unmarshal(existing, &config); err != nil {
-		return fmt.Errorf("%w: %q: %w", fsx.ErrUnparseableJSON, path, err)
+		return false, fmt.Errorf("%w: %q: %w", fsx.ErrUnparseableJSON, path, err)
 	}
 
-	instructionsChanged, err := fsx.StripSliceSection(
+	var instructionsChanged bool
+	instructionsChanged, err = fsx.StripSliceSection(
 		config, "instructions", fmt.Sprintf("%q instructions", path), stripInstructions,
 	)
 	if err != nil {
-		return fmt.Errorf("strip instructions: %w", err)
+		return false, fmt.Errorf("strip instructions: %w", err)
 	}
-	mcpChanged, err := fsx.StripMapSection(
+	var mcpChanged bool
+	mcpChanged, err = fsx.StripMapSection(
 		config,
 		"mcp",
 		fmt.Sprintf("%q mcp", path),
 		stripGoplsMCP,
 	)
 	if err != nil {
-		return fmt.Errorf("strip mcp: %w", err)
+		return false, fmt.Errorf("strip mcp: %w", err)
 	}
 	if !instructionsChanged && !mcpChanged {
-		return nil
+		return false, nil
 	}
 	removeOwnedSchema(config)
 	if _, err = fsx.SaveOrRemove(path, config); err != nil {
-		return fmt.Errorf("write opencode config: %w", err)
+		return false, fmt.Errorf("write opencode config: %w", err)
 	}
-	return nil
+	return true, nil
 }
 
 func removeOwnedSchema(config map[string]json.RawMessage) {
