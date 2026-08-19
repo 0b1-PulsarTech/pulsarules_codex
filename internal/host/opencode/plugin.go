@@ -28,19 +28,12 @@ func Install(dir string, templates fs.FS) (backedUp []string, err error) {
 		return nil, fmt.Errorf("read plugin template: %w", readErr)
 	}
 	pluginPath := filepath.Join(pluginsDir, pluginName)
-	exists, ours, checkErr := ownedfile.Check(pluginPath)
-	if checkErr != nil {
-		return nil, fmt.Errorf("check plugin: %w", checkErr)
+	note, installErr := ownedfile.InstallFile(pluginPath, script, disk.FilePrivate)
+	if installErr != nil {
+		return backedUp, fmt.Errorf("install plugin: %w", installErr)
 	}
-	if exists && !ours {
-		backupPath, backupErr := ownedfile.Backup(pluginPath)
-		if backupErr != nil {
-			return nil, fmt.Errorf("back up %q: %w", pluginPath, backupErr)
-		}
-		backedUp = append(backedUp, ownedfile.BackupMessage(pluginPath, backupPath))
-	}
-	if err = os.WriteFile(pluginPath, script, disk.FilePrivate); err != nil {
-		return backedUp, fmt.Errorf("write plugin: %w", err)
+	if note != "" {
+		backedUp = append(backedUp, note)
 	}
 	if err = InstallBinary(dir); err != nil {
 		return backedUp, fmt.Errorf("install binary: %w", err)

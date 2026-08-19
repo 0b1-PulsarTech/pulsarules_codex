@@ -9,6 +9,69 @@ import (
 
 const ownedBody = "# " + Marker + "\nbody\n"
 
+func TestInstallFile(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		seed       string
+		seedMode   os.FileMode
+		wantNote   bool
+		wantBackup bool
+	}{
+		{name: "absent path is a plain write"},
+		{
+			name:       "foreign occupant is backed up",
+			seed:       "user content\n",
+			seedMode:   0o600,
+			wantNote:   true,
+			wantBackup: true,
+		},
+		{
+			name:     "owned occupant is replaced without a backup",
+			seed:     ownedBody,
+			seedMode: 0o600,
+		},
+		{
+			name:     "read-only owned occupant is still replaced",
+			seed:     ownedBody,
+			seedMode: 0o500,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			path := filepath.Join(t.TempDir(), "asset")
+			if testCase.seed != "" {
+				if err := os.WriteFile(
+					path, []byte(testCase.seed), testCase.seedMode,
+				); err != nil {
+					t.Fatalf("seed: %v", err)
+				}
+			}
+			note, err := InstallFile(path, []byte(ownedBody), 0o600)
+			if err != nil {
+				t.Fatalf("InstallFile: %v", err)
+			}
+			if gotNote := note != ""; gotNote != testCase.wantNote {
+				t.Errorf("note = %q, want note %v", note, testCase.wantNote)
+			}
+			got, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("read back: %v", err)
+			}
+			if string(got) != ownedBody {
+				t.Errorf("content = %q, want the installed body", got)
+			}
+			_, statErr := os.Lstat(path + BackupSuffix)
+			if gotBackup := statErr == nil; gotBackup != testCase.wantBackup {
+				t.Errorf("backup exists = %v, want %v", gotBackup, testCase.wantBackup)
+			}
+		})
+	}
+}
+
 func seedAsset(tb testing.TB, path, seed, seedBackup string) {
 	tb.Helper()
 
