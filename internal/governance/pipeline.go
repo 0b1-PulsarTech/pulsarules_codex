@@ -26,6 +26,10 @@ func (r *StageRunner) RunStages(ctx *pass.Context) []pass.Finding {
 				continue
 			}
 			findings := a.Analyze(ctx)
+			// An in-place analyzer already appended to ctx.Findings; skip its return.
+			if _, inPlace := a.(pass.InPlaceAnalyzer); inPlace {
+				continue
+			}
 			ctx.Findings = append(ctx.Findings, findings...)
 		}
 	}
