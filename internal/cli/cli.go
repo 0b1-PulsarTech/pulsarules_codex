@@ -86,6 +86,11 @@ func resolveProjectDir(opts *version.Options) string {
 	if opts.ProjectDir != "" {
 		return opts.ProjectDir
 	}
+	// Install/uninstall bind --project onto opts.Project, and that checkout is also
+	// the analyzed repository.
+	if opts.Command == "install" || opts.Command == "uninstall" {
+		return opts.Project
+	}
 	if opts.Command == "governance" {
 		return os.Getenv("PULSARULES_PROJECT_DIR")
 	}
