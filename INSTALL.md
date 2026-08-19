@@ -149,7 +149,9 @@ Additional install flags:
   `inner-modules`) that overrides which rules a skill composes (e.g. the `code-placement` layout
   variant). `--interactive` prompts for the layout when it is unset.
 - `--git-hooks commit-msg,pre-commit` (default `commit-msg,pre-commit`): comma-separated git hook
-  scripts to install into `<target>/.git/hooks/` that delegate to the installed binary. Valid names
+  scripts to install into the repository's shared hooks dir (`git rev-parse --git-common-dir` +
+  `/hooks` - the dir git actually reads, which a linked worktree shares with its main checkout, so
+  installing from either reaches both). The scripts delegate to the installed binary. Valid names
   are `commit-msg`, `pre-commit`, and `pre-push`; an unrecognized name fails the whole `install`
   command before anything is written, naming the valid set. `--no-git-hooks` skips installing git
   hooks entirely.
@@ -162,8 +164,8 @@ it probes the project for every layout it can detect on disk (a `.claude` dir, a
 `--target` to narrow it to one layout. It unwires the hook from both `settings.json` and
 `settings.local.json` by default (it cannot recover which `--hooks-scope` install used); pass
 `--hooks-scope` to narrow to one file. It also removes the gopls entry from `.mcp.json`, the
-opencode plugin plus its `opencode.json` wiring, and the git hooks `install` wrote into
-`.git/hooks/`. A root `AGENTS.md` is removed only when its content still carries the marker
+opencode plugin plus its `opencode.json` wiring, and the git hooks `install` wrote into the
+repository's shared hooks dir. A root `AGENTS.md` is removed only when its content still carries the marker
 `install` wrote it with, so a hand-authored one is never touched. Unless `--keep-skills` is given,
 it also removes every rendered skill and workflow doc `install` wrote (a user's own files placed
 inside a rendered skill's directory are never touched). Every step is idempotent, so running it

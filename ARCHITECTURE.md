@@ -191,7 +191,10 @@ file-extension-based dispatch. The families:
 ### internal/vcs
 
 `vcs.Repository` is the typed, read-only git port the whole governance pipeline depends on (`Root`,
-`HeadSubject`, `HeadAuthorEpoch`, `RecentSubjects`, `WorktreeStatus`, `StagedRenames`). `vcs.Open`
+`HeadSubject`, `HeadAuthorEpoch`, `RecentSubjects`, `WorktreeStatus`, `StagedRenames`). The
+package-level `vcs.CommonDir` resolves the git dir every linked worktree of a repository shares -
+the git-hook installer joins it with `hooks` to find the dir git actually runs hook scripts from.
+`vcs.Open`
 walks up from a directory to the repository root (resolving a linked worktree) and returns
 `ErrNoRepository` rather than a bare error when the directory is not a git repository, so callers can
 degrade quietly. EVERY git read in the product goes through `gitcmd.go`'s one `runGit` helper, which
