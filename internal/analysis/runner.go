@@ -3,7 +3,9 @@ package analysis
 import (
 	"maps"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/movepurity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 )
 
@@ -31,36 +33,46 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *core.AnalysisConfig {
 // withEmojiParams projects the emoji settings onto the commit analyzer's
 // params, which is how analyzers read runtime configuration.
 func withEmojiParams(analyzers map[string]core.AnalyzerConfig, emojiCfg config.EmojiConfig) {
-	const commitAnalyzerID = "commit-lint"
-
-	entry, found := analyzers[commitAnalyzerID]
-	if !found {
-		entry = core.AnalyzerConfig{Enabled: true}
-	}
-	params := make(map[string]any, len(entry.Params))
-	maps.Copy(params, entry.Params)
-	params["emoji_hard_window"] = emojiCfg.WindowSize
-	params["emoji_soft_window"] = emojiCfg.SoftWindowSize
-	params["emoji_suggestions"] = emojiCfg.SuggestionCount
-
-	entry.Params = params
-	analyzers[commitAnalyzerID] = entry
+	setDefaultParam(analyzers, commit.AnalyzerID, commit.ParamEmojiHardWindow, emojiCfg.WindowSize)
+	setDefaultParam(
+		analyzers,
+		commit.AnalyzerID,
+		commit.ParamEmojiSoftWindow,
+		emojiCfg.SoftWindowSize,
+	)
+	setDefaultParam(
+		analyzers, commit.AnalyzerID, commit.ParamEmojiSuggestions, emojiCfg.SuggestionCount,
+	)
 }
 
 // withMovePurityParams projects the move-purity settings onto the analyzer's
 // own params, the same way withEmojiParams does for commit-lint.
 func withMovePurityParams(analyzers map[string]core.AnalyzerConfig, cfg config.MovePurityConfig) {
-	const movePurityAnalyzerID = "commit-move-purity"
+	setDefaultParam(
+		analyzers,
+		movepurity.AnalyzerID,
+		movepurity.ParamMinSimilarity,
+		cfg.MinSimilarity,
+	)
+	setDefaultParam(analyzers, movepurity.AnalyzerID, core.ParamSeverity, cfg.Severity)
+}
 
-	entry, found := analyzers[movePurityAnalyzerID]
+// setDefaultParam projects a typed config field onto an analyzer's param map
+// UNLESS the caller already set that key explicitly (e.g. via
+// GovernanceConfig.SetParam): an explicit param always wins over the value a
+// config projection would otherwise supply, so SetParam is never silently
+// clobbered by the config-to-param hop that runs after it.
+func setDefaultParam(analyzers map[string]core.AnalyzerConfig, id, key string, value any) {
+	entry, found := analyzers[id]
 	if !found {
 		entry = core.AnalyzerConfig{Enabled: true}
 	}
-	params := make(map[string]any, len(entry.Params)+2)
+	if _, explicit := entry.Params[key]; explicit {
+		return
+	}
+	params := make(map[string]any, len(entry.Params)+1)
 	maps.Copy(params, entry.Params)
-	params["min_similarity"] = cfg.MinSimilarity
-	params["severity"] = cfg.Severity
-
+	params[key] = value
 	entry.Params = params
-	analyzers[movePurityAnalyzerID] = entry
+	analyzers[id] = entry
 }
