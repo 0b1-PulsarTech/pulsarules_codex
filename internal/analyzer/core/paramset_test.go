@@ -129,3 +129,69 @@ func TestAnalysisContextParams(t *testing.T) {
 		})
 	}
 }
+
+// TestParamSetSeverity asserts the conventional "severity" key maps to each
+// Severity, and that an absent or unrecognized value falls back rather than
+// silently downgrading a finding to Info (the zero value).
+func TestParamSetSeverity(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		params   ParamSet
+		fallback Severity
+		want     Severity
+	}{
+		{
+			name:     "error",
+			params:   ParamSet{"severity": "error"},
+			fallback: SeverityWarning,
+			want:     SeverityError,
+		},
+		{
+			name:     "warning",
+			params:   ParamSet{"severity": "warning"},
+			fallback: SeverityError,
+			want:     SeverityWarning,
+		},
+		{
+			name:     "info",
+			params:   ParamSet{"severity": "info"},
+			fallback: SeverityError,
+			want:     SeverityInfo,
+		},
+		{
+			name:     "absent key keeps the fallback",
+			params:   ParamSet{},
+			fallback: SeverityError,
+			want:     SeverityError,
+		},
+		{
+			name:     "nil set keeps the fallback",
+			params:   nil,
+			fallback: SeverityError,
+			want:     SeverityError,
+		},
+		{
+			name:     "unrecognized value keeps the fallback",
+			params:   ParamSet{"severity": "fatal"},
+			fallback: SeverityError,
+			want:     SeverityError,
+		},
+		{
+			name:     "non-string value keeps the fallback",
+			params:   ParamSet{"severity": 2},
+			fallback: SeverityError,
+			want:     SeverityError,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := testCase.params.Severity(testCase.fallback); got != testCase.want {
+				t.Errorf("Severity(%v) = %v, want %v", testCase.fallback, got, testCase.want)
+			}
+		})
+	}
+}

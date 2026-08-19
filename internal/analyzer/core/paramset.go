@@ -1,6 +1,9 @@
 package core
 
-import "strconv"
+import (
+	"slices"
+	"strconv"
+)
 
 // ParamSet is a typed view over one analyzer's raw parameter map. A preset
 // literal is a Go int, a YAML config decodes numbers as float64, and a
@@ -57,6 +60,45 @@ func (p ParamSet) String(key string, fallback string) string {
 		return fallback
 	}
 	return v
+}
+
+// severityByName is the vocabulary a configured severity is spelled in. It is
+// the single source for both reading a value and rejecting a bad one, so a
+// caller cannot validate against a list that drifts from what this accepts.
+var severityByName = map[string]Severity{
+	"error":   SeverityError,
+	"warning": SeverityWarning,
+	"info":    SeverityInfo,
+}
+
+// SeverityNames lists the accepted spellings, sorted for a stable diagnostic.
+func SeverityNames() []string {
+	names := make([]string, 0, len(severityByName))
+	for name := range severityByName {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	return names
+}
+
+// ValidSeverityName reports whether name is a severity ParamSet.Severity reads.
+// why: an unrecognized value falls back silently, which would turn a typo in a
+// flag into a policy the caller never chose.
+func ValidSeverityName(name string) bool {
+	_, ok := severityByName[name]
+	return ok
+}
+
+// Severity returns the Severity named by the conventional "severity" key, or
+// fallback when the key is absent or names nothing recognized.
+// why: severity is policy, not a property of the defect - the same finding blocks
+// one project and only advises another - so a configurable analyzer reads it here
+// instead of freezing it into a package-level reporter.
+func (p ParamSet) Severity(fallback Severity) Severity {
+	if severity, ok := severityByName[p.String("severity", "")]; ok {
+		return severity
+	}
+	return fallback
 }
 
 // Params returns the ParamSet for analyzerID. It is nil (safe to call
