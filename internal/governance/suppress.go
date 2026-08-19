@@ -1,22 +1,19 @@
 package governance
 
-import (
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-)
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 
 type Result struct {
-	Findings            []finding.Finding
+	Findings            []pass.Finding
 	SuppressedGenerated int
 }
 
-func splitGenerated(ctx *pass.Context, findings []finding.Finding) Result {
+func splitGenerated(ctx *pass.Context, findings []pass.Finding) Result {
 	known := make(map[string]bool, len(ctx.ChangedFiles))
 	for _, fc := range ctx.ChangedFiles {
 		known[fc.Path] = fc.Generated
 	}
 
-	kept := make([]finding.Finding, 0, len(findings))
+	kept := make([]pass.Finding, 0, len(findings))
 	suppressed := 0
 	for _, finding := range findings {
 		// A finding with no file (a commit-message rule) belongs to no file and is never

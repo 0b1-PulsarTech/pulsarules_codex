@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -18,7 +17,7 @@ func TestAnalyzer_Identity(t *testing.T) {
 	if a.ID() != "commit-move-purity" {
 		t.Fatalf("ID() = %q, want commit-move-purity", a.ID())
 	}
-	if a.Stage() != finding.StageStatic {
+	if a.Stage() != pass.StageStatic {
 		t.Fatalf("Stage() = %d, want StageStatic", a.Stage())
 	}
 	if needs := a.Needs(); needs.NeedsAST || needs.NeedsGitHistory {
@@ -61,7 +60,7 @@ func TestAnalyzer_Analyze(t *testing.T) {
 			if findings[0].AnalyzerID != "commit-move-purity" {
 				t.Fatalf("AnalyzerID = %q, want commit-move-purity", findings[0].AnalyzerID)
 			}
-			if findings[0].Severity != finding.SeverityWarning {
+			if findings[0].Severity != pass.SeverityWarning {
 				t.Fatalf("Severity = %d, want SeverityWarning by default", findings[0].Severity)
 			}
 		})
@@ -142,7 +141,7 @@ func TestAnalyzer_Analyze_ParamsOverride(t *testing.T) {
 			findings,
 		)
 	}
-	if findings[0].Severity != finding.SeverityError {
+	if findings[0].Severity != pass.SeverityError {
 		t.Fatalf("Severity = %d, want SeverityError when configured", findings[0].Severity)
 	}
 }

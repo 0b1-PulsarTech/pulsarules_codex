@@ -3,15 +3,14 @@ package character
 import (
 	"fmt"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 )
 
 type textReporters struct {
-	carrier     finding.Reporter
-	contextual  finding.Reporter
-	frontmatter finding.Reporter
+	carrier     pass.Reporter
+	contextual  pass.Reporter
+	frontmatter pass.Reporter
 }
 
 type TextAnalyzer struct {
@@ -23,35 +22,27 @@ func NewTextAnalyzer() *TextAnalyzer {
 		// Classes `clean --write` removes outright: no neighbouring context can justify
 		// them, and the bidi controls among them are the Trojan Source vector
 		// (CVE-2021-42574), so they block.
-		carrier: finding.NewReporter("text-markers", finding.SeverityError, finding.CatSyntax),
+		carrier: pass.NewReporter("text-markers", pass.SeverityError, pass.CatSyntax),
 		// Invisible characters that may be load-bearing (emoji glue, script joiners)
 		// cannot be judged here, so they advise instead of blocking.
-		contextual: finding.NewReporter(
-			"text-markers",
-			finding.SeverityWarning,
-			finding.CatSyntax,
-		),
-		frontmatter: finding.NewReporter(
-			"ai-frontmatter",
-			finding.SeverityError,
-			finding.CatSyntax,
-		),
+		contextual:  pass.NewReporter("text-markers", pass.SeverityWarning, pass.CatSyntax),
+		frontmatter: pass.NewReporter("ai-frontmatter", pass.SeverityError, pass.CatSyntax),
 	}}
 }
 
 func (a *TextAnalyzer) ID() string { return "text-markers" }
 
-func (a *TextAnalyzer) Stage() finding.StageID { return finding.StageStatic }
+func (a *TextAnalyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *TextAnalyzer) Needs() finding.Requirements { return finding.Requirements{} }
+func (a *TextAnalyzer) Needs() pass.Requirements { return pass.Requirements{} }
 
-func (a *TextAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	return eachMarkedFile(ctx, func(fc pass.FileChange, src string) []finding.Finding {
+func (a *TextAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	return eachMarkedFile(ctx, func(fc pass.FileChange, src string) []pass.Finding {
 		return checkCarriers(fc, src, a.reporters)
 	})
 }
 
-func checkCarriers(fc pass.FileChange, src string, reporters textReporters) []finding.Finding {
+func checkCarriers(fc pass.FileChange, src string, reporters textReporters) []pass.Finding {
 	findings := frontmatterFindings(fc, src, reporters.frontmatter)
 	for _, found := range invisible.Scan(src) {
 		if found.Class == invisible.ClassTypographic {
@@ -85,23 +76,23 @@ func NewTypographicAnalyzer() *TypographicAnalyzer { return &TypographicAnalyzer
 
 func (a *TypographicAnalyzer) ID() string { return "typographic-markers" }
 
-func (a *TypographicAnalyzer) Stage() finding.StageID { return finding.StageStatic }
+func (a *TypographicAnalyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *TypographicAnalyzer) Needs() finding.Requirements { return finding.Requirements{} }
+func (a *TypographicAnalyzer) Needs() pass.Requirements { return pass.Requirements{} }
 
-func (a *TypographicAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := finding.NewReporter(
+func (a *TypographicAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	reporter := pass.NewReporter(
 		a.ID(),
-		ctx.Params(a.ID()).Severity(finding.SeverityError),
-		finding.CatSyntax,
+		ctx.Params(a.ID()).Severity(pass.SeverityError),
+		pass.CatSyntax,
 	)
-	return eachMarkedFile(ctx, func(fc pass.FileChange, src string) []finding.Finding {
+	return eachMarkedFile(ctx, func(fc pass.FileChange, src string) []pass.Finding {
 		return checkTypographic(reporter, fc, src)
 	})
 }
 
-func checkTypographic(reporter finding.Reporter, fc pass.FileChange, src string) []finding.Finding {
-	var findings []finding.Finding
+func checkTypographic(reporter pass.Reporter, fc pass.FileChange, src string) []pass.Finding {
+	var findings []pass.Finding
 	for _, found := range invisible.Scan(src) {
 		if found.Class != invisible.ClassTypographic {
 			continue

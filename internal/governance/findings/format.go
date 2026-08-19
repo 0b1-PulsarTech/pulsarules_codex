@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -29,7 +29,7 @@ func layoutFor(style FindingStyle) layout {
 	return layout{indent: "", arrow: "  ", upper: true, withRule: true}
 }
 
-func FormatFindings(findings []finding.Finding, style FindingStyle, header string) string {
+func FormatFindings(findings []pass.Finding, style FindingStyle, header string) string {
 	if len(findings) == 0 {
 		return ""
 	}
@@ -46,7 +46,7 @@ func FormatFindings(findings []finding.Finding, style FindingStyle, header strin
 	return out.String()
 }
 
-func writeFinding(out *strings.Builder, finding finding.Finding, form layout) {
+func writeFinding(out *strings.Builder, finding pass.Finding, form layout) {
 	label := severityLabel(finding.Severity)
 	if form.upper {
 		label = strings.ToUpper(label)
@@ -75,7 +75,7 @@ func writeFinding(out *strings.Builder, finding finding.Finding, form layout) {
 	}
 }
 
-func location(finding finding.Finding) string {
+func location(finding pass.Finding) string {
 	if finding.File == "" {
 		return ""
 	}
@@ -85,11 +85,11 @@ func location(finding finding.Finding) string {
 	return finding.File
 }
 
-func severityLabel(severity finding.Severity) string {
+func severityLabel(severity pass.Severity) string {
 	switch severity {
-	case finding.SeverityWarning:
+	case pass.SeverityWarning:
 		return "warn"
-	case finding.SeverityError:
+	case pass.SeverityError:
 		return "error"
 	default:
 		return "info"

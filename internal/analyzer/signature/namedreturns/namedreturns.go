@@ -6,36 +6,35 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
-	reporter finding.Reporter
+	reporter pass.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: finding.NewReporter("named-returns", finding.SeverityWarning, finding.CatAST),
+		reporter: pass.NewReporter("named-returns", pass.SeverityWarning, pass.CatAST),
 	}
 }
 
-func (a *Analyzer) ID() string             { return "named-returns" }
-func (a *Analyzer) Stage() finding.StageID { return finding.StageAST }
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{NeedsAST: true}
+func (a *Analyzer) ID() string          { return "named-returns" }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{NeedsAST: true}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
 		return checkFile(ctx.ASTCache.FileSet(), fc, f, a.reporter)
 	})
 }
 
 func checkFile(
-	fset *token.FileSet, fc pass.FileChange, f *ast.File, reporter finding.Reporter,
-) []finding.Finding {
-	var findings []finding.Finding
+	fset *token.FileSet, fc pass.FileChange, f *ast.File, reporter pass.Reporter,
+) []pass.Finding {
+	var findings []pass.Finding
 
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch node := n.(type) {
@@ -69,13 +68,13 @@ type declSite struct {
 }
 
 func checkResults(
-	fset *token.FileSet, fc pass.FileChange, site declSite, reporter finding.Reporter,
-) []finding.Finding {
+	fset *token.FileSet, fc pass.FileChange, site declSite, reporter pass.Reporter,
+) []pass.Finding {
 	dup, found := duplicateResultType(site.results)
 	if !found {
 		return nil
 	}
-	return []finding.Finding{reporter.At(
+	return []pass.Finding{reporter.At(
 		fc.Path,
 		fset.Position(site.pos).Line,
 		fmt.Sprintf(

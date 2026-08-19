@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 )
@@ -37,15 +37,15 @@ type emojiCheck struct {
 	Reporters emojiReporters
 }
 
-func (check emojiCheck) ValidateEmoji() []finding.Finding {
+func (check emojiCheck) ValidateEmoji() []pass.Finding {
 	if check.Message.IsInitial || check.Message.IsMerge {
 		return nil
 	}
 	return append(check.validateCatalog(), check.validateWindow()...)
 }
 
-func (check emojiCheck) validateCatalog() []finding.Finding {
-	var findings []finding.Finding
+func (check emojiCheck) validateCatalog() []pass.Finding {
+	var findings []pass.Finding
 	for _, shortcode := range check.Message.Emojis {
 		if replacement, banned := emoji.ProhibitedReplacement(shortcode); banned {
 			message := "emoji :" + shortcode + ": is prohibited by project convention"
@@ -70,14 +70,14 @@ func (check emojiCheck) validateCatalog() []finding.Finding {
 	return findings
 }
 
-func (check emojiCheck) validateWindow() []finding.Finding {
+func (check emojiCheck) validateWindow() []pass.Finding {
 	if len(check.Message.Emojis) == 0 {
 		return nil
 	}
 	current := check.Message.Emojis[0]
 
 	if slices.Contains(check.recentEmojis(check.Config.HardWindow), current) {
-		return []finding.Finding{check.Reporters.repeat.NewWithSuggestion(
+		return []pass.Finding{check.Reporters.repeat.NewWithSuggestion(
 			"emoji :"+current+": already appears in the last "+
 				strconv.Itoa(check.Config.HardWindow)+
 				" commits; every commit in that window needs a distinct emoji",
@@ -85,7 +85,7 @@ func (check emojiCheck) validateWindow() []finding.Finding {
 		)}
 	}
 	if slices.Contains(check.recentEmojis(check.Config.SoftWindow), current) {
-		return []finding.Finding{check.Reporters.softRepeat.NewWithSuggestion(
+		return []pass.Finding{check.Reporters.softRepeat.NewWithSuggestion(
 			"emoji :"+current+": was used within the last "+strconv.Itoa(check.Config.SoftWindow)+
 				" commits; a fresher one would read better",
 			check.suggestionText(),

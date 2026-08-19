@@ -1,7 +1,6 @@
 package message
 
 import (
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
@@ -31,13 +30,13 @@ func NewAnalyzer(catalog *emoji.Catalog) *Analyzer {
 
 func (a *Analyzer) ID() string { return "commit-lint" }
 
-func (a *Analyzer) Stage() finding.StageID { return finding.StageStatic }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{}
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if ctx.CommitMsg == "" {
 		return nil
 	}
@@ -45,7 +44,7 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	msg := commitmsg.Parse(ctx.CommitMsg)
 	windowCfg := a.windowCfg.merge(ctx.Params(a.ID()))
 
-	findings := make([]finding.Finding, 0, typicalFindingCapacity)
+	findings := make([]pass.Finding, 0, typicalFindingCapacity)
 	findings = append(findings, Validate(msg, a.ruleCfg, a.ruleReporters)...)
 	findings = append(findings, emojiCheck{
 		Message:   msg,

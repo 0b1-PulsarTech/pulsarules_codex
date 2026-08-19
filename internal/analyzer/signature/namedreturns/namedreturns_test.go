@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
@@ -206,7 +205,7 @@ func TestDuplicateResultTypeMessage(t *testing.T) {
 	}
 }
 
-func analyzeSource(t *testing.T, source string) []finding.Finding {
+func analyzeSource(t *testing.T, source string) []pass.Finding {
 	t.Helper()
 
 	dir := t.TempDir()

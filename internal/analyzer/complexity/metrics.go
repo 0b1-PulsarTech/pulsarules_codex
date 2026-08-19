@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -21,12 +20,12 @@ func checkFlagArguments(
 	fset *token.FileSet,
 	fc pass.FileChange,
 	fn *ast.FuncDecl,
-	reporter finding.Reporter,
-) []finding.Finding {
+	reporter pass.Reporter,
+) []pass.Finding {
 	if fn.Type.Params == nil {
 		return nil
 	}
-	var findings []finding.Finding
+	var findings []pass.Finding
 	for _, field := range fn.Type.Params.List {
 		if !isBoolType(field.Type) {
 			continue

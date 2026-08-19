@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/golang"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
@@ -60,7 +59,7 @@ func TestTopOfFile_CommentBeforePackage(t *testing.T) {
 	if len(findings) != 1 {
 		t.Fatalf("expected 1 finding, got %d", len(findings))
 	}
-	if findings[0].Severity != finding.SeverityError {
+	if findings[0].Severity != pass.SeverityError {
 		t.Errorf("expected error severity, got %d", findings[0].Severity)
 	}
 	if findings[0].Line != 1 {

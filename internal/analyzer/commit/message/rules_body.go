@@ -5,14 +5,14 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
 
 func validateDescription(
 	msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters,
-) []finding.Finding {
-	var findings []finding.Finding
+) []pass.Finding {
+	var findings []pass.Finding
 	desc := msg.Description
 
 	if desc == "" {
@@ -52,15 +52,11 @@ func validateDescription(
 	return findings
 }
 
-func validateBody(
-	msg commitmsg.Message,
-	cfg ruleConfig,
-	reporters ruleReporters,
-) []finding.Finding {
+func validateBody(msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters) []pass.Finding {
 	if msg.Body == "" {
 		return nil
 	}
-	var findings []finding.Finding
+	var findings []pass.Finding
 	for lineIndex, line := range strings.Split(msg.Body, "\n") {
 		if len([]rune(line)) > cfg.MaxBodyLineLen {
 			findings = append(findings, reporters.bodyLength.New(
@@ -84,7 +80,7 @@ func validateBody(
 
 func validateToolTrailers(
 	msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters,
-) []finding.Finding {
+) []pass.Finding {
 	if !cfg.RejectToolTrailers {
 		return nil
 	}
@@ -92,7 +88,7 @@ func validateToolTrailers(
 	if trailer == "" {
 		return nil
 	}
-	return []finding.Finding{
+	return []pass.Finding{
 		reporters.noCoauthor.New(
 			"tool-attribution trailer '" + trailer + "' is not allowed; " +
 				"remove it before committing",

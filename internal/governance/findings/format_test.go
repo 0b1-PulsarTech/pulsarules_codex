@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-func locatedFinding() finding.Finding {
-	return finding.Finding{
+func locatedFinding() pass.Finding {
+	return pass.Finding{
 		AnalyzerID:  "file-size",
-		Severity:    finding.SeverityWarning,
+		Severity:    pass.SeverityWarning,
 		Message:     "file is too long",
 		File:        "internal/a.go",
 		Line:        42,
@@ -19,27 +19,27 @@ func locatedFinding() finding.Finding {
 	}
 }
 
-func blankRuleFinding() finding.Finding {
-	return finding.Finding{
+func blankRuleFinding() pass.Finding {
+	return pass.Finding{
 		AnalyzerID:  "naming",
-		Severity:    finding.SeverityWarning,
+		Severity:    pass.SeverityWarning,
 		Message:     "bad name",
 		RuleSummary: "\n   \n\n",
 	}
 }
 
-func unlocatedFinding() finding.Finding {
-	return finding.Finding{
+func unlocatedFinding() pass.Finding {
+	return pass.Finding{
 		AnalyzerID: "commit-lint",
-		Severity:   finding.SeverityError,
+		Severity:   pass.SeverityError,
 		Message:    "missing emoji",
 	}
 }
 
-func fileOnlyFinding() finding.Finding {
-	return finding.Finding{
+func fileOnlyFinding() pass.Finding {
+	return pass.Finding{
 		AnalyzerID: "imports",
-		Severity:   finding.SeverityInfo,
+		Severity:   pass.SeverityInfo,
 		Message:    "regroup imports",
 		File:       "internal/b.go",
 	}
@@ -50,7 +50,7 @@ func TestFormatFindings(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		findings []finding.Finding
+		findings []pass.Finding
 		style    FindingStyle
 		header   string
 		want     string
@@ -64,7 +64,7 @@ func TestFormatFindings(t *testing.T) {
 		},
 		{
 			name:     "cli upcases the severity and appends the rule",
-			findings: []finding.Finding{locatedFinding()},
+			findings: []pass.Finding{locatedFinding()},
 			style:    StyleCLI,
 			want: "[WARN] file-size: file is too long (internal/a.go:42)\n" +
 				"  \u2192 split it\n" +
@@ -72,39 +72,39 @@ func TestFormatFindings(t *testing.T) {
 		},
 		{
 			name:     "hook indents, downcases and drops the rule",
-			findings: []finding.Finding{locatedFinding()},
+			findings: []pass.Finding{locatedFinding()},
 			style:    StyleHook,
 			want: "  [warn] file-size: file is too long (internal/a.go:42)\n" +
 				"    \u2192 split it\n",
 		},
 		{
 			name:     "a finding without a file omits the location",
-			findings: []finding.Finding{unlocatedFinding()},
+			findings: []pass.Finding{unlocatedFinding()},
 			style:    StyleCLI,
 			want:     "[ERROR] commit-lint: missing emoji\n",
 		},
 		{
 			name:     "a file without a line omits the colon",
-			findings: []finding.Finding{fileOnlyFinding()},
+			findings: []pass.Finding{fileOnlyFinding()},
 			style:    StyleCLI,
 			want:     "[INFO] imports: regroup imports (internal/b.go)\n",
 		},
 		{
 			name:     "the header precedes the findings",
-			findings: []finding.Finding{unlocatedFinding()},
+			findings: []pass.Finding{unlocatedFinding()},
 			style:    StyleHook,
 			header:   "Governance checks:",
 			want:     "Governance checks:\n  [error] commit-lint: missing emoji\n",
 		},
 		{
 			name:     "an all-blank rule body prints no rule line",
-			findings: []finding.Finding{blankRuleFinding()},
+			findings: []pass.Finding{blankRuleFinding()},
 			style:    StyleCLI,
 			want:     "[WARN] naming: bad name\n",
 		},
 		{
 			name:     "an unknown style falls back to the cli layout",
-			findings: []finding.Finding{unlocatedFinding()},
+			findings: []pass.Finding{unlocatedFinding()},
 			style:    FindingStyle("nonsense"),
 			want:     "[ERROR] commit-lint: missing emoji\n",
 		},
@@ -124,10 +124,10 @@ func TestFormatFindings(t *testing.T) {
 func TestFormatFindingsRendersEveryFinding(t *testing.T) {
 	t.Parallel()
 
-	findings := []finding.Finding{
-		{AnalyzerID: "one", Severity: finding.SeverityError, Message: "first"},
-		{AnalyzerID: "two", Severity: finding.SeverityWarning, Message: "second"},
-		{AnalyzerID: "three", Severity: finding.SeverityInfo, Message: "third"},
+	findings := []pass.Finding{
+		{AnalyzerID: "one", Severity: pass.SeverityError, Message: "first"},
+		{AnalyzerID: "two", Severity: pass.SeverityWarning, Message: "second"},
+		{AnalyzerID: "three", Severity: pass.SeverityInfo, Message: "third"},
 	}
 
 	got := FormatFindings(findings, StyleCLI, "")

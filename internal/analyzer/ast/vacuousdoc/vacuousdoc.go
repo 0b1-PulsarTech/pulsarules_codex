@@ -6,38 +6,37 @@ import (
 	"go/token"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
-	reporter finding.Reporter
+	reporter pass.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: finding.NewReporter("vacuous-doc", finding.SeverityWarning, finding.CatAST),
+		reporter: pass.NewReporter("vacuous-doc", pass.SeverityWarning, pass.CatAST),
 	}
 }
 
 func (a *Analyzer) ID() string { return "vacuous-doc" }
 
-func (a *Analyzer) Stage() finding.StageID { return finding.StageAST }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
 
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{NeedsAST: true}
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{NeedsAST: true}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
 		return checkFile(ctx.ASTCache.FileSet(), fc, f, a.reporter)
 	})
 }
 
 func checkFile(
-	fset *token.FileSet, fc pass.FileChange, f *ast.File, reporter finding.Reporter,
-) []finding.Finding {
-	var findings []finding.Finding
+	fset *token.FileSet, fc pass.FileChange, f *ast.File, reporter pass.Reporter,
+) []pass.Finding {
+	var findings []pass.Finding
 	for _, decl := range f.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Doc == nil || !returnsOnlyLiteralOrField(fn) || earnsItsPlace(fn.Doc) {

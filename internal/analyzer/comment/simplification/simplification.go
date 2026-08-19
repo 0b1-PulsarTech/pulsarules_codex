@@ -3,37 +3,32 @@ package simplification
 import (
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 const markerPrefix = "simplification:"
 
 type Analyzer struct {
-	reporter finding.Reporter
+	reporter pass.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: finding.NewReporter(
-			"simplification-path",
-			finding.SeverityWarning,
-			finding.CatSyntax,
-		),
+		reporter: pass.NewReporter("simplification-path", pass.SeverityWarning, pass.CatSyntax),
 	}
 }
 
-func (a *Analyzer) ID() string             { return "simplification-path" }
-func (a *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{}
+func (a *Analyzer) ID() string          { return "simplification-path" }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if ctx.Sources == nil {
 		return nil
 	}
-	var findings []finding.Finding
+	var findings []pass.Finding
 	for _, fc := range ctx.ChangedFiles {
 		if fc.Extension != ".go" {
 			continue
@@ -47,8 +42,8 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	return findings
 }
 
-func scanFile(src []byte, path string, reporter finding.Reporter) []finding.Finding {
-	var findings []finding.Finding
+func scanFile(src []byte, path string, reporter pass.Reporter) []pass.Finding {
+	var findings []pass.Finding
 	lines := strings.Split(string(src), "\n")
 	for lineIdx := 0; lineIdx < len(lines); lineIdx++ {
 		if !isMarkerLine(lines[lineIdx]) {

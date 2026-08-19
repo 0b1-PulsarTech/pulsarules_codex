@@ -1,10 +1,6 @@
 package pass
 
-import (
-	"testing"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
-)
+import "testing"
 
 func TestParamSetInt(t *testing.T) {
 	t.Parallel()
@@ -119,50 +115,50 @@ func TestParamSetSeverity(t *testing.T) {
 	testCases := []struct {
 		name     string
 		params   ParamSet
-		fallback finding.Severity
-		want     finding.Severity
+		fallback Severity
+		want     Severity
 	}{
 		{
 			name:     "error",
 			params:   ParamSet{"severity": "error"},
-			fallback: finding.SeverityWarning,
-			want:     finding.SeverityError,
+			fallback: SeverityWarning,
+			want:     SeverityError,
 		},
 		{
 			name:     "warning",
 			params:   ParamSet{"severity": "warning"},
-			fallback: finding.SeverityError,
-			want:     finding.SeverityWarning,
+			fallback: SeverityError,
+			want:     SeverityWarning,
 		},
 		{
 			name:     "info",
 			params:   ParamSet{"severity": "info"},
-			fallback: finding.SeverityError,
-			want:     finding.SeverityInfo,
+			fallback: SeverityError,
+			want:     SeverityInfo,
 		},
 		{
 			name:     "absent key keeps the fallback",
 			params:   ParamSet{},
-			fallback: finding.SeverityError,
-			want:     finding.SeverityError,
+			fallback: SeverityError,
+			want:     SeverityError,
 		},
 		{
 			name:     "nil set keeps the fallback",
 			params:   nil,
-			fallback: finding.SeverityError,
-			want:     finding.SeverityError,
+			fallback: SeverityError,
+			want:     SeverityError,
 		},
 		{
 			name:     "unrecognized value keeps the fallback",
 			params:   ParamSet{"severity": "fatal"},
-			fallback: finding.SeverityError,
-			want:     finding.SeverityError,
+			fallback: SeverityError,
+			want:     SeverityError,
 		},
 		{
 			name:     "non-string value keeps the fallback",
 			params:   ParamSet{"severity": 2},
-			fallback: finding.SeverityError,
-			want:     finding.SeverityError,
+			fallback: SeverityError,
+			want:     SeverityError,
 		},
 	}
 	for _, testCase := range testCases {
@@ -171,6 +167,34 @@ func TestParamSetSeverity(t *testing.T) {
 
 			if got := testCase.params.Severity(testCase.fallback); got != testCase.want {
 				t.Errorf("Severity(%v) = %v, want %v", testCase.fallback, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestValidateSeverityName(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		severity string
+		wantErr  bool
+	}{
+		{name: "empty keeps the analyzer default"},
+		{name: "error", severity: "error"},
+		{name: "warning", severity: "warning"},
+		{name: "info", severity: "info"},
+		{name: "a typo is rejected", severity: "fatal", wantErr: true},
+		{name: "capitalised is rejected", severity: "Warning", wantErr: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := ValidateSeverityName(testCase.severity)
+			if (err != nil) != testCase.wantErr {
+				t.Errorf("ValidateSeverityName(%q) err = %v, wantErr %v",
+					testCase.severity, err, testCase.wantErr)
 			}
 		})
 	}

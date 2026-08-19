@@ -3,7 +3,6 @@ package rulesummary
 import (
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -64,16 +63,16 @@ func NewAnalyzer(index *knowledge.Index) *Analyzer {
 	return &Analyzer{index: index}
 }
 
-func (a *Analyzer) ID() string                  { return "rule-injection" }
-func (a *Analyzer) Stage() finding.StageID      { return finding.StageRuleInjection }
-func (a *Analyzer) Needs() finding.Requirements { return finding.Requirements{} }
+func (a *Analyzer) ID() string               { return "rule-injection" }
+func (a *Analyzer) Stage() pass.StageID      { return pass.StageRuleInjection }
+func (a *Analyzer) Needs() pass.Requirements { return pass.Requirements{} }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	injectRuleSummaries(ctx.Findings, a.index)
 	return nil
 }
 
-func injectRuleSummaries(findings []finding.Finding, index *knowledge.Index) {
+func injectRuleSummaries(findings []pass.Finding, index *knowledge.Index) {
 	if index == nil {
 		return
 	}

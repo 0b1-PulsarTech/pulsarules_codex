@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 func forcedLinters() []string {
@@ -22,26 +22,26 @@ func forcedLinters() []string {
 
 type Runner struct {
 	path    string
-	failure finding.Reporter
-	warning finding.Reporter
+	failure pass.Reporter
+	warning pass.Reporter
 }
 
 func NewRunner(golangciLintPath string) *Runner {
 	return &Runner{
 		path:    golangciLintPath,
-		failure: finding.NewReporter("golangci-lint", finding.SeverityError, finding.CatSyntax),
-		warning: finding.NewReporter("golangci-lint", finding.SeverityWarning, finding.CatSyntax),
+		failure: pass.NewReporter("golangci-lint", pass.SeverityError, pass.CatSyntax),
+		warning: pass.NewReporter("golangci-lint", pass.SeverityWarning, pass.CatSyntax),
 	}
 }
 
-func (r *Runner) Run(projectDir, configPath string) []finding.Finding {
+func (r *Runner) Run(projectDir, configPath string) []pass.Finding {
 	if r.path == "" {
 		return nil
 	}
 	return r.runLint(projectDir, configPath)
 }
 
-func (r *Runner) runLint(projectDir, configPath string) []finding.Finding {
+func (r *Runner) runLint(projectDir, configPath string) []pass.Finding {
 	if hasGoWork(projectDir) {
 		return r.runPerModule(projectDir, configPath)
 	}
@@ -49,7 +49,7 @@ func (r *Runner) runLint(projectDir, configPath string) []finding.Finding {
 	return r.runSingle(projectDir, configPath)
 }
 
-func (r *Runner) runPerModule(projectDir, configPath string) []finding.Finding {
+func (r *Runner) runPerModule(projectDir, configPath string) []pass.Finding {
 	modules := parseGoWorkModules(projectDir)
 	if len(modules) == 0 {
 		return r.runSingle(projectDir, configPath)
@@ -66,7 +66,7 @@ func (r *Runner) runPerModule(projectDir, configPath string) []finding.Finding {
 	return allFindings
 }
 
-func (r *Runner) runSingle(projectDir, configPath string) []finding.Finding {
+func (r *Runner) runSingle(projectDir, configPath string) []pass.Finding {
 	configFlag := resolvedConfigFlag(projectDir, configPath)
 	out, err := r.run(projectDir, lintArgs("./...", configFlag))
 	return append(r.forcedBaselineFindings(configFlag), r.parseOutput(out, err)...)

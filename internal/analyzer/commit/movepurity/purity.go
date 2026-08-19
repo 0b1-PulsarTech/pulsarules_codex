@@ -3,11 +3,10 @@ package movepurity
 import (
 	"fmt"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-func notPureMoveFinding(reporter finding.Reporter, rename pass.Rename) finding.Finding {
+func notPureMoveFinding(reporter pass.Reporter, rename pass.Rename) pass.Finding {
 	return reporter.At(
 		rename.NewPath,
 		0,
@@ -19,7 +18,7 @@ func notPureMoveFinding(reporter finding.Reporter, rename pass.Rename) finding.F
 	)
 }
 
-func mixedChangesetFinding(reporter finding.Reporter, renameCount, editCount int) finding.Finding {
+func mixedChangesetFinding(reporter pass.Reporter, renameCount, editCount int) pass.Finding {
 	return reporter.NewWithSuggestion(
 		fmt.Sprintf(
 			"this commit mixes %d rename(s) with %d edit(s); split the move into its own commit",
@@ -29,7 +28,7 @@ func mixedChangesetFinding(reporter finding.Reporter, renameCount, editCount int
 	)
 }
 
-func renameCarriesEditFinding(reporter finding.Reporter, rename pass.Rename) finding.Finding {
+func renameCarriesEditFinding(reporter pass.Reporter, rename pass.Rename) pass.Finding {
 	return reporter.At(
 		rename.NewPath,
 		0,

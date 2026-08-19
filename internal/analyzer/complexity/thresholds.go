@@ -6,7 +6,6 @@ import (
 	"go/token"
 	"math"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -14,8 +13,8 @@ type thresholds struct {
 	maxComplexity int
 	maxFuncLines  int
 	maxParams     int
-	warnReporter  finding.Reporter
-	infoReporter  finding.Reporter
+	warnReporter  pass.Reporter
+	infoReporter  pass.Reporter
 }
 
 func (th thresholds) maxFuncLinesFor(fc pass.FileChange) int {
@@ -32,11 +31,11 @@ func (th thresholds) checkFile(
 	fset *token.FileSet,
 	fc pass.FileChange,
 	file *ast.File,
-) []finding.Finding {
+) []pass.Finding {
 	if fset == nil {
 		return nil
 	}
-	var findings []finding.Finding
+	var findings []pass.Finding
 
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
@@ -53,8 +52,8 @@ func (th thresholds) checkFuncDecl(
 	fset *token.FileSet,
 	fc pass.FileChange,
 	fn *ast.FuncDecl,
-) []finding.Finding {
-	var findings []finding.Finding
+) []pass.Finding {
+	var findings []pass.Finding
 	comp := cyclomaticComplexity(fn)
 	if comp > th.maxComplexity {
 		findings = append(findings, th.warnReporter.At(

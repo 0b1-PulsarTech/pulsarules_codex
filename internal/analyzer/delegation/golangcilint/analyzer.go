@@ -1,9 +1,6 @@
 package golangcilint
 
-import (
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-)
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 
 const golangciLintID = "golangci-lint"
 
@@ -15,13 +12,13 @@ func NewAnalyzer(path string) *Analyzer {
 	return &Analyzer{runner: NewRunner(path)}
 }
 
-func (a *Analyzer) ID() string             { return golangciLintID }
-func (a *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{}
+func (a *Analyzer) ID() string          { return golangciLintID }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	configPath := extractGolangciConfigPath(ctx)
 	return a.runner.Run(ctx.ProjectDir, configPath)
 }

@@ -5,31 +5,30 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
 	maxNesting int
-	reporter   finding.Reporter
+	reporter   pass.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	const defaultMaxNesting = 4
 	return &Analyzer{
 		maxNesting: defaultMaxNesting,
-		reporter:   finding.NewReporter("control-flow", finding.SeverityWarning, finding.CatAST),
+		reporter:   pass.NewReporter("control-flow", pass.SeverityWarning, pass.CatAST),
 	}
 }
 
-func (a *Analyzer) ID() string             { return "control-flow" }
-func (a *Analyzer) Stage() finding.StageID { return finding.StageAST }
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{NeedsAST: true}
+func (a *Analyzer) ID() string          { return "control-flow" }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{NeedsAST: true}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
 		return a.checkFile(ctx.ASTCache.FileSet(), fc, f)
 	})
 }
@@ -38,8 +37,8 @@ func (a *Analyzer) checkFile(
 	fset *token.FileSet,
 	fc pass.FileChange,
 	f *ast.File,
-) []finding.Finding {
-	var findings []finding.Finding
+) []pass.Finding {
+	var findings []pass.Finding
 
 	emit := func(pos token.Pos, msg, suggestion string) {
 		findings = append(

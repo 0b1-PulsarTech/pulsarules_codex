@@ -4,13 +4,13 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
 
 func validateInitial(
-	msg commitmsg.Message, _ ruleConfig, findings []finding.Finding, reporters ruleReporters,
-) []finding.Finding {
+	msg commitmsg.Message, _ ruleConfig, findings []pass.Finding, reporters ruleReporters,
+) []pass.Finding {
 	if len(msg.Emojis) != 1 || msg.Emojis[0] != "ghost" {
 		findings = append(
 			findings,
@@ -21,8 +21,8 @@ func validateInitial(
 }
 
 func validateMerge(
-	msg commitmsg.Message, _ ruleConfig, findings []finding.Finding, reporters ruleReporters,
-) []finding.Finding {
+	msg commitmsg.Message, _ ruleConfig, findings []pass.Finding, reporters ruleReporters,
+) []pass.Finding {
 	if len(msg.Emojis) < 1 || msg.Emojis[0] != "volcano" {
 		findings = append(findings, reporters.merge.New("merge commit must start with :volcano:"))
 	}
@@ -31,8 +31,8 @@ func validateMerge(
 
 func validateEmojis(
 	msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters,
-) []finding.Finding {
-	var findings []finding.Finding
+) []pass.Finding {
+	var findings []pass.Finding
 
 	if cfg.RequireEmoji && len(msg.Emojis) == 0 {
 		findings = append(
@@ -48,9 +48,9 @@ func validateEmojis(
 	return findings
 }
 
-func validateType(msg commitmsg.Message, reporters ruleReporters) []finding.Finding {
+func validateType(msg commitmsg.Message, reporters ruleReporters) []pass.Finding {
 	if msg.Type == "" {
-		return []finding.Finding{
+		return []pass.Finding{
 			reporters.typeRequired.New("commit message must have a Conventional Commit type"),
 		}
 	}
@@ -59,7 +59,7 @@ func validateType(msg commitmsg.Message, reporters ruleReporters) []finding.Find
 		return nil
 	}
 
-	return []finding.Finding{
+	return []pass.Finding{
 		reporters.typeEnum.New(
 			"type '" + msg.Type + "' is not allowed; use one of: " + strings.Join(
 				commitmsg.AllowedTypes(),
@@ -69,13 +69,13 @@ func validateType(msg commitmsg.Message, reporters ruleReporters) []finding.Find
 	}
 }
 
-func validateScope(msg commitmsg.Message, reporters ruleReporters) []finding.Finding {
+func validateScope(msg commitmsg.Message, reporters ruleReporters) []pass.Finding {
 	if msg.Scope == "" {
 		return nil
 	}
 	for _, char := range msg.Scope {
 		if !isScopeChar(char) {
-			return []finding.Finding{
+			return []pass.Finding{
 				reporters.scopeCharset.New(
 					"scope must be ASCII alphanumeric with - or _ separators only",
 				),

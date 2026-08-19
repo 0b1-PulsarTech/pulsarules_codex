@@ -3,7 +3,6 @@ package complexity
 import (
 	"go/ast"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -11,8 +10,8 @@ type Analyzer struct {
 	maxComplexity int
 	maxFuncLines  int
 	maxParams     int
-	warnReporter  finding.Reporter
-	infoReporter  finding.Reporter
+	warnReporter  pass.Reporter
+	infoReporter  pass.Reporter
 }
 
 const (
@@ -26,20 +25,20 @@ func NewAnalyzer() *Analyzer {
 		maxComplexity: defaultMaxComplexity,
 		maxFuncLines:  defaultMaxFuncLines,
 		maxParams:     defaultMaxParams,
-		warnReporter:  finding.NewReporter("complexity", finding.SeverityWarning, finding.CatAST),
-		infoReporter:  finding.NewReporter("complexity", finding.SeverityInfo, finding.CatAST),
+		warnReporter:  pass.NewReporter("complexity", pass.SeverityWarning, pass.CatAST),
+		infoReporter:  pass.NewReporter("complexity", pass.SeverityInfo, pass.CatAST),
 	}
 }
 
-func (a *Analyzer) ID() string             { return "complexity" }
-func (a *Analyzer) Stage() finding.StageID { return finding.StageAST }
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{NeedsAST: true}
+func (a *Analyzer) ID() string          { return "complexity" }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{NeedsAST: true}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	th := a.resolveThresholds(ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []finding.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
 		return th.checkFile(ctx.ASTCache.FileSet(), fc, f)
 	})
 }

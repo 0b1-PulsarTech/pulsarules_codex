@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 )
@@ -77,7 +76,7 @@ func TestAnalyze_HonoursConfiguredThresholds(t *testing.T) {
 	}
 }
 
-func hasFuncLinesFinding(findings []finding.Finding) bool {
+func hasFuncLinesFinding(findings []pass.Finding) bool {
 	for _, finding := range findings {
 		if strings.Contains(finding.Message, "is 4 lines, max 1") {
 			return true

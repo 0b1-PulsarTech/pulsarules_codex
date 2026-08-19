@@ -3,33 +3,32 @@ package banner
 import (
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
 	langs    *pass.LanguageRegistry
-	reporter finding.Reporter
+	reporter pass.Reporter
 }
 
 func NewAnalyzer(langs *pass.LanguageRegistry) *Analyzer {
 	return &Analyzer{
 		langs:    langs,
-		reporter: finding.NewReporter("top-of-file", finding.SeverityError, finding.CatSyntax),
+		reporter: pass.NewReporter("top-of-file", pass.SeverityError, pass.CatSyntax),
 	}
 }
 
-func (a *Analyzer) ID() string             { return "top-of-file" }
-func (a *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{}
+func (a *Analyzer) ID() string          { return "top-of-file" }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if a.langs == nil || ctx.Sources == nil {
 		return nil
 	}
-	var findings []finding.Finding
+	var findings []pass.Finding
 	for _, fc := range ctx.ChangedFiles {
 		lang := a.langs.Lookup(fc.Extension)
 		if lang == nil {

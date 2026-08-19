@@ -3,7 +3,6 @@ package golangcilint
 import (
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -59,7 +58,7 @@ func TestAnalyzer_StageRegistryKey(t *testing.T) {
 	if got := a.ID(); got != "golangci-lint" {
 		t.Errorf("ID() = %q, want %q", got, "golangci-lint")
 	}
-	if got := a.Stage(); got != finding.StageStatic {
+	if got := a.Stage(); got != pass.StageStatic {
 		t.Errorf("Stage() = %v, want StageStatic", got)
 	}
 	if req := a.Needs(); req.NeedsAST || req.NeedsGitHistory {

@@ -1,15 +1,15 @@
 package governance
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 
-func CountBySeverity(findings []finding.Finding) (errors, warnings, infos int) {
+func CountBySeverity(findings []pass.Finding) (errors, warnings, infos int) {
 	for _, f := range findings {
 		switch f.Severity {
-		case finding.SeverityError:
+		case pass.SeverityError:
 			errors++
-		case finding.SeverityWarning:
+		case pass.SeverityWarning:
 			warnings++
-		case finding.SeverityInfo:
+		case pass.SeverityInfo:
 			infos++
 		}
 	}

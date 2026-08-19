@@ -6,14 +6,13 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 func resolveModuleOrFindings(
-	reporter finding.Reporter,
+	reporter pass.Reporter,
 	projectDir string,
-) (string, []finding.Finding) {
+) (string, []pass.Finding) {
 	modulePath, err := pass.ModulePath(projectDir)
 	if err == nil {
 		return modulePath, nil
@@ -22,28 +21,28 @@ func resolveModuleOrFindings(
 	if errors.Is(err, fs.ErrNotExist) {
 		return "", nil
 	}
-	return "", []finding.Finding{reporter.New(
+	return "", []pass.Finding{reporter.New(
 		fmt.Sprintf("cannot determine the project's module path: %s", err),
 	)}
 }
 
 type PackageBoundaryAnalyzer struct {
-	reporter finding.Reporter
+	reporter pass.Reporter
 }
 
 func NewPackageBoundaryAnalyzer() *PackageBoundaryAnalyzer {
 	return &PackageBoundaryAnalyzer{
-		reporter: finding.NewReporter("arch-boundary", finding.SeverityError, finding.CatArch),
+		reporter: pass.NewReporter("arch-boundary", pass.SeverityError, pass.CatArch),
 	}
 }
 
-func (a *PackageBoundaryAnalyzer) ID() string             { return "arch-boundary" }
-func (a *PackageBoundaryAnalyzer) Stage() finding.StageID { return finding.StageArch }
-func (a *PackageBoundaryAnalyzer) Needs() finding.Requirements {
-	return finding.Requirements{}
+func (a *PackageBoundaryAnalyzer) ID() string          { return "arch-boundary" }
+func (a *PackageBoundaryAnalyzer) Stage() pass.StageID { return pass.StageArch }
+func (a *PackageBoundaryAnalyzer) Needs() pass.Requirements {
+	return pass.Requirements{}
 }
 
-func (a *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
+func (a *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if ctx.ProjectDir == "" {
 		return nil
 	}
@@ -68,22 +67,22 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 }
 
 type ImportCycleAnalyzer struct {
-	reporter finding.Reporter
+	reporter pass.Reporter
 }
 
 func NewImportCycleAnalyzer() *ImportCycleAnalyzer {
 	return &ImportCycleAnalyzer{
-		reporter: finding.NewReporter("import-cycle", finding.SeverityError, finding.CatArch),
+		reporter: pass.NewReporter("import-cycle", pass.SeverityError, pass.CatArch),
 	}
 }
 
-func (a *ImportCycleAnalyzer) ID() string             { return "import-cycle" }
-func (a *ImportCycleAnalyzer) Stage() finding.StageID { return finding.StageArch }
-func (a *ImportCycleAnalyzer) Needs() finding.Requirements {
-	return finding.Requirements{}
+func (a *ImportCycleAnalyzer) ID() string          { return "import-cycle" }
+func (a *ImportCycleAnalyzer) Stage() pass.StageID { return pass.StageArch }
+func (a *ImportCycleAnalyzer) Needs() pass.Requirements {
+	return pass.Requirements{}
 }
 
-func (a *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
+func (a *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if ctx.ProjectDir == "" {
 		return nil
 	}

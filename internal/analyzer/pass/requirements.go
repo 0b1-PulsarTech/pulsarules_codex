@@ -1,4 +1,4 @@
-package finding
+package pass
 
 type Severity int
 

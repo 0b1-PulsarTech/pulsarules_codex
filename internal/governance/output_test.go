@@ -3,19 +3,19 @@ package governance
 import (
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 func TestCountBySeverity(t *testing.T) {
 	t.Parallel()
 
-	findings := []finding.Finding{
-		{Severity: finding.SeverityError},
-		{Severity: finding.SeverityError},
-		{Severity: finding.SeverityWarning},
-		{Severity: finding.SeverityInfo},
-		{Severity: finding.SeverityInfo},
-		{Severity: finding.SeverityInfo},
+	findings := []pass.Finding{
+		{Severity: pass.SeverityError},
+		{Severity: pass.SeverityError},
+		{Severity: pass.SeverityWarning},
+		{Severity: pass.SeverityInfo},
+		{Severity: pass.SeverityInfo},
+		{Severity: pass.SeverityInfo},
 	}
 
 	errors, warnings, infos := CountBySeverity(findings)

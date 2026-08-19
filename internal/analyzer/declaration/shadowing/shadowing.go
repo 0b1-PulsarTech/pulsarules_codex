@@ -5,41 +5,36 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
-	shadowReporter finding.Reporter
-	reuseReporter  finding.Reporter
+	shadowReporter pass.Reporter
+	reuseReporter  pass.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		shadowReporter: finding.NewReporter("shadowing", finding.SeverityWarning, finding.CatAST),
+		shadowReporter: pass.NewReporter("shadowing", pass.SeverityWarning, pass.CatAST),
 		// The two findings share scope machinery but say opposite things.
-		reuseReporter: finding.NewReporter(
-			"short-decl-reuse",
-			finding.SeverityWarning,
-			finding.CatAST,
-		),
+		reuseReporter: pass.NewReporter("short-decl-reuse", pass.SeverityWarning, pass.CatAST),
 	}
 }
 
-func (a *Analyzer) ID() string             { return "shadowing" }
-func (a *Analyzer) Stage() finding.StageID { return finding.StageAST }
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{NeedsAST: true}
+func (a *Analyzer) ID() string          { return "shadowing" }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{NeedsAST: true}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
 		return a.checkFile(ctx.ASTCache.FileSet(), fc, f)
 	})
 }
 
 func (a *Analyzer) forFunc(
-	fset *token.FileSet, fc pass.FileChange, findings *[]finding.Finding,
+	fset *token.FileSet, fc pass.FileChange, findings *[]pass.Finding,
 ) reporter {
 	reported := make(map[string]bool)
 	// One report per name per function. The mandated `(out T, err error)` plus
@@ -80,8 +75,8 @@ func (a *Analyzer) checkFile(
 	fset *token.FileSet,
 	fc pass.FileChange,
 	f *ast.File,
-) []finding.Finding {
-	var findings []finding.Finding
+) []pass.Finding {
+	var findings []pass.Finding
 	// simplification: function literals are not walked; doing so mostly finds
 	// `if err := f(); err != nil` in closures, not worth reporting yet. Upgrade
 	// path: walk FuncLit bodies in walkStmt.

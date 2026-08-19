@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type expectedFinding struct {
@@ -65,7 +65,7 @@ func copyTree(t *testing.T, src, dst string) {
 	}
 }
 
-func assertFindings(t *testing.T, caseName string, got []finding.Finding, want []expectedFinding) {
+func assertFindings(t *testing.T, caseName string, got []pass.Finding, want []expectedFinding) {
 	t.Helper()
 	if len(got) != len(want) {
 		t.Fatalf("case %s: got %d findings, want %d\ngot: %+v\nwant: %+v",

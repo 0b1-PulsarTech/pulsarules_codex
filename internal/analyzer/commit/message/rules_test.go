@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
 
@@ -120,12 +120,12 @@ func TestValidateDescriptionTooLong(t *testing.T) {
 	longDesc := descBuilder.String()
 	msg := commitmsg.Parse(":wrench: feat: " + longDesc)
 	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
-	findingItem, ok := findingByID(findings, "commit-desc-length")
+	finding, ok := findingByID(findings, "commit-desc-length")
 	if !ok {
 		t.Fatalf("expected commit-desc-length finding for 80+ char subject")
 	}
-	if findingItem.Severity != finding.SeverityError {
-		t.Errorf("commit-desc-length severity = %v, want error (must block)", findingItem.Severity)
+	if finding.Severity != pass.SeverityError {
+		t.Errorf("commit-desc-length severity = %v, want error (must block)", finding.Severity)
 	}
 }
 

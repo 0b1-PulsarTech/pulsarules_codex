@@ -5,35 +5,34 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
 	maxLines int
-	reporter finding.Reporter
+	reporter pass.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	const defaultMaxLines = 180
 	return &Analyzer{
 		maxLines: defaultMaxLines,
-		reporter: finding.NewReporter("file-size", finding.SeverityWarning, finding.CatProject),
+		reporter: pass.NewReporter("file-size", pass.SeverityWarning, pass.CatProject),
 	}
 }
 
-func (a *Analyzer) ID() string             { return "file-size" }
-func (a *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{}
+func (a *Analyzer) ID() string          { return "file-size" }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	limits := newLineLimits(a.resolveMaxLines(ctx))
 	if ctx.Sources == nil {
 		return nil
 	}
-	var findings []finding.Finding
+	var findings []pass.Finding
 	for _, fc := range ctx.ChangedFiles {
 		if fc.Extension != ".go" {
 			continue

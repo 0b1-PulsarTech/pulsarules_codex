@@ -6,32 +6,31 @@ import (
 	"go/token"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
-	reporter finding.Reporter
+	reporter pass.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: finding.NewReporter("import-groups", finding.SeverityError, finding.CatSyntax),
+		reporter: pass.NewReporter("import-groups", pass.SeverityError, pass.CatSyntax),
 	}
 }
 
-func (a *Analyzer) ID() string             { return "import-groups" }
-func (a *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{}
+func (a *Analyzer) ID() string          { return "import-groups" }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	modulePath, err := pass.ModulePath(ctx.ProjectDir)
 	if err != nil || modulePath == "" {
 		return nil
 	}
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []finding.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
 		return a.checkFile(ctx.ASTCache.FileSet(), modulePath, fc, f)
 	})
 }
@@ -41,7 +40,7 @@ func (a *Analyzer) checkFile(
 	modulePath string,
 	fc pass.FileChange,
 	f *ast.File,
-) []finding.Finding {
+) []pass.Finding {
 	if len(f.Imports) == 0 {
 		return nil
 	}
@@ -70,7 +69,7 @@ func (a *Analyzer) checkFile(
 	for _, spec := range f.Imports[1:] {
 		g := classify(spec.Path.Value)
 		if g < prevGroup {
-			return []finding.Finding{
+			return []pass.Finding{
 				a.reporter.At(
 					fc.Path,
 					fset.Position(spec.Pos()).Line,

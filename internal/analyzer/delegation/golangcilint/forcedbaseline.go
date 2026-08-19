@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type disabledLinters struct {
@@ -16,7 +16,7 @@ type disabledLinters struct {
 	} `yaml:"linters"`
 }
 
-func (r *Runner) forcedBaselineFindings(configPath string) []finding.Finding {
+func (r *Runner) forcedBaselineFindings(configPath string) []pass.Finding {
 	if configPath == "" {
 		return nil
 	}
@@ -29,7 +29,7 @@ func (r *Runner) forcedBaselineFindings(configPath string) []finding.Finding {
 	forcedLinters := forcedLinters()
 	var cfg disabledLinters
 	if err = yaml.Unmarshal(raw, &cfg); err != nil {
-		return []finding.Finding{r.warning.At(configPath, 0, fmt.Sprintf(
+		return []pass.Finding{r.warning.At(configPath, 0, fmt.Sprintf(
 			"cannot read the golangci-lint config, so the forced baseline "+
 				"(%v) cannot be confirmed: %v",
 			forcedLinters,
@@ -37,7 +37,7 @@ func (r *Runner) forcedBaselineFindings(configPath string) []finding.Finding {
 		), "fix the YAML so the forced-linter baseline can be verified")}
 	}
 
-	var findings []finding.Finding
+	var findings []pass.Finding
 	for _, linter := range cfg.Linters.Disable {
 		if !slices.Contains(forcedLinters, linter) {
 			continue

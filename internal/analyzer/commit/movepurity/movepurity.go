@@ -1,9 +1,6 @@
 package movepurity
 
-import (
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-)
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 
 const analyzerID = "commit-move-purity"
 
@@ -21,25 +18,21 @@ func NewAnalyzer(diffs diffReader) *Analyzer {
 
 func (a *Analyzer) ID() string { return analyzerID }
 
-func (a *Analyzer) Stage() finding.StageID { return finding.StageStatic }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{}
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if len(ctx.StagedRenames) == 0 {
 		return nil
 	}
 	params := ctx.Params(a.ID())
 	minSimilarity := params.Int("min_similarity", a.minSimilarity)
-	reporter := finding.NewReporter(
-		analyzerID,
-		params.Severity(finding.SeverityWarning),
-		finding.CatCommit,
-	)
+	reporter := pass.NewReporter(analyzerID, params.Severity(pass.SeverityWarning), pass.CatCommit)
 
-	var findings []finding.Finding
+	var findings []pass.Finding
 	for _, rename := range ctx.StagedRenames {
 		if rename.Score < minSimilarity {
 			findings = append(findings, notPureMoveFinding(reporter, rename))
@@ -59,16 +52,16 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 }
 
 func (a *Analyzer) renameEditFinding(
-	reporter finding.Reporter,
+	reporter pass.Reporter,
 	rename pass.Rename,
-) (finding.Finding, bool) {
+) (pass.Finding, bool) {
 	if a.diffs == nil {
-		return finding.Finding{}, false
+		return pass.Finding{}, false
 	}
 	const renameDiffProbeScore = 1
 	diff, err := a.diffs.StagedRenameDiff(rename.OldPath, rename.NewPath, renameDiffProbeScore)
 	if err == nil && isImportOnlyDiff(diff) {
-		return finding.Finding{}, false
+		return pass.Finding{}, false
 	}
 	return renameCarriesEditFinding(reporter, rename), true
 }

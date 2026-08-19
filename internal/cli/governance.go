@@ -8,6 +8,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
@@ -100,6 +101,12 @@ func governanceConfig(opts *version.Options) (*config.GovernanceConfig, error) {
 
 	if opts.GolangciConfig != "" {
 		cfg.SetParam("golangci-lint", "config_path", opts.GolangciConfig)
+	}
+	if err := pass.ValidateSeverityName(opts.TypographicSeverity); err != nil {
+		return nil, err
+	}
+	if opts.TypographicSeverity != "" {
+		cfg.SetParam("typographic-markers", "severity", opts.TypographicSeverity)
 	}
 	return cfg, nil
 }

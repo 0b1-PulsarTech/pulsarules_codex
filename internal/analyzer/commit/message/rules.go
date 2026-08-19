@@ -3,7 +3,7 @@ package message
 import (
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
 
@@ -32,8 +32,8 @@ func DefaultRuleConfig() ruleConfig {
 	}
 }
 
-func Validate(msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters) []finding.Finding {
-	findings := make([]finding.Finding, 0, typicalFindingCapacity)
+func Validate(msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters) []pass.Finding {
+	findings := make([]pass.Finding, 0, typicalFindingCapacity)
 
 	rawAfterEmoji := strings.TrimSpace(msg.Raw)
 	for _, emoji := range msg.Emojis {

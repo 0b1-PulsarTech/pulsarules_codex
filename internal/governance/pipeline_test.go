@@ -3,20 +3,19 @@ package governance
 import (
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type stubAnalyzer struct {
 	id       string
-	stage    finding.StageID
-	findings []finding.Finding
+	stage    pass.StageID
+	findings []pass.Finding
 }
 
-func (s stubAnalyzer) ID() string                  { return s.id }
-func (s stubAnalyzer) Stage() finding.StageID      { return s.stage }
-func (s stubAnalyzer) Needs() finding.Requirements { return finding.Requirements{} }
-func (s stubAnalyzer) Analyze(_ *pass.Context) []finding.Finding {
+func (s stubAnalyzer) ID() string               { return s.id }
+func (s stubAnalyzer) Stage() pass.StageID      { return s.stage }
+func (s stubAnalyzer) Needs() pass.Requirements { return pass.Requirements{} }
+func (s stubAnalyzer) Analyze(_ *pass.Context) []pass.Finding {
 	return s.findings
 }
 
@@ -26,16 +25,16 @@ func TestStageRunnerRegisterAndRun(t *testing.T) {
 	r := newPipeline(nil)
 	r.Register(stubAnalyzer{
 		id:    "a1",
-		stage: finding.StageStatic,
-		findings: []finding.Finding{
-			{AnalyzerID: "a1", Message: "issue 1", Severity: finding.SeverityWarning},
+		stage: pass.StageStatic,
+		findings: []pass.Finding{
+			{AnalyzerID: "a1", Message: "issue 1", Severity: pass.SeverityWarning},
 		},
 	})
 	r.Register(stubAnalyzer{
 		id:    "a2",
-		stage: finding.StageAST,
-		findings: []finding.Finding{
-			{AnalyzerID: "a2", Message: "issue 2", Severity: finding.SeverityError},
+		stage: pass.StageAST,
+		findings: []pass.Finding{
+			{AnalyzerID: "a2", Message: "issue 2", Severity: pass.SeverityError},
 		},
 	})
 
@@ -63,13 +62,13 @@ func TestStageRunnerDisabledAnalyzer(t *testing.T) {
 	r := newPipeline(cfg)
 	r.Register(stubAnalyzer{
 		id:       "disabled",
-		stage:    finding.StageStatic,
-		findings: []finding.Finding{{AnalyzerID: "disabled", Message: "should not appear"}},
+		stage:    pass.StageStatic,
+		findings: []pass.Finding{{AnalyzerID: "disabled", Message: "should not appear"}},
 	})
 	r.Register(stubAnalyzer{
 		id:       "enabled",
-		stage:    finding.StageStatic,
-		findings: []finding.Finding{{AnalyzerID: "enabled", Message: "should appear"}},
+		stage:    pass.StageStatic,
+		findings: []pass.Finding{{AnalyzerID: "enabled", Message: "should appear"}},
 	})
 
 	ctx := &pass.Context{}
@@ -88,18 +87,18 @@ func TestStageRunnerOrdersByStage(t *testing.T) {
 	r := newPipeline(nil)
 	r.Register(stubAnalyzer{
 		id:       "ast",
-		stage:    finding.StageAST,
-		findings: []finding.Finding{{AnalyzerID: "ast"}},
+		stage:    pass.StageAST,
+		findings: []pass.Finding{{AnalyzerID: "ast"}},
 	})
 	r.Register(stubAnalyzer{
 		id:       "static",
-		stage:    finding.StageStatic,
-		findings: []finding.Finding{{AnalyzerID: "static"}},
+		stage:    pass.StageStatic,
+		findings: []pass.Finding{{AnalyzerID: "static"}},
 	})
 	r.Register(stubAnalyzer{
 		id:       "arch",
-		stage:    finding.StageArch,
-		findings: []finding.Finding{{AnalyzerID: "arch"}},
+		stage:    pass.StageArch,
+		findings: []pass.Finding{{AnalyzerID: "arch"}},
 	})
 
 	ctx := &pass.Context{}

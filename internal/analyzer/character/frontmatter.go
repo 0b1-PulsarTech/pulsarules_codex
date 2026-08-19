@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -21,15 +20,11 @@ func isProvenanceKey(key string) bool {
 	return false
 }
 
-func frontmatterFindings(
-	fc pass.FileChange,
-	src string,
-	reporter finding.Reporter,
-) []finding.Finding {
+func frontmatterFindings(fc pass.FileChange, src string, reporter pass.Reporter) []pass.Finding {
 	if strings.ToLower(fc.Extension) != ".md" {
 		return nil
 	}
-	var findings []finding.Finding
+	var findings []pass.Finding
 	// Key position only, never body prose: a document that merely discusses a vendor
 	// is not machine-generated.
 	for offset, line := range frontmatterLines(src) {

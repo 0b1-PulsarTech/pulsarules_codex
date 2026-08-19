@@ -1,17 +1,17 @@
 package message
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 
-func hasAnalyzer(findings []finding.Finding, id string) bool {
+func hasAnalyzer(findings []pass.Finding, id string) bool {
 	_, ok := findingByID(findings, id)
 	return ok
 }
 
-func findingByID(findings []finding.Finding, id string) (finding.Finding, bool) {
+func findingByID(findings []pass.Finding, id string) (pass.Finding, bool) {
 	for _, finding := range findings {
 		if finding.AnalyzerID == id {
 			return finding, true
 		}
 	}
-	return finding.Finding{}, false
+	return pass.Finding{}, false
 }

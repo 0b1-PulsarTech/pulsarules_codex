@@ -4,28 +4,27 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
-	reporter finding.Reporter
+	reporter pass.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: finding.NewReporter("naming", finding.SeverityWarning, finding.CatSyntax),
+		reporter: pass.NewReporter("naming", pass.SeverityWarning, pass.CatSyntax),
 	}
 }
 
-func (a *Analyzer) ID() string             { return "naming" }
-func (a *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-func (a *Analyzer) Needs() finding.Requirements {
-	return finding.Requirements{}
+func (a *Analyzer) ID() string          { return "naming" }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (a *Analyzer) Needs() pass.Requirements {
+	return pass.Requirements{}
 }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []finding.Finding {
+func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
 		return a.checkFile(ctx.ASTCache.FileSet(), fc, f)
 	})
 }
@@ -34,8 +33,8 @@ func (a *Analyzer) checkFile(
 	fset *token.FileSet,
 	fc pass.FileChange,
 	f *ast.File,
-) []finding.Finding {
-	var findings []finding.Finding
+) []pass.Finding {
+	var findings []pass.Finding
 	// Two passes: the sequential-name and noise rules both need the whole
 	// file (siblings, and the types names are built from), which no single
 	// identifier can answer for itself.

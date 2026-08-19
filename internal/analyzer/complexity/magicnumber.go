@@ -6,7 +6,6 @@ import (
 	"go/token"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -17,14 +16,14 @@ func findMagicNumbers(
 	fset *token.FileSet,
 	fc pass.FileChange,
 	fn *ast.FuncDecl,
-	reporter finding.Reporter,
-) []finding.Finding {
+	reporter pass.Reporter,
+) []pass.Finding {
 	// A test's literals are its documentation: a table-driven case reads `want: 3`.
 	if fc.IsTest {
 		return nil
 	}
 
-	var findings []finding.Finding
+	var findings []pass.Finding
 	fired := false
 	// ast.Inspect visits a call before its arguments, so an exemption is marked in time.
 	exemptPos := map[token.Pos]bool{}

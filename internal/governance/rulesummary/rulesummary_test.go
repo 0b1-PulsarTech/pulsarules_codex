@@ -3,7 +3,6 @@ package rulesummary
 import (
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -16,25 +15,21 @@ func TestInjectRuleSummaries(t *testing.T) {
 		t.Fatalf("load knowledge: %v", err)
 	}
 
-	findings := []finding.Finding{
-		{AnalyzerID: "file-size", Severity: finding.SeverityWarning, Message: "file too long"},
-		{AnalyzerID: "naming", Severity: finding.SeverityWarning, Message: "bad name"},
-		{AnalyzerID: "unknown-analyzer", Severity: finding.SeverityError, Message: "unknown"},
+	findings := []pass.Finding{
+		{AnalyzerID: "file-size", Severity: pass.SeverityWarning, Message: "file too long"},
+		{AnalyzerID: "naming", Severity: pass.SeverityWarning, Message: "bad name"},
+		{AnalyzerID: "unknown-analyzer", Severity: pass.SeverityError, Message: "unknown"},
 		{
 			AnalyzerID: "golangci-lint/gocyclo",
-			Severity:   finding.SeverityWarning,
+			Severity:   pass.SeverityWarning,
 			Message:    "high cyclomatic",
 		},
 		{
 			AnalyzerID: "commit-type-required",
-			Severity:   finding.SeverityError,
+			Severity:   pass.SeverityError,
 			Message:    "type required",
 		},
-		{
-			AnalyzerID: "arch-boundary",
-			Severity:   finding.SeverityError,
-			Message:    "boundary violation",
-		},
+		{AnalyzerID: "arch-boundary", Severity: pass.SeverityError, Message: "boundary violation"},
 	}
 
 	injectRuleSummaries(findings, idx)
@@ -68,8 +63,8 @@ func TestInjectRuleSummaries(t *testing.T) {
 func TestInjectRuleSummaries_NilIndex(t *testing.T) {
 	t.Parallel()
 
-	findings := []finding.Finding{
-		{AnalyzerID: "file-size", Severity: finding.SeverityWarning, Message: "file too long"},
+	findings := []pass.Finding{
+		{AnalyzerID: "file-size", Severity: pass.SeverityWarning, Message: "file too long"},
 	}
 
 	injectRuleSummaries(findings, nil)
@@ -87,10 +82,10 @@ func TestInjectRuleSummaries_PreexistingRuleID(t *testing.T) {
 		t.Fatalf("load knowledge: %v", err)
 	}
 
-	findings := []finding.Finding{
+	findings := []pass.Finding{
 		{
 			AnalyzerID: "some-analyzer",
-			Severity:   finding.SeverityWarning,
+			Severity:   pass.SeverityWarning,
 			Message:    "msg",
 			RuleID:     "imports",
 		},
@@ -114,10 +109,10 @@ func TestInjectRuleSummaries_AlreadyHasSummary(t *testing.T) {
 		t.Fatalf("load knowledge: %v", err)
 	}
 
-	findings := []finding.Finding{
+	findings := []pass.Finding{
 		{
 			AnalyzerID:  "file-size",
-			Severity:    finding.SeverityWarning,
+			Severity:    pass.SeverityWarning,
 			Message:     "msg",
 			RuleSummary: "custom summary",
 		},
@@ -134,7 +129,7 @@ func TestRuleInjectionAnalyzer_Stage(t *testing.T) {
 	t.Parallel()
 
 	a := NewAnalyzer(nil)
-	if a.Stage() != finding.StageRuleInjection {
+	if a.Stage() != pass.StageRuleInjection {
 		t.Fatalf("expected StageRuleInjection, got %d", a.Stage())
 	}
 	if a.ID() != "rule-injection" {
@@ -152,8 +147,8 @@ func TestAnalyzer_Summaries(t *testing.T) {
 
 	a := NewAnalyzer(idx)
 	ctx := &pass.Context{
-		Findings: []finding.Finding{
-			{AnalyzerID: "naming", Severity: finding.SeverityWarning, Message: "bad name"},
+		Findings: []pass.Finding{
+			{AnalyzerID: "naming", Severity: pass.SeverityWarning, Message: "bad name"},
 		},
 	}
 

@@ -3,7 +3,6 @@ package message
 import (
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 )
@@ -35,7 +34,7 @@ func TestCommitAnalyzerID(t *testing.T) {
 	if analyzer.ID() != "commit-lint" {
 		t.Errorf("ID = %q, want commit-lint", analyzer.ID())
 	}
-	if analyzer.Stage() != finding.StageStatic {
+	if analyzer.Stage() != pass.StageStatic {
 		t.Errorf("Stage = %v, want StageStatic", analyzer.Stage())
 	}
 }
