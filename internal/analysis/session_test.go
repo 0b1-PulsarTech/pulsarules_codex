@@ -182,3 +182,57 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 		t.Fatalf("expected FileSetAll to report the committed defect, got %+v", allFindings)
 	}
 }
+
+func TestSession_ScopeCommit_StaticSources(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	gitInitRepo(t, dir)
+
+	content := "package x\n\n// bad note \u2014 trips typographic-markers\n"
+	if err := os.WriteFile(
+		filepath.Join(dir, "violation.go"), []byte(content), 0o600,
+	); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	repo, err := vcs.Open(dir)
+	if err != nil {
+		t.Fatalf("vcs.Open: %v", err)
+	}
+
+	sess := NewSession(repo, "", nil, nil)
+	findings := sess.Analyze(ScopeCommit, nil, FileSetChanged).Findings
+
+	for _, finding := range findings {
+		if finding.AnalyzerID == "typographic-markers" {
+			return
+		}
+	}
+	t.Fatalf("expected a typographic-markers finding over the changed file, got %+v", findings)
+}
+
+func TestSession_ScopeCommit_EmptyStatus(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	gitInitRepo(t, dir)
+
+	content := "package x\n\n// bad note \u2014 would trip typographic-markers\n"
+	if err := os.WriteFile(
+		filepath.Join(dir, "violation.go"), []byte(content), 0o600,
+	); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	repo, err := vcs.Open(dir)
+	if err != nil {
+		t.Fatalf("vcs.Open: %v", err)
+	}
+
+	sess := NewSession(repo, "", nil, nil)
+	findings := sess.Analyze(ScopeCommit, &vcs.Status{}, FileSetChanged).Findings
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 findings with an explicit empty status, got %+v", findings)
+	}
+}

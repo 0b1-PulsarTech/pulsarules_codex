@@ -71,11 +71,9 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Disc
 		d.StagedRenames = toCoreRenames(renames)
 	}
 
-	if scope == ScopeFull || scope == ScopeChanged {
-		d.Sources = core.NewSourceProvider(s.repo.Root())
-	}
+	d.Sources = core.NewSourceProvider(s.repo.Root())
 
-	if files == FileSetAll && d.Sources != nil {
+	if files == FileSetAll {
 		d.ChangedFiles = walkAllFiles(d.Sources)
 		return d
 	}
