@@ -106,7 +106,8 @@ func ValidExtraTypes(spec string) bool {
 	if spec == "" {
 		return true
 	}
-	// Only lowercase names, digits and dashes are valid branch types.
+	// The value is baked into a generated shell script, so anything outside
+	// lowercase letters, digits and dashes is rejected at the boundary.
 	for entry := range strings.SplitSeq(spec, ",") {
 		if entry == "" {
 			return false

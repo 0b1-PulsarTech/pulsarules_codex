@@ -91,6 +91,13 @@ func bindGitHookFlags(fs *flag.FlagSet, opts *Options) {
 		"bake into the git hooks how hard a typographic-marker finding lands "+
 			"(error|warning|info); empty keeps the analyzer default",
 	)
+	fs.StringVar(
+		&opts.BranchExtraTypes,
+		"branch-extra-types",
+		"",
+		"bake into the pre-push hook extra branch types a project allows beyond "+
+			"the Conventional Commit and gitflow types (e.g. spike,experiment)",
+	)
 }
 
 func bindUninstallFlags(fs *flag.FlagSet, opts *Options) {

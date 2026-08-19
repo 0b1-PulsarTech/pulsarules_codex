@@ -8,6 +8,7 @@ type hookSpec struct {
 	description string
 	command     string
 	governed    bool
+	isFullScope bool
 }
 
 func hookSpecs() map[string]hookSpec {
@@ -25,12 +26,14 @@ func hookSpecs() map[string]hookSpec {
 			description: "runs governance checks before pushing",
 			command:     `governance --project "$PROJECT_DIR"`,
 			governed:    true,
+			isFullScope: true,
 		},
 	}
 }
 
 type Options struct {
 	TypographicSeverity string
+	BranchExtraTypes    string
 }
 
 func (opts Options) typographicFlag() string {
@@ -38,6 +41,13 @@ func (opts Options) typographicFlag() string {
 		return ""
 	}
 	return " --typographic-severity " + opts.TypographicSeverity
+}
+
+func (opts Options) branchFlag() string {
+	if opts.BranchExtraTypes == "" {
+		return ""
+	}
+	return " --branch-extra-types " + opts.BranchExtraTypes
 }
 
 func hookScript(name string, opts Options) (string, bool) {
@@ -49,6 +59,10 @@ func hookScript(name string, opts Options) (string, bool) {
 	command := spec.command
 	if spec.governed {
 		command += opts.typographicFlag()
+	}
+	// Branch-name runs only at ScopeFull; pre-commit would carry a value no analyzer reads.
+	if spec.isFullScope {
+		command += opts.branchFlag()
 	}
 	const scriptPreamble = `PROJECT_DIR=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 cd "$PROJECT_DIR" || exit 0
