@@ -19,6 +19,7 @@ func (gitInstaller) Name() string { return "git" }
 func (gitInstaller) Install(ctx Context) error {
 	backedUp, err := githook.Install(ctx.Dir, ctx.GitHooks, githook.Options{
 		TypographicSeverity: ctx.TypographicSeverity,
+		BranchExtraTypes:    ctx.BranchExtraTypes,
 	})
 	if err != nil {
 		return fmt.Errorf("install git hooks: %w", err)

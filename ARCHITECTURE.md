@@ -180,6 +180,9 @@ file-extension-based dispatch. The families:
   window, tool-attribution trailers, delegating emoji lookups to `internal/emoji`.
 - `movepurity` - flags a staged rename below the configured git rename-similarity score, or one
   staged alongside unrelated edits, as not a pure move.
+- `branchname` - flags a checked-out branch whose name carries no recognized type prefix
+  (Conventional Commit types, the gitflow lines, plus a project's own `extra_types`). Gated to
+  `ScopeFull` - the pre-push run - since a branch name is not a property of a staged change.
 - `delegation/golangcilint` - shells out to an external tool and translates its output into
   `core.Finding`s; both are gated to `delegationScopes` (`ScopeFull`) since spawning a process is only
   worth the cost on a full run.
@@ -191,10 +194,10 @@ file-extension-based dispatch. The families:
 ### internal/vcs
 
 `vcs.Repository` is the typed, read-only git port the whole governance pipeline depends on (`Root`,
-`HeadSubject`, `HeadAuthorEpoch`, `RecentSubjects`, `WorktreeStatus`, `StagedRenames`). The
-package-level `vcs.CommonDir` resolves the git dir every linked worktree of a repository shares -
-the git-hook installer joins it with `hooks` to find the dir git actually runs hook scripts from.
-`vcs.Open`
+`HeadSubject`, `HeadAuthorEpoch`, `RecentSubjects`, `CurrentBranch`, `WorktreeStatus`,
+`StagedRenames`). The package-level `vcs.CommonDir` resolves the git dir every linked worktree of a
+repository shares - the git-hook installer joins it with `hooks` to find the dir git actually runs
+hook scripts from. `vcs.Open`
 walks up from a directory to the repository root (resolving a linked worktree) and returns
 `ErrNoRepository` rather than a bare error when the directory is not a git repository, so callers can
 degrade quietly. EVERY git read in the product goes through `gitcmd.go`'s one `runGit` helper, which
@@ -298,6 +301,7 @@ The governance pipeline (see above) adds its own package set:
 | `internal/analyzer/arch`          | `PackageBoundaryAnalyzer`, `ImportCycleAnalyzer` - multi-file architecture checks                   |
 | `internal/analyzer/commit`        | `CommitAnalyzer` - commit-message format, emoji, and trailer rules                                  |
 | `internal/analyzer/movepurity`    | flags a staged rename that is not a pure move                                                       |
+| `internal/analyzer/branchname`    | flags a branch name with no recognized type prefix; `ScopeFull` (pre-push) only                     |
 | `internal/analyzer/delegation/*`  | `golangcilint` - shells out to an external tool, gated to `ScopeFull`                              |
 | `internal/analyzer/golang`        | the `Language` handler for `.go` files                                                              |
 | `internal/vcs`                    | `Repository` port, `Open`, `Status`/`Rename` types, `gitcmd.go`'s `runGit` (the one git-exec point)  |

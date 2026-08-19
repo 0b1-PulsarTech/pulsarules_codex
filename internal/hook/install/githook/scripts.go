@@ -25,6 +25,10 @@ type hookSpec struct {
 	description string
 	command     string
 	governed    bool
+	// isFullScope marks the hook whose governance run has no --scope
+	// narrowing - the only run the ScopeFull-gated analyzers, and so the
+	// flags configuring them, ever reach.
+	isFullScope bool
 }
 
 // hookSpecs is the whole supported set, keyed by git hook name.
@@ -42,6 +46,7 @@ var hookSpecs = map[string]hookSpec{
 		description: "runs governance checks before pushing",
 		command:     `governance --project "$PROJECT_DIR"`,
 		governed:    true,
+		isFullScope: true,
 	},
 }
 
@@ -53,14 +58,27 @@ type Options struct {
 	// TypographicSeverity, when set, spells how hard a typographic-marker
 	// finding lands. Empty leaves the analyzer's own default in place.
 	TypographicSeverity string
+	// BranchExtraTypes, when set, lists the branch types a project allows on top
+	// of the Conventional Commit set. Empty allows only the commit types.
+	BranchExtraTypes string
 }
 
-// governanceFlags renders opts as flags appended to a governance invocation.
-func (o Options) governanceFlags() string {
+// typographicFlag renders the severity flag every governed hook carries.
+func (o Options) typographicFlag() string {
 	if o.TypographicSeverity == "" {
 		return ""
 	}
 	return " --typographic-severity " + o.TypographicSeverity
+}
+
+// branchFlag renders the extra-types flag only a full-scope run reads.
+// why: branch-name is gated to ScopeFull, so baking this into pre-commit
+// would carry a value no analyzer of that run ever consumes.
+func (o Options) branchFlag() string {
+	if o.BranchExtraTypes == "" {
+		return ""
+	}
+	return " --branch-extra-types " + o.BranchExtraTypes
 }
 
 // hookScript renders the full shell script for one git hook, reporting false
@@ -72,7 +90,10 @@ func hookScript(name string, opts Options) (string, bool) {
 	}
 	command := spec.command
 	if spec.governed {
-		command += opts.governanceFlags()
+		command += opts.typographicFlag()
+	}
+	if spec.isFullScope {
+		command += opts.branchFlag()
 	}
 	return "#!/bin/sh\n" +
 		"# pulsarules_codex " + name + " hook - " + spec.description + ".\n" +

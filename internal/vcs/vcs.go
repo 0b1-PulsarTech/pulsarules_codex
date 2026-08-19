@@ -25,6 +25,9 @@ type Repository interface {
 	// RecentSubjects returns up to limit recent commit subjects, newest
 	// first, or (nil, nil) when the repository has no commits yet.
 	RecentSubjects(limit int) ([]string, error)
+	// CurrentBranch returns the checked-out branch name, or "" on a detached
+	// HEAD - a state that names no branch at all.
+	CurrentBranch() (string, error)
 	// WorktreeStatus reports the paths that differ from HEAD.
 	WorktreeStatus() (Status, error)
 	// StagedRenames pairs staged deletions with staged additions that look
@@ -68,6 +71,18 @@ func Open(dir string) (Repository, error) {
 
 func (r *repository) Root() string {
 	return r.root
+}
+
+// CurrentBranch returns the checked-out branch name.
+// why: `branch --show-current` prints empty on a detached HEAD instead of
+// failing (unlike symbolic-ref), so a genuinely broken git still surfaces as
+// the error it is rather than masquerading as a detached HEAD.
+func (r *repository) CurrentBranch() (string, error) {
+	branch, err := runGit(r.root, "branch", "--show-current")
+	if err != nil {
+		return "", fmt.Errorf("read current branch: %w", err)
+	}
+	return branch, nil
 }
 
 // HeadSubject returns the subject line of HEAD's commit message, or

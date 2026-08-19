@@ -26,11 +26,11 @@ go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
 pulsarules_cli generate [--root DIR] [--out DIR]
 pulsarules_cli validate [--root DIR]
 pulsarules_cli list [skills|rules|patterns|workflows] [--root DIR]
-pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--git-hooks commit-msg,pre-commit] [--no-git-hooks] [--typographic-severity error|warning|info]
+pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--git-hooks commit-msg,pre-commit] [--no-git-hooks] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
 pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info]
+pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
 pulsarules_cli clean [--project DIR] [--write]
 pulsarules_cli evals --artifact FILE [--scenario ID]
 pulsarules_cli version
@@ -159,6 +159,10 @@ Additional install flags:
   `typographic-markers` finding lands (the analyzer's own default is `error`); a git hook receives
   no arguments from the person committing, so install time is the only chance to set it. The same
   flag on `governance` applies to a single run.
+- `--branch-extra-types release,hotfix`: bake into the pre-push hook extra branch-type prefixes the
+  `branch-name` analyzer accepts beyond the Conventional Commit and gitflow sets. Only pre-push
+  carries it: `branch-name` runs only on a full-scope pass. The same flag on `governance` applies to
+  a single run.
 
 ### Uninstall
 
@@ -208,10 +212,10 @@ project and print findings to stderr, exiting non-zero on any error-severity fin
 analyzes only files `git status` reports as changed; `--all-files` walks the whole source tree
 instead (skipping `.git/`, `.claude/`, `.opencode/`, `generated/`, `build/`, and `vendor/`).
 `--scope commit` runs the lightweight static + AST + commit checks only (what the pre-commit hook
-uses); `--scope full` (default) adds architecture and delegation. `--preset
-recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity` overrides how
-hard a `typographic-markers` finding lands for this run (see the install flag of the same name for
-the baked-in variant). Findings in generated files (detected by
+uses); `--scope full` (default) adds architecture, delegation, and the `branch-name` check. `--preset
+recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity` overrides how hard
+a `typographic-markers` finding lands for this run; `--branch-extra-types` widens the branch-type
+prefixes `branch-name` accepts (see the install flags of the same name for the baked-in variants). Findings in generated files (detected by
 the `// Code generated ... DO NOT EDIT.` marker) are suppressed by default; `--include-generated`
 turns that off.
 

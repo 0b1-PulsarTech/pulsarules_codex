@@ -94,6 +94,19 @@ func TestHookScript_BakesInstallPolicy(t *testing.T) {
 			opts: Options{TypographicSeverity: "warning"},
 		},
 		{name: "an unset policy bakes no flag", hook: "pre-commit"},
+		{
+			name:     "pre-push carries the extra branch types",
+			hook:     "pre-push",
+			opts:     Options{BranchExtraTypes: "release,hotfix"},
+			wantFlag: true,
+		},
+		{
+			// branch-name is gated to ScopeFull, so the commit-scoped run has
+			// no analyzer that would ever read the flag.
+			name: "pre-commit does not carry the extra branch types",
+			hook: "pre-commit",
+			opts: Options{BranchExtraTypes: "release,hotfix"},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -103,7 +116,11 @@ func TestHookScript_BakesInstallPolicy(t *testing.T) {
 			if !ok {
 				t.Fatalf("hookScript(%q) reported no script", testCase.hook)
 			}
-			got := strings.Contains(script, "--typographic-severity warning")
+			wantText := "--typographic-severity warning"
+			if testCase.opts.BranchExtraTypes != "" {
+				wantText = "--branch-extra-types " + testCase.opts.BranchExtraTypes
+			}
+			got := strings.Contains(script, wantText)
 			if got != testCase.wantFlag {
 				t.Errorf(
 					"script carries the flag = %v, want %v\n%s",

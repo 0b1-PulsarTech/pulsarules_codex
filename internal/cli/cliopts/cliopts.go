@@ -31,6 +31,10 @@ type Options struct {
 	// (error|warning|info). Set at install, it is baked into the generated hook
 	// scripts; passed to governance, it applies to that run.
 	TypographicSeverity string
+	// --branch-extra-types: comma-separated branch types a project allows on top
+	// of the Conventional Commit set (e.g. release,hotfix). Set at install, it is
+	// baked into the pre-push hook.
+	BranchExtraTypes string
 
 	// uninstall (also reuses --root, --project, --global, --target, --hooks-scope)
 	KeepSkills bool // --keep-skills: uninstall keeps the rendered skill/workflow docs; hook wiring is still removed

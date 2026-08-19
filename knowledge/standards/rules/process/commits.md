@@ -8,6 +8,7 @@ tags:
 analyzers:
     - commit-lint
     - commit-move-purity
+    - branch-name
 ---
 
 # Commits
@@ -66,6 +67,13 @@ Applies to: every commit in every project.
     ends with an unmarked commit that restores green.
 12. Do NOT append `Co-Authored-By`, `Claude-Session`, or any other tool-attribution trailer, even
     for AI-assisted commits.
+13. Name the BRANCH `<type>/<description>`, with an optional `(<scope>)` between them -
+    `feat/branch-name-check`, `fix(hook)/worktree-hooks-dir`, `feature/add_branch-check`. The type is
+    a commit type from item 6 or a gitflow line (`feature`, `release`, `hotfix`, `bugfix`,
+    `support`). The pre-push check blocks a branch with no recognized prefix, so a tool-generated
+    name (`claude/...`) does not reach a remote. `main`, `master` and `develop` are exempt: a trunk
+    names a line of history, not a change. A project with its own vocabulary beyond both sets adds it
+    through the analyzer's `extra_types`, which install bakes into the hook.
 {{end}}
 
 {{define "forbidden"}}
