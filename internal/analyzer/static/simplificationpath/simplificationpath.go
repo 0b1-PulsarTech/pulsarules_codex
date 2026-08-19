@@ -22,6 +22,7 @@ func (a *Analyzer) ID() string          { return "simplification-path" }
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	reporter := a.reporter.Resolved(ctx)
 	if ctx.Sources == nil {
 		return nil
 	}
@@ -34,7 +35,7 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		if !ok {
 			continue
 		}
-		findings = append(findings, scanFile(src, fc.Path, a.reporter)...)
+		findings = append(findings, scanFile(src, fc.Path, reporter)...)
 	}
 	return findings
 }

@@ -42,6 +42,24 @@ func defaultRuleReporters() ruleReporters {
 	}
 }
 
+func (rr ruleReporters) resolved(ctx *core.AnalysisContext) ruleReporters {
+	rr.initial = rr.initial.Resolved(ctx)
+	rr.merge = rr.merge.Resolved(ctx)
+	rr.emojiRequired = rr.emojiRequired.Resolved(ctx)
+	rr.emojiCount = rr.emojiCount.Resolved(ctx)
+	rr.typeRequired = rr.typeRequired.Resolved(ctx)
+	rr.typeEnum = rr.typeEnum.Resolved(ctx)
+	rr.scopeCharset = rr.scopeCharset.Resolved(ctx)
+	rr.descRequired = rr.descRequired.Resolved(ctx)
+	rr.descLength = rr.descLength.Resolved(ctx)
+	rr.descCapitalize = rr.descCapitalize.Resolved(ctx)
+	rr.descNoPeriod = rr.descNoPeriod.Resolved(ctx)
+	rr.bodyLength = rr.bodyLength.Resolved(ctx)
+	rr.bodyTotalLength = rr.bodyTotalLength.Resolved(ctx)
+	rr.noCoauthor = rr.noCoauthor.Resolved(ctx)
+	return rr
+}
+
 type emojiReporters struct {
 	prohibited core.Reporter
 	catalog    core.Reporter
@@ -58,4 +76,12 @@ func defaultEmojiReporters() emojiReporters {
 			"commit-emoji-soft-repeat", core.SeverityInfo, core.CatCommit,
 		),
 	}
+}
+
+func (er emojiReporters) resolved(ctx *core.AnalysisContext) emojiReporters {
+	er.prohibited = er.prohibited.Resolved(ctx)
+	er.catalog = er.catalog.Resolved(ctx)
+	er.repeat = er.repeat.Resolved(ctx)
+	er.softRepeat = er.softRepeat.Resolved(ctx)
+	return er
 }

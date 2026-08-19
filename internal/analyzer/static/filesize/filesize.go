@@ -26,6 +26,7 @@ func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	limits := newLineLimits(a.resolveMaxLines(ctx))
+	reporter := a.reporter.Resolved(ctx)
 	if ctx.Sources == nil {
 		return nil
 	}
@@ -41,7 +42,7 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		limit := limits.forFile(fc)
 		lines := countLines(src)
 		if lines > limit {
-			findings = append(findings, a.reporter.At(
+			findings = append(findings, reporter.At(
 				fc.Path,
 				0,
 				fmt.Sprintf("file is %d lines, max %d", lines, limit),

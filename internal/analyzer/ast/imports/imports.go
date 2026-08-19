@@ -27,8 +27,9 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if err != nil || modulePath == "" {
 		return nil
 	}
+	reporter := a.reporter.Resolved(ctx)
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return a.checkFile(ctx.ASTCache.FileSet(), modulePath, fc, f)
+		return a.checkFile(ctx.ASTCache.FileSet(), modulePath, fc, f, reporter)
 	})
 }
 
@@ -37,6 +38,7 @@ func (a *Analyzer) checkFile(
 	modulePath string,
 	fc core.FileChange,
 	f *ast.File,
+	reporter core.Reporter,
 ) []core.Finding {
 	if len(f.Imports) == 0 {
 		return nil
@@ -67,7 +69,7 @@ func (a *Analyzer) checkFile(
 		g := classify(spec.Path.Value)
 		if g < prevGroup {
 			return []core.Finding{
-				a.reporter.At(
+				reporter.At(
 					fc.Path,
 					fset.Position(spec.Pos()).Line,
 					fmt.Sprintf(

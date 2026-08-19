@@ -76,6 +76,62 @@ func TestAnalyze_HonoursConfiguredThresholds(t *testing.T) {
 	}
 }
 
+func TestAnalyze_HonoursConfiguredSeverity(t *testing.T) {
+	t.Parallel()
+
+	a := NewAnalyzer()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "foo.go")
+	src := []byte("package foo\nfunc f() {\n\tx := 1\n\t_ = x\n}\n")
+	if err := os.WriteFile(path, src, 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	cache := astcache.New()
+	if _, err := cache.Parse(path, src); err != nil {
+		t.Fatalf("parse source: %v", err)
+	}
+	changedFiles := []core.FileChange{{Path: path, Extension: ".go"}}
+
+	testCases := []struct {
+		name   string
+		config *core.AnalysisConfig
+		want   core.Severity
+	}{
+		{
+			name: "default severity is warning",
+			config: &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
+				"complexity": {Params: map[string]any{"max_func_lines": 1}},
+			}},
+			want: core.SeverityWarning,
+		},
+		{
+			name: "configured severity overrides the default",
+			config: &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
+				"complexity": {
+					Params: map[string]any{"max_func_lines": 1, "severity": "error"},
+				},
+			}},
+			want: core.SeverityError,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := a.Analyze(&core.AnalysisContext{
+				ASTCache:     cache,
+				ChangedFiles: changedFiles,
+				Config:       testCase.config,
+			})
+			if !hasFuncLinesFinding(got) {
+				t.Fatalf("expected a func-lines finding, got %+v", got)
+			}
+			if got[0].Severity != testCase.want {
+				t.Fatalf("Severity = %v, want %v", got[0].Severity, testCase.want)
+			}
+		})
+	}
+}
+
 func hasFuncLinesFinding(findings []core.Finding) bool {
 	for _, finding := range findings {
 		if strings.Contains(finding.Message, "is 4 lines, max 1") {

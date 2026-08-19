@@ -25,12 +25,21 @@ func (a *Analyzer) ID() string          { return "shadowing" }
 func (a *Analyzer) Stage() core.StageID { return core.StageAST }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	reps := fileReporters{
+		shadow: a.shadowReporter.Resolved(ctx),
+		reuse:  a.reuseReporter.Resolved(ctx),
+	}
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return a.checkFile(ctx.ASTCache.FileSet(), fc, f)
+		return a.checkFile(ctx.ASTCache.FileSet(), fc, f, reps)
 	})
 }
 
-func (a *Analyzer) forFunc(
+type fileReporters struct {
+	shadow core.Reporter
+	reuse  core.Reporter
+}
+
+func (reps fileReporters) forFunc(
 	fset *token.FileSet, fc core.FileChange, findings *[]core.Finding,
 ) reporter {
 	reported := make(map[string]bool)
@@ -42,7 +51,7 @@ func (a *Analyzer) forFunc(
 			if name == "ok" {
 				return
 			}
-			*findings = append(*findings, a.shadowReporter.At(
+			*findings = append(*findings, reps.shadow.At(
 				fc.Path,
 				fset.Position(pos).Line,
 				fmt.Sprintf("%q shadows an outer %s", name, kind),
@@ -54,7 +63,7 @@ func (a *Analyzer) forFunc(
 				return
 			}
 			reported[name] = true
-			*findings = append(*findings, a.reuseReporter.At(
+			*findings = append(*findings, reps.reuse.At(
 				fc.Path,
 				fset.Position(pos).Line,
 				fmt.Sprintf("%q is reassigned by := in the block that declares it", name),
@@ -69,9 +78,7 @@ func (a *Analyzer) forFunc(
 }
 
 func (a *Analyzer) checkFile(
-	fset *token.FileSet,
-	fc core.FileChange,
-	f *ast.File,
+	fset *token.FileSet, fc core.FileChange, f *ast.File, reps fileReporters,
 ) []core.Finding {
 	var findings []core.Finding
 	// simplification: function literals are not walked; doing so mostly finds
@@ -83,7 +90,7 @@ func (a *Analyzer) checkFile(
 			continue
 		}
 		scopes := newScopeStack()
-		report := a.forFunc(fset, fc, &findings)
+		report := reps.forFunc(fset, fc, &findings)
 
 		// Package scope: the function's own name is not part of its block.
 		scopes.push()

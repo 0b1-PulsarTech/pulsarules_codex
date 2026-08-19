@@ -11,11 +11,16 @@ var _ core.Analyzer = (*Analyzer)(nil)
 type Analyzer struct {
 	minSimilarity int
 	diffs         diffReader
+	reporter      core.Reporter
 }
 
 func NewAnalyzer(diffs diffReader) *Analyzer {
 	const defaultMinSimilarity = 90
-	return &Analyzer{minSimilarity: defaultMinSimilarity, diffs: diffs}
+	return &Analyzer{
+		minSimilarity: defaultMinSimilarity,
+		diffs:         diffs,
+		reporter:      core.NewReporter(analyzerID, core.SeverityWarning, core.CatCommit),
+	}
 }
 
 func (a *Analyzer) ID() string { return analyzerID }
@@ -28,7 +33,7 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	}
 	params := ctx.Params(a.ID())
 	minSimilarity := params.Int("min_similarity", a.minSimilarity)
-	reporter := core.NewReporter(analyzerID, params.Severity(core.SeverityWarning), core.CatCommit)
+	reporter := a.reporter.Resolved(ctx)
 
 	var findings []core.Finding
 	for _, rename := range ctx.StagedRenames {

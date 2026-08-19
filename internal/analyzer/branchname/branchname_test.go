@@ -110,6 +110,50 @@ func TestAnalyze_NilRepo(t *testing.T) {
 	}
 }
 
+func TestAnalyze_SeverityParam(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		severity string
+		want     core.Severity
+	}{
+		{name: "unset keeps the blocking default", want: core.SeverityError},
+		{
+			name:     "configured warning overrides the default",
+			severity: "warning",
+			want:     core.SeverityWarning,
+		},
+		{
+			name:     "unrecognized value keeps the blocking default",
+			severity: "bogus",
+			want:     core.SeverityError,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := &core.AnalysisContext{}
+			if testCase.severity != "" {
+				ctx.Config = &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
+					analyzerID: {
+						Enabled: true,
+						Params:  map[string]any{"severity": testCase.severity},
+					},
+				}}
+			}
+			got := NewAnalyzer(repoStub{branch: "spike/idea"}).Analyze(ctx)
+			if len(got) != 1 {
+				t.Fatalf("findings = %+v, want exactly one", got)
+			}
+			if got[0].Severity != testCase.want {
+				t.Errorf("severity = %v, want %v", got[0].Severity, testCase.want)
+			}
+		})
+	}
+}
+
 func TestValidExtraTypes(t *testing.T) {
 	t.Parallel()
 

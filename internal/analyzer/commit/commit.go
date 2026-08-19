@@ -41,13 +41,13 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	windowCfg := a.windowCfg.merge(ctx.Params(a.ID()))
 
 	findings := make([]core.Finding, 0, typicalFindingCapacity)
-	findings = append(findings, Validate(msg, a.ruleCfg, a.ruleReporters)...)
+	findings = append(findings, Validate(msg, a.ruleCfg, a.ruleReporters.resolved(ctx))...)
 	findings = append(findings, EmojiCheck{
 		Message:   msg,
 		Catalog:   a.catalog,
 		History:   historySubjects(ctx.GitHistory),
 		Config:    windowCfg,
-		Reporters: a.emojiReporters,
+		Reporters: a.emojiReporters.resolved(ctx),
 	}.ValidateEmoji()...)
 
 	return findings
