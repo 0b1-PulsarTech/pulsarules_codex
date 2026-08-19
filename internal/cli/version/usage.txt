@@ -8,7 +8,7 @@ Usage:
   pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
   pulsarules_cli package [--root DIR] [--out FILE]
   pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-  pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
+  pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit|changed] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
   pulsarules_cli clean [--project DIR] [--write]
   pulsarules_cli evals --artifact FILE [--scenario ID]
   pulsarules_cli hook <mode>
@@ -36,9 +36,11 @@ overrides which rules a skill composes; --interactive prompts for it when unset.
 thresholds; strict pins max_lines=180, max_complexity=10; minimal disables AST,
 architecture, and delegated tool analyzers, keeping only static checks.
 
---scope limits the governance analysis to a subset of analyzers (full = all,
-commit = static + AST + commit analyzers only, skipping delegation and arch).
-Use --scope commit in pre-commit hooks for fast checks.
+--scope limits the governance analysis to a subset of analyzers (full = all;
+changed = static-gate (static, AST, commit) and architecture analyzers, skipping
+the full-only analyzers (golangci-lint, branch-name); commit = static + AST +
+commit analyzers only, skipping delegation and arch). Use --scope commit in
+pre-commit hooks for fast checks.
 
 --golangci-config overrides the golangci-lint config discovery path. When unset,
 the runner searches the project root, tools/, and build/ directories for

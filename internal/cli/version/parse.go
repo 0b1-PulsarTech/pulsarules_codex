@@ -92,7 +92,7 @@ func bindGovernanceFlags(fs *flag.FlagSet, opts *Options) {
 		"recommended",
 		"analyzer preset (recommended|strict|minimal)",
 	)
-	fs.StringVar(&opts.Scope, "scope", "full", "analysis scope (full|commit)")
+	fs.StringVar(&opts.Scope, "scope", "full", "analysis scope (full|commit|changed)")
 	fs.StringVar(
 		&opts.GolangciConfig,
 		"golangci-config",
