@@ -216,3 +216,62 @@ func TestSession_FileSetAll_CleanTree(t *testing.T) {
 		t.Fatalf("expected FileSetAll to report the committed defect, got %+v", allFindings)
 	}
 }
+
+// TestSession_ScopeCommit_ReadsChangedContent pins the pre-commit gate: the
+// static analyzers are registered for ScopeCommit (staticScopes), so discovery
+// must hand them Sources - without it they silently no-op and a marker in a
+// staged file sails through the hook that exists to block it.
+func TestSession_ScopeCommit_ReadsChangedContent(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	gitInitRepo(t, dir)
+
+	// The em dash is written as an escape so this fixture never trips the
+	// check it exercises.
+	content := "package x\n\n// bad note \u2014 trips typographic-markers\n"
+	if err := os.WriteFile(filepath.Join(dir, "violation.go"), []byte(content), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	repo, err := vcs.Open(dir)
+	if err != nil {
+		t.Fatalf("vcs.Open: %v", err)
+	}
+
+	sess := NewSession(repo, "", nil, nil)
+	findings := sess.Analyze(ScopeCommit, nil, FileSetChanged).Findings
+
+	for _, finding := range findings {
+		if finding.AnalyzerID == "typographic-markers" {
+			return
+		}
+	}
+	t.Fatalf("expected a typographic-markers finding over the changed file, got %+v", findings)
+}
+
+// TestSession_ScopeCommit_ExplicitEmptyStatus pins commitlint's contract: a
+// caller that passes an empty status is a pure message linter, so a dirty
+// worktree must not leak content findings into it.
+func TestSession_ScopeCommit_ExplicitEmptyStatus(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	gitInitRepo(t, dir)
+
+	content := "package x\n\n// bad note \u2014 would trip typographic-markers\n"
+	if err := os.WriteFile(filepath.Join(dir, "violation.go"), []byte(content), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	repo, err := vcs.Open(dir)
+	if err != nil {
+		t.Fatalf("vcs.Open: %v", err)
+	}
+
+	sess := NewSession(repo, "", nil, nil)
+	findings := sess.Analyze(ScopeCommit, &vcs.Status{}, FileSetChanged).Findings
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 findings with an explicit empty status, got %+v", findings)
+	}
+}

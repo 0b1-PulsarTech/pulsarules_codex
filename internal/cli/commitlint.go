@@ -41,7 +41,10 @@ func runCommitLint(inj remy.Injector, opts *cliopts.Options) error {
 		return fmt.Errorf("get knowledge index: %w", err)
 	}
 	sess := analysis.NewSession(repo, msg, idx, nil)
-	findings := sess.Analyze(analysis.ScopeCommit, nil, analysis.FileSetChanged).Findings
+	// why: an explicit empty status keeps this a pure MESSAGE linter. A nil
+	// status would have discovery read the worktree, and content findings from
+	// unrelated dirty files would fail a commit whose message is fine.
+	findings := sess.Analyze(analysis.ScopeCommit, &vcs.Status{}, analysis.FileSetChanged).Findings
 
 	if len(findings) == 0 {
 		_, _ = fmt.Fprintln(os.Stderr, "commit message is valid")

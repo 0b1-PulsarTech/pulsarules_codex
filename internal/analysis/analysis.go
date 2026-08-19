@@ -98,10 +98,9 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Disc
 		return d
 	}
 
-	// A pre-commit hook (ScopeCommit) cares only about the staged changeset,
-	// not the wider source cache, so renames and per-file staged status are
-	// gathered for it too - the point of commit-move-purity is exactly this
-	// moment - while Sources/ASTCache stay gated to Full/Changed below.
+	// Every remaining scope reads file content: the static/AST analyzers are
+	// registered for ScopeCommit too (staticScopes), so the pre-commit hook
+	// needs Sources or they silently no-op on the very changeset they gate.
 	if scope != ScopeFull && scope != ScopeChanged && scope != ScopeCommit {
 		return d
 	}
@@ -110,9 +109,7 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Disc
 		d.StagedRenames = toCoreRenames(renames)
 	}
 
-	if scope == ScopeFull || scope == ScopeChanged {
-		d.Sources = core.NewSourceProvider(s.repo.Root())
-	}
+	d.Sources = core.NewSourceProvider(s.repo.Root())
 
 	if files == FileSetAll && d.Sources != nil {
 		d.ChangedFiles = walkAllFiles(d.Sources)
