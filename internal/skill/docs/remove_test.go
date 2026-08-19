@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
@@ -34,7 +35,7 @@ func TestRemoveDocs_RemovesOwnedLeavesForeign(t *testing.T) {
 		t.Fatalf("seed user file: %v", err)
 	}
 
-	removed, _, err := Remove(dest, "SKILL.md")
+	removed, _, _, err := Remove(dest, "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
@@ -64,7 +65,7 @@ func TestRemoveDocs_RemovesDestWhenEmptied(t *testing.T) {
 		t.Fatalf("WriteDoc: %v", err)
 	}
 
-	if _, _, err := Remove(dest, "SKILL.md"); err != nil {
+	if _, _, _, err := Remove(dest, "SKILL.md"); err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
 
@@ -76,7 +77,7 @@ func TestRemoveDocs_RemovesDestWhenEmptied(t *testing.T) {
 func TestRemoveDocs_NoOpWhenAbsent(t *testing.T) {
 	t.Parallel()
 
-	removed, _, err := Remove(filepath.Join(t.TempDir(), "never-created"), "SKILL.md")
+	removed, _, _, err := Remove(filepath.Join(t.TempDir(), "never-created"), "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
@@ -102,7 +103,7 @@ func TestRemoveDocs_PreservesUserFileInsideOwnedDir(t *testing.T) {
 		t.Fatalf("seed nested file: %v", err)
 	}
 
-	removed, _, err := Remove(dest, "SKILL.md")
+	removed, _, _, err := Remove(dest, "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
@@ -139,10 +140,10 @@ func TestRemoveDocs_Idempotent(t *testing.T) {
 	); err != nil {
 		t.Fatalf("WriteDoc: %v", err)
 	}
-	if _, _, err := Remove(dest, "SKILL.md"); err != nil {
+	if _, _, _, err := Remove(dest, "SKILL.md"); err != nil {
 		t.Fatalf("RemoveDocs #1: %v", err)
 	}
-	if _, _, err := Remove(dest, "SKILL.md"); err != nil {
+	if _, _, _, err := Remove(dest, "SKILL.md"); err != nil {
 		t.Fatalf("RemoveDocs #2: %v", err)
 	}
 }
@@ -164,7 +165,7 @@ func TestRemoveDocs_RestoresBackup(t *testing.T) {
 		t.Fatalf("WriteDoc: %v", err)
 	}
 
-	removed, restored, err := Remove(dest, "SKILL.md")
+	removed, restored, _, err := Remove(dest, "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
@@ -196,7 +197,7 @@ func TestRemoveDocs_RemovesWithoutGitignore(t *testing.T) {
 		t.Fatalf("remove .gitignore: %v", err)
 	}
 
-	removed, _, err := Remove(dest, "SKILL.md")
+	removed, _, _, err := Remove(dest, "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
@@ -205,6 +206,32 @@ func TestRemoveDocs_RemovesWithoutGitignore(t *testing.T) {
 	}
 	if _, statErr := os.Stat(dir); !errors.Is(statErr, fs.ErrNotExist) {
 		t.Errorf("expected dir to be removed, stat err = %v", statErr)
+	}
+}
+
+func TestRemoveDocs_ReportsOrphanedBackup(t *testing.T) {
+	t.Parallel()
+
+	dest := t.TempDir()
+	dir := filepath.Join(dest, "security")
+	if _, err := Write(dir, "SKILL.md", "# rendered\n"+ownedfile.Marker+"\n"); err != nil {
+		t.Fatalf("WriteDoc: %v", err)
+	}
+	docPath := filepath.Join(dir, "SKILL.md")
+	if err := os.WriteFile(
+		docPath+ownedfile.BackupSuffix+".2",
+		[]byte("older\n"),
+		0o600,
+	); err != nil {
+		t.Fatalf("seed orphan slot: %v", err)
+	}
+
+	_, _, orphaned, err := Remove(dest, "SKILL.md")
+	if err != nil {
+		t.Fatalf("RemoveDocs: %v", err)
+	}
+	if len(orphaned) != 1 || !strings.Contains(orphaned[0], docPath) {
+		t.Errorf("orphaned = %v, want one note naming %q", orphaned, docPath)
 	}
 }
 
@@ -232,7 +259,7 @@ func TestRemoveDocs_LeavesUserGitignoreAndSkipsRestore(t *testing.T) {
 		t.Fatalf("add user line: %v", err)
 	}
 
-	_, restored, err := Remove(root, "SKILL.md")
+	_, restored, _, err := Remove(root, "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}

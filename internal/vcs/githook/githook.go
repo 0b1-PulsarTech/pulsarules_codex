@@ -56,13 +56,17 @@ func HookNames() []string {
 	return slices.Sorted(maps.Keys(hookSpecs()))
 }
 
-func Uninstall(dir string) (removed, restored []string, err error) {
+func Uninstall(dir string) (removed, restored, orphaned []string, err error) {
 	dest := hooksDir(dir)
+	paths := make([]string, 0, len(hookSpecs()))
 	for name := range hookSpecs() {
 		path := filepath.Join(dest, name)
+		paths = append(paths, path)
 		removedOK, note, uninstallErr := ownedfile.UninstallFile(path)
 		if uninstallErr != nil {
-			return removed, restored, fmt.Errorf("uninstall hook %q: %w", name, uninstallErr)
+			return removed, restored, orphaned, fmt.Errorf(
+				"uninstall hook %q: %w", name, uninstallErr,
+			)
 		}
 		if !removedOK {
 			continue
@@ -72,8 +76,13 @@ func Uninstall(dir string) (removed, restored []string, err error) {
 			restored = append(restored, note)
 		}
 	}
-	if err = os.RemoveAll(filepath.Join(dest, binaryName)); err != nil {
-		return removed, restored, fmt.Errorf("remove installer binary: %w", err)
+	// Queried before the binary goes: a numbered slot survives Restore and
+	// would otherwise sit in the shared hooks dir unmentioned forever.
+	if orphaned, err = ownedfile.OrphanNotes(paths...); err != nil {
+		return removed, restored, orphaned, err
 	}
-	return removed, restored, nil
+	if err = os.RemoveAll(filepath.Join(dest, binaryName)); err != nil {
+		return removed, restored, orphaned, fmt.Errorf("remove installer binary: %w", err)
+	}
+	return removed, restored, orphaned, nil
 }

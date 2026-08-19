@@ -32,23 +32,20 @@ func (gitInstaller) Install(ctx Context) (report.Report, error) {
 }
 
 func (gitInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
-	removed, restored, err := githook.Uninstall(ctx.Dir)
+	removed, restored, orphaned, err := githook.Uninstall(ctx.Dir)
 	var rpt report.Report
 	if err == nil && len(removed) > 0 {
 		rpt.Note("removed git hooks")
+	}
+	// Orphan and restore notes print even on error: completed work is worth reporting.
+	for _, msg := range orphaned {
+		rpt.Warn("%s", msg)
 	}
 	for _, msg := range restored {
 		rpt.Note("%s", msg)
 	}
 	if err != nil {
 		return rpt, fmt.Errorf("uninstall git hooks: %w", err)
-	}
-	notes, notesErr := githook.Orphans(ctx.Dir)
-	if notesErr != nil {
-		return rpt, fmt.Errorf("list leftover git hook backups: %w", notesErr)
-	}
-	for _, msg := range notes {
-		rpt.Warn("%s", msg)
 	}
 	return rpt, nil
 }

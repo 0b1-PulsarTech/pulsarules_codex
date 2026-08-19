@@ -90,7 +90,7 @@ func TestUninstall_RemovesPluginAndGitignore(t *testing.T) {
 		t.Fatalf("Install: %v", err)
 	}
 
-	removed, _, err := Uninstall(dir)
+	removed, _, _, err := Uninstall(dir)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestUninstall_RemovesPluginAndGitignore(t *testing.T) {
 func TestUninstall_UntouchedDir(t *testing.T) {
 	t.Parallel()
 
-	removed, _, err := Uninstall(t.TempDir())
+	removed, _, _, err := Uninstall(t.TempDir())
 	if err != nil {
 		t.Fatalf("Uninstall on untouched dir: %v", err)
 	}
@@ -256,7 +256,7 @@ func TestUninstall_RestoresForeignPlugin(t *testing.T) {
 	if _, err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
-	removed, restored, err := Uninstall(dir)
+	removed, restored, _, err := Uninstall(dir)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
