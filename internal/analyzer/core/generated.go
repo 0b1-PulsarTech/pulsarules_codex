@@ -52,7 +52,7 @@ func isGeneratedMarker(line string) bool {
 
 func IsExemptHeaderLine(line string) bool {
 	trimmed := strings.TrimSpace(line)
-	return strings.HasPrefix(trimmed, "// Code generated") ||
+	return isGeneratedMarker(trimmed) ||
 		strings.HasPrefix(trimmed, "//go:build") ||
 		strings.HasPrefix(trimmed, "// +build")
 }
