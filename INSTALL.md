@@ -165,7 +165,9 @@ it probes the project for every layout it can detect on disk (a `.claude` dir, a
 `settings.local.json` by default (it cannot recover which `--hooks-scope` install used); pass
 `--hooks-scope` to narrow to one file. It also removes the gopls entry from `.mcp.json`, the
 opencode plugin plus its `opencode.json` wiring, and the git hooks `install` wrote into the
-repository's shared hooks dir. A root `AGENTS.md` is removed only when its content still carries the marker
+repository's shared hooks dir. A hook that install backed up is restored from its base backup slot;
+an earlier numbered slot (`.pulsarules-backup.N`) is left in place and named in the output for the
+operator to reconcile by hand. A root `AGENTS.md` is removed only when its content still carries the marker
 `install` wrote it with, so a hand-authored one is never touched. Unless `--keep-skills` is given,
 it also removes every rendered skill and workflow doc `install` wrote (a user's own files placed
 inside a rendered skill's directory are never touched). Every step is idempotent, so running it

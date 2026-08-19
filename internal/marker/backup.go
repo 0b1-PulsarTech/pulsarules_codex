@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
 )
 
 // BackupSuffix names the sibling file Backup renames a foreign (not-ours)
@@ -67,4 +71,50 @@ func BackupMessage(original, backup string) string {
 
 func RestoreMessage(path string) string {
 	return fmt.Sprintf("restored backup to %s", path)
+}
+
+// Orphans returns the numbered backup slots sitting beside path - the ones
+// Restore deliberately leaves behind, since a numbered slot is not provably the
+// antecedent of the file being uninstalled. The base slot is excluded: Restore
+// consumes that one. The directory is scanned, not probed slot by slot, so a
+// slot past a numbering gap (a hand-deleted .1) is still named.
+func Orphans(path string) ([]string, error) {
+	dir := filepath.Dir(path)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		// why: a missing dir is a legitimate never-installed target with no
+		// orphans to report - erroring here would break idempotent uninstall.
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("scan %q: %w", dir, err)
+	}
+	prefix := filepath.Base(path) + BackupSuffix + "."
+	var serials []int
+	for _, entry := range entries {
+		remainder, found := strings.CutPrefix(entry.Name(), prefix)
+		if !found {
+			continue
+		}
+		// The round-trip check rejects a remainder Atoi tolerates but Backup
+		// never writes ("007", "+1"), keeping the rebuilt path faithful.
+		serial, atoiErr := strconv.Atoi(remainder)
+		if atoiErr != nil || strconv.Itoa(serial) != remainder {
+			continue
+		}
+		serials = append(serials, serial)
+	}
+	slices.Sort(serials)
+	slots := make([]string, len(serials))
+	for i, serial := range serials {
+		slots[i] = fmt.Sprintf("%s.%d", path+BackupSuffix, serial)
+	}
+	return slots, nil
+}
+
+// OrphanMessage names the leftover slots for a person to reconcile by hand.
+func OrphanMessage(path string, slots []string) string {
+	return fmt.Sprintf(
+		"left %d earlier backup(s) of %s in place: %s", len(slots), path, strings.Join(slots, ", "),
+	)
 }

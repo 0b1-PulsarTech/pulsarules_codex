@@ -75,6 +75,9 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 	for _, msg := range gitResult.Restored {
 		_, _ = fmt.Println(msg)
 	}
+	for _, msg := range gitResult.Notes {
+		_, _ = fmt.Println(msg)
+	}
 
 	if len(errs) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, retryHint)
