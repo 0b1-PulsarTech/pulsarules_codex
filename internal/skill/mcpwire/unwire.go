@@ -2,24 +2,22 @@ package mcpwire
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/gitignore"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsonconfig"
 )
 
 func RemoveMCP(repoDir string) error {
 	path := filepath.Join(repoDir, ".mcp.json")
-	existing, err := os.ReadFile(path) //nolint:gosec // path is the caller's project root.
+	existing, err := jsonconfig.Read(path)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("read %q: %w", path, err)
+		return err
+	}
+	if existing == nil {
+		return nil
 	}
 
 	config := map[string]json.RawMessage{}

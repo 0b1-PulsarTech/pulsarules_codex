@@ -304,6 +304,7 @@ The governance pipeline (see above) adds its own package set:
 | `internal/analyzer/golang`        | the `Language` handler for `.go` files                                                              |
 | `internal/vcs`                    | `Repository` port, `Open`, `CommonDir`, `Status`/`Rename` types, `gitcmd.go`'s `runGit`              |
 | `internal/execx`                  | `Run` - the one external-process seam (timeout, env, captured stderr, typed `*execx.Error`)          |
+| `internal/jsonconfig`             | `Read` - read a JSON config file, tolerating an absent one, shared by every merge/unmerge site       |
 | `internal/hook`                   | `hook.go`/`dispatcher_deps.go` (`Dispatcher`), `router.go` (`Router`), `session.go` (`SessionTracker`), `checklist.go`, `checks.go` (`RunGovernanceCheck`), `install/*` (per-target hook installers) |
 | `internal/config`                 | `GovernanceConfig` and its sub-configs, `presets.go`                                                 |
 | `internal/obs`                    | `New` (off-by-default `slog.Logger`), tail-truncating log rotation                                   |
