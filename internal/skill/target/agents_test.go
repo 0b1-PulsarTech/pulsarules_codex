@@ -57,7 +57,8 @@ func TestAgentsTargetPresent_DefersToOpencode(t *testing.T) {
 	t.Parallel()
 
 	base := t.TempDir()
-	if err := os.WriteFile(filepath.Join(base, "AGENTS.md"), []byte("# AGENTS.md\n"), 0o600); err != nil {
+	agentsPath := filepath.Join(base, "AGENTS.md")
+	if err := os.WriteFile(agentsPath, []byte("# AGENTS.md\n"), 0o600); err != nil {
 		t.Fatalf("seed AGENTS.md: %v", err)
 	}
 	if err := os.MkdirAll(filepath.Join(base, ".opencode"), 0o750); err != nil {

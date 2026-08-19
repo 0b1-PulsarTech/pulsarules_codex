@@ -38,8 +38,8 @@ func TestReport_NoteAndWarn(t *testing.T) {
 	t.Parallel()
 
 	var report Report
-	report.note("installed: %s", "x")
-	report.warn("skipped: %s", "y")
+	report.Note("installed: %s", "x")
+	report.Warn("skipped: %s", "y")
 
 	if len(report.Notes) != 1 || report.Notes[0] != "installed: x" {
 		t.Fatalf("Notes = %v, want [installed: x]", report.Notes)

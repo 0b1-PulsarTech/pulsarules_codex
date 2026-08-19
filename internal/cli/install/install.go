@@ -127,23 +127,14 @@ func installPostTargets(
 	gitHooks []string,
 ) error {
 	if !opts.NoGitHooks {
-		hookErr := hookReg.Install("git", install.Context{
-			Dir:                 projectDir,
-			Templates:           templates,
-			GitHooks:            gitHooks,
-			TypographicSeverity: opts.TypographicSeverity,
-			BranchExtraTypes:    opts.BranchExtraTypes,
-			Warn: func(format string, args ...any) {
-				_, _ = fmt.Fprintf(os.Stderr, "warning: "+format+"\n", args...)
-			},
+		rpt, hookErr := hookReg.Install("git", install.Context{
+			Dir:       projectDir,
+			Templates: templates,
+			GitHooks:  gitHooks,
 		})
-		switch {
-		case hookErr != nil:
+		printReport(rpt)
+		if hookErr != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "warning: git hooks: %v\n", hookErr)
-		case len(gitHooks) > 0:
-			// why: an explicit empty --git-hooks list writes nothing, so the
-			// success line must not claim hooks were installed either.
-			_, _ = fmt.Printf("installed git hooks: %s\n", strings.Join(gitHooks, ","))
 		}
 	}
 

@@ -1,10 +1,10 @@
 package target
 
 import (
-	"fmt"
 	"io/fs"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/report"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -54,16 +54,9 @@ type Target interface {
 }
 
 // Report collects a Strategy's human-facing output so the caller owns all
-// stdout/stderr; the package itself stays silent and easy to test.
-type Report struct {
-	Notes    []string // progress lines for stdout
-	Warnings []string // non-fatal warnings for stderr
-}
-
-func (r *Report) note(format string, args ...any) {
-	r.Notes = append(r.Notes, fmt.Sprintf(format, args...))
-}
-
-func (r *Report) warn(format string, args ...any) {
-	r.Warnings = append(r.Warnings, fmt.Sprintf(format, args...))
-}
+// stdout/stderr; the package itself stays silent and easy to test. It is an
+// alias for report.Report, the one type every install/uninstall producer -
+// from the wire packages up through the hook installers - returns, so a
+// Strategy merges a collaborator's output instead of re-deriving whether it
+// did anything from a bool, a slice length, or a status field.
+type Report = report.Report

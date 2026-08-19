@@ -20,7 +20,7 @@ const goplsInstructionsTimeout = 30 * time.Second
 // gopls is not on PATH, so a missing tool never fails an install.
 func wireClaudeMCP(templates fs.FS, repoDir, skillsDir string, report *Report) error {
 	if !mcpwire.GoplsOnPath() {
-		report.warn(noGoplsWarning)
+		report.Warn(noGoplsWarning)
 		return nil
 	}
 	if err := mcpwire.WriteMCP(templates, repoDir); err != nil {
@@ -29,7 +29,7 @@ func wireClaudeMCP(templates fs.FS, repoDir, skillsDir string, report *Report) e
 	if err := generateGoplsSkill(templates, skillsDir, report); err != nil {
 		return fmt.Errorf("generate gopls skill: %w", err)
 	}
-	report.note(
+	report.Note(
 		"wired gopls MCP into %s; generated gopls-navigation skill",
 		filepath.Join(repoDir, ".mcp.json"),
 	)
@@ -45,13 +45,13 @@ func unwireClaudeMCP(repoDir string, report *Report) error {
 	changed, err := mcpwire.RemoveMCP(repoDir)
 	if err != nil {
 		if errors.Is(err, fsx.ErrUnparseableJSON) {
-			report.warn("%v", err)
+			report.Warn("%v", err)
 			return nil
 		}
 		return fmt.Errorf("remove mcp: %w", err)
 	}
 	if changed {
-		report.note("unwired gopls from %s", filepath.Join(repoDir, ".mcp.json"))
+		report.Note("unwired gopls from %s", filepath.Join(repoDir, ".mcp.json"))
 	}
 	return nil
 }
@@ -70,7 +70,7 @@ func generateGoplsSkill(templates fs.FS, skillsDir string, report *Report) error
 	}
 	backedUp, genErr := mcpwire.GenerateGoplsSkill(templates, skillsDir, instructions)
 	for _, msg := range backedUp {
-		report.warn("%s", msg)
+		report.Warn("%s", msg)
 	}
 	if genErr != nil {
 		return fmt.Errorf("generate gopls skill: %w", genErr)

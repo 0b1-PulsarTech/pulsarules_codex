@@ -27,16 +27,16 @@ func installSkills(ctx Context, dest string, report *Report) error {
 	// fails midway through the batch must not swallow the renames the earlier ids performed - the
 	// user would see only "install failed" while a file of theirs sat renamed away.
 	for _, msg := range backedUp {
-		report.warn("%s", msg)
+		report.Warn("%s", msg)
 	}
 	if err != nil {
 		return fmt.Errorf("render skills to %q: %w", dest, err)
 	}
 	for _, id := range installed {
-		report.note("installed: %s", filepath.Join(dest, id))
+		report.Note("installed: %s", filepath.Join(dest, id))
 	}
 	for _, id := range skipped {
-		report.warn("skipped (unknown skill): %s", id)
+		report.Warn("skipped (unknown skill): %s", id)
 	}
 	return nil
 }
@@ -73,16 +73,16 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 	)
 	// why: same as installSkills - a backup already made is reported even when a later id fails.
 	for _, msg := range backedUp {
-		report.warn("%s", msg)
+		report.Warn("%s", msg)
 	}
 	if err != nil {
 		return fmt.Errorf("render workflows to %q: %w", dest, err)
 	}
 	for _, id := range installed {
-		report.note("installed workflow: %s", filepath.Join(dest, id))
+		report.Note("installed workflow: %s", filepath.Join(dest, id))
 	}
 	for _, id := range skipped {
-		report.warn("skipped workflow (unknown): %s", id)
+		report.Warn("skipped workflow (unknown): %s", id)
 	}
 	return nil
 }
@@ -98,10 +98,10 @@ func removeSkills(dest string, report *Report) error {
 		return fmt.Errorf("remove skills from %q: %w", dest, err)
 	}
 	for _, id := range removed {
-		report.note("removed: %s", filepath.Join(dest, id))
+		report.Note("removed: %s", filepath.Join(dest, id))
 	}
 	for _, msg := range restored {
-		report.note("%s", msg)
+		report.Note("%s", msg)
 	}
 	return nil
 }
@@ -116,10 +116,10 @@ func removeWorkflows(dest string, report *Report) error {
 		return fmt.Errorf("remove workflows from %q: %w", dest, err)
 	}
 	for _, id := range removed {
-		report.note("removed workflow: %s", filepath.Join(dest, id))
+		report.Note("removed workflow: %s", filepath.Join(dest, id))
 	}
 	for _, msg := range restored {
-		report.note("%s", msg)
+		report.Note("%s", msg)
 	}
 	return nil
 }
@@ -136,9 +136,9 @@ func writeAgents(ctx Context, report *Report) error {
 		return fmt.Errorf("write agents: %w", err)
 	}
 	if wrote {
-		report.note("wrote %s", path)
+		report.Note("wrote %s", path)
 	} else {
-		report.warn("kept existing user-authored %s (not overwritten)", path)
+		report.Warn("kept existing user-authored %s (not overwritten)", path)
 	}
 	return nil
 }
@@ -153,7 +153,7 @@ func removeAgents(base string, report *Report) error {
 		return fmt.Errorf("remove agents: %w", err)
 	}
 	if removed {
-		report.note("removed %s", path)
+		report.Note("removed %s", path)
 	}
 	return nil
 }

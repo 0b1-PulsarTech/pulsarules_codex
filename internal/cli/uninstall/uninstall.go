@@ -65,18 +65,10 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 		}
 	}
 
-	gitResult, hookErr := deps.hooks.Uninstall("git", install.UninstallContext{Dir: absBase})
+	gitReport, hookErr := deps.hooks.Uninstall("git", install.UninstallContext{Dir: absBase})
+	printReport(gitReport)
 	if hookErr != nil {
 		errs = append(errs, hookErr)
-	}
-	if hookErr == nil && len(gitResult.Removed) > 0 {
-		_, _ = fmt.Println("removed git hooks")
-	}
-	for _, msg := range gitResult.Restored {
-		_, _ = fmt.Println(msg)
-	}
-	for _, msg := range gitResult.Notes {
-		_, _ = fmt.Println(msg)
 	}
 
 	if len(errs) > 0 {

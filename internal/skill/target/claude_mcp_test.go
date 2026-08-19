@@ -105,7 +105,7 @@ func TestGenerateGoplsSkill_ReportsBackingUpAForeignSkill(t *testing.T) {
 
 	var report Report
 	for _, msg := range backedUp {
-		report.warn("%s", msg)
+		report.Warn("%s", msg)
 	}
 	if len(report.Warnings) != len(backedUp) {
 		t.Errorf("warnings = %d, want %d", len(report.Warnings), len(backedUp))

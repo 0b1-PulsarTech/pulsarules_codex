@@ -2,8 +2,10 @@ package install
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install/githook"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/report"
 )
 
 // gitInstaller installs git hook scripts into .git/hooks/.
@@ -16,37 +18,40 @@ func (gitInstaller) Name() string { return "git" }
 // solely on the --git-hooks flag, so the printed line and hooks actually
 // written always agree; a second default here would let an explicit empty
 // list silently resurrect it.
-func (gitInstaller) Install(ctx Context) error {
+func (gitInstaller) Install(ctx Context) (report.Report, error) {
 	backedUp, err := githook.Install(ctx.Dir, ctx.GitHooks, githook.Options{
 		TypographicSeverity: ctx.TypographicSeverity,
 		BranchExtraTypes:    ctx.BranchExtraTypes,
 	})
 	if err != nil {
-		return fmt.Errorf("install git hooks: %w", err)
+		return report.Report{}, fmt.Errorf("install git hooks: %w", err)
 	}
-	if ctx.Warn != nil {
-		for _, msg := range backedUp {
-			ctx.Warn("%s", msg)
-		}
+	var rpt report.Report
+	for _, msg := range backedUp {
+		rpt.Warn("%s", msg)
 	}
-	return nil
+	if len(ctx.GitHooks) > 0 {
+		rpt.Note("installed git hooks: %s", strings.Join(ctx.GitHooks, ","))
+	}
+	return rpt, nil
 }
 
-// Uninstall removes the git hook scripts and installer binary Install wrote into
-// the repository's shared hooks dir, reporting which hook names were removed,
-// which backups were restored, and which earlier backup slots were left behind.
-func (gitInstaller) Uninstall(ctx UninstallContext) (Result, error) {
+// Uninstall removes the git hook scripts and installer binary Install wrote
+// into ctx.Dir/.git/hooks/. The "removed git hooks" note fires only once
+// nothing failed, mirroring githook.Uninstall's all-or-partial return; the
+// restore notes print regardless, since a restore that already happened is
+// worth reporting even if a later step in the same call errors.
+func (gitInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
 	removed, restored, err := githook.Uninstall(ctx.Dir)
-	result := Result{Removed: removed, Restored: restored}
+	var rpt report.Report
+	if err == nil && len(removed) > 0 {
+		rpt.Note("removed git hooks")
+	}
+	for _, msg := range restored {
+		rpt.Note("%s", msg)
+	}
 	if err != nil {
-		return result, fmt.Errorf("uninstall git hooks: %w", err)
+		return rpt, fmt.Errorf("uninstall git hooks: %w", err)
 	}
-	// Queried after the removal: Restore consumes only the base backup slot, so
-	// any earlier one is still there and nothing else would ever mention it.
-	notes, notesErr := githook.Orphans(ctx.Dir)
-	if notesErr != nil {
-		return result, fmt.Errorf("list leftover git hook backups: %w", notesErr)
-	}
-	result.Notes = notes
-	return result, nil
+	return rpt, nil
 }
