@@ -30,5 +30,10 @@ func (gitInstaller) Uninstall(ctx UninstallContext) (Result, error) {
 	if err != nil {
 		return result, fmt.Errorf("uninstall git hooks: %w", err)
 	}
+	notes, notesErr := githook.Orphans(ctx.Dir)
+	if notesErr != nil {
+		return result, fmt.Errorf("list leftover git hook backups: %w", notesErr)
+	}
+	result.Notes = notes
 	return result, nil
 }

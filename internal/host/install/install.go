@@ -22,6 +22,7 @@ type UninstallContext struct {
 type Result struct {
 	Removed         []string
 	Restored        []string
+	Notes           []string
 	SettingsChanged bool
 }
 

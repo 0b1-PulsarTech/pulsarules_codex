@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
 )
 
 const BackupSuffix = ".pulsarules-backup"
@@ -55,4 +59,46 @@ func BackupMessage(original, backup string) string {
 
 func RestoreMessage(path string) string {
 	return fmt.Sprintf("restored backup to %s", path)
+}
+
+func Orphans(path string) ([]string, error) {
+	dir := filepath.Dir(path)
+	// Scanned rather than probed slot by slot, so a slot past a numbering gap is found.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		// A missing dir is a legitimate never-installed target with no
+		// orphans to report, and erroring here would break idempotent uninstall.
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("scan %q: %w", dir, err)
+	}
+	prefix := filepath.Base(path) + BackupSuffix + "."
+	var serials []int
+	for _, entry := range entries {
+		remainder, found := strings.CutPrefix(entry.Name(), prefix)
+		if !found {
+			continue
+		}
+		// The round-trip check rejects a remainder Atoi tolerates but Backup
+		// never writes ("007", "+1"), keeping the rebuilt path faithful.
+		serial, atoiErr := strconv.Atoi(remainder)
+		if atoiErr != nil || strconv.Itoa(serial) != remainder {
+			continue
+		}
+		serials = append(serials, serial)
+	}
+	slices.Sort(serials)
+	slots := make([]string, len(serials))
+	for idx, serial := range serials {
+		slots[idx] = fmt.Sprintf("%s.%d", path+BackupSuffix, serial)
+	}
+	return slots, nil
+}
+
+func OrphanMessage(path string, slots []string) string {
+	return fmt.Sprintf(
+		"left %d earlier backup(s) of %s in place: %s",
+		len(slots), path, strings.Join(slots, ", "),
+	)
 }

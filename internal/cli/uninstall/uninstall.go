@@ -48,6 +48,9 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	for _, msg := range gitResult.Restored {
 		_, _ = fmt.Println(msg)
 	}
+	for _, msg := range gitResult.Notes {
+		_, _ = fmt.Println(msg)
+	}
 
 	if len(errs) > 0 {
 		const retryHint = "uninstall did not finish cleanly; every step is idempotent, " +
