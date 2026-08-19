@@ -1,8 +1,10 @@
 package core
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 // ParamSet is a typed view over one analyzer's raw parameter map. A preset
@@ -79,6 +81,19 @@ func SeverityNames() []string {
 	}
 	slices.Sort(names)
 	return names
+}
+
+// ValidateSeverityName rejects a configured severity this package would not
+// recognize, naming the accepted set. An empty name keeps the caller default.
+// why: the diagnostic lives beside the vocabulary it describes, so a second
+// caller cannot invent a different wording for the same rejection.
+func ValidateSeverityName(name string) error {
+	if name == "" || ValidSeverityName(name) {
+		return nil
+	}
+	return fmt.Errorf(
+		"invalid --typographic-severity %q (want %s)", name, strings.Join(SeverityNames(), "|"),
+	)
 }
 
 // ValidSeverityName reports whether name is a severity ParamSet.Severity reads.

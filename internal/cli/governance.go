@@ -129,23 +129,16 @@ func governanceConfig(opts *cliopts.Options) (*config.GovernanceConfig, error) {
 	if opts.GolangciConfig != "" {
 		cfg.SetParam("golangci-lint", "config_path", opts.GolangciConfig)
 	}
+	if err := core.ValidateSeverityName(opts.TypographicSeverity); err != nil {
+		return nil, err
+	}
 	if opts.TypographicSeverity != "" {
-		if !core.ValidSeverityName(opts.TypographicSeverity) {
-			return nil, fmt.Errorf(
-				"invalid --typographic-severity %q (want %s)",
-				opts.TypographicSeverity, strings.Join(core.SeverityNames(), "|"),
-			)
-		}
 		cfg.SetParam("typographic-markers", "severity", opts.TypographicSeverity)
 	}
+	if err := branchname.ValidateExtraTypes(opts.BranchExtraTypes); err != nil {
+		return nil, err
+	}
 	if opts.BranchExtraTypes != "" {
-		if !branchname.ValidExtraTypes(opts.BranchExtraTypes) {
-			return nil, fmt.Errorf(
-				"invalid --branch-extra-types %q (want a comma-separated list of "+
-					"lowercase names, e.g. release,hotfix)",
-				opts.BranchExtraTypes,
-			)
-		}
 		cfg.SetParam("branch-name", "extra_types", opts.BranchExtraTypes)
 	}
 	return cfg, nil

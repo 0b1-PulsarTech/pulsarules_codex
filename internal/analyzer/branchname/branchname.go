@@ -101,6 +101,20 @@ func hasAllowedType(branch string, allowed []string) bool {
 	return slices.Contains(allowed, prefix)
 }
 
+// ValidateExtraTypes rejects a spec ValidExtraTypes would not accept, naming
+// the shape it wants. why: the wording lives beside the rule it enforces, so
+// the install-time and run-time gates cannot drift apart.
+func ValidateExtraTypes(spec string) error {
+	if ValidExtraTypes(spec) {
+		return nil
+	}
+	return fmt.Errorf(
+		"invalid --branch-extra-types %q (want a comma-separated list of "+
+			"lowercase names, e.g. release,hotfix)",
+		spec,
+	)
+}
+
 // ValidExtraTypes reports whether spec is a well-formed comma-separated list of
 // branch types: each entry lowercase letters, digits or dashes, none empty.
 //

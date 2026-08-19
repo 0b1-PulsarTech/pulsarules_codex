@@ -25,32 +25,16 @@ func resolveGitHooks(opts *cliopts.Options) ([]string, error) {
 	// why: rejected HERE, before the value is baked into a script. A typo that
 	// installs cleanly would instead fail every commit from inside the hook,
 	// where the person committing cannot see which flag was wrong.
-	if err := validateTypographicSeverity(opts.TypographicSeverity); err != nil {
+	if err := core.ValidateSeverityName(opts.TypographicSeverity); err != nil {
 		return nil, err
 	}
 	// why: the value is written INTO a generated shell script, so an entry
 	// outside the allowed alphabet is refused here rather than quoted and hoped
 	// for at the point it runs.
-	if !branchname.ValidExtraTypes(opts.BranchExtraTypes) {
-		return nil, fmt.Errorf(
-			"invalid --branch-extra-types %q (want a comma-separated list of "+
-				"lowercase names, e.g. release,hotfix)",
-			opts.BranchExtraTypes,
-		)
+	if err := branchname.ValidateExtraTypes(opts.BranchExtraTypes); err != nil {
+		return nil, err
 	}
 	return hooks, nil
-}
-
-// validateTypographicSeverity rejects a --typographic-severity value the
-// analyzer would not recognize. An empty value keeps the analyzer default.
-func validateTypographicSeverity(severity string) error {
-	if severity == "" || core.ValidSeverityName(severity) {
-		return nil
-	}
-	return fmt.Errorf(
-		"invalid --typographic-severity %q (want %s)",
-		severity, strings.Join(core.SeverityNames(), "|"),
-	)
 }
 
 // validateGitHooks rejects any --git-hooks name githook does not recognize,

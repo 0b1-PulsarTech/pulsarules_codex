@@ -2,6 +2,8 @@ package install
 
 import (
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
 // TestValidateGitHooks asserts every recognized --git-hooks name passes and
@@ -64,9 +66,9 @@ func TestValidateTypographicSeverity(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validateTypographicSeverity(testCase.severity)
+			err := core.ValidateSeverityName(testCase.severity)
 			if (err != nil) != testCase.wantErr {
-				t.Errorf("validateTypographicSeverity(%q) err = %v, wantErr %v",
+				t.Errorf("ValidateSeverityName(%q) err = %v, wantErr %v",
 					testCase.severity, err, testCase.wantErr)
 			}
 		})
