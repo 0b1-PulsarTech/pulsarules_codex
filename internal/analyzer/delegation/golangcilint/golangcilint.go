@@ -3,6 +3,7 @@ package golangcilint
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
@@ -37,6 +38,10 @@ func NewRunner(golangciLintPath string) *Runner {
 
 func (r *Runner) Run(projectDir, configPath string) []core.Finding {
 	if r.path == "" {
+		return nil
+	}
+	// A missing binary is an environment fact, not a finding.
+	if _, err := exec.LookPath(r.path); err != nil {
 		return nil
 	}
 	return r.runLint(projectDir, configPath)
