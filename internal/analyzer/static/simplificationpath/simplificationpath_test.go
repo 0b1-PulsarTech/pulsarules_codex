@@ -127,6 +127,36 @@ func TestAnalyze_NonexistentFileSkipped(t *testing.T) {
 	}
 }
 
+// why: the pipeline's changed-file path never runs a full core.Walk, so
+// testdata's skip has to be repeated here too, or an unlabeled fixture
+// trips the check it exists to demonstrate.
+func TestAnalyze_SkipsTestdataFixture(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	fixtureDir := filepath.Join(dir, "testdata")
+	if err := os.MkdirAll(fixtureDir, 0o750); err != nil {
+		t.Fatalf("mkdir testdata: %v", err)
+	}
+	path := filepath.Join(fixtureDir, "no_label.go")
+	content := "package fixture\n\n" +
+		"// simplification: skip the rare case because it never happens in practice.\n" +
+		"func f() {}\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	a := NewAnalyzer()
+	got := a.Analyze(&core.AnalysisContext{
+		ProjectDir:   dir,
+		Sources:      core.NewSourceProvider(dir),
+		ChangedFiles: []core.FileChange{{Path: "testdata/no_label.go", Extension: ".go"}},
+	})
+	if got != nil {
+		t.Fatalf("got %+v findings for a testdata fixture, want nil", got)
+	}
+}
+
 // TestBlockNamesUpgradePath_WrappedLabel pins a false positive the project's own formatter caused:
 // golines wrapped "Upgrade path:" across two comment lines, and joining the raw lines with "\n"
 // left "upgrade\n// path:" in the haystack, so a documented corner was reported as undocumented.

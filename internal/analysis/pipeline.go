@@ -7,17 +7,22 @@ import (
 // StageRunner holds the analyzers grouped by stage. Each stage runs after the
 // previous one, and its analyzers receive the accumulated context. Adding a
 // new rule is one file (implementing core.Analyzer) plus one line in boot.go.
+//
+// why: cfg used to live wrapped in a second, otherwise-empty
+// *core.AnalysisContext built solely to carry it - a shadow of the real
+// context RunStages(ctx) evaluates analyzers against, and nothing kept the
+// two in sync. Storing the config directly removes that second context.
 type StageRunner struct {
-	stages  map[core.StageID][]core.Analyzer
-	context *core.AnalysisContext
+	stages map[core.StageID][]core.Analyzer
+	cfg    *core.AnalysisConfig
 }
 
 // NewStageRunner creates an empty stage runner with the given config.
 // Analyzers are registered via Register.
 func NewStageRunner(cfg *core.AnalysisConfig) *StageRunner {
 	return &StageRunner{
-		stages:  make(map[core.StageID][]core.Analyzer),
-		context: &core.AnalysisContext{Config: cfg},
+		stages: make(map[core.StageID][]core.Analyzer),
+		cfg:    cfg,
 	}
 }
 
@@ -27,6 +32,12 @@ func (r *StageRunner) Register(a core.Analyzer) {
 
 // RunStages executes all enabled analyzers in stage order, accumulating
 // findings in the context. It returns the aggregated findings.
+//
+// why: a core.InPlaceAnalyzer (ruleinjection, output) already transforms
+// ctx.Findings itself; appending its Analyze return value on top would
+// double whatever it returned. Checking the marker interface, rather than
+// trusting every such analyzer to return nil, makes that contract explicit
+// instead of an unenforced convention.
 func (r *StageRunner) RunStages(ctx *core.AnalysisContext) []core.Finding {
 	for stage := core.StageContext; stage <= core.StageOutput; stage++ {
 		analyzers := r.stages[stage]
@@ -34,10 +45,10 @@ func (r *StageRunner) RunStages(ctx *core.AnalysisContext) []core.Finding {
 			if !r.enabled(a) {
 				continue
 			}
-			if !r.requirementsMet(a, ctx) {
+			findings := a.Analyze(ctx)
+			if _, inPlace := a.(core.InPlaceAnalyzer); inPlace {
 				continue
 			}
-			findings := a.Analyze(ctx)
 			ctx.Findings = append(ctx.Findings, findings...)
 		}
 	}
@@ -45,23 +56,12 @@ func (r *StageRunner) RunStages(ctx *core.AnalysisContext) []core.Finding {
 }
 
 func (r *StageRunner) enabled(a core.Analyzer) bool {
-	if r.context == nil || r.context.Config == nil {
+	if r.cfg == nil {
 		return true
 	}
-	cfg, ok := r.context.Config.Analyzers[a.ID()]
+	cfg, ok := r.cfg.Analyzers[a.ID()]
 	if !ok {
 		return true
 	}
 	return cfg.Enabled
-}
-
-func (r *StageRunner) requirementsMet(a core.Analyzer, ctx *core.AnalysisContext) bool {
-	req := a.Needs()
-	if req.NeedsAST && ctx.ChangedFiles == nil {
-		return false
-	}
-	if req.NeedsGitHistory && len(ctx.GitHistory) == 0 {
-		return false
-	}
-	return true
 }

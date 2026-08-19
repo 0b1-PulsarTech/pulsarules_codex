@@ -18,57 +18,31 @@ func NewAnalyzer(langs *core.LanguageRegistry) *Analyzer {
 	return &Analyzer{langs: langs}
 }
 
-func (a *Analyzer) ID() string   { return "top-of-file" }
-func (a *Analyzer) Name() string { return "Top of file" }
-func (a *Analyzer) Description() string {
-	return "Reports files starting with comments before the package declaration"
-}
-func (a *Analyzer) Stage() core.StageID     { return core.StageStatic }
-func (a *Analyzer) Category() core.Category { return core.CatSyntax }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
+func (a *Analyzer) ID() string          { return "top-of-file" }
+func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if a.langs == nil || ctx.Sources == nil {
+	if a.langs == nil {
 		return nil
 	}
-	var findings []core.Finding
-	for _, fc := range ctx.ChangedFiles {
+	reporter := topOfFileReporter.Resolved(ctx)
+	eligible := func(fc core.FileChange) bool { return a.langs.Lookup(fc.Extension) != nil }
+	return core.EachChangedFile(ctx, eligible, func(fc core.FileChange, src []byte) []core.Finding {
 		lang := a.langs.Lookup(fc.Extension)
-		if lang == nil {
-			continue
-		}
-		src, ok := ctx.Sources.Read(fc.Path)
-		if !ok {
-			continue
-		}
 		line, lineNum, ok := firstNonBlank(src)
-		if !ok {
-			continue
-		}
-		if isExemptHeader(line) {
-			continue
+		if !ok || core.IsExemptHeaderLine(line) {
+			return nil
 		}
 		if lang.IsCommentLine(line) && !lang.IsPackageDeclaration(line) {
-			findings = append(findings, topOfFileReporter.At(
+			return []core.Finding{reporter.At(
 				fc.Path,
 				lineNum,
 				"file starts with a comment before the package declaration",
 				"remove the comment; no package docstrings",
-			))
+			)}
 		}
-	}
-	return findings
-}
-
-// isExemptHeader reports whether line is a Go header that is allowed before
-// the package declaration: generated-file markers and build-constraint tags.
-func isExemptHeader(line string) bool {
-	trimmed := strings.TrimSpace(line)
-	return strings.HasPrefix(trimmed, "// Code generated") ||
-		strings.HasPrefix(trimmed, "//go:build") ||
-		strings.HasPrefix(trimmed, "// +build")
+		return nil
+	})
 }
 
 // firstNonBlank returns the first non-blank line from src, its 1-based line

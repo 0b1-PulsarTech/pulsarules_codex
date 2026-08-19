@@ -20,31 +20,26 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (a *Analyzer) ID() string   { return "time-discipline" }
-func (a *Analyzer) Name() string { return "Time discipline" }
-func (a *Analyzer) Description() string {
-	return "Reports time.Sleep calls and now func() time.Time clock-injection fields"
-}
-func (a *Analyzer) Stage() core.StageID     { return core.StageAST }
-func (a *Analyzer) Category() core.Category { return core.CatAST }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{NeedsAST: true}
-}
+func (a *Analyzer) ID() string          { return "time-discipline" }
+func (a *Analyzer) Stage() core.StageID { return core.StageAST }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	reporter := timeDisciplineReporter.Resolved(ctx)
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return checkFile(ctx.ASTCache.FileSet(), fc, f)
+		return checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
 	})
 }
 
-func checkFile(fset *token.FileSet, fc core.FileChange, f *ast.File) []core.Finding {
+func checkFile(
+	fset *token.FileSet, fc core.FileChange, f *ast.File, reporter core.Reporter,
+) []core.Finding {
 	var findings []core.Finding
 
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.CallExpr:
 			if isTimeSleepCall(node) {
-				findings = append(findings, timeDisciplineReporter.At(
+				findings = append(findings, reporter.At(
 					fc.Path,
 					fset.Position(node.Pos()).Line,
 					"time.Sleep call; pace production code on a ticker/context.Done "+
@@ -62,7 +57,7 @@ func checkFile(fset *token.FileSet, fc core.FileChange, f *ast.File) []core.Find
 				if !ok {
 					continue
 				}
-				findings = append(findings, timeDisciplineReporter.At(
+				findings = append(findings, reporter.At(
 					fc.Path,
 					fset.Position(field.Pos()).Line,
 					"field "+name+" is a now func() time.Time clock-injection seam",

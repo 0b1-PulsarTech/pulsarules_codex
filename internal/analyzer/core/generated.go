@@ -64,3 +64,15 @@ func isGeneratedMarker(line string) bool {
 	return strings.HasPrefix(line, generatedPrefix) &&
 		strings.HasSuffix(line, generatedSuffix)
 }
+
+// IsExemptHeaderLine reports whether line is a header Go permits ahead of
+// the package declaration: the generated-code marker (see IsGeneratedSource)
+// or a //go:build / // +build constraint tag. It is the single predicate
+// behind a "should this line before the package clause be exempt" check, so
+// a header-position rule (top-of-file, big-comment) does not reimplement it.
+func IsExemptHeaderLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return isGeneratedMarker(trimmed) ||
+		strings.HasPrefix(trimmed, "//go:build") ||
+		strings.HasPrefix(trimmed, "// +build")
+}

@@ -10,16 +10,11 @@ import (
 type stubAnalyzer struct {
 	id       string
 	stage    core.StageID
-	category core.Category
 	findings []core.Finding
 }
 
-func (s stubAnalyzer) ID() string               { return s.id }
-func (s stubAnalyzer) Name() string             { return "stub-" + s.id }
-func (s stubAnalyzer) Description() string      { return "stub analyzer" }
-func (s stubAnalyzer) Stage() core.StageID      { return s.stage }
-func (s stubAnalyzer) Category() core.Category  { return s.category }
-func (s stubAnalyzer) Needs() core.Requirements { return core.Requirements{} }
+func (s stubAnalyzer) ID() string          { return s.id }
+func (s stubAnalyzer) Stage() core.StageID { return s.stage }
 func (s stubAnalyzer) Analyze(_ *core.AnalysisContext) []core.Finding {
 	return s.findings
 }
@@ -29,17 +24,15 @@ func TestStageRunnerRegisterAndRun(t *testing.T) {
 
 	r := NewStageRunner(nil)
 	r.Register(stubAnalyzer{
-		id:       "a1",
-		stage:    core.StageStatic,
-		category: core.CatSyntax,
+		id:    "a1",
+		stage: core.StageStatic,
 		findings: []core.Finding{
 			{AnalyzerID: "a1", Message: "issue 1", Severity: core.SeverityWarning},
 		},
 	})
 	r.Register(stubAnalyzer{
-		id:       "a2",
-		stage:    core.StageAST,
-		category: core.CatAST,
+		id:    "a2",
+		stage: core.StageAST,
 		findings: []core.Finding{
 			{AnalyzerID: "a2", Message: "issue 2", Severity: core.SeverityError},
 		},
@@ -85,6 +78,82 @@ func TestStageRunnerDisabledAnalyzer(t *testing.T) {
 	}
 	if findings[0].AnalyzerID != "enabled" {
 		t.Errorf("expected enabled, got %s", findings[0].AnalyzerID)
+	}
+}
+
+// TestStageRunnerRunsRegardlessOfContextShape pins the deletion of the
+// Needs()/Requirements gate: a registered analyzer used to be skipped when
+// its declared NeedsAST/NeedsGitHistory went unmet, and the AST gate tested
+// ctx.ChangedFiles instead of ctx.ASTCache, so a nil ASTCache alongside
+// non-nil ChangedFiles passed anyway. With the gate gone, an analyzer runs
+// on a context with neither ChangedFiles nor GitHistory populated.
+func TestStageRunnerRunsRegardlessOfContextShape(t *testing.T) {
+	t.Parallel()
+
+	r := NewStageRunner(nil)
+	r.Register(stubAnalyzer{
+		id:    "bare-context",
+		stage: core.StageStatic,
+		findings: []core.Finding{
+			{AnalyzerID: "bare-context", Message: "ran anyway"},
+		},
+	})
+
+	findings := r.RunStages(&core.AnalysisContext{})
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding on a bare context, got %d: %+v", len(findings), findings)
+	}
+}
+
+// stubInPlaceAnalyzer mutates ctx.Findings itself (e.g. dropping the first
+// one) and returns a non-nil slice from Analyze - if RunStages still
+// appended that return value on top, as it would for a plain Analyzer, the
+// findings count below would be wrong.
+type stubInPlaceAnalyzer struct {
+	id    string
+	stage core.StageID
+}
+
+func (s stubInPlaceAnalyzer) ID() string          { return s.id }
+func (s stubInPlaceAnalyzer) Stage() core.StageID { return s.stage }
+func (s stubInPlaceAnalyzer) TransformsInPlace()  {}
+
+func (s stubInPlaceAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	if len(ctx.Findings) > 0 {
+		ctx.Findings = ctx.Findings[1:]
+	}
+	return []core.Finding{{AnalyzerID: "should-not-be-appended"}}
+}
+
+var _ core.InPlaceAnalyzer = stubInPlaceAnalyzer{}
+
+// TestStageRunnerInPlaceAnalyzerNotAppended proves RunStages checks
+// core.InPlaceAnalyzer instead of trusting every in-place analyzer to
+// return nil: a mutating analyzer's own Analyze return value never lands
+// in ctx.Findings, only the mutation it made directly.
+func TestStageRunnerInPlaceAnalyzerNotAppended(t *testing.T) {
+	t.Parallel()
+
+	r := NewStageRunner(nil)
+	r.Register(stubAnalyzer{
+		id:    "producer",
+		stage: core.StageStatic,
+		findings: []core.Finding{
+			{AnalyzerID: "one"}, {AnalyzerID: "two"},
+		},
+	})
+	r.Register(stubInPlaceAnalyzer{id: "transformer", stage: core.StageOutput})
+
+	findings := r.RunStages(&core.AnalysisContext{})
+	if len(findings) != 1 {
+		t.Fatalf(
+			"expected 1 finding (one dropped, none appended), got %d: %+v",
+			len(findings),
+			findings,
+		)
+	}
+	if findings[0].AnalyzerID != "two" {
+		t.Fatalf("expected the surviving finding to be %q, got %q", "two", findings[0].AnalyzerID)
 	}
 }
 

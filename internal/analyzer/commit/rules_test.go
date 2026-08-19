@@ -12,7 +12,7 @@ func TestValidateValidCommit(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse(":wrench: feat(goscan): Detect variable shadowing")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if len(findings) != 0 {
 		t.Fatalf("expected no findings for valid commit, got %d: %+v", len(findings), findings)
 	}
@@ -22,7 +22,7 @@ func TestValidateMissingEmoji(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse("feat: Add something")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-emoji-required") {
 		t.Errorf("expected commit-emoji-required finding")
 	}
@@ -32,7 +32,7 @@ func TestValidateInvalidType(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse(":wrench: banana: Do something")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-type-enum") {
 		t.Errorf("expected commit-type-enum finding")
 	}
@@ -42,7 +42,7 @@ func TestValidateMissingType(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse(":wrench: Do something")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-type-required") {
 		t.Errorf("expected commit-type-required finding")
 	}
@@ -57,7 +57,7 @@ func TestValidateEmojiCountExceedsMax(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse(":sparkles: :bug: :wrench: :zap: feat: Add a thing")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-emoji-count") {
 		t.Errorf("expected commit-emoji-count finding for 4 leading emojis")
 	}
@@ -85,7 +85,7 @@ func TestValidateScopeCharset(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			msg := commitmsg.Parse(":wrench: feat(" + testCase.scope + "): Do something")
-			findings := Validate(msg, DefaultRuleConfig())
+			findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 			hasScopeError := hasAnalyzer(findings, "commit-scope-charset")
 			if hasScopeError != testCase.wantError {
 				t.Errorf("scope charset error = %v, want %v", hasScopeError, testCase.wantError)
@@ -98,7 +98,7 @@ func TestValidateDescriptionCapitalization(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse(":wrench: feat: add something lowercase")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-desc-capitalize") {
 		t.Errorf("expected commit-desc-capitalize finding for lowercase start")
 	}
@@ -108,7 +108,7 @@ func TestValidateDescriptionNoPeriod(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse(":wrench: feat: Add something.")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-desc-no-period") {
 		t.Errorf("expected commit-desc-no-period finding")
 	}
@@ -124,7 +124,7 @@ func TestValidateDescriptionTooLong(t *testing.T) {
 	}
 	longDesc := descBuilder.String()
 	msg := commitmsg.Parse(":wrench: feat: " + longDesc)
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	finding, ok := findingByID(findings, "commit-desc-length")
 	if !ok {
 		t.Fatalf("expected commit-desc-length finding for 80+ char subject")
@@ -140,7 +140,7 @@ func TestValidateCoAuthorRejected(t *testing.T) {
 	msg := commitmsg.Parse(
 		":wrench: feat: Add thing\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
 	)
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-no-coauthor") {
 		t.Errorf("expected commit-no-coauthor finding")
 	}
@@ -154,7 +154,7 @@ func TestValidateCoAuthorAllowedWhenDisabled(t *testing.T) {
 	msg := commitmsg.Parse(
 		":wrench: feat: Add thing\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
 	)
-	findings := Validate(msg, cfg)
+	findings := Validate(msg, cfg, defaultRuleReporters())
 	if hasAnalyzer(findings, "commit-no-coauthor") {
 		t.Errorf("should not reject co-author when RejectToolTrailers is false")
 	}
@@ -169,7 +169,7 @@ func TestValidateBodyLineTooLong(t *testing.T) {
 	}
 	longLine := lineBuilder.String()
 	msg := commitmsg.Parse(":wrench: feat: Add thing\n\n" + longLine)
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-body-length") {
 		t.Errorf("expected commit-body-length finding")
 	}
@@ -179,7 +179,7 @@ func TestValidateInitialCommit(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse(":ghost: Initial Commit")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if len(findings) != 0 {
 		t.Fatalf("initial commit should be valid, got %d findings: %+v", len(findings), findings)
 	}
@@ -189,7 +189,7 @@ func TestValidateInitialCommitWrongEmoji(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse(":wrench: Initial Commit")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-initial") {
 		t.Errorf("expected commit-initial finding for wrong emoji")
 	}
@@ -199,7 +199,7 @@ func TestValidateMergeCommit(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse(":volcano: Merge branch 'feature-x'")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if len(findings) != 0 {
 		t.Fatalf("merge commit should be valid, got %d findings", len(findings))
 	}
@@ -209,7 +209,7 @@ func TestValidateMergeCommitWrongEmoji(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse(":wrench: Merge branch 'feature-x'")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-merge") {
 		t.Errorf("expected commit-merge finding for wrong emoji")
 	}

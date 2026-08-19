@@ -14,7 +14,12 @@ import (
 // struct tags and some test fixtures, but those are rare in real code.
 // Upgrade path: revisit if struct-tag or fixture literals start producing
 // real false negatives; walk into those subtrees instead of skipping them.
-func findMagicNumbers(fset *token.FileSet, fc core.FileChange, fn *ast.FuncDecl) []core.Finding {
+func findMagicNumbers(
+	fset *token.FileSet,
+	fc core.FileChange,
+	fn *ast.FuncDecl,
+	reporter core.Reporter,
+) []core.Finding {
 	var findings []core.Finding
 	fired := false
 	// exemptPos records literals whose ROLE, not their value, makes them
@@ -40,7 +45,7 @@ func findMagicNumbers(fset *token.FileSet, fc core.FileChange, fn *ast.FuncDecl)
 			return true
 		}
 		fired = true
-		findings = append(findings, complexityInfoReporter.At(
+		findings = append(findings, reporter.At(
 			fc.Path,
 			fset.Position(lit.Pos()).Line,
 			fmt.Sprintf("magic number %s in %s", lit.Value, fn.Name.Name),

@@ -98,7 +98,7 @@ func TestCheckFile(t *testing.T) {
 				t.Fatalf("parse: %v", err)
 			}
 			fc := core.FileChange{Path: "p.go", Extension: ".go"}
-			got := checkFile(cache.FileSet(), fc, file)
+			got := checkFile(cache.FileSet(), fc, file, vacuousDocReporter)
 			if len(got) != testCase.expect {
 				t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
 			}

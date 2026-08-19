@@ -21,7 +21,12 @@ var valueArgNames = map[string]bool{
 // checkFlagArguments reports bool parameters that select between two
 // behaviors. It excludes bool parameters named for a default VALUE (see
 // valueArgNames) rather than a behavior switch.
-func checkFlagArguments(fset *token.FileSet, fc core.FileChange, fn *ast.FuncDecl) []core.Finding {
+func checkFlagArguments(
+	fset *token.FileSet,
+	fc core.FileChange,
+	fn *ast.FuncDecl,
+	reporter core.Reporter,
+) []core.Finding {
 	if fn.Type.Params == nil {
 		return nil
 	}
@@ -34,7 +39,7 @@ func checkFlagArguments(fset *token.FileSet, fc core.FileChange, fn *ast.FuncDec
 			if valueArgNames[id.Name] {
 				continue
 			}
-			findings = append(findings, complexityWarnReporter.At(
+			findings = append(findings, reporter.At(
 				fc.Path,
 				fset.Position(id.NamePos).Line,
 				fmt.Sprintf("flag argument %q in %s", id.Name, fn.Name.Name),

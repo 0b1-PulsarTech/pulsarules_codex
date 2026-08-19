@@ -43,23 +43,16 @@ func NewPackageBoundaryAnalyzer() *PackageBoundaryAnalyzer {
 	return &PackageBoundaryAnalyzer{}
 }
 
-func (a *PackageBoundaryAnalyzer) ID() string   { return "arch-boundary" }
-func (a *PackageBoundaryAnalyzer) Name() string { return "Package boundaries" }
-func (a *PackageBoundaryAnalyzer) Description() string {
-	return "Checks that inner layers do not depend on outer layers"
-}
-func (a *PackageBoundaryAnalyzer) Stage() core.StageID     { return core.StageArch }
-func (a *PackageBoundaryAnalyzer) Category() core.Category { return core.CatArch }
-func (a *PackageBoundaryAnalyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
+func (a *PackageBoundaryAnalyzer) ID() string          { return "arch-boundary" }
+func (a *PackageBoundaryAnalyzer) Stage() core.StageID { return core.StageArch }
 
 func (a *PackageBoundaryAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if ctx.ProjectDir == "" {
 		return nil
 	}
+	reporter := archBoundaryReporter.Resolved(ctx)
 
-	modulePath, findings := resolveModulePathOrFindings(archBoundaryReporter, ctx.ProjectDir)
+	modulePath, findings := resolveModulePathOrFindings(reporter, ctx.ProjectDir)
 	if modulePath == "" {
 		return findings
 	}
@@ -68,7 +61,7 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Find
 	violations := checkBoundaries(idx.graph, modulePath)
 
 	for _, v := range violations {
-		findings = append(findings, archBoundaryReporter.At(
+		findings = append(findings, reporter.At(
 			".",
 			0,
 			v,
@@ -85,23 +78,16 @@ func NewImportCycleAnalyzer() *ImportCycleAnalyzer {
 	return &ImportCycleAnalyzer{}
 }
 
-func (a *ImportCycleAnalyzer) ID() string   { return "import-cycle" }
-func (a *ImportCycleAnalyzer) Name() string { return "Import cycles" }
-func (a *ImportCycleAnalyzer) Description() string {
-	return "Detects cycles in the package import graph"
-}
-func (a *ImportCycleAnalyzer) Stage() core.StageID     { return core.StageArch }
-func (a *ImportCycleAnalyzer) Category() core.Category { return core.CatArch }
-func (a *ImportCycleAnalyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
+func (a *ImportCycleAnalyzer) ID() string          { return "import-cycle" }
+func (a *ImportCycleAnalyzer) Stage() core.StageID { return core.StageArch }
 
 func (a *ImportCycleAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if ctx.ProjectDir == "" {
 		return nil
 	}
+	reporter := importCycleReporter.Resolved(ctx)
 
-	modulePath, findings := resolveModulePathOrFindings(importCycleReporter, ctx.ProjectDir)
+	modulePath, findings := resolveModulePathOrFindings(reporter, ctx.ProjectDir)
 	if modulePath == "" {
 		return findings
 	}
@@ -118,7 +104,7 @@ func (a *ImportCycleAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding 
 			b.WriteString(stripModule(p, modulePath))
 		}
 		path := b.String()
-		findings = append(findings, importCycleReporter.At(
+		findings = append(findings, reporter.At(
 			".",
 			0,
 			fmt.Sprintf("import cycle: %s", path),

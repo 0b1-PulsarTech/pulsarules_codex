@@ -25,41 +25,27 @@ func NewAnalyzer(langs *core.LanguageRegistry) *Analyzer {
 	return &Analyzer{langs: langs, maxLines: defaultMaxCommentLines}
 }
 
-func (a *Analyzer) ID() string   { return "big-comment" }
-func (a *Analyzer) Name() string { return "Big comment" }
-func (a *Analyzer) Description() string {
-	return "Reports comment blocks longer than " + strconv.Itoa(defaultMaxCommentLines) + " lines"
-}
-func (a *Analyzer) Stage() core.StageID     { return core.StageStatic }
-func (a *Analyzer) Category() core.Category { return core.CatSyntax }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
+func (a *Analyzer) ID() string          { return "big-comment" }
+func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if a.langs == nil || ctx.Sources == nil {
+	if a.langs == nil {
 		return nil
 	}
 	ml := a.resolveMaxLines(ctx)
-	var findings []core.Finding
-	for _, fc := range ctx.ChangedFiles {
-		lang := a.langs.Lookup(fc.Extension)
-		if lang == nil {
-			continue
-		}
-		src, ok := ctx.Sources.Read(fc.Path)
-		if !ok {
-			continue
-		}
-		findings = append(findings, scanFile(src, fc, lang, ml)...)
-	}
-	return findings
+	reporter := bigCommentReporter.Resolved(ctx)
+	eligible := func(fc core.FileChange) bool { return a.langs.Lookup(fc.Extension) != nil }
+	return core.EachChangedFile(ctx, eligible, func(fc core.FileChange, src []byte) []core.Finding {
+		return scanFile(src, fc, a.langs.Lookup(fc.Extension), ml, reporter)
+	})
 }
 
 // scanFile reads src line by line, tracking consecutive comment lines, and
 // emits a finding when a comment block exceeds maxLines. Comment blocks that
 // start with a generated-file marker or build-constraint tag are exempt.
-func scanFile(src []byte, fc core.FileChange, lang core.Language, maxLines int) []core.Finding {
+func scanFile(
+	src []byte, fc core.FileChange, lang core.Language, maxLines int, reporter core.Reporter,
+) []core.Finding {
 	var findings []core.Finding
 	blockStart := 0
 	blockLines := 0
@@ -70,13 +56,13 @@ func scanFile(src []byte, fc core.FileChange, lang core.Language, maxLines int) 
 		if lang.IsCommentLine(line) {
 			if blockLines == 0 {
 				blockStart = lineNum
-				exempt = isGeneratedHeader(line) || isBuildTag(line)
+				exempt = core.IsExemptHeaderLine(line)
 			}
 			blockLines++
 			continue
 		}
 		if blockLines > maxLines && !exempt {
-			findings = append(findings, bigCommentReporter.At(
+			findings = append(findings, reporter.At(
 				fc.Path,
 				blockStart,
 				"comment block is "+strconv.Itoa(blockLines)+" lines, max "+strconv.Itoa(maxLines),
@@ -87,7 +73,7 @@ func scanFile(src []byte, fc core.FileChange, lang core.Language, maxLines int) 
 		exempt = false
 	}
 	if blockLines > maxLines && !exempt {
-		findings = append(findings, bigCommentReporter.At(
+		findings = append(findings, reporter.At(
 			fc.Path,
 			blockStart,
 			"comment block is "+strconv.Itoa(blockLines)+" lines, max "+strconv.Itoa(maxLines),
@@ -95,15 +81,6 @@ func scanFile(src []byte, fc core.FileChange, lang core.Language, maxLines int) 
 		))
 	}
 	return findings
-}
-
-func isGeneratedHeader(line string) bool {
-	return strings.HasPrefix(strings.TrimSpace(line), "// Code generated")
-}
-
-func isBuildTag(line string) bool {
-	trimmed := strings.TrimSpace(line)
-	return strings.HasPrefix(trimmed, "//go:build") || strings.HasPrefix(trimmed, "// +build")
 }
 
 func (a *Analyzer) resolveMaxLines(ctx *core.AnalysisContext) int {

@@ -39,6 +39,50 @@ func TestReporter_New(t *testing.T) {
 	}
 }
 
+func TestReporter_Resolved(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		ctx  *AnalysisContext
+		want Severity
+	}{
+		{
+			name: "no config keeps the reporter's own default",
+			ctx:  &AnalysisContext{},
+			want: SeverityWarning,
+		},
+		{
+			name: "a configured severity overrides the default",
+			ctx: &AnalysisContext{Config: &AnalysisConfig{Analyzers: map[string]AnalyzerConfig{
+				"naming": {Params: map[string]any{"severity": "error"}},
+			}}},
+			want: SeverityError,
+		},
+		{
+			name: "a different analyzer's config does not leak in",
+			ctx: &AnalysisContext{Config: &AnalysisConfig{Analyzers: map[string]AnalyzerConfig{
+				"other": {Params: map[string]any{"severity": "error"}},
+			}}},
+			want: SeverityWarning,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			reporter := NewReporter("naming", SeverityWarning, CatSyntax)
+			resolved := reporter.Resolved(testCase.ctx)
+			if got := resolved.At("main.go", 1, "msg", "").Severity; got != testCase.want {
+				t.Fatalf("Resolved().At().Severity = %v, want %v", got, testCase.want)
+			}
+			if reporter.At("main.go", 1, "msg", "").Severity != SeverityWarning {
+				t.Fatal("Resolved() mutated the receiver's own severity")
+			}
+		})
+	}
+}
+
 func TestReporter_NewWithSuggestion(t *testing.T) {
 	t.Parallel()
 

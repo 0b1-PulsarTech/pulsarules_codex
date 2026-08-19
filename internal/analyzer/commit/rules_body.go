@@ -9,20 +9,22 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
 
-func validateDescription(msg commitmsg.Message, cfg RuleConfig) []core.Finding {
+func validateDescription(
+	msg commitmsg.Message, cfg RuleConfig, reporters ruleReporters,
+) []core.Finding {
 	var findings []core.Finding
 	desc := msg.Description
 
 	if desc == "" {
 		findings = append(
 			findings,
-			descRequiredReporter.New("commit message must have a description"),
+			reporters.descRequired.New("commit message must have a description"),
 		)
 		return findings
 	}
 
 	if len([]rune(desc)) > cfg.MaxSubjectLen {
-		findings = append(findings, descLengthReporter.New(
+		findings = append(findings, reporters.descLength.New(
 			"subject is "+strconv.Itoa(
 				len([]rune(desc)),
 			)+" chars, max "+strconv.Itoa(
@@ -35,7 +37,7 @@ func validateDescription(msg commitmsg.Message, cfg RuleConfig) []core.Finding {
 	if !unicode.IsUpper(first) && !msg.IsWIP {
 		findings = append(
 			findings,
-			descCapitalizeReporter.New("description must start with a capital letter"),
+			reporters.descCapitalize.New("description must start with a capital letter"),
 		)
 	}
 
@@ -43,21 +45,21 @@ func validateDescription(msg commitmsg.Message, cfg RuleConfig) []core.Finding {
 	if last == '.' {
 		findings = append(
 			findings,
-			descNoPeriodReporter.New("description must not end with a period"),
+			reporters.descNoPeriod.New("description must not end with a period"),
 		)
 	}
 
 	return findings
 }
 
-func validateBody(msg commitmsg.Message, cfg RuleConfig) []core.Finding {
+func validateBody(msg commitmsg.Message, cfg RuleConfig, reporters ruleReporters) []core.Finding {
 	if msg.Body == "" {
 		return nil
 	}
 	var findings []core.Finding
 	for i, line := range strings.Split(msg.Body, "\n") {
 		if len([]rune(line)) > cfg.MaxBodyLineLen {
-			findings = append(findings, bodyLengthReporter.New(
+			findings = append(findings, reporters.bodyLength.New(
 				"body line "+strconv.Itoa(i+1)+" is "+strconv.Itoa(
 					len([]rune(line)),
 				)+" chars, max "+strconv.Itoa(
@@ -67,7 +69,7 @@ func validateBody(msg commitmsg.Message, cfg RuleConfig) []core.Finding {
 		}
 	}
 	if total := len([]rune(msg.Body)); total > cfg.MaxBodyLen {
-		findings = append(findings, bodyTotalLengthReporter.New(
+		findings = append(findings, reporters.bodyTotalLength.New(
 			"body is "+strconv.Itoa(total)+" chars, max "+strconv.Itoa(
 				cfg.MaxBodyLen,
 			)+"; keep it short or use a subject-only commit",
@@ -76,7 +78,9 @@ func validateBody(msg commitmsg.Message, cfg RuleConfig) []core.Finding {
 	return findings
 }
 
-func validateToolTrailers(msg commitmsg.Message, cfg RuleConfig) []core.Finding {
+func validateToolTrailers(
+	msg commitmsg.Message, cfg RuleConfig, reporters ruleReporters,
+) []core.Finding {
 	if !cfg.RejectToolTrailers {
 		return nil
 	}
@@ -85,7 +89,7 @@ func validateToolTrailers(msg commitmsg.Message, cfg RuleConfig) []core.Finding 
 		return nil
 	}
 	return []core.Finding{
-		noCoauthorReporter.New(
+		reporters.noCoauthor.New(
 			"tool-attribution trailer '" + trailer + "' is not allowed; remove it before committing",
 		),
 	}

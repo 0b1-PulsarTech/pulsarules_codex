@@ -6,6 +6,21 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 )
 
+// AnalyzerID is the stable ID this analyzer reports findings under, and the
+// key its runtime params are looked up by - exported so the config
+// projection in internal/analysis.withEmojiParams spells it once.
+const AnalyzerID = "commit-lint"
+
+// Param keys the pipeline projects config.EmojiConfig's fields onto (see
+// internal/analysis.withEmojiParams), read back by merge below - the one
+// place each name is spelled, instead of a string literal on both ends of
+// the config-to-param hop.
+const (
+	ParamEmojiHardWindow  = "emoji_hard_window"
+	ParamEmojiSoftWindow  = "emoji_soft_window"
+	ParamEmojiSuggestions = "emoji_suggestions"
+)
+
 var _ core.Analyzer = (*Analyzer)(nil)
 
 // Analyzer implements core.Analyzer. It parses a commit message from
@@ -28,25 +43,9 @@ func NewAnalyzer(catalog *emoji.Catalog) *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string { return "commit-lint" }
-
-func (a *Analyzer) Name() string { return "Commit lint" }
-
-func (a *Analyzer) Description() string {
-	return "Validates commit message format, emoji catalog, repetition window, and trailer rules"
-}
+func (a *Analyzer) ID() string { return AnalyzerID }
 
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
-
-func (a *Analyzer) Category() core.Category { return core.CatCommit }
-
-// Needs declares what the analyzer requires from the pipeline context. Git
-// history is deliberately NOT required: the pipeline skips an analyzer whose
-// requirements are unmet, and demanding history would disable format and
-// catalog checks entirely on a repository's first commit.
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
 
 // Analyze parses the commit message from ctx.CommitMsg, validates it, and
 // returns findings.
@@ -59,12 +58,13 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	windowCfg := a.windowCfg.merge(ctx.Params(a.ID()))
 
 	findings := make([]core.Finding, 0, typicalFindingCapacity)
-	findings = append(findings, Validate(msg, a.ruleCfg)...)
+	findings = append(findings, Validate(msg, a.ruleCfg, defaultRuleReporters().resolved(ctx))...)
 	findings = append(findings, EmojiCheck{
-		Message: msg,
-		Catalog: a.catalog,
-		History: historySubjects(ctx.GitHistory),
-		Config:  windowCfg,
+		Message:   msg,
+		Catalog:   a.catalog,
+		History:   historySubjects(ctx.GitHistory),
+		Config:    windowCfg,
+		Reporters: defaultEmojiReporters().resolved(ctx),
 	}.ValidateEmoji()...)
 
 	return findings
@@ -81,8 +81,8 @@ func historySubjects(entries []core.GitCommitEntry) []string {
 // merge overlays the runtime analyzer params onto the compiled-in defaults so
 // a project can widen or narrow the windows without a rebuild.
 func (cfg EmojiWindowConfig) merge(params core.ParamSet) EmojiWindowConfig {
-	cfg.HardWindow = params.Int("emoji_hard_window", cfg.HardWindow)
-	cfg.SoftWindow = params.Int("emoji_soft_window", cfg.SoftWindow)
-	cfg.Suggestions = params.Int("emoji_suggestions", cfg.Suggestions)
+	cfg.HardWindow = params.Int(ParamEmojiHardWindow, cfg.HardWindow)
+	cfg.SoftWindow = params.Int(ParamEmojiSoftWindow, cfg.SoftWindow)
+	cfg.Suggestions = params.Int(ParamEmojiSuggestions, cfg.Suggestions)
 	return cfg
 }

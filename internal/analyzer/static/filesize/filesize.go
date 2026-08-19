@@ -31,44 +31,28 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{maxLines: defaultMaxLines}
 }
 
-func (a *Analyzer) ID() string   { return "file-size" }
-func (a *Analyzer) Name() string { return "File size" }
-func (a *Analyzer) Description() string {
-	return "Reports Go files that exceed the configured line count"
-}
-func (a *Analyzer) Stage() core.StageID     { return core.StageStatic }
-func (a *Analyzer) Category() core.Category { return core.CatProject }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
+func (a *Analyzer) ID() string          { return "file-size" }
+func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	limits := newLineLimits(a.resolveMaxLines(ctx))
-	if ctx.Sources == nil {
-		return nil
-	}
-	var findings []core.Finding
-	for _, fc := range ctx.ChangedFiles {
-		if fc.Extension != ".go" {
-			continue
-		}
-		src, ok := ctx.Sources.Read(fc.Path)
-		if !ok {
-			continue
-		}
+	reporter := fileSizeReporter.Resolved(ctx)
+	return core.EachChangedFile(ctx, isGoFile, func(fc core.FileChange, src []byte) []core.Finding {
 		limit := limits.forFile(fc)
 		lines := countLines(src)
-		if lines > limit {
-			findings = append(findings, fileSizeReporter.At(
-				fc.Path,
-				0,
-				fmt.Sprintf("file is %d lines, max %d", lines, limit),
-				fmt.Sprintf("split into smaller files (max %d lines per file)", limit),
-			))
+		if lines <= limit {
+			return nil
 		}
-	}
-	return findings
+		return []core.Finding{reporter.At(
+			fc.Path,
+			0,
+			fmt.Sprintf("file is %d lines, max %d", lines, limit),
+			fmt.Sprintf("split into smaller files (max %d lines per file)", limit),
+		)}
+	})
 }
+
+func isGoFile(fc core.FileChange) bool { return fc.Extension == ".go" }
 
 func (a *Analyzer) resolveMaxLines(ctx *core.AnalysisContext) int {
 	return ctx.Params(a.ID()).Int("max_lines", a.maxLines)

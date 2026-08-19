@@ -114,7 +114,7 @@ func TestCheckFile(t *testing.T) {
 			}
 
 			fc := core.FileChange{Path: "foo.go", Extension: ".go"}
-			got := a.checkFile(cache.FileSet(), modPath, fc, f)
+			got := a.checkFile(cache.FileSet(), modPath, fc, f, importGroupsReporter)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d", len(got), testCase.expect)
 			}

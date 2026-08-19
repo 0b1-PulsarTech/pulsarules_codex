@@ -16,12 +16,15 @@ import (
 // branching. 1.5x clears this repo's worst pre-fix overage (85/80) with headroom.
 const testFuncLinesMultiplier = 1.5
 
-// thresholds bundles the three configurable limits so they thread through
-// checkFile/checkFuncDecl as one parameter instead of three.
+// thresholds bundles the three configurable limits, plus the two reporters
+// already resolved against the run's config, so they thread through
+// checkFile/checkFuncDecl as one parameter instead of five.
 type thresholds struct {
 	maxComplexity int
 	maxFuncLines  int
 	maxParams     int
+	warnReporter  core.Reporter
+	infoReporter  core.Reporter
 }
 
 // maxFuncLinesFor reads as a lookup on the file rather than a boolean handed
@@ -63,7 +66,7 @@ func (th thresholds) checkFuncDecl(
 
 	comp := cyclomaticComplexity(fn)
 	if comp > th.maxComplexity {
-		findings = append(findings, complexityWarnReporter.At(
+		findings = append(findings, th.warnReporter.At(
 			fc.Path,
 			fset.Position(fn.Pos()).Line,
 			fmt.Sprintf(
@@ -79,7 +82,7 @@ func (th thresholds) checkFuncDecl(
 	funcLines := endLine - startLine + 1
 	maxFuncLines := th.maxFuncLinesFor(fc)
 	if funcLines > maxFuncLines {
-		findings = append(findings, complexityWarnReporter.At(
+		findings = append(findings, th.warnReporter.At(
 			fc.Path,
 			fset.Position(fn.Pos()).Line,
 			fmt.Sprintf(
@@ -93,7 +96,7 @@ func (th thresholds) checkFuncDecl(
 	if fn.Type.Params != nil {
 		paramCount := countParams(fn.Type.Params)
 		if paramCount > th.maxParams {
-			findings = append(findings, complexityWarnReporter.At(
+			findings = append(findings, th.warnReporter.At(
 				fc.Path,
 				fset.Position(fn.Pos()).Line,
 				fmt.Sprintf(
@@ -105,8 +108,8 @@ func (th thresholds) checkFuncDecl(
 		}
 	}
 
-	findings = append(findings, checkFlagArguments(fset, fc, fn)...)
-	findings = append(findings, findMagicNumbers(fset, fc, fn)...)
+	findings = append(findings, checkFlagArguments(fset, fc, fn, th.warnReporter)...)
+	findings = append(findings, findMagicNumbers(fset, fc, fn, th.infoReporter)...)
 
 	return findings
 }

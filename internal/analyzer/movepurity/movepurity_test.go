@@ -20,12 +20,6 @@ func TestAnalyzer_Identity(t *testing.T) {
 	if a.Stage() != core.StageStatic {
 		t.Fatalf("Stage() = %d, want StageStatic", a.Stage())
 	}
-	if a.Category() != core.CatCommit {
-		t.Fatalf("Category() = %d, want CatCommit", a.Category())
-	}
-	if needs := a.Needs(); needs.NeedsAST || needs.NeedsGitHistory {
-		t.Fatalf("Needs() = %+v, want no requirements", needs)
-	}
 }
 
 type movePurityCase struct {

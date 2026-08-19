@@ -48,13 +48,17 @@ const (
 	StageOutput
 )
 
-// Requirements declares what an analyzer needs from the pipeline context, so
-// the pipeline can skip analyzers whose requirements are unmet (e.g. no AST
-// cache available). Only fields the pipeline actually reads belong here.
+// Requirements is a compatibility shim: the pipeline no longer gates an
+// analyzer on it (Needs was dropped from the Analyzer interface and
+// pipeline.requirementsMet was deleted - NeedsAST tested ctx.ChangedFiles
+// instead of ctx.ASTCache, so a nil cache with non-nil ChangedFiles passed
+// anyway, and NeedsGitHistory had zero callers). It survives only because
+// internal/analyzer/delegation still declares a Needs() core.Requirements
+// method this package does not own; deleting Requirements is the last step
+// once delegation drops that method too.
 type Requirements struct {
-	// NeedsAST signals the analyzer needs parsed Go ASTs in the context.
+	// NeedsAST is unread by the pipeline; kept for delegation's Needs().
 	NeedsAST bool
-	// NeedsGitHistory signals the analyzer needs recent commit subjects
-	// (e.g. the emoji-variance check).
+	// NeedsGitHistory is unread by the pipeline; kept for delegation's Needs().
 	NeedsGitHistory bool
 }

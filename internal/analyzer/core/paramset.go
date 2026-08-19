@@ -64,6 +64,11 @@ func (p ParamSet) String(key string, fallback string) string {
 	return v
 }
 
+// ParamSeverity is the params key an analyzer's severity override is read
+// from. Its values are the one vocabulary Severity and format's label both
+// use, so a rendered finding's label is always the string that configures it.
+const ParamSeverity = "severity"
+
 // severityByName is the vocabulary a configured severity is spelled in. It is
 // the single source for both reading a value and rejecting a bad one, so a
 // caller cannot validate against a list that drifts from what this accepts.
@@ -110,7 +115,7 @@ func ValidSeverityName(name string) bool {
 // one project and only advises another - so a configurable analyzer reads it here
 // instead of freezing it into a package-level reporter.
 func (p ParamSet) Severity(fallback Severity) Severity {
-	if severity, ok := severityByName[p.String("severity", "")]; ok {
+	if severity, ok := severityByName[p.String(ParamSeverity, "")]; ok {
 		return severity
 	}
 	return fallback

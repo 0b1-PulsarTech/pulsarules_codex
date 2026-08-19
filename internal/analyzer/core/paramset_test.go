@@ -94,42 +94,6 @@ func TestParamSetString(t *testing.T) {
 	}
 }
 
-func TestAnalysisContextParams(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name string
-		ctx  *AnalysisContext
-		id   string
-		want int
-	}{
-		{"nil config returns nil ParamSet", &AnalysisContext{}, "file-size", 300},
-		{
-			name: "missing analyzer returns nil ParamSet",
-			ctx:  &AnalysisContext{Config: &AnalysisConfig{Analyzers: map[string]AnalyzerConfig{}}},
-			id:   "file-size",
-			want: 300,
-		},
-		{
-			name: "present analyzer returns its params",
-			ctx: &AnalysisContext{Config: &AnalysisConfig{Analyzers: map[string]AnalyzerConfig{
-				"file-size": {Params: map[string]any{"max_lines": 180}},
-			}}},
-			id:   "file-size",
-			want: 180,
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			got := testCase.ctx.Params(testCase.id).Int("max_lines", 300)
-			if got != testCase.want {
-				t.Errorf("Params(%q).Int(max_lines) = %d, want %d", testCase.id, got, testCase.want)
-			}
-		})
-	}
-}
-
 // TestParamSetSeverity asserts the conventional "severity" key maps to each
 // Severity, and that an absent or unrecognized value falls back rather than
 // silently downgrading a finding to Info (the zero value).

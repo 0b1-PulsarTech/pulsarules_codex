@@ -230,7 +230,7 @@ func analyzeMessage(t *testing.T, a *Analyzer, source string) string {
 	}
 
 	fc := core.FileChange{Path: "foo.go", Extension: ".go"}
-	got := a.checkFile(cache.FileSet(), fc, f)
+	got := a.checkFile(cache.FileSet(), fc, f, shadowingReporter, reuseReporter)
 	if len(got) != 1 {
 		t.Fatalf("got %d findings, want 1: %v", len(got), got)
 	}
@@ -269,7 +269,7 @@ func countByRule(t *testing.T, a *Analyzer, source string) (shadows, reuses int)
 	}
 
 	fc := core.FileChange{Path: "foo.go", Extension: ".go"}
-	for _, finding := range a.checkFile(cache.FileSet(), fc, f) {
+	for _, finding := range a.checkFile(cache.FileSet(), fc, f, shadowingReporter, reuseReporter) {
 		switch finding.AnalyzerID {
 		case "shadowing":
 			shadows++

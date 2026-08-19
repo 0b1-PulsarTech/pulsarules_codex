@@ -37,19 +37,6 @@ func TestCommitAnalyzerID(t *testing.T) {
 	if analyzer.Stage() != core.StageStatic {
 		t.Errorf("Stage = %v, want StageStatic", analyzer.Stage())
 	}
-	if analyzer.Category() != core.CatCommit {
-		t.Errorf("Category = %v, want CatCommit", analyzer.Category())
-	}
-}
-
-// Requiring git history would make the pipeline skip the analyzer whenever
-// history is missing, disabling every commit rule on a first commit.
-func TestCommitAnalyzerDoesNotRequireGitHistory(t *testing.T) {
-	t.Parallel()
-
-	if newTestAnalyzer(t).Needs().NeedsGitHistory {
-		t.Fatal("commit lint must run without git history")
-	}
 }
 
 type analyzeCase struct {

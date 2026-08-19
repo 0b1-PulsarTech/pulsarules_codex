@@ -4,13 +4,20 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-// analyzerID is the stable ID this analyzer reports findings under, and the
-// key its runtime params are looked up by.
-const analyzerID = "commit-move-purity"
+// AnalyzerID is the stable ID this analyzer reports findings under, and the
+// key its runtime params are looked up by - exported so the config
+// projection in internal/analysis.withMovePurityParams spells it once.
+const AnalyzerID = "commit-move-purity"
 
 // defaultMinSimilarity is the git rename-similarity score, out of 100, a
 // staged rename must meet to count as a pure move.
 const defaultMinSimilarity = 90
+
+// ParamMinSimilarity is the params key config.MovePurityConfig.MinSimilarity
+// is projected onto (see internal/analysis.withMovePurityParams) - the one
+// place this name is spelled, instead of a string literal on both ends of
+// the config-to-param hop.
+const ParamMinSimilarity = "min_similarity"
 
 // renameDiffProbeScore is the similarity threshold passed to
 // StagedRenameDiff: the pair already came from ctx.StagedRenames, so a low
@@ -19,6 +26,11 @@ const defaultMinSimilarity = 90
 const renameDiffProbeScore = 1
 
 var _ core.Analyzer = (*Analyzer)(nil)
+
+// baseReporter carries this analyzer's id and category; Analyze resolves
+// its severity against the run's config each call (see core.Reporter.
+// Resolved), the same mechanism every other analyzer's reporter uses.
+var baseReporter = core.NewReporter(AnalyzerID, core.SeverityWarning, core.CatCommit)
 
 // Analyzer reports staged renames that are not pure moves: a rename scored
 // below the configured similarity, or renames staged alongside unrelated
@@ -39,24 +51,9 @@ func NewAnalyzer(diffs diffReader) *Analyzer {
 	return &Analyzer{minSimilarity: defaultMinSimilarity, diffs: diffs}
 }
 
-func (a *Analyzer) ID() string { return analyzerID }
-
-func (a *Analyzer) Name() string { return "Commit move purity" }
-
-func (a *Analyzer) Description() string {
-	return "Reports staged renames that mix content edits into the move, or coexist with unrelated staged edits"
-}
+func (a *Analyzer) ID() string { return AnalyzerID }
 
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
-
-func (a *Analyzer) Category() core.Category { return core.CatCommit }
-
-// Needs declares what the analyzer requires from the pipeline context. It
-// needs neither ASTs nor git history: the staged-rename data it reads comes
-// through ctx.StagedRenames/ctx.ChangedFiles regardless of requirements.
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
 
 // Analyze inspects the staged renames in ctx and reports the ones that are
 // not pure moves, plus one finding when renames coexist with unrelated
@@ -66,8 +63,8 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		return nil
 	}
 	params := ctx.Params(a.ID())
-	minSimilarity := params.Int("min_similarity", a.minSimilarity)
-	reporter := core.NewReporter(analyzerID, params.Severity(core.SeverityWarning), core.CatCommit)
+	minSimilarity := params.Int(ParamMinSimilarity, a.minSimilarity)
+	reporter := baseReporter.Resolved(ctx)
 
 	var findings []core.Finding
 	for _, rename := range ctx.StagedRenames {

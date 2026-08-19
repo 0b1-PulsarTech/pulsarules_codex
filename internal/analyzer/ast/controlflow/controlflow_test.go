@@ -143,7 +143,7 @@ func runCheckFile(t *testing.T, a *Analyzer, source string, expect int) {
 	}
 
 	fc := core.FileChange{Path: "foo.go", Extension: ".go"}
-	got := a.checkFile(cache.FileSet(), fc, f)
+	got := a.checkFile(cache.FileSet(), fc, f, controlFlowReporter)
 	if len(got) != expect {
 		t.Fatalf("got %d findings, want %d: %v", len(got), expect, got)
 	}

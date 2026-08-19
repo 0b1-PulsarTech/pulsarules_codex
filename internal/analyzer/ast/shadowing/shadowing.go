@@ -28,20 +28,14 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (a *Analyzer) ID() string   { return "shadowing" }
-func (a *Analyzer) Name() string { return "Variable shadowing" }
-func (a *Analyzer) Description() string {
-	return "Reports names that shadow a name from an enclosing scope or a Go builtin"
-}
-func (a *Analyzer) Stage() core.StageID     { return core.StageAST }
-func (a *Analyzer) Category() core.Category { return core.CatAST }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{NeedsAST: true}
-}
+func (a *Analyzer) ID() string          { return "shadowing" }
+func (a *Analyzer) Stage() core.StageID { return core.StageAST }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	shadowReporter := shadowingReporter.Resolved(ctx)
+	dupReporter := reuseReporter.Resolved(ctx)
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return a.checkFile(ctx.ASTCache.FileSet(), fc, f)
+		return a.checkFile(ctx.ASTCache.FileSet(), fc, f, shadowReporter, dupReporter)
 	})
 }
 
@@ -57,6 +51,8 @@ func (a *Analyzer) checkFile(
 	fset *token.FileSet,
 	fc core.FileChange,
 	f *ast.File,
+	shadowReporter core.Reporter,
+	dupReporter core.Reporter,
 ) []core.Finding {
 	var findings []core.Finding
 	// One report per name per function. The mandated `(out T, err error)` plus
@@ -69,7 +65,7 @@ func (a *Analyzer) checkFile(
 			if shadowAllowlist[name] {
 				return
 			}
-			findings = append(findings, shadowingReporter.At(
+			findings = append(findings, shadowReporter.At(
 				fc.Path,
 				fset.Position(pos).Line,
 				fmt.Sprintf("%q shadows an outer %s", name, kind),
@@ -81,7 +77,7 @@ func (a *Analyzer) checkFile(
 				return
 			}
 			reported[name] = true
-			findings = append(findings, reuseReporter.At(
+			findings = append(findings, dupReporter.At(
 				fc.Path,
 				fset.Position(pos).Line,
 				fmt.Sprintf("%q is reassigned by := in the block that declares it", name),

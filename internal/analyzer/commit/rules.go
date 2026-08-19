@@ -111,8 +111,9 @@ var (
 
 // Validate checks a parsed commit message against all rules and returns
 // findings. Special cases (initial commit, merge, WIP) are exempt from
-// type/emoji requirements.
-func Validate(msg commitmsg.Message, cfg RuleConfig) []core.Finding {
+// type/emoji requirements. reporters carries the 14 sub-rule reporters,
+// already resolved against the run's config (see ruleReporters.resolved).
+func Validate(msg commitmsg.Message, cfg RuleConfig, reporters ruleReporters) []core.Finding {
 	findings := make([]core.Finding, 0, typicalFindingCapacity)
 
 	rawAfterEmoji := strings.TrimSpace(msg.Raw)
@@ -125,18 +126,18 @@ func Validate(msg commitmsg.Message, cfg RuleConfig) []core.Finding {
 	isMergeText := strings.HasPrefix(rawAfterEmoji, "Merge ")
 
 	if isInitialText {
-		return validateInitial(msg, cfg, findings)
+		return validateInitial(msg, cfg, findings, reporters)
 	}
 	if isMergeText {
-		return validateMerge(msg, cfg, findings)
+		return validateMerge(msg, cfg, findings, reporters)
 	}
 
-	findings = append(findings, validateEmojis(msg, cfg)...)
-	findings = append(findings, validateType(msg)...)
-	findings = append(findings, validateScope(msg)...)
-	findings = append(findings, validateDescription(msg, cfg)...)
-	findings = append(findings, validateBody(msg, cfg)...)
-	findings = append(findings, validateToolTrailers(msg, cfg)...)
+	findings = append(findings, validateEmojis(msg, cfg, reporters)...)
+	findings = append(findings, validateType(msg, reporters)...)
+	findings = append(findings, validateScope(msg, reporters)...)
+	findings = append(findings, validateDescription(msg, cfg, reporters)...)
+	findings = append(findings, validateBody(msg, cfg, reporters)...)
+	findings = append(findings, validateToolTrailers(msg, cfg, reporters)...)
 
 	return findings
 }

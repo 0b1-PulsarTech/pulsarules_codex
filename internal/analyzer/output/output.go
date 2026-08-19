@@ -6,6 +6,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
+var _ core.InPlaceAnalyzer = (*Analyzer)(nil)
+
 // Analyzer runs at StageOutput. It sorts the accumulated findings by
 // severity (error first, then warning, then info), then by file and line, and
 // removes exact duplicates (same AnalyzerID, File, Line, Message). It mutates
@@ -14,13 +16,13 @@ type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer { return &Analyzer{} }
 
-func (a *Analyzer) ID() string   { return "output" }
-func (a *Analyzer) Name() string { return "Output aggregation" }
+func (a *Analyzer) ID() string { return "output" }
 
-func (a *Analyzer) Description() string      { return "Sorts, deduplicates, and counts findings" }
-func (a *Analyzer) Stage() core.StageID      { return core.StageOutput }
-func (a *Analyzer) Category() core.Category  { return core.CatProject }
-func (a *Analyzer) Needs() core.Requirements { return core.Requirements{} }
+func (a *Analyzer) Stage() core.StageID { return core.StageOutput }
+
+// TransformsInPlace marks Analyzer as a core.InPlaceAnalyzer: it sorts and
+// deduplicates ctx.Findings in place rather than contributing new findings.
+func (a *Analyzer) TransformsInPlace() {}
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if len(ctx.Findings) == 0 {

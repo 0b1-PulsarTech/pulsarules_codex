@@ -31,7 +31,11 @@ func TestValidateToolTrailerRejected(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			findings := Validate(commitmsg.Parse(testCase.message), DefaultRuleConfig())
+			findings := Validate(
+				commitmsg.Parse(testCase.message),
+				DefaultRuleConfig(),
+				defaultRuleReporters(),
+			)
 			finding, ok := findingByID(findings, "commit-no-coauthor")
 			if !ok {
 				t.Fatalf("expected commit-no-coauthor finding, got %+v", findings)
@@ -50,7 +54,7 @@ func TestValidateBodyTotalTooLong(t *testing.T) {
 	// reproducing the oversized-but-wrapped body that previously slipped through.
 	body := strings.Repeat("a line of moderate length that is well under the cap.\n", 10)
 	msg := commitmsg.Parse(":wrench: feat: Add thing\n\n" + body)
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if hasAnalyzer(findings, "commit-body-length") {
 		t.Fatalf("no single body line should exceed the per-line cap: %+v", findings)
 	}
@@ -67,7 +71,7 @@ func TestValidateShortBodyWithFooterValid(t *testing.T) {
 	t.Parallel()
 
 	msg := commitmsg.Parse(":wrench: feat: Add thing\n\nA short, useful body.\n\nRefs: #42")
-	findings := Validate(msg, DefaultRuleConfig())
+	findings := Validate(msg, DefaultRuleConfig(), defaultRuleReporters())
 	if len(findings) != 0 {
 		t.Fatalf("short body with a legit footer should be valid, got %+v", findings)
 	}

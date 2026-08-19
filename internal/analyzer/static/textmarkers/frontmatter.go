@@ -25,7 +25,7 @@ var provenanceKeys = map[string]bool{
 // why: key position in the frontmatter only, never body prose. A document that
 // merely discusses Claude is not machine-generated, and scanning the body is
 // the false positive this check exists to avoid.
-func frontmatterFindings(fc core.FileChange, src string) []core.Finding {
+func frontmatterFindings(fc core.FileChange, src string, reporter core.Reporter) []core.Finding {
 	if strings.ToLower(fc.Extension) != ".md" {
 		return nil
 	}
@@ -39,7 +39,7 @@ func frontmatterFindings(fc core.FileChange, src string) []core.Finding {
 		if !provenanceKeys[key] {
 			continue
 		}
-		findings = append(findings, frontmatterReporter.At(
+		findings = append(findings, reporter.At(
 			fc.Path, offset+2,
 			fmt.Sprintf("frontmatter key %q names a generating machine", key),
 			"delete the key; provenance metadata does not belong in a source document",

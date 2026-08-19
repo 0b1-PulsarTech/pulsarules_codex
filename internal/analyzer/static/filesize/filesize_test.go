@@ -138,6 +138,36 @@ func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
 	}
 }
 
+// why: the pipeline's changed-file path never runs a full core.Walk, so
+// testdata's skip has to be repeated here too, or a fixture written
+// deliberately oversized trips the very check it exists to demonstrate.
+func TestAnalyze_SkipsTestdataFixture(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	fixtureDir := filepath.Join(dir, "testdata")
+	if err := os.MkdirAll(fixtureDir, fsperm.DirPrivate); err != nil {
+		t.Fatalf("mkdir testdata: %v", err)
+	}
+	body := "package fixture\n" + strings.Repeat("// filler\n", 300)
+	fixturePath := filepath.Join(fixtureDir, "big.go")
+	if err := os.WriteFile(fixturePath, []byte(body), fsperm.File); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	a := NewAnalyzer()
+	got := a.Analyze(&core.AnalysisContext{
+		ProjectDir: dir,
+		Sources:    core.NewSourceProvider(dir),
+		ChangedFiles: []core.FileChange{
+			{Path: "testdata/big.go", Extension: ".go"},
+		},
+	})
+	if len(got) != 0 {
+		t.Fatalf("got %d findings for a testdata fixture, want 0: %+v", len(got), got)
+	}
+}
+
 func TestCountLines(t *testing.T) {
 	t.Parallel()
 

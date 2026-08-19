@@ -22,16 +22,8 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (a *Analyzer) ID() string   { return "import-groups" }
-func (a *Analyzer) Name() string { return "Import groups" }
-func (a *Analyzer) Description() string {
-	return "Checks import ordering: stdlib, external, this module"
-}
-func (a *Analyzer) Stage() core.StageID     { return core.StageStatic }
-func (a *Analyzer) Category() core.Category { return core.CatSyntax }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
+func (a *Analyzer) ID() string          { return "import-groups" }
+func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 // Analyze reports every file whose import blocks break the three-group order.
 //
@@ -43,8 +35,9 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if err != nil || modulePath == "" {
 		return nil
 	}
+	reporter := importGroupsReporter.Resolved(ctx)
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return a.checkFile(ctx.ASTCache.FileSet(), modulePath, fc, f)
+		return a.checkFile(ctx.ASTCache.FileSet(), modulePath, fc, f, reporter)
 	})
 }
 
@@ -53,6 +46,7 @@ func (a *Analyzer) checkFile(
 	modulePath string,
 	fc core.FileChange,
 	f *ast.File,
+	reporter core.Reporter,
 ) []core.Finding {
 	if len(f.Imports) == 0 {
 		return nil
@@ -83,7 +77,7 @@ func (a *Analyzer) checkFile(
 		g := classify(spec.Path.Value)
 		if g < prevGroup {
 			return []core.Finding{
-				importGroupsReporter.At(
+				reporter.At(
 					fc.Path,
 					fset.Position(spec.Pos()).Line,
 					fmt.Sprintf(

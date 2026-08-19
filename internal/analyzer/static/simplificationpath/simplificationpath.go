@@ -22,16 +22,8 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (a *Analyzer) ID() string   { return "simplification-path" }
-func (a *Analyzer) Name() string { return "Simplification path" }
-func (a *Analyzer) Description() string {
-	return "Reports a simplification comment that names no upgrade path"
-}
-func (a *Analyzer) Stage() core.StageID     { return core.StageStatic }
-func (a *Analyzer) Category() core.Category { return core.CatSyntax }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
+func (a *Analyzer) ID() string          { return "simplification-path" }
+func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 // Analyze reports every "// simplification:" marker that names no upgrade path.
 //
@@ -39,27 +31,18 @@ func (a *Analyzer) Needs() core.Requirements {
 // markers also exist in opencode-plugin.js (JS shares "//" comments).
 // Upgrade path: route non-Go extensions through core.LanguageRegistry.IsCommentLine.
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if ctx.Sources == nil {
-		return nil
-	}
-	var findings []core.Finding
-	for _, fc := range ctx.ChangedFiles {
-		if fc.Extension != ".go" {
-			continue
-		}
-		src, ok := ctx.Sources.Read(fc.Path)
-		if !ok {
-			continue
-		}
-		findings = append(findings, scanFile(src, fc.Path)...)
-	}
-	return findings
+	reporter := missingUpgradePathReporter.Resolved(ctx)
+	return core.EachChangedFile(ctx, isGoFile, func(fc core.FileChange, src []byte) []core.Finding {
+		return scanFile(src, fc.Path, reporter)
+	})
 }
+
+func isGoFile(fc core.FileChange) bool { return fc.Extension == ".go" }
 
 // scanFile walks src line by line, collecting each "// simplification:"
 // comment block (the marker line plus every immediately following comment
 // line) and reporting one whose block never states an upgrade-path label.
-func scanFile(src []byte, path string) []core.Finding {
+func scanFile(src []byte, path string, reporter core.Reporter) []core.Finding {
 	var findings []core.Finding
 	lines := strings.Split(string(src), "\n")
 	for lineIdx := 0; lineIdx < len(lines); lineIdx++ {
@@ -71,7 +54,7 @@ func scanFile(src []byte, path string) []core.Finding {
 			blockEnd++
 		}
 		if !blockNamesUpgradePath(lines[lineIdx:blockEnd]) {
-			findings = append(findings, missingUpgradePathReporter.At(
+			findings = append(findings, reporter.At(
 				path,
 				lineIdx+1,
 				"simplification comment names no upgrade path",

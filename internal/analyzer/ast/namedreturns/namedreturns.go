@@ -24,24 +24,19 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (a *Analyzer) ID() string   { return "named-returns" }
-func (a *Analyzer) Name() string { return "Named results" }
-func (a *Analyzer) Description() string {
-	return "Reports two or more unnamed results of the same type, where only the order tells them apart"
-}
-func (a *Analyzer) Stage() core.StageID     { return core.StageAST }
-func (a *Analyzer) Category() core.Category { return core.CatAST }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{NeedsAST: true}
-}
+func (a *Analyzer) ID() string          { return "named-returns" }
+func (a *Analyzer) Stage() core.StageID { return core.StageAST }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	reporter := namedReturnsReporter.Resolved(ctx)
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return checkFile(ctx.ASTCache.FileSet(), fc, f)
+		return checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
 	})
 }
 
-func checkFile(fset *token.FileSet, fc core.FileChange, f *ast.File) []core.Finding {
+func checkFile(
+	fset *token.FileSet, fc core.FileChange, f *ast.File, reporter core.Reporter,
+) []core.Finding {
 	var findings []core.Finding
 
 	ast.Inspect(f, func(n ast.Node) bool {
@@ -49,7 +44,7 @@ func checkFile(fset *token.FileSet, fc core.FileChange, f *ast.File) []core.Find
 		case *ast.FuncDecl:
 			findings = append(
 				findings,
-				checkResults(fset, fc, node.Name.Name, node.Pos(), node.Type.Results)...,
+				checkResults(fset, fc, node.Name.Name, node.Pos(), node.Type.Results, reporter)...,
 			)
 		case *ast.InterfaceType:
 			for _, field := range node.Methods.List {
@@ -59,7 +54,9 @@ func checkFile(fset *token.FileSet, fc core.FileChange, f *ast.File) []core.Find
 				}
 				findings = append(
 					findings,
-					checkResults(fset, fc, field.Names[0].Name, field.Pos(), funcType.Results)...,
+					checkResults(
+						fset, fc, field.Names[0].Name, field.Pos(), funcType.Results, reporter,
+					)...,
 				)
 			}
 		}
@@ -71,13 +68,18 @@ func checkFile(fset *token.FileSet, fc core.FileChange, f *ast.File) []core.Find
 
 // why: shared by both the FuncDecl and InterfaceType branches above.
 func checkResults(
-	fset *token.FileSet, fc core.FileChange, name string, pos token.Pos, results *ast.FieldList,
+	fset *token.FileSet,
+	fc core.FileChange,
+	name string,
+	pos token.Pos,
+	results *ast.FieldList,
+	reporter core.Reporter,
 ) []core.Finding {
 	dup, found := duplicateResultType(results)
 	if !found {
 		return nil
 	}
-	return []core.Finding{namedReturnsReporter.At(
+	return []core.Finding{reporter.At(
 		fc.Path,
 		fset.Position(pos).Line,
 		fmt.Sprintf(

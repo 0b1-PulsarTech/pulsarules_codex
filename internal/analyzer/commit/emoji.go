@@ -54,12 +54,14 @@ var (
 
 // EmojiCheck is one commit message weighed against the catalog and the recent
 // history. History holds recent commit subjects OLDEST FIRST, as git log
-// yields them once reversed.
+// yields them once reversed. Reporters carries the 4 sub-rule reporters,
+// already resolved against the run's config (see emojiReporters.resolved).
 type EmojiCheck struct {
-	Message commitmsg.Message
-	Catalog *emoji.Catalog
-	History []string
-	Config  EmojiWindowConfig
+	Message   commitmsg.Message
+	Catalog   *emoji.Catalog
+	History   []string
+	Config    EmojiWindowConfig
+	Reporters emojiReporters
 }
 
 // ValidateEmoji reports every emoji rule the commit breaks: membership of the
@@ -84,12 +86,12 @@ func (check EmojiCheck) validateCatalog() []core.Finding {
 			}
 			findings = append(
 				findings,
-				emojiProhibitedReporter.NewWithSuggestion(message, check.suggestionText()),
+				check.Reporters.prohibited.NewWithSuggestion(message, check.suggestionText()),
 			)
 			continue
 		}
 		if !check.Catalog.Allows(shortcode) {
-			findings = append(findings, emojiCatalogReporter.NewWithSuggestion(
+			findings = append(findings, check.Reporters.catalog.NewWithSuggestion(
 				"emoji :"+shortcode+": is not in the commit emoji catalog; it may not render in the history view",
 				check.suggestionText(),
 			))
@@ -107,7 +109,7 @@ func (check EmojiCheck) validateWindow() []core.Finding {
 	current := check.Message.Emojis[0]
 
 	if slices.Contains(check.recentEmojis(check.Config.HardWindow), current) {
-		return []core.Finding{emojiRepeatReporter.NewWithSuggestion(
+		return []core.Finding{check.Reporters.repeat.NewWithSuggestion(
 			"emoji :"+current+": already appears in the last "+
 				strconv.Itoa(check.Config.HardWindow)+
 				" commits; every commit in that window needs a distinct emoji",
@@ -115,7 +117,7 @@ func (check EmojiCheck) validateWindow() []core.Finding {
 		)}
 	}
 	if slices.Contains(check.recentEmojis(check.Config.SoftWindow), current) {
-		return []core.Finding{emojiSoftRepeatReporter.NewWithSuggestion(
+		return []core.Finding{check.Reporters.softRepeat.NewWithSuggestion(
 			"emoji :"+current+": was used within the last "+strconv.Itoa(check.Config.SoftWindow)+
 				" commits; a fresher one would read better",
 			check.suggestionText(),

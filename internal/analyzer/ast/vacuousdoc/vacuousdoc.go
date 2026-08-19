@@ -26,34 +26,27 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (a *Analyzer) ID() string   { return "vacuous-doc" }
-func (a *Analyzer) Name() string { return "Vacuous doc comment" }
+func (a *Analyzer) ID() string { return "vacuous-doc" }
 
-func (a *Analyzer) Description() string {
-	return "Reports a doc comment on a function that only returns a literal or a field"
-}
-func (a *Analyzer) Stage() core.StageID     { return core.StageAST }
-func (a *Analyzer) Category() core.Category { return core.CatAST }
-
-// Needs asks for nothing: the check reads the AST the cache already holds.
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{NeedsAST: true}
-}
+func (a *Analyzer) Stage() core.StageID { return core.StageAST }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	reporter := vacuousDocReporter.Resolved(ctx)
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return checkFile(ctx.ASTCache.FileSet(), fc, f)
+		return checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
 	})
 }
 
-func checkFile(fset *token.FileSet, fc core.FileChange, f *ast.File) []core.Finding {
+func checkFile(
+	fset *token.FileSet, fc core.FileChange, f *ast.File, reporter core.Reporter,
+) []core.Finding {
 	var findings []core.Finding
 	for _, decl := range f.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Doc == nil || !returnsOnlyLiteralOrField(fn) || earnsItsPlace(fn.Doc) {
 			continue
 		}
-		findings = append(findings, vacuousDocReporter.At(
+		findings = append(findings, reporter.At(
 			fc.Path,
 			fset.Position(fn.Doc.Pos()).Line,
 			fmt.Sprintf("doc comment on %s restates a one-line accessor", fn.Name.Name),

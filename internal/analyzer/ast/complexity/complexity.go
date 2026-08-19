@@ -34,16 +34,8 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string   { return "complexity" }
-func (a *Analyzer) Name() string { return "Code complexity" }
-func (a *Analyzer) Description() string {
-	return "Reports cyclomatic complexity, long functions, many parameters, flag arguments"
-}
-func (a *Analyzer) Stage() core.StageID     { return core.StageAST }
-func (a *Analyzer) Category() core.Category { return core.CatAST }
-func (a *Analyzer) Needs() core.Requirements {
-	return core.Requirements{NeedsAST: true}
-}
+func (a *Analyzer) ID() string          { return "complexity" }
+func (a *Analyzer) Stage() core.StageID { return core.StageAST }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	th := a.resolveThresholds(ctx)
@@ -54,12 +46,15 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 
 // resolveThresholds overlays the runtime analyzer params onto the compiled-in
 // defaults so a project can tighten or loosen the thresholds without a
-// rebuild.
+// rebuild, and resolves both reporters against ctx once per run rather than
+// leaving them frozen at their package-level default severity.
 func (a *Analyzer) resolveThresholds(ctx *core.AnalysisContext) thresholds {
 	params := ctx.Params(a.ID())
 	return thresholds{
 		maxComplexity: params.Int("max_complexity", a.maxComplexity),
 		maxFuncLines:  params.Int("max_func_lines", a.maxFuncLines),
 		maxParams:     params.Int("max_params", a.maxParams),
+		warnReporter:  complexityWarnReporter.Resolved(ctx),
+		infoReporter:  complexityInfoReporter.Resolved(ctx),
 	}
 }

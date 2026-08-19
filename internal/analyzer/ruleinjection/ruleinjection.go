@@ -63,6 +63,8 @@ var defaultRuleMap = map[string]string{
 	"golangci-lint": "code-smells",
 }
 
+var _ core.InPlaceAnalyzer = (*Analyzer)(nil)
+
 // Analyzer injects rule summaries into findings at StageRuleInjection. It
 // maps each finding's AnalyzerID to a knowledge-base rule ID via the
 // defaultRuleMap and looks up the summary from the Index.
@@ -76,14 +78,12 @@ func NewAnalyzer(index *knowledge.Index) *Analyzer {
 	return &Analyzer{index: index}
 }
 
-func (a *Analyzer) ID() string   { return "rule-injection" }
-func (a *Analyzer) Name() string { return "Rule injection" }
-func (a *Analyzer) Description() string {
-	return "Attaches rule summaries to findings"
-}
-func (a *Analyzer) Stage() core.StageID      { return core.StageRuleInjection }
-func (a *Analyzer) Category() core.Category  { return core.CatCommit }
-func (a *Analyzer) Needs() core.Requirements { return core.Requirements{} }
+func (a *Analyzer) ID() string          { return "rule-injection" }
+func (a *Analyzer) Stage() core.StageID { return core.StageRuleInjection }
+
+// TransformsInPlace marks Analyzer as a core.InPlaceAnalyzer: it annotates
+// ctx.Findings in place rather than contributing new findings.
+func (a *Analyzer) TransformsInPlace() {}
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	injectRuleSummaries(ctx.Findings, a.index)
