@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
 func TestRun_NoBinary(t *testing.T) {
@@ -200,11 +202,11 @@ func TestResolvedConfigFlag_NotFound(t *testing.T) {
 func TestParseOutput_Raw(t *testing.T) {
 	t.Parallel()
 
-	out := []byte(
-		`{"Issues":[{"FromLinter":"errcheck","Text":"unchecked error","Severity":"warning",` +
-			`"Pos":{"Filename":"foo.go","Line":42}}]}`,
-	)
-	findings := NewRunner("").parseOutput(out, nil)
+	out := `{"Issues": [{
+  "FromLinter": "errcheck", "Text": "unchecked error", "Severity": "warning",
+  "Pos": {"Filename": "foo.go", "Line": 42}
+}]}`
+	findings := NewRunner("").parseOutput(process.Result{Stdout: out}, nil)
 	if len(findings) != 1 {
 		t.Fatalf("expected 1 finding, got %d", len(findings))
 	}

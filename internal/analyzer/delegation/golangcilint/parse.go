@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
 type lintReport struct {
@@ -27,13 +28,13 @@ type lintPos struct {
 	Line     int    `json:"Line"`
 }
 
-func (r *Runner) parseOutput(out []byte, cmdErr error) []pass.Finding {
-	if failure := r.exitFailure(cmdErr); failure != nil {
+func (r *Runner) parseOutput(result process.Result, cmdErr error) []pass.Finding {
+	if failure := r.exitFailure(result, cmdErr); failure != nil {
 		return failure
 	}
 
-	var result lintReport
-	if parseErr := json.Unmarshal(extractJSON(out), &result); parseErr != nil {
+	var parsed lintReport
+	if parseErr := json.Unmarshal(extractJSON([]byte(result.Stdout)), &parsed); parseErr != nil {
 		return []pass.Finding{
 			r.failure.New(
 				fmt.Sprintf("failed to parse golangci-lint output: %s", parseErr),
@@ -41,7 +42,7 @@ func (r *Runner) parseOutput(out []byte, cmdErr error) []pass.Finding {
 		}
 	}
 
-	findings, escaped := issueFindings(result.Issues)
+	findings, escaped := issueFindings(parsed.Issues)
 	// A stale cache is the environment's problem, not the code's, so it
 	// warns instead of failing the gate the way a real lint finding does.
 	if escaped > 0 {
@@ -50,7 +51,7 @@ func (r *Runner) parseOutput(out []byte, cmdErr error) []pass.Finding {
 	return findings
 }
 
-func (r *Runner) exitFailure(cmdErr error) []pass.Finding {
+func (r *Runner) exitFailure(result process.Result, cmdErr error) []pass.Finding {
 	if cmdErr == nil {
 		return nil
 	}
@@ -66,7 +67,7 @@ func (r *Runner) exitFailure(cmdErr error) []pass.Finding {
 		return nil
 	}
 	return []pass.Finding{
-		r.failure.New(fmt.Sprintf("golangci-lint failed: %s", string(exitErr.Stderr))),
+		r.failure.New(fmt.Sprintf("golangci-lint failed: %s", result.Stderr)),
 	}
 }
 
