@@ -30,7 +30,7 @@ pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude
 pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
+pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit|changed] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
 pulsarules_cli clean [--project DIR] [--write]
 pulsarules_cli evals --artifact FILE [--scenario ID]
 pulsarules_cli version
@@ -212,7 +212,8 @@ project and print findings to stderr, exiting non-zero on any error-severity fin
 analyzes only files `git status` reports as changed; `--all-files` walks the whole source tree
 instead (skipping `.git/`, `.claude/`, `.opencode/`, `generated/`, `build/`, and `vendor/`).
 `--scope commit` runs the lightweight static + AST + commit checks only (what the pre-commit hook
-uses); `--scope full` (default) adds architecture, delegation, and the `branch-name` check.
+uses); `--scope changed` adds the architecture analyzers over the changed files (what the Stop hook
+uses); `--scope full` (default) adds delegation and the `branch-name` check.
 `--preset recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity`
 overrides how hard a `typographic-markers` finding lands for this run; `--branch-extra-types` widens
 the branch-type prefixes `branch-name` accepts (see the install flags of the same name for the
