@@ -90,12 +90,10 @@ func BootstrapOptions(opts *cliopts.Options) bootstrap.Options {
 	}
 }
 
-// resolveProjectDir mirrors each command's pre-DI project-directory fallback:
-// governance requires an explicit project dir (--project or
-// PULSARULES_PROJECT_DIR) and reports that itself; install/uninstall bind
-// --project onto opts.Project (their install destination, resolved by
-// cliopts.Options.BaseDir) rather than opts.ProjectDir, so it is read here
-// too - the install target and the analyzed repository are the same checkout.
+// resolveProjectDir mirrors each command's pre-DI project-directory fallback.
+// why: install/uninstall bind --project onto opts.Project (their install
+// destination), not opts.ProjectDir, so it is read here too - the install
+// target and the analyzed repository are one checkout.
 func resolveProjectDir(opts *cliopts.Options) string {
 	if opts.ProjectDir != "" {
 		return opts.ProjectDir

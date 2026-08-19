@@ -22,12 +22,10 @@ var errProjectDirRequired = errors.New(
 	"governance requires --project DIR or PULSARULES_PROJECT_DIR",
 )
 
-// validScopes names the --scope spellings accepted before analysis.ParseScope
-// runs. It excludes "changed" on purpose: analysis.ScopeChanged exists, but
-// ParseScope does not parse a "changed" string onto it yet (that belongs to
-// internal/analysis's owner) - it falls back to ScopeFull like any other
-// unrecognized value, so accepting "changed" here would validate a spelling
-// ParseScope still silently downgrades.
+// validScopes names the --scope spellings accepted before ParseScope runs.
+// why: "changed" is excluded until ParseScope parses it - today it falls
+// through to ScopeFull, so accepting it here would validate a spelling the
+// parser silently downgrades.
 var validScopes = []string{"full", "commit"}
 
 // validateScope rejects an unrecognized --scope by name, the same way

@@ -14,9 +14,9 @@ func Usage() error {
 	return nil
 }
 
-// UsageText returns the embedded usage banner, so a caller (e.g. a parity
-// test asserting every dispatched command is documented) can inspect it
-// without shelling out to Usage's stdout write.
+// UsageText returns the embedded usage banner.
+// why: the dispatch-parity test reads the banner directly rather than
+// capturing Usage's write to os.Stdout.
 func UsageText() string {
 	return usageText
 }
