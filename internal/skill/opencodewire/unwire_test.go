@@ -205,7 +205,11 @@ func TestUnwireConfig_ChangedSignal(t *testing.T) {
 	}{
 		{name: "absent file", wantChanged: false},
 		{name: "present with no wiring", seed: `{"theme": "dark"}`, wantChanged: false},
-		{name: "present with instructions wired", seed: `{"instructions": ["AGENTS.md"]}`, wantChanged: true},
+		{
+			name:        "present with instructions wired",
+			seed:        `{"instructions": ["AGENTS.md"]}`,
+			wantChanged: true,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

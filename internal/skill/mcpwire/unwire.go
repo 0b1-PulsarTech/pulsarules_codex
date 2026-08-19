@@ -2,14 +2,12 @@ package mcpwire
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/gitignore"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsonconfig"
 )
 
 // RemoveMCP removes the managed servers (gopls) from <repoDir>/.mcp.json,
@@ -23,12 +21,12 @@ import (
 // with no gopls entry.
 func RemoveMCP(repoDir string) (changed bool, err error) {
 	path := filepath.Join(repoDir, ".mcp.json")
-	existing, err := os.ReadFile(path) //nolint:gosec // path is the caller's project root.
+	existing, err := jsonconfig.Read(path)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return false, nil
-		}
-		return false, fmt.Errorf("read %q: %w", path, err)
+		return false, err
+	}
+	if existing == nil {
+		return false, nil
 	}
 
 	config := map[string]json.RawMessage{}

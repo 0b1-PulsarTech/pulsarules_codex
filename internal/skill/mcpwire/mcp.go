@@ -3,16 +3,15 @@ package mcpwire
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"text/template"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/gitignore"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsonconfig"
 )
 
 // server is one MCP server the installer wires in. Add another by appending
@@ -49,9 +48,9 @@ func WriteMCP(templates fs.FS, repoDir string) error {
 		return fmt.Errorf("render servers: %w", err)
 	}
 	path := filepath.Join(repoDir, ".mcp.json")
-	existing, err := os.ReadFile(path) //nolint:gosec // path is the caller's project root.
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("read %q: %w", path, err)
+	existing, err := jsonconfig.Read(path)
+	if err != nil {
+		return err
 	}
 	merged, err := mergeServers(existing, servers)
 	if err != nil {

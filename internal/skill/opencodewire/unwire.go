@@ -3,14 +3,12 @@ package opencodewire
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 	"path/filepath"
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsonconfig"
 )
 
 // UnwireConfig removes the instruction globs and gopls MCP entry WireConfig
@@ -24,12 +22,12 @@ import (
 // file carrying neither wired instructions nor a gopls entry.
 func UnwireConfig(projectDir string) (changed bool, err error) {
 	path := filepath.Join(projectDir, configFile)
-	existing, err := os.ReadFile(path) //nolint:gosec // path is under the caller's project dir.
+	existing, err := jsonconfig.Read(path)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return false, nil
-		}
-		return false, fmt.Errorf("read %q: %w", path, err)
+		return false, err
+	}
+	if existing == nil {
+		return false, nil
 	}
 
 	config := map[string]json.RawMessage{}

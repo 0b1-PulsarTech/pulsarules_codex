@@ -3,7 +3,6 @@ package hookwire
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsonconfig"
 )
 
 // hookScript is the basename used both to install the hook and to recognise (and
@@ -31,9 +31,9 @@ func WireSettings(templates fs.FS, claudeDir, settingsFile string) error {
 		return fmt.Errorf("mkdir %q: %w", claudeDir, err)
 	}
 	path := filepath.Join(claudeDir, settingsFile)
-	existing, err := os.ReadFile(path) //nolint:gosec // path is under the caller's .claude dir.
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("read %q: %w", path, err)
+	existing, err := jsonconfig.Read(path)
+	if err != nil {
+		return err
 	}
 
 	merged, err := mergeSettings(existing, block)

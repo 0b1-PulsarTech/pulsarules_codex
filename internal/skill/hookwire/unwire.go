@@ -2,14 +2,12 @@ package hookwire
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsonconfig"
 )
 
 // UnwireSettings undoes WireSettings on <claudeDir>/<settingsFile>, reporting
@@ -19,12 +17,12 @@ import (
 // why: filters at COMMAND level, but an emptied group survives unless we emptied it.
 func UnwireSettings(claudeDir, settingsFile string) (bool, error) {
 	path := filepath.Join(claudeDir, settingsFile)
-	existing, err := os.ReadFile(path) //nolint:gosec // path is under the caller's .claude dir.
+	existing, err := jsonconfig.Read(path)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return false, nil
-		}
-		return false, fmt.Errorf("read %q: %w", path, err)
+		return false, err
+	}
+	if existing == nil {
+		return false, nil
 	}
 
 	settings := map[string]json.RawMessage{}
