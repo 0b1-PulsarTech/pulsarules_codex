@@ -60,6 +60,13 @@ func bindInstallFlags(fs *flag.FlagSet, opts *Options) {
 		false,
 		"prompt for unset customizations (e.g. the layout) before installing",
 	)
+	bindGitHookFlags(fs, opts)
+}
+
+// bindGitHookFlags registers the flags that shape the GENERATED git hooks, kept
+// apart from the rest because they are install-time policy baked into the
+// scripts rather than choices about what to render.
+func bindGitHookFlags(fs *flag.FlagSet, opts *Options) {
 	fs.StringVar(
 		&opts.GitHooks,
 		"git-hooks",
@@ -71,6 +78,13 @@ func bindInstallFlags(fs *flag.FlagSet, opts *Options) {
 		"no-git-hooks",
 		false,
 		"skip git hooks installation entirely",
+	)
+	fs.StringVar(
+		&opts.TypographicSeverity,
+		"typographic-severity",
+		"",
+		"bake into the git hooks how hard a typographic-marker finding lands "+
+			"(error|warning|info); empty keeps the analyzer default",
 	)
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -103,6 +104,15 @@ func governanceConfig(opts *cliopts.Options) (*config.GovernanceConfig, error) {
 
 	if opts.GolangciConfig != "" {
 		cfg.SetParam("golangci-lint", "config_path", opts.GolangciConfig)
+	}
+	if opts.TypographicSeverity != "" {
+		if !core.ValidSeverityName(opts.TypographicSeverity) {
+			return nil, fmt.Errorf(
+				"invalid --typographic-severity %q (want %s)",
+				opts.TypographicSeverity, strings.Join(core.SeverityNames(), "|"),
+			)
+		}
+		cfg.SetParam("typographic-markers", "severity", opts.TypographicSeverity)
 	}
 	return cfg, nil
 }

@@ -19,11 +19,12 @@ BINARY="$COMMON_DIR/hooks/` + binaryName + `"
 [ -x "$BINARY" ] || exit 0
 `
 
-// hookSpec describes one git hook: the WHY a reader of .git/hooks sees and the
-// installer invocation it execs.
+// hookSpec describes one git hook: the WHY a reader of .git/hooks sees, the
+// installer invocation it execs, and whether governance policy applies to it.
 type hookSpec struct {
 	description string
 	command     string
+	governed    bool
 }
 
 // hookSpecs is the whole supported set, keyed by git hook name.
@@ -35,21 +36,44 @@ var hookSpecs = map[string]hookSpec{
 	"pre-commit": {
 		description: "runs governance checks on staged changes",
 		command:     `governance --project "$PROJECT_DIR" --scope commit`,
+		governed:    true,
 	},
 	"pre-push": {
 		description: "runs governance checks before pushing",
 		command:     `governance --project "$PROJECT_DIR"`,
+		governed:    true,
 	},
+}
+
+// Options carries the policy chosen at install time, baked into the scripts.
+// why: a git hook receives no arguments from the person committing, so a flag not
+// written into the script at install can never reach the gate - this is what
+// makes a configured severity apply to pre-commit, not just a hand-typed run.
+type Options struct {
+	// TypographicSeverity, when set, spells how hard a typographic-marker
+	// finding lands. Empty leaves the analyzer's own default in place.
+	TypographicSeverity string
+}
+
+// governanceFlags renders opts as flags appended to a governance invocation.
+func (o Options) governanceFlags() string {
+	if o.TypographicSeverity == "" {
+		return ""
+	}
+	return " --typographic-severity " + o.TypographicSeverity
 }
 
 // hookScript renders the full shell script for one git hook, reporting false
 // for a name no hook is defined for.
-func hookScript(name string) (string, bool) {
+func hookScript(name string, opts Options) (string, bool) {
 	spec, ok := hookSpecs[name]
 	if !ok {
 		return "", false
 	}
 	command := spec.command
+	if spec.governed {
+		command += opts.governanceFlags()
+	}
 	return "#!/bin/sh\n" +
 		"# pulsarules_codex " + name + " hook - " + spec.description + ".\n" +
 		"# " + marker.Installed + "; remove or edit this file to disable.\n" +

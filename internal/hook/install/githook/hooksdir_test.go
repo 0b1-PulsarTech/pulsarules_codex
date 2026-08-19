@@ -65,7 +65,7 @@ func TestInstall_LinkedWorktree(t *testing.T) {
 
 	mainDir, worktree := newWorktree(t)
 	hooks := []string{"commit-msg", "pre-commit", "pre-push"}
-	if _, err := Install(worktree, hooks); err != nil {
+	if _, err := Install(worktree, hooks, Options{}); err != nil {
 		t.Fatalf("Install from worktree: %v", err)
 	}
 
@@ -92,7 +92,7 @@ func TestUninstall_LinkedWorktree(t *testing.T) {
 	t.Parallel()
 
 	mainDir, worktree := newWorktree(t)
-	if _, err := Install(worktree, []string{"commit-msg"}); err != nil {
+	if _, err := Install(worktree, []string{"commit-msg"}, Options{}); err != nil {
 		t.Fatalf("Install from worktree: %v", err)
 	}
 
@@ -137,11 +137,11 @@ func TestOrphans_SurviveUninstall(t *testing.T) {
 	}
 
 	writeForeign("#!/bin/sh\n# first hand-written hook\n")
-	if _, err := Install(dir, []string{"commit-msg"}); err != nil {
+	if _, err := Install(dir, []string{"commit-msg"}, Options{}); err != nil {
 		t.Fatalf("first Install: %v", err)
 	}
 	writeForeign("#!/bin/sh\n# second hand-written hook\n")
-	if _, err := Install(dir, []string{"commit-msg"}); err != nil {
+	if _, err := Install(dir, []string{"commit-msg"}, Options{}); err != nil {
 		t.Fatalf("second Install: %v", err)
 	}
 

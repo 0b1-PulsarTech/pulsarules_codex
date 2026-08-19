@@ -92,6 +92,7 @@ func TestRegistryUninstall_Git(t *testing.T) {
 				if _, err := githook.Install(
 					dir,
 					[]string{"commit-msg", "pre-commit"},
+					githook.Options{},
 				); err != nil {
 					t.Fatalf("githook.Install: %v", err)
 				}
