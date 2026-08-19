@@ -169,3 +169,35 @@ func TestTopOfFile_BuildTagExempt(t *testing.T) {
 		t.Fatalf("build-tag header should be exempt, got %d findings", len(findings))
 	}
 }
+
+func TestTopOfFile_SkipsTestdataFixture(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	fixtureDir := filepath.Join(dir, "testdata")
+	if err := os.MkdirAll(fixtureDir, 0o750); err != nil {
+		t.Fatalf("mkdir testdata: %v", err)
+	}
+	path := filepath.Join(fixtureDir, "bad.go")
+	if err := os.WriteFile(
+		path,
+		[]byte("// This is a package docstring\npackage foo\n"),
+		0o644,
+	); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := pass.NewLanguageRegistry()
+	langs.Register(golang.New())
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&pass.Context{
+		ProjectDir: dir,
+		Sources:    pass.NewSourceProvider(dir),
+		ChangedFiles: []pass.FileChange{
+			{Path: "testdata/bad.go", Extension: ".go"},
+		},
+	})
+	if len(findings) != 0 {
+		t.Fatalf("got %d findings for a testdata fixture, want 0: %+v", len(findings), findings)
+	}
+}

@@ -1,8 +1,6 @@
 package character
 
 import (
-	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -13,16 +11,10 @@ func eachMarkedFile(
 	check func(pass.FileChange, string) []pass.Finding,
 ) []pass.Finding {
 	scanned := map[string]bool{".go": true, ".md": true}
-	eligible := func(fc pass.FileChange) bool {
-		return scanned[strings.ToLower(fc.Extension)] && !isFixture(fc.Path)
-	}
+	eligible := func(fc pass.FileChange) bool { return scanned[strings.ToLower(fc.Extension)] }
 	return pass.EachChangedFile(ctx, eligible, func(
 		fc pass.FileChange, src []byte,
 	) []pass.Finding {
 		return check(fc, string(src))
 	})
-}
-
-func isFixture(path string) bool {
-	return slices.Contains(strings.Split(filepath.ToSlash(path), "/"), "testdata")
 }
