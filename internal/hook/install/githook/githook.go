@@ -2,6 +2,7 @@ package githook
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -23,7 +24,7 @@ func Install(dir string, hooks []string) (backedUp []string, err error) {
 		return nil, fmt.Errorf("mkdir .git/hooks: %w", err)
 	}
 	for _, name := range hooks {
-		script, ok := hookScripts()[name]
+		script, ok := hookScript(name)
 		if !ok {
 			return backedUp, fmt.Errorf(
 				"unknown git hook %q (want %s)", name, strings.Join(HookNames(), "|"),
@@ -53,37 +54,6 @@ func Install(dir string, hooks []string) (backedUp []string, err error) {
 	return backedUp, nil
 }
 
-func hookScripts() map[string]string {
-	return map[string]string{
-		"commit-msg": `#!/bin/sh
-# pulsarules_codex commit-msg hook - validates commit message format.
-# ` + marker.Installed + `; remove or edit this file to disable.
-PROJECT_DIR=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
-BINARY="$PROJECT_DIR/` + binaryRel + `"
-[ -x "$BINARY" ] || exit 0
-exec "$BINARY" commitlint --project "$PROJECT_DIR" --file "$1"
-`,
-
-		"pre-commit": `#!/bin/sh
-# pulsarules_codex pre-commit hook - runs governance checks on staged changes.
-# ` + marker.Installed + `; remove or edit this file to disable.
-PROJECT_DIR=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
-BINARY="$PROJECT_DIR/` + binaryRel + `"
-[ -x "$BINARY" ] || exit 0
-exec "$BINARY" governance --project "$PROJECT_DIR" --scope commit
-`,
-
-		"pre-push": `#!/bin/sh
-# pulsarules_codex pre-push hook - runs governance checks before pushing.
-# ` + marker.Installed + `; remove or edit this file to disable.
-PROJECT_DIR=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
-BINARY="$PROJECT_DIR/` + binaryRel + `"
-[ -x "$BINARY" ] || exit 0
-exec "$BINARY" governance --project "$PROJECT_DIR"
-`,
-	}
-}
-
 func InstallBinary(dir string) error {
 	dst := filepath.Join(dir, ".git", "hooks", "pulsarules_cli")
 	if err := selfbin.Copy(dst); err != nil {
@@ -93,17 +63,12 @@ func InstallBinary(dir string) error {
 }
 
 func HookNames() []string {
-	names := make([]string, 0, len(hookScripts()))
-	for name := range hookScripts() {
-		names = append(names, name)
-	}
-	slices.Sort(names)
-	return names
+	return slices.Sorted(maps.Keys(hookSpecs()))
 }
 
 func Uninstall(dir string) (removed, restored []string, err error) {
 	hooksDir := filepath.Join(dir, ".git", "hooks")
-	for name := range hookScripts() {
+	for name := range hookSpecs() {
 		path := filepath.Join(hooksDir, name)
 		_, ours, checkErr := marker.Check(path)
 		if checkErr != nil {
