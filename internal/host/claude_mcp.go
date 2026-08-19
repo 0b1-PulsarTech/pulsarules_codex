@@ -14,7 +14,7 @@ import (
 
 func wireClaudeMCP(templates fs.FS, repoDir, skillsDir string, report *Report) error {
 	if !mcp.GoplsOnPath() {
-		report.warn(noGoplsWarning)
+		report.Warn(noGoplsWarning)
 		return nil
 	}
 	if err := mcp.Write(templates, repoDir); err != nil {
@@ -23,7 +23,7 @@ func wireClaudeMCP(templates fs.FS, repoDir, skillsDir string, report *Report) e
 	if err := generateGoplsSkill(templates, skillsDir, report); err != nil {
 		return fmt.Errorf("generate gopls skill: %w", err)
 	}
-	report.note(
+	report.Note(
 		"wired gopls MCP into %s; generated gopls-navigation skill",
 		filepath.Join(repoDir, ".mcp.json"),
 	)
@@ -34,13 +34,13 @@ func unwireClaudeMCP(repoDir string, report *Report) error {
 	changed, err := mcp.Remove(repoDir)
 	if err != nil {
 		if errors.Is(err, jsondoc.ErrUnparseableJSON) {
-			report.warn("%v", err)
+			report.Warn("%v", err)
 			return nil
 		}
 		return fmt.Errorf("remove mcp: %w", err)
 	}
 	if changed {
-		report.note("unwired gopls from %s", filepath.Join(repoDir, ".mcp.json"))
+		report.Note("unwired gopls from %s", filepath.Join(repoDir, ".mcp.json"))
 	}
 	return nil
 }
@@ -56,7 +56,7 @@ func generateGoplsSkill(templates fs.FS, skillsDir string, report *Report) error
 	backedUp, genErr := mcp.GenerateGoplsSkill(templates, skillsDir, instructions)
 	// Backed-up foreign files must reach the report, or a hand-written skill is renamed silently.
 	for _, msg := range backedUp {
-		report.warn("%s", msg)
+		report.Warn("%s", msg)
 	}
 	if genErr != nil {
 		return fmt.Errorf("generate gopls skill: %w", genErr)

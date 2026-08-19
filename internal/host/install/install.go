@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/fs"
 	"slices"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/report"
 )
 
 type Context struct {
@@ -13,7 +15,6 @@ type Context struct {
 	GitHooks            []string
 	TypographicSeverity string
 	BranchExtraTypes    string
-	Warn                func(format string, args ...any)
 }
 
 type UninstallContext struct {
@@ -21,17 +22,10 @@ type UninstallContext struct {
 	SettingsFile string
 }
 
-type Result struct {
-	Removed         []string
-	Restored        []string
-	Notes           []string
-	SettingsChanged bool
-}
-
 type Installer interface {
 	Name() string
-	Install(ctx Context) error
-	Uninstall(ctx UninstallContext) (Result, error)
+	Install(ctx Context) (report.Report, error)
+	Uninstall(ctx UninstallContext) (report.Report, error)
 }
 
 type Registry struct {
@@ -46,27 +40,28 @@ func NewRegistry() *Registry {
 	return reg
 }
 
-func (reg *Registry) Install(name string, ctx Context) error {
+func (reg *Registry) Install(name string, ctx Context) (report.Report, error) {
 	inst, ok := reg.byName[name]
 	if !ok {
-		return fmt.Errorf("unknown hook installer %q", name)
+		return report.Report{}, fmt.Errorf("unknown hook installer %q", name)
 	}
-	if err := inst.Install(ctx); err != nil {
-		return fmt.Errorf("install %s: %w", inst.Name(), err)
+	rpt, err := inst.Install(ctx)
+	if err != nil {
+		return rpt, fmt.Errorf("install %s: %w", inst.Name(), err)
 	}
-	return nil
+	return rpt, nil
 }
 
-func (reg *Registry) Uninstall(name string, ctx UninstallContext) (Result, error) {
+func (reg *Registry) Uninstall(name string, ctx UninstallContext) (report.Report, error) {
 	inst, ok := reg.byName[name]
 	if !ok {
-		return Result{}, fmt.Errorf("unknown hook installer %q", name)
+		return report.Report{}, fmt.Errorf("unknown hook installer %q", name)
 	}
-	result, err := inst.Uninstall(ctx)
+	rpt, err := inst.Uninstall(ctx)
 	if err != nil {
-		return result, fmt.Errorf("uninstall %s: %w", inst.Name(), err)
+		return rpt, fmt.Errorf("uninstall %s: %w", inst.Name(), err)
 	}
-	return result, nil
+	return rpt, nil
 }
 
 func (reg *Registry) Has(name string) bool {

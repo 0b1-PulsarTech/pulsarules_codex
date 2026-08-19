@@ -42,15 +42,15 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 	if ctx.NoHooks {
 		return report, nil
 	}
-	if err := ctx.HookInstallers.Install("claude", install.Context{
+	sub, err := ctx.HookInstallers.Install("claude", install.Context{
 		Dir:          claudeDir,
 		Templates:    ctx.Templates,
 		SettingsFile: ctx.SettingsFile,
-		Warn:         report.warn,
-	}); err != nil {
+	})
+	report.Merge(sub)
+	if err != nil {
 		return report, fmt.Errorf("install hooks: %w", err)
 	}
-	report.note("wired hook into %s", filepath.Join(claudeDir, ctx.SettingsFile))
 	return report, nil
 }
 
@@ -91,21 +91,16 @@ func unwireClaudeHooks(
 	var errs []error
 	for _, settingsFile := range files {
 		uctx := install.UninstallContext{Dir: claudeDir, SettingsFile: settingsFile}
-		result, err := hooks.Uninstall("claude", uctx)
+		sub, err := hooks.Uninstall("claude", uctx)
 		if err != nil {
 			if errors.Is(err, jsondoc.ErrUnparseableJSON) {
-				report.warn("%v", err)
+				report.Warn("%v", err)
 				continue
 			}
 			errs = append(errs, fmt.Errorf("uninstall hooks (%s): %w", settingsFile, err))
 			continue
 		}
-		if result.SettingsChanged {
-			report.note("removed hook wiring from %s", filepath.Join(claudeDir, settingsFile))
-		}
-		for _, msg := range result.Restored {
-			report.note("%s", msg)
-		}
+		report.Merge(sub)
 	}
 	return errors.Join(errs...)
 }
