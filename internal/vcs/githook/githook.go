@@ -70,23 +70,16 @@ func Uninstall(dir string) (removed, restored []string, err error) {
 	dest := hooksDir(dir)
 	for name := range hookSpecs() {
 		path := filepath.Join(dest, name)
-		_, ours, checkErr := ownedfile.Check(path)
-		if checkErr != nil {
-			return removed, restored, fmt.Errorf("check %q: %w", path, checkErr)
+		removedOK, note, uninstallErr := ownedfile.UninstallFile(path)
+		if uninstallErr != nil {
+			return removed, restored, fmt.Errorf("uninstall hook %q: %w", name, uninstallErr)
 		}
-		if !ours {
+		if !removedOK {
 			continue
 		}
-		if err = os.Remove(path); err != nil {
-			return removed, restored, fmt.Errorf("remove %q: %w", path, err)
-		}
 		removed = append(removed, name)
-		restoredOK, restoreErr := ownedfile.Restore(path)
-		if restoreErr != nil {
-			return removed, restored, fmt.Errorf("restore %q: %w", path, restoreErr)
-		}
-		if restoredOK {
-			restored = append(restored, ownedfile.RestoreMessage(path))
+		if note != "" {
+			restored = append(restored, note)
 		}
 	}
 	if err = os.RemoveAll(filepath.Join(dest, binaryName)); err != nil {
