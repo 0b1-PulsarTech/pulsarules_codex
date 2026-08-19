@@ -1,7 +1,7 @@
 ---
 id: agent-orchestration
 name: Agent orchestration
-description: Delegate to agents safely - the main session orchestrates and integrates, implementation runs the staged loop (implement, review, fix, test) inside the cheap tier before it returns, scouts and reviewers are read-only, parallel writers get isolated worktrees verified via git reflog, git-history operations are never delegated, and delegated results are verified before they land.
+description: Delegate to agents safely - the main session orchestrates and integrates, implementation runs the staged loop (implement, review, fix, test) inside the cheap tier before it returns, scouts and reviewers are read-only, parallel writers get isolated worktrees, git-history operations are never delegated, and delegated results are verified before they land.
 tags:
     - process
     - agents
@@ -41,6 +41,11 @@ Applies to: any task that fans work out to subagents or runs agents in parallel.
    work. Only a converged result returns to the orchestrator.
 8. The orchestrator's audit is a second review, never a rubber stamp on the agent's own report: one
    reviewer misses things, and an agent grading itself is the reviewer most likely to.
+9. Brief the agent with the intent behind each task, not just the instruction, and say which side is
+   authoritative when a test and the code disagree - "fix the failing test" invites baking the bug
+   into the expectation.
+10. Tell the agent which commit to work from, and verify the base yourself: a worktree cut from the
+    wrong base silently produces work against code that no longer exists.
 {{end}}
 
 {{define "recipe"}}
@@ -87,4 +92,5 @@ reported verbatim.
 - [ ] Delegated results were verified (diff re-read, build and tests run) before landing.
 - [ ] The staged loop ran with a separate fresh agent per stage; nobody reviewed their own work.
 - [ ] The orchestrator audited independently rather than trusting the agent's own report.
+- [ ] Every agent had an explicit file-ownership list and a stated base commit, both verified.
 {{end}}
