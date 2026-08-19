@@ -66,7 +66,7 @@ func TestFormatFindings(t *testing.T) {
 			name:     "cli upcases the severity and appends the rule",
 			findings: []core.Finding{locatedFinding()},
 			style:    StyleCLI,
-			want: "[WARN] file-size: file is too long (internal/a.go:42)\n" +
+			want: "[WARNING] file-size: file is too long (internal/a.go:42)\n" +
 				"  \u2192 split it\n" +
 				"  rule: Keep functions short and files under one concept.\n",
 		},
@@ -74,7 +74,7 @@ func TestFormatFindings(t *testing.T) {
 			name:     "hook indents, downcases and drops the rule",
 			findings: []core.Finding{locatedFinding()},
 			style:    StyleHook,
-			want: "  [warn] file-size: file is too long (internal/a.go:42)\n" +
+			want: "  [warning] file-size: file is too long (internal/a.go:42)\n" +
 				"    \u2192 split it\n",
 		},
 		{
@@ -100,7 +100,7 @@ func TestFormatFindings(t *testing.T) {
 			name:     "an all-blank rule body prints no rule line",
 			findings: []core.Finding{blankRuleFinding()},
 			style:    StyleCLI,
-			want:     "[WARN] naming: bad name\n",
+			want:     "[WARNING] naming: bad name\n",
 		},
 		{
 			name:     "an unknown style falls back to the cli layout",
@@ -134,7 +134,7 @@ func TestFormatFindingsRendersEveryFinding(t *testing.T) {
 	if lines := strings.Count(got, "\n"); lines != len(findings) {
 		t.Fatalf("rendered %d lines, want %d:\n%s", lines, len(findings), got)
 	}
-	for _, want := range []string{"[ERROR] one", "[WARN] two", "[INFO] three"} {
+	for _, want := range []string{"[ERROR] one", "[WARNING] two", "[INFO] three"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("output missing %q:\n%s", want, got)
 		}
