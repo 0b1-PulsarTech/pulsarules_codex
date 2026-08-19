@@ -66,9 +66,10 @@ func findCycles(g depGraph) [][]string {
 	return cycles
 }
 
-// simplification: boundary rules use a simple prefix-based classification
-// (domain, infra, transport). This works for the standard app layout.
-// Upgrade path: add an explicit config map for non-standard layouts.
+// classifyLayer names the layer a package sits in, or layerUnclassified when no
+// rule recognizes it.
+// simplification: prefix-based classification fits the standard app layout.
+// Upgrade path: an explicit config map for a non-standard one.
 func classifyLayer(pkgPath string) string {
 	for p := range strings.SplitSeq(pkgPath, "/") {
 		switch p {
@@ -82,8 +83,13 @@ func classifyLayer(pkgPath string) string {
 			return "cmd"
 		}
 	}
-	return "other"
+	return layerUnclassified
 }
+
+// layerUnclassified marks a package no layer rule recognizes. It is SKIPPED
+// rather than ranked: ranked innermost, an apps/ + libs/ + proto/ tree classified
+// as unrecognized and every ordinary import read as an inward violation.
+const layerUnclassified = ""
 
 // layer rank constants used by checkBoundaries' inward-only ordering: a
 // higher rank must never depend on a lower one.
@@ -92,7 +98,6 @@ const (
 	layerRankTransport
 	layerRankInfra
 	layerRankDomain
-	layerRankOther
 )
 
 // checkBoundaries verifies that inner layers do not depend on outer layers.
@@ -104,13 +109,18 @@ func checkBoundaries(g depGraph, modulePath string) []string {
 		"transport": layerRankTransport,
 		"infra":     layerRankInfra,
 		"domain":    layerRankDomain,
-		"other":     layerRankOther,
 	}
 
 	for pkg, deps := range g {
 		pkgLayer := classifyLayer(pkg)
+		if pkgLayer == layerUnclassified {
+			continue
+		}
 		for _, dep := range deps {
 			depLayer := classifyLayer(dep)
+			if depLayer == layerUnclassified {
+				continue
+			}
 			pkgOrd := layerOrder[pkgLayer]
 			depOrd := layerOrder[depLayer]
 			if pkgOrd > depOrd {
