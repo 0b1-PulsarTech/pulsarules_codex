@@ -93,6 +93,12 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 			"",
 			"how hard a typographic-marker finding lands (error|warning|info)",
 		)
+		fs.StringVar(
+			&opts.BranchExtraTypes,
+			"branch-extra-types",
+			"",
+			"comma-separated branch types allowed beyond the Conventional Commit set",
+		)
 		fs.BoolVar(
 			&opts.AllFiles,
 			"all-files",

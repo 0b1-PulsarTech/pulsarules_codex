@@ -16,6 +16,8 @@ type Context struct {
 	// TypographicSeverity is baked into the generated hook scripts, so the gate
 	// the hook applies is the one install chose (see githook.Options).
 	TypographicSeverity string
+	// BranchExtraTypes is baked into the pre-push hook the same way.
+	BranchExtraTypes string
 	// Warn, if set, receives a formatted non-fatal notice - such as a
 	// foreign file backed up before being overwritten - so the caller's own
 	// report channel surfaces it instead of the message being dropped. A nil

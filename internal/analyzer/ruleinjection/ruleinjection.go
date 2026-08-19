@@ -25,6 +25,7 @@ var defaultRuleMap = map[string]string{
 	"vacuous-doc":         "effective-go",
 	"simplification-path": "minimalism",
 	// commit-lint sub-rules (each has its own AnalyzerID)
+	"branch-name":              "commits",
 	"commit-lint":              "commits",
 	"commit-initial":           "commits",
 	"commit-merge":             "commits",

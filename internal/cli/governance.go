@@ -9,6 +9,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/branchname"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
@@ -113,6 +114,16 @@ func governanceConfig(opts *cliopts.Options) (*config.GovernanceConfig, error) {
 			)
 		}
 		cfg.SetParam("typographic-markers", "severity", opts.TypographicSeverity)
+	}
+	if opts.BranchExtraTypes != "" {
+		if !branchname.ValidExtraTypes(opts.BranchExtraTypes) {
+			return nil, fmt.Errorf(
+				"invalid --branch-extra-types %q (want a comma-separated list of "+
+					"lowercase names, e.g. release,hotfix)",
+				opts.BranchExtraTypes,
+			)
+		}
+		cfg.SetParam("branch-name", "extra_types", opts.BranchExtraTypes)
 	}
 	return cfg, nil
 }

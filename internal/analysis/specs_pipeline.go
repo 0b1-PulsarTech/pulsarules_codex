@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/arch"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/branchname"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
@@ -14,6 +15,16 @@ import (
 // pipeline-housekeeping tail of analyzerSpecs (specs.go), split into this
 // file only to keep specs.go under the file-size ceiling.
 var pipelineAnalyzerSpecs = []analyzerSpec{
+	{
+		// why: ScopeFull only, which is where the pre-push hook runs. A branch
+		// name is not a property of a staged change, so gating a COMMIT on it
+		// would block work that a rename before pushing fixes.
+		id: "branch-name",
+		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, repo vcs.Repository) core.Analyzer {
+			return branchname.NewAnalyzer(repo)
+		},
+		scopes: []Scope{ScopeFull},
+	},
 	{
 		id: "arch-boundary",
 		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {

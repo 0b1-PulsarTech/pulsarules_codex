@@ -132,6 +132,7 @@ func installPostTargets(
 			Templates:           templates,
 			GitHooks:            gitHooks,
 			TypographicSeverity: opts.TypographicSeverity,
+			BranchExtraTypes:    opts.BranchExtraTypes,
 			Warn: func(format string, args ...any) {
 				_, _ = fmt.Fprintf(os.Stderr, "warning: "+format+"\n", args...)
 			},

@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/branchname"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install/githook"
@@ -26,6 +27,16 @@ func resolveGitHooks(opts *cliopts.Options) ([]string, error) {
 	// where the person committing cannot see which flag was wrong.
 	if err := validateTypographicSeverity(opts.TypographicSeverity); err != nil {
 		return nil, err
+	}
+	// why: the value is written INTO a generated shell script, so an entry
+	// outside the allowed alphabet is refused here rather than quoted and hoped
+	// for at the point it runs.
+	if !branchname.ValidExtraTypes(opts.BranchExtraTypes) {
+		return nil, fmt.Errorf(
+			"invalid --branch-extra-types %q (want a comma-separated list of "+
+				"lowercase names, e.g. release,hotfix)",
+			opts.BranchExtraTypes,
+		)
 	}
 	return hooks, nil
 }

@@ -53,14 +53,21 @@ type Options struct {
 	// TypographicSeverity, when set, spells how hard a typographic-marker
 	// finding lands. Empty leaves the analyzer's own default in place.
 	TypographicSeverity string
+	// BranchExtraTypes, when set, lists the branch types a project allows on top
+	// of the Conventional Commit set. Empty allows only the commit types.
+	BranchExtraTypes string
 }
 
 // governanceFlags renders opts as flags appended to a governance invocation.
 func (o Options) governanceFlags() string {
-	if o.TypographicSeverity == "" {
-		return ""
+	var flags string
+	if o.TypographicSeverity != "" {
+		flags += " --typographic-severity " + o.TypographicSeverity
 	}
-	return " --typographic-severity " + o.TypographicSeverity
+	if o.BranchExtraTypes != "" {
+		flags += " --branch-extra-types " + o.BranchExtraTypes
+	}
+	return flags
 }
 
 // hookScript renders the full shell script for one git hook, reporting false
