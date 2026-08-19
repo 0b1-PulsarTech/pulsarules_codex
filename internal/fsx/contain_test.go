@@ -89,3 +89,39 @@ func TestResolveInside_SymlinkStayingInside(t *testing.T) {
 		t.Errorf("ResolveInside rejected a link that stays inside: %v", err)
 	}
 }
+
+// TestResolveInside_SymlinkedRootNewFile is the regression the darwin temp dir
+// exposed: when root itself is reached through a link and the target does not
+// exist yet, resolving only the root compares two spellings of one tree and
+// every about-to-be-written file reads as an escape. Built explicitly here so
+// the case holds on a platform whose temp dir is not itself a link.
+func TestResolveInside_SymlinkedRootNewFile(t *testing.T) {
+	t.Parallel()
+
+	realRoot := t.TempDir()
+	linkRoot := filepath.Join(t.TempDir(), "link")
+	if err := os.Symlink(realRoot, linkRoot); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	testCases := []struct {
+		name string
+		rel  string
+	}{
+		{name: "file that does not exist yet", rel: "new.txt"},
+		{name: "nested file whose parent does not exist yet", rel: "sub/new.txt"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := ResolveInside(linkRoot, filepath.Join(linkRoot, testCase.rel))
+			if err != nil {
+				t.Fatalf("ResolveInside through a linked root: %v", err)
+			}
+			if !filepath.IsAbs(got) {
+				t.Errorf("got %q, want an absolute path", got)
+			}
+		})
+	}
+}
