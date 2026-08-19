@@ -55,6 +55,8 @@ func defaultRuleMap() map[string]string {
 	}
 }
 
+var _ core.InPlaceAnalyzer = (*Analyzer)(nil)
+
 type Analyzer struct {
 	index *knowledge.Index
 }
@@ -66,6 +68,8 @@ func NewAnalyzer(index *knowledge.Index) *Analyzer {
 
 func (a *Analyzer) ID() string          { return "rule-injection" }
 func (a *Analyzer) Stage() core.StageID { return core.StageRuleInjection }
+
+func (a *Analyzer) TransformsInPlace() {}
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	injectRuleSummaries(ctx.Findings, a.index)

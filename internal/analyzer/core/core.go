@@ -5,3 +5,8 @@ type Analyzer interface {
 	Stage() StageID
 	Analyze(ctx *AnalysisContext) []Finding
 }
+
+type InPlaceAnalyzer interface {
+	Analyzer
+	TransformsInPlace()
+}

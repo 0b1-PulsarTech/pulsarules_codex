@@ -8,6 +8,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
+var _ core.InPlaceAnalyzer = (*Analyzer)(nil)
+
 type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer { return &Analyzer{} }
@@ -15,6 +17,8 @@ func NewAnalyzer() *Analyzer { return &Analyzer{} }
 func (a *Analyzer) ID() string { return "output" }
 
 func (a *Analyzer) Stage() core.StageID { return core.StageOutput }
+
+func (a *Analyzer) TransformsInPlace() {}
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if len(ctx.Findings) == 0 {

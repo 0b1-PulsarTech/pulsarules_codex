@@ -80,6 +80,50 @@ func TestStageRunnerDisabledAnalyzer(t *testing.T) {
 	}
 }
 
+type stubInPlaceAnalyzer struct {
+	id    string
+	stage core.StageID
+}
+
+func (s stubInPlaceAnalyzer) ID() string          { return s.id }
+func (s stubInPlaceAnalyzer) Stage() core.StageID { return s.stage }
+func (s stubInPlaceAnalyzer) TransformsInPlace()  {}
+
+func (s stubInPlaceAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	if len(ctx.Findings) > 0 {
+		ctx.Findings = ctx.Findings[1:]
+	}
+	return []core.Finding{{AnalyzerID: "should-not-be-appended"}}
+}
+
+var _ core.InPlaceAnalyzer = stubInPlaceAnalyzer{}
+
+func TestStageRunnerInPlaceAnalyzerNotAppended(t *testing.T) {
+	t.Parallel()
+
+	r := NewStageRunner(nil)
+	r.Register(stubAnalyzer{
+		id:    "producer",
+		stage: core.StageStatic,
+		findings: []core.Finding{
+			{AnalyzerID: "one"}, {AnalyzerID: "two"},
+		},
+	})
+	r.Register(stubInPlaceAnalyzer{id: "transformer", stage: core.StageOutput})
+
+	findings := r.RunStages(&core.AnalysisContext{})
+	if len(findings) != 1 {
+		t.Fatalf(
+			"expected 1 finding (one dropped, none appended), got %d: %+v",
+			len(findings),
+			findings,
+		)
+	}
+	if findings[0].AnalyzerID != "two" {
+		t.Fatalf("expected the surviving finding to be %q, got %q", "two", findings[0].AnalyzerID)
+	}
+}
+
 func TestStageRunnerOrdersByStage(t *testing.T) {
 	t.Parallel()
 
