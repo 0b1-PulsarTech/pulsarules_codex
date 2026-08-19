@@ -171,6 +171,18 @@ func TestResolveProjectDir(t *testing.T) {
 	}
 }
 
+func TestResolveProjectDir_InstallFlag(t *testing.T) {
+	t.Parallel()
+
+	opts, err := cliopts.ParseArgs([]string{"install", "--project", "/tmp/repo", "--all"})
+	if err != nil {
+		t.Fatalf("ParseArgs: %v", err)
+	}
+	if got := resolveProjectDir(opts); got != "/tmp/repo" {
+		t.Errorf("resolveProjectDir() = %q, want %q", got, "/tmp/repo")
+	}
+}
+
 func TestResolveLogPath(t *testing.T) {
 	testCases := []struct {
 		name    string
