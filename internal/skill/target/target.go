@@ -1,10 +1,10 @@
 package target
 
 import (
-	"fmt"
 	"io/fs"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/report"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -36,15 +36,4 @@ type Target interface {
 	Uninstall(ctx UninstallContext) (Report, error)
 }
 
-type Report struct {
-	Notes    []string
-	Warnings []string
-}
-
-func (r *Report) note(format string, args ...any) {
-	r.Notes = append(r.Notes, fmt.Sprintf(format, args...))
-}
-
-func (r *Report) warn(format string, args ...any) {
-	r.Warnings = append(r.Warnings, fmt.Sprintf(format, args...))
-}
+type Report = report.Report

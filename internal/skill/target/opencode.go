@@ -40,7 +40,7 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 			}
 			gopls = opencodewire.WithGopls
 		} else {
-			report.warn(noGoplsWarning)
+			report.Warn(noGoplsWarning)
 		}
 	}
 	if err := writeAgents(ctx, &report); err != nil {
@@ -53,21 +53,16 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 		return report, fmt.Errorf("wire opencode config: %w", err)
 	}
 	if !ctx.NoHooks {
-		installErr := ctx.HookInstallers.Install("opencode", install.Context{
+		sub, installErr := ctx.HookInstallers.Install("opencode", install.Context{
 			Dir:       ctx.Base,
 			Templates: ctx.Templates,
-			Warn:      report.warn,
 		})
+		report.Merge(sub)
 		if installErr != nil {
-			report.warn("opencode plugin: %v", installErr)
-		} else {
-			report.note(
-				"installed opencode governance plugin: %s",
-				filepath.Join(ctx.Base, ".opencode", "plugins"),
-			)
+			report.Warn("opencode plugin: %v", installErr)
 		}
 	}
-	report.note("wired opencode: %s", filepath.Join(ctx.Base, "opencode.json"))
+	report.Note("wired opencode: %s", filepath.Join(ctx.Base, "opencode.json"))
 	return report, nil
 }
 
@@ -85,20 +80,14 @@ func (opencodeTarget) Uninstall(ctx UninstallContext) (Report, error) {
 	if err := unwireOpencodeConfig(ctx.Base, &report); err != nil {
 		return report, err
 	}
-	// Note only on actual removal: a never-installed plugin must not be reported as removed.
-	result, err := ctx.HookUninstallers.Uninstall(
+	sub, err := ctx.HookUninstallers.Uninstall(
 		"opencode",
 		install.UninstallContext{Dir: ctx.Base},
 	)
 	if err != nil {
 		return report, fmt.Errorf("uninstall opencode plugin: %w", err)
 	}
-	if len(result.Removed) > 0 {
-		report.note(
-			"removed opencode governance plugin: %s",
-			filepath.Join(ctx.Base, ".opencode", "plugins"),
-		)
-	}
+	report.Merge(sub)
 	if err = fsx.RemoveEmptyDir(filepath.Join(ctx.Base, ".opencode")); err != nil {
 		return report, fmt.Errorf("remove empty opencode dir: %w", err)
 	}
@@ -111,13 +100,13 @@ func retireLegacyAgents(base string, report *Report) error {
 		return fmt.Errorf("retire legacy agents: %w", err)
 	}
 	if removed {
-		report.note(
+		report.Note(
 			"retired legacy %s (superseded by %s)",
 			filepath.Join(base, ".opencode", "AGENTS.md"),
 			filepath.Join(base, "AGENTS.md"),
 		)
 	} else if warning != "" {
-		report.warn("%s", warning)
+		report.Warn("%s", warning)
 	}
 	return nil
 }
@@ -126,13 +115,13 @@ func unwireOpencodeConfig(projectDir string, report *Report) error {
 	changed, err := opencodewire.UnwireConfig(projectDir)
 	if err != nil {
 		if errors.Is(err, fsx.ErrUnparseableJSON) {
-			report.warn("%v", err)
+			report.Warn("%v", err)
 			return nil
 		}
 		return fmt.Errorf("unwire opencode config: %w", err)
 	}
 	if changed {
-		report.note("unwired %s", filepath.Join(projectDir, "opencode.json"))
+		report.Note("unwired %s", filepath.Join(projectDir, "opencode.json"))
 	}
 	return nil
 }

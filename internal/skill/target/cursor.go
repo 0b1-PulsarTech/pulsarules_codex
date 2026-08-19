@@ -61,7 +61,7 @@ func writeCursorRules(ctx Context, report *Report) error {
 	for _, id := range ctx.IDs {
 		skill, ok := ctx.Index.Skill(id)
 		if !ok {
-			report.warn("skipped (unknown skill): %s", id)
+			report.Warn("skipped (unknown skill): %s", id)
 			continue
 		}
 		body, err := ctx.Renderer.RenderSkillCursor(ctx.Index, skill, ctx.RouterFilter)
@@ -82,9 +82,9 @@ func writeCursorFile(base, id, body string, report *Report) error {
 	}
 	path := filepath.Join(base, cursorwire.RulesDir, id+".mdc")
 	if wrote {
-		report.note("installed: %s", path)
+		report.Note("installed: %s", path)
 	} else {
-		report.warn("kept existing user-authored %s (not overwritten)", path)
+		report.Warn("kept existing user-authored %s (not overwritten)", path)
 	}
 	return nil
 }
@@ -100,7 +100,7 @@ func (cursorTarget) Uninstall(ctx UninstallContext) (Report, error) {
 	}
 	dir := filepath.Join(ctx.Base, cursorwire.RulesDir)
 	for _, id := range removed {
-		report.note("removed: %s", filepath.Join(dir, id+".mdc"))
+		report.Note("removed: %s", filepath.Join(dir, id+".mdc"))
 	}
 	const cursorRootDir = ".cursor"
 	// RulesDir is the only thing written under .cursor, so reaping the empty root is safe.
