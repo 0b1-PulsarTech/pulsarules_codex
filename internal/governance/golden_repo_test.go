@@ -12,6 +12,8 @@ var _ vcs.Repository = (*goldenRepo)(nil)
 
 func (g *goldenRepo) Root() string { return g.root }
 
+func (g *goldenRepo) CurrentBranch() (string, error) { return "", nil }
+
 func (g *goldenRepo) HeadAuthorEpoch() (int64, bool, error) { return 0, false, nil }
 
 func (g *goldenRepo) RecentSubjects(int) ([]string, error) { return nil, nil }

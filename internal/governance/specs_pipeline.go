@@ -1,7 +1,10 @@
 package governance
 
 import (
+	"slices"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/arch"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/branch"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/concurrency/clock"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
@@ -12,8 +15,17 @@ import (
 )
 
 func pipelineAnalyzerSpecs() []analyzerSpec {
-	return []analyzerSpec{
+	return slices.Concat([]analyzerSpec{
 		staticSpec("time-discipline", clock.NewAnalyzer),
+		{
+			id: "branch-name",
+			build: func(
+				_ *knowledge.Index, _ *pass.LanguageRegistry, repo vcs.Repository,
+			) pass.Analyzer {
+				return branch.NewAnalyzer(repo)
+			},
+			scopes: []Scope{ScopeFull},
+		},
 		{
 			id: "arch-boundary",
 			build: func(
@@ -32,15 +44,7 @@ func pipelineAnalyzerSpecs() []analyzerSpec {
 			},
 			scopes: archScopes(),
 		},
-		{
-			id: "golangci-lint",
-			build: func(
-				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
-			) pass.Analyzer {
-				return golangcilint.NewAnalyzer("golangci-lint")
-			},
-			scopes: delegationScopes(),
-		},
+	}, delegationSpecs(), []analyzerSpec{
 		{
 			id: "rule-injection",
 			build: func(
@@ -51,5 +55,19 @@ func pipelineAnalyzerSpecs() []analyzerSpec {
 			scopes: staticScopes(),
 		},
 		staticSpec("output", output.NewAnalyzer),
+	})
+}
+
+func delegationSpecs() []analyzerSpec {
+	return []analyzerSpec{
+		{
+			id: "golangci-lint",
+			build: func(
+				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
+			) pass.Analyzer {
+				return golangcilint.NewAnalyzer("golangci-lint")
+			},
+			scopes: delegationScopes(),
+		},
 	}
 }

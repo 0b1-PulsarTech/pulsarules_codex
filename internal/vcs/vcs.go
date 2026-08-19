@@ -13,6 +13,7 @@ type Repository interface {
 	Root() string
 	HeadAuthorEpoch() (int64, bool, error)
 	RecentSubjects(limit int) ([]string, error)
+	CurrentBranch() (string, error)
 	WorktreeStatus() (Status, error)
 	StagedRenames(minScore int) ([]Rename, error)
 	StagedDiff(path string) (string, error)
@@ -39,6 +40,14 @@ func Open(dir string) (Repository, error) {
 
 func (repo *repository) Root() string {
 	return repo.root
+}
+
+func (repo *repository) CurrentBranch() (string, error) {
+	branch, err := runGit(repo.root, "branch", "--show-current")
+	if err != nil {
+		return "", fmt.Errorf("read current branch: %w", err)
+	}
+	return branch, nil
 }
 
 func (repo *repository) HeadAuthorEpoch() (int64, bool, error) {
