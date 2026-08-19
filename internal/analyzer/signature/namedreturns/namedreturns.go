@@ -32,19 +32,20 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 }
 
 func checkFile(
-	fset *token.FileSet, fc pass.FileChange, f *ast.File, reporter pass.Reporter,
+	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter pass.Reporter,
 ) []pass.Finding {
 	var findings []pass.Finding
 
-	ast.Inspect(f, func(n ast.Node) bool {
-		switch node := n.(type) {
+	ast.Inspect(file, func(node ast.Node) bool {
+		switch typed := node.(type) {
 		case *ast.FuncDecl:
-			site := declSite{name: node.Name.Name, pos: node.Pos(), results: node.Type.Results}
+			site := declSite{name: typed.Name.Name, pos: typed.Pos(), results: typed.Type.Results}
 			findings = append(findings, checkResults(fset, fc, site, reporter)...)
 		case *ast.InterfaceType:
-			for _, field := range node.Methods.List {
+			for _, field := range typed.Methods.List {
 				funcType, ok := field.Type.(*ast.FuncType)
 				if !ok || len(field.Names) == 0 {
+					// Embedded interface: no method name of its own to report.
 					continue
 				}
 				site := declSite{

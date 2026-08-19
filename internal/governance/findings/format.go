@@ -88,7 +88,7 @@ func location(finding pass.Finding) string {
 func severityLabel(severity pass.Severity) string {
 	switch severity {
 	case pass.SeverityWarning:
-		return "warn"
+		return "warning"
 	case pass.SeverityError:
 		return "error"
 	default:
