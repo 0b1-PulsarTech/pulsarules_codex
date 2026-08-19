@@ -1,7 +1,7 @@
 ---
 id: agent-orchestration
 name: Agent orchestration
-description: Delegate to agents safely - the main session orchestrates and integrates, scouts and reviewers are read-only, parallel writers get isolated worktrees verified via git reflog, git-history operations are never delegated, and delegated results are verified before they land.
+description: Delegate to agents safely - the main session orchestrates and integrates, implementation runs the staged loop (implement, review, fix, test) inside the cheap tier before it returns, scouts and reviewers are read-only, parallel writers get isolated worktrees, git-history operations are never delegated, and delegated results are verified before they land.
 tags:
     - process
     - agents
@@ -34,6 +34,42 @@ Applies to: any task that fans work out to subagents or runs agents in parallel.
    results yourself.
 6. Verify delegated work before acting on it: re-read the diff, run the build and tests, confirm
    findings against the code.
+7. Run the STAGED LOOP in the cheap model tier, with a SEPARATE agent per stage - implement,
+   review, fix, test. A fresh agent brings an empty context, so it neither inherits the previous
+   agent's blind spots nor re-reads its rationalisations; the stages are adversarial by design, the
+   reviewer's job being to find what the implementer missed. Never let one agent review its own
+   work. Only a converged result returns to the orchestrator.
+8. The orchestrator's audit is a SECOND review, never a rubber stamp on the agent's own report: one
+   reviewer misses things, and an agent grading itself is the reviewer most likely to.
+9. Brief the agent with the INTENT behind each task, not just the instruction, and say which side is
+   authoritative when a test and the code disagree - "fix the failing test" invites baking the bug
+   into the expectation.
+10. Tell the agent which commit to work from, and verify the base yourself: a worktree cut from the
+    wrong base silently produces work against code that no longer exists.
+{{end}}
+
+{{define "recipe"}}
+The staged loop for one bounded slice of work:
+
+1. ORCHESTRATOR: bound the slice, name the files the agent owns (disjoint from every other
+   concurrent writer), and state the return contract - commits, per-task status, the test that
+   proves each item, and the verbatim output of the verification commands.
+2. IMPLEMENTER (fresh agent): implement the slice.
+3. REVIEWER (fresh agent, read-only, told nothing of the implementer's reasoning): review the diff
+   against the loaded skills' validation checklists and return findings as data. Its brief says to
+   find what is wrong, not to confirm the work.
+4. FIXER (fresh agent): apply the review's findings. TESTER (fresh agent): re-run the gates and
+   prove each fix with a test that fails without it. Repeat 3-4 with NEW agents each round until a
+   review round returns nothing; only then return.
+5. ORCHESTRATOR: audit independently - re-read the diff, re-run build, race tests, linters and the
+   governance gate on the integrated tree, and confirm each claimed fix has a test that fails
+   without it. Treat "tests pass" in a report as a claim to check, not a result.
+6. ORCHESTRATOR: integrate. Every git-history operation (cherry-pick, rebase, fold, reset) happens
+   here, never in the agent.
+
+Fixture-green is not correct: an agent can pass build, vet, race tests, lint and its own fixtures and
+still be wrong against a real repository. End every brief with a proof run against real data,
+reported verbatim.
 {{end}}
 
 {{define "forbidden"}}
@@ -41,6 +77,11 @@ Applies to: any task that fans work out to subagents or runs agents in parallel.
 - Running two write-capable agents against the same working tree concurrently.
 - Giving a scout or reviewer write tools.
 - Merging a subagent's output without re-reading the diff and running the build and tests.
+- Letting one agent review, fix, or test its own implementation - each stage gets a fresh agent.
+- Returning a first draft to the orchestrator before a review round came back empty.
+- Accepting an agent's "tests pass" as verification instead of re-running them on the integrated
+  tree.
+- Delegating a slice without naming the files it owns, or letting two writers own the same file.
 {{end}}
 
 {{define "validation"}}
@@ -49,4 +90,7 @@ Applies to: any task that fans work out to subagents or runs agents in parallel.
 - [ ] Parallel writers had isolated worktrees; the tree was verified via `git status`/`git reflog`.
 - [ ] No git-history operation was delegated.
 - [ ] Delegated results were verified (diff re-read, build and tests run) before landing.
+- [ ] The staged loop ran with a separate fresh agent per stage; nobody reviewed their own work.
+- [ ] The orchestrator audited independently rather than trusting the agent's own report.
+- [ ] Every agent had an explicit file-ownership list and a stated base commit, both verified.
 {{end}}
