@@ -20,9 +20,6 @@ func NewAnalyzer(langs *pass.LanguageRegistry) *Analyzer {
 
 func (a *Analyzer) ID() string          { return "top-of-file" }
 func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
-func (a *Analyzer) Needs() pass.Requirements {
-	return pass.Requirements{}
-}
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if a.langs == nil || ctx.Sources == nil {

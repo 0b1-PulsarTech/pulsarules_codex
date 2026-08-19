@@ -12,9 +12,8 @@ type stubAnalyzer struct {
 	findings []pass.Finding
 }
 
-func (s stubAnalyzer) ID() string               { return s.id }
-func (s stubAnalyzer) Stage() pass.StageID      { return s.stage }
-func (s stubAnalyzer) Needs() pass.Requirements { return pass.Requirements{} }
+func (s stubAnalyzer) ID() string          { return s.id }
+func (s stubAnalyzer) Stage() pass.StageID { return s.stage }
 func (s stubAnalyzer) Analyze(_ *pass.Context) []pass.Finding {
 	return s.findings
 }

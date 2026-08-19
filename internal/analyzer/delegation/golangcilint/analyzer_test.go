@@ -61,9 +61,6 @@ func TestAnalyzer_StageRegistryKey(t *testing.T) {
 	if got := a.Stage(); got != pass.StageStatic {
 		t.Errorf("Stage() = %v, want StageStatic", got)
 	}
-	if req := a.Needs(); req.NeedsAST || req.NeedsGitHistory {
-		t.Errorf("Needs() = %+v, want no requirements", req)
-	}
 }
 
 func TestAnalyzer_SkipsWithoutBinary(t *testing.T) {

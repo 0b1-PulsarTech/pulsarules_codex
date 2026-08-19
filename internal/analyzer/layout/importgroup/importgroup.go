@@ -21,9 +21,6 @@ func NewAnalyzer() *Analyzer {
 
 func (a *Analyzer) ID() string          { return "import-groups" }
 func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
-func (a *Analyzer) Needs() pass.Requirements {
-	return pass.Requirements{}
-}
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	modulePath, err := pass.ModulePath(ctx.ProjectDir)

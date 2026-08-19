@@ -14,10 +14,6 @@ func (probe *langProbe) ID() string                             { return "probe"
 func (probe *langProbe) Stage() pass.StageID                    { return pass.StageAST }
 func (probe *langProbe) Analyze(_ *pass.Context) []pass.Finding { return nil }
 
-func (probe *langProbe) Needs() pass.Requirements {
-	return pass.Requirements{}
-}
-
 func TestLangSpec_InjectedRegistry(t *testing.T) {
 	t.Parallel()
 

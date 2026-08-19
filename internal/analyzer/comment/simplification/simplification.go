@@ -20,9 +20,6 @@ func NewAnalyzer() *Analyzer {
 
 func (a *Analyzer) ID() string          { return "simplification-path" }
 func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
-func (a *Analyzer) Needs() pass.Requirements {
-	return pass.Requirements{}
-}
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if ctx.Sources == nil {

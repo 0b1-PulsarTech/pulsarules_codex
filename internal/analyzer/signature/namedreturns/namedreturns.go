@@ -21,9 +21,6 @@ func NewAnalyzer() *Analyzer {
 
 func (a *Analyzer) ID() string          { return "named-returns" }
 func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
-func (a *Analyzer) Needs() pass.Requirements {
-	return pass.Requirements{NeedsAST: true}
-}
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {

@@ -64,9 +64,8 @@ func NewAnalyzer(index *knowledge.Index) *Analyzer {
 	return &Analyzer{index: index}
 }
 
-func (a *Analyzer) ID() string               { return "rule-injection" }
-func (a *Analyzer) Stage() pass.StageID      { return pass.StageRuleInjection }
-func (a *Analyzer) Needs() pass.Requirements { return pass.Requirements{} }
+func (a *Analyzer) ID() string          { return "rule-injection" }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageRuleInjection }
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	injectRuleSummaries(ctx.Findings, a.index)

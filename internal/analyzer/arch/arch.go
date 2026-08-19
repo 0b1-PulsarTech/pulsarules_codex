@@ -38,9 +38,6 @@ func NewPackageBoundaryAnalyzer() *PackageBoundaryAnalyzer {
 
 func (a *PackageBoundaryAnalyzer) ID() string          { return "arch-boundary" }
 func (a *PackageBoundaryAnalyzer) Stage() pass.StageID { return pass.StageArch }
-func (a *PackageBoundaryAnalyzer) Needs() pass.Requirements {
-	return pass.Requirements{}
-}
 
 func (a *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if ctx.ProjectDir == "" {
@@ -78,9 +75,6 @@ func NewImportCycleAnalyzer() *ImportCycleAnalyzer {
 
 func (a *ImportCycleAnalyzer) ID() string          { return "import-cycle" }
 func (a *ImportCycleAnalyzer) Stage() pass.StageID { return pass.StageArch }
-func (a *ImportCycleAnalyzer) Needs() pass.Requirements {
-	return pass.Requirements{}
-}
 
 func (a *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if ctx.ProjectDir == "" {

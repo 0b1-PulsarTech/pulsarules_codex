@@ -14,8 +14,7 @@ func NewAnalyzer() *Analyzer { return &Analyzer{} }
 
 func (a *Analyzer) ID() string { return "output" }
 
-func (a *Analyzer) Stage() pass.StageID      { return pass.StageOutput }
-func (a *Analyzer) Needs() pass.Requirements { return pass.Requirements{} }
+func (a *Analyzer) Stage() pass.StageID { return pass.StageOutput }
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if len(ctx.Findings) == 0 {
