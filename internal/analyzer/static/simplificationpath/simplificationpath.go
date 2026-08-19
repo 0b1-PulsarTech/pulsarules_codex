@@ -23,22 +23,16 @@ func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	reporter := a.reporter.Resolved(ctx)
-	if ctx.Sources == nil {
-		return nil
-	}
-	var findings []core.Finding
-	for _, fc := range ctx.ChangedFiles {
-		if fc.Extension != ".go" {
-			continue
-		}
-		src, ok := ctx.Sources.Read(fc.Path)
-		if !ok {
-			continue
-		}
-		findings = append(findings, scanFile(src, fc.Path, reporter)...)
-	}
-	return findings
+	return core.EachChangedFile(
+		ctx,
+		isGoFile,
+		func(fc core.FileChange, src []byte) []core.Finding {
+			return scanFile(src, fc.Path, reporter)
+		},
+	)
 }
+
+func isGoFile(fc core.FileChange) bool { return fc.Extension == ".go" }
 
 func scanFile(src []byte, path string, reporter core.Reporter) []core.Finding {
 	var findings []core.Finding

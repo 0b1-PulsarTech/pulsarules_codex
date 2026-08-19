@@ -165,9 +165,10 @@ the specs whose scopes contain the requested scope.
 Every analyzer implements the small `core.Analyzer` interface (`ID`, `Stage`, `Analyze`) declared in
 `internal/analyzer/core`, which also carries the shared `AnalysisContext`, `Finding`, and the
 `Language`/`LanguageRegistry` Strategy for file-extension-based dispatch. `Reporter.Resolved(ctx)`
-re-reads a reporter's severity from the run's config. `core.InPlaceAnalyzer` marks the second
-contract - an analyzer that rewrites `ctx.Findings` (rule injection, output) instead of returning
-new ones. The families:
+re-reads a reporter's severity from the run's config, and `core.EachChangedFile` iterates the
+changed files as text, while `core.RunPerGoFile` iterates the parsed Go files.
+`core.InPlaceAnalyzer` marks the second contract - an analyzer that rewrites `ctx.Findings` (rule
+injection, output) instead of returning new ones. The families:
 
 - `static/*` - pure text/structure checks needing no parser: `filesize` (line-count ceiling),
   `textmarkers` (invisible carriers, exotic spaces and AI typographic punctuation), `topoffile` and
@@ -295,7 +296,7 @@ The governance pipeline (see above) adds its own package set:
 | Package                          | Responsibility                                                                                      |
 |----------------------------------|-----------------------------------------------------------------------------------------------------|
 | `internal/analysis`               | `analysis.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`registerForScope`), `specs.go` (`analyzerSpecs`), `runner.go` (`toAnalysisConfig`), `output.go`, `format.go`, `history.go` |
-| `internal/analyzer/core`          | `Analyzer`/`InPlaceAnalyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Reporter.Resolved`, `LanguageRegistry`, `core/astcache` (parsed-AST cache) |
+| `internal/analyzer/core`          | `Analyzer`/`InPlaceAnalyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Reporter.Resolved`, `EachChangedFile`, `LanguageRegistry`, `core/astcache` |
 | `internal/analyzer/static/*`      | `filesize`, `textmarkers`, `topoffile`, `bigcomment` - text/structure checks                        |
 | `internal/analyzer/ast/*`         | `complexity`, `controlflow`, `shadowing`, `imports`, `naming` - `go/ast`-based checks                |
 | `internal/analyzer/arch`          | `PackageBoundaryAnalyzer`, `ImportCycleAnalyzer` - multi-file architecture checks                   |

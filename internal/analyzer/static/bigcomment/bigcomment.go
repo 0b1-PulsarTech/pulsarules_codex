@@ -27,24 +27,19 @@ func (a *Analyzer) ID() string          { return "big-comment" }
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	if a.langs == nil || ctx.Sources == nil {
+	if a.langs == nil {
 		return nil
 	}
 	ml := a.resolveMaxLines(ctx)
 	reporter := a.reporter.Resolved(ctx)
-	var findings []core.Finding
-	for _, fc := range ctx.ChangedFiles {
-		lang := a.langs.Lookup(fc.Extension)
-		if lang == nil {
-			continue
-		}
-		src, ok := ctx.Sources.Read(fc.Path)
-		if !ok {
-			continue
-		}
-		findings = append(findings, scanFile(src, fc, lang, ml, reporter)...)
-	}
-	return findings
+	eligible := func(fc core.FileChange) bool { return a.langs.Lookup(fc.Extension) != nil }
+	return core.EachChangedFile(
+		ctx,
+		eligible,
+		func(fc core.FileChange, src []byte) []core.Finding {
+			return scanFile(src, fc, a.langs.Lookup(fc.Extension), ml, reporter)
+		},
+	)
 }
 
 func scanFile(
