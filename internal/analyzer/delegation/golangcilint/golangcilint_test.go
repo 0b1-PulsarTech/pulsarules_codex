@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 )
@@ -26,6 +27,38 @@ func TestRun_MissingBinary(t *testing.T) {
 	if len(findings) != 0 {
 		t.Fatalf("expected 0 findings for a missing binary, got %d: %+v", len(findings), findings)
 	}
+}
+
+func TestRun_TimeoutIsARealFailureNotASilentSkip(t *testing.T) {
+	t.Parallel()
+
+	script := writeExecSleepScriptNoGrandchild(t)
+	r := NewRunner(script)
+	r.timeout = 50 * time.Millisecond
+
+	start := time.Now()
+	findings := r.Run(t.TempDir(), "")
+	elapsed := time.Since(start)
+
+	if elapsed > 2*time.Second {
+		t.Fatalf("Run took %v, want it killed near the 50ms timeout", elapsed)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding for a timed-out run, got %d: %+v", len(findings), findings)
+	}
+	if findings[0].AnalyzerID != "golangci-lint" {
+		t.Errorf("AnalyzerID = %q, want %q", findings[0].AnalyzerID, "golangci-lint")
+	}
+}
+
+func writeExecSleepScriptNoGrandchild(t *testing.T) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "slow-golangci-lint")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nexec sleep 5\n"), 0o700); err != nil {
+		t.Fatalf("write slow script: %v", err)
+	}
+	return path
 }
 
 func TestLintArgs(t *testing.T) {
