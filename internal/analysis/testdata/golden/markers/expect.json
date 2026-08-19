@@ -7,16 +7,16 @@
       "messageSubstring": "generator"
     },
     {
-      "analyzerId": "typographic-markers",
-      "file": "docs/notes.md",
-      "line": 7,
-      "messageSubstring": "em dash"
-    },
-    {
       "analyzerId": "text-markers",
       "file": "docs/notes.md",
       "line": 7,
       "messageSubstring": "zero width space"
+    },
+    {
+      "analyzerId": "typographic-markers",
+      "file": "docs/notes.md",
+      "line": 7,
+      "messageSubstring": "em dash"
     }
   ],
   "suppressedGenerated": 0
