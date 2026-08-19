@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
 )
 
 // TestInstallWorkflows asserts known workflows are written to
@@ -41,7 +43,7 @@ func TestInstallWorkflows(t *testing.T) {
 	if readErr != nil {
 		t.Fatalf("read workflow .gitignore: %v", readErr)
 	}
-	if want := "WORKFLOW.md\n.gitignore\n"; string(giContent) != want {
+	if want := "# " + marker.Installed + "\nWORKFLOW.md\n.gitignore\n"; string(giContent) != want {
 		t.Errorf("workflow .gitignore content = %q, want %q", string(giContent), want)
 	}
 }
@@ -83,7 +85,7 @@ func TestInstall_RouterAndUnknown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read .gitignore: %v", err)
 	}
-	if want := "SKILL.md\n.gitignore\n"; string(giContent) != want {
+	if want := "# " + marker.Installed + "\nSKILL.md\n.gitignore\n"; string(giContent) != want {
 		t.Errorf(".gitignore content = %q, want %q", string(giContent), want)
 	}
 	if _, statErr := os.Stat(filepath.Join(dest, "ghost")); !errors.Is(statErr, fs.ErrNotExist) {

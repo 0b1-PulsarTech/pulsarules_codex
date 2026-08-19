@@ -11,24 +11,25 @@ import (
 )
 
 // TestRemoveDocs_RemovesOwnedLeavesForeign asserts RemoveDocs deletes only
-// the directories carrying WriteDoc's own fingerprint (docName + the
-// matching sibling .gitignore), leaving a user's own directory (no
-// .gitignore, or one with different content) untouched.
+// the directories whose docName carries marker.Installed, leaving a user's
+// own directory (its docName carries no marker) untouched.
 func TestRemoveDocs_RemovesOwnedLeavesForeign(t *testing.T) {
 	t.Parallel()
 
 	dest := t.TempDir()
-	if _, err := WriteDoc(filepath.Join(dest, "go-style"), "SKILL.md", "body"); err != nil {
+	if _, err := WriteDoc(
+		filepath.Join(dest, "go-style"), "SKILL.md", "body\n"+marker.Installed+"\n",
+	); err != nil {
 		t.Fatalf("WriteDoc: %v", err)
 	}
 	if _, err := WriteDoc(
 		filepath.Join(dest, "gopls-navigation"),
 		"SKILL.md",
-		"body2",
+		"body2\n"+marker.Installed+"\n",
 	); err != nil {
 		t.Fatalf("WriteDoc: %v", err)
 	}
-	// A user's own directory sharing the dest, with no WriteDoc fingerprint.
+	// A user's own directory sharing the dest, its SKILL.md carrying no marker.
 	userDir := filepath.Join(dest, "my-own-notes")
 	if err := os.MkdirAll(userDir, 0o750); err != nil {
 		t.Fatalf("mkdir: %v", err)
@@ -64,7 +65,9 @@ func TestRemoveDocs_RemovesDestWhenEmptied(t *testing.T) {
 	t.Parallel()
 
 	dest := t.TempDir()
-	if _, err := WriteDoc(filepath.Join(dest, "go-style"), "SKILL.md", "body"); err != nil {
+	if _, err := WriteDoc(
+		filepath.Join(dest, "go-style"), "SKILL.md", "body\n"+marker.Installed+"\n",
+	); err != nil {
 		t.Fatalf("WriteDoc: %v", err)
 	}
 
@@ -92,14 +95,16 @@ func TestRemoveDocs_NoOpWhenAbsent(t *testing.T) {
 
 // TestRemoveDocs_PreservesUserFileInsideOwnedDir asserts a file a user (or
 // the skill format itself, e.g. references/) placed inside a directory
-// RemoveDocs recognizes as WriteDoc's own survives: only the fingerprinted
-// docName + .gitignore pair is deleted, leaving the directory non-empty.
+// RemoveDocs recognizes as WriteDoc's own survives: only docName and its
+// .gitignore entries are deleted, leaving the directory non-empty.
 // Regression test for the bug where RemoveDocs os.RemoveAll'd the whole dir.
 func TestRemoveDocs_PreservesUserFileInsideOwnedDir(t *testing.T) {
 	t.Parallel()
 
 	dest := t.TempDir()
-	if _, err := WriteDoc(filepath.Join(dest, "dataviz"), "SKILL.md", "body"); err != nil {
+	if _, err := WriteDoc(
+		filepath.Join(dest, "dataviz"), "SKILL.md", "body\n"+marker.Installed+"\n",
+	); err != nil {
 		t.Fatalf("WriteDoc: %v", err)
 	}
 	nested := filepath.Join(dest, "dataviz", "references", "palette.md")
@@ -144,7 +149,9 @@ func TestRemoveDocs_Idempotent(t *testing.T) {
 	t.Parallel()
 
 	dest := t.TempDir()
-	if _, err := WriteDoc(filepath.Join(dest, "go-style"), "SKILL.md", "body"); err != nil {
+	if _, err := WriteDoc(
+		filepath.Join(dest, "go-style"), "SKILL.md", "body\n"+marker.Installed+"\n",
+	); err != nil {
 		t.Fatalf("WriteDoc: %v", err)
 	}
 	if _, _, err := RemoveDocs(dest, "SKILL.md"); err != nil {

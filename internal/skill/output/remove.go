@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/gitignore"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
 )
 
@@ -48,21 +49,24 @@ func RemoveDocs(dest, docName string) (removed, restored []string, err error) {
 	return removed, restored, nil
 }
 
-// removeOwnedDoc deletes exactly docName and .gitignore from dir, then dir
-// itself once empty, so anything else (a user's file, or a
-// references/scripts/assets/ subdirectory the skill format ships) survives.
-// The .gitignore may already be gone (WriteDoc invites deleting it to
-// commit the doc), so removal tolerates fs.ErrNotExist; restored reports any backup.
+// removeOwnedDoc deletes exactly docName and its gitignore entries from dir,
+// then dir itself once empty, so anything else (a user's file, or a
+// references/scripts/assets/ dir the skill format ships) survives. Restore
+// skips a path gitignore.Remove left standing (foreign entries kept), so a
+// surviving user gitignore is never clobbered by a backup.
 func removeOwnedDoc(dir, docName string) (restored []string, err error) {
 	docPath := filepath.Join(dir, docName)
 	if err = os.Remove(docPath); err != nil {
 		return nil, fmt.Errorf("remove %q: %w", docPath, err)
 	}
-	gitignorePath := filepath.Join(dir, ".gitignore")
-	if rmErr := os.Remove(gitignorePath); rmErr != nil && !errors.Is(rmErr, fs.ErrNotExist) {
-		return nil, fmt.Errorf("remove %q: %w", gitignorePath, rmErr)
+	if _, err = gitignore.Remove(dir, docName, gitignoreName); err != nil {
+		return nil, fmt.Errorf("remove gitignore entries in %q: %w", dir, err)
 	}
+	gitignorePath := filepath.Join(dir, gitignoreName)
 	for _, path := range []string{docPath, gitignorePath} {
+		if _, statErr := os.Lstat(path); statErr == nil {
+			continue // still present (foreign content gitignore.Remove kept); nothing to restore.
+		}
 		restoredOK, restoreErr := marker.Restore(path)
 		if restoreErr != nil {
 			return restored, fmt.Errorf("%w", restoreErr)
@@ -78,19 +82,9 @@ func removeOwnedDoc(dir, docName string) (restored []string, err error) {
 }
 
 // isOwnedDoc reports whether dir already holds a docName this tool
-// installed: either docName carries marker.Installed, or - for a doc
-// rendered before that marker existed - the sibling .gitignore matches
-// WriteDoc's fingerprint. Either proof suffices, so a pre-marker doc still
-// removes cleanly, even with its .gitignore deleted to commit it.
+// installed, proven the same way every other asset this tool writes proves
+// it: docName's own content carries marker.Installed.
 func isOwnedDoc(dir, docName string) bool {
-	docPath := filepath.Join(dir, docName)
-	if _, ours, err := marker.Check(docPath); err == nil && ours {
-		return true
-	}
-	body, err := os.ReadFile(filepath.Join(dir, ".gitignore")) //nolint:gosec // dir is under dest.
-	if err != nil || string(body) != docName+"\n.gitignore\n" {
-		return false
-	}
-	_, err = os.Stat(docPath)
-	return err == nil
+	_, ours, err := marker.Check(filepath.Join(dir, docName))
+	return err == nil && ours
 }

@@ -6,8 +6,14 @@ import (
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/gitignore"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
 )
+
+// gitignoreName is the sibling ignore file WriteDoc maintains through the
+// gitignore package, the same mechanism every other installed asset uses;
+// it carries no ownership meaning of its own (see isOwnedDoc).
+const gitignoreName = ".gitignore"
 
 // writeFile creates parent directories and writes content with gosec-safe perms.
 func writeFile(filePath, content string) error {
@@ -36,12 +42,12 @@ func backupIfPresent(filePath string) (backedUp string, err error) {
 
 // WriteDoc writes body to <dir>/<docName> plus a sibling .gitignore that
 // ignores both, so generated output is untracked by default; delete the
-// .gitignore to commit it (docName carries marker.Installed, so ownership
-// no longer depends on the .gitignore). A dir isOwnedDoc does not recognize
-// is backed up file-by-file first, preserving a user-owned same-named dir.
+// .gitignore to commit it. Ownership is proven solely by docName carrying
+// marker.Installed (see isOwnedDoc). A dir isOwnedDoc does not recognize is
+// backed up file-by-file first, preserving a user-owned same-named dir.
 func WriteDoc(dir, docName, body string) (backedUp []string, err error) {
 	docPath := filepath.Join(dir, docName)
-	gitignorePath := filepath.Join(dir, ".gitignore")
+	gitignorePath := filepath.Join(dir, gitignoreName)
 	if !isOwnedDoc(dir, docName) {
 		for _, path := range []string{docPath, gitignorePath} {
 			msg, backupErr := backupIfPresent(path)
@@ -57,8 +63,7 @@ func WriteDoc(dir, docName, body string) (backedUp []string, err error) {
 	// generated output on disk with nothing ignoring it - untracked in git,
 	// which is the exact state this pair exists to prevent. Reversed, a failure
 	// leaves at worst an orphaned .gitignore that ignores itself.
-	gitignoreBody := docName + "\n.gitignore\n"
-	if err = writeFile(gitignorePath, gitignoreBody); err != nil {
+	if err = gitignore.Ensure(dir, docName, gitignoreName); err != nil {
 		return backedUp, fmt.Errorf("gitignore for %q: %w", docName, err)
 	}
 	if err = writeFile(docPath, body); err != nil {

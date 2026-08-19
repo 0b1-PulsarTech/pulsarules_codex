@@ -164,12 +164,12 @@ func TestWriteDoc_NeverOverwritesExistingBackup(t *testing.T) {
 	}
 }
 
-// TestWriteDoc_LegacyGitignoreOwnershipStillRecognized asserts a doc rendered
-// before the content marker existed - proven only by the sibling .gitignore
-// fingerprint - is still recognized as this tool's own and overwritten in
-// place with no backup, so upgrading to the marker-carrying template does
-// not treat every previously-installed project as foreign.
-func TestWriteDoc_LegacyGitignoreOwnershipStillRecognized(t *testing.T) {
+// TestWriteDoc_PreMarkerDocIsNowForeign pins the breaking change from
+// unifying ownership onto marker.Installed alone: a pre-marker doc,
+// recognizable only by the old .gitignore fingerprint, no longer counts as
+// owned. Both it and its .gitignore are backed up like any foreign occupant
+// instead of silently overwritten - the old fallback is gone, not replaced.
+func TestWriteDoc_PreMarkerDocIsNowForeign(t *testing.T) {
 	t.Parallel()
 
 	dest := t.TempDir()
@@ -177,14 +177,14 @@ func TestWriteDoc_LegacyGitignoreOwnershipStillRecognized(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if err := os.WriteFile(
-		filepath.Join(dir, "SKILL.md"), []byte("# go-style\nno marker here\n"), 0o600,
-	); err != nil {
+	docPath := filepath.Join(dir, "SKILL.md")
+	legacyDoc := "# go-style\nno marker here\n"
+	if err := os.WriteFile(docPath, []byte(legacyDoc), 0o600); err != nil {
 		t.Fatalf("seed legacy doc: %v", err)
 	}
-	if err := os.WriteFile(
-		filepath.Join(dir, ".gitignore"), []byte("SKILL.md\n.gitignore\n"), 0o600,
-	); err != nil {
+	gitignorePath := filepath.Join(dir, ".gitignore")
+	legacyGitignore := "SKILL.md\n.gitignore\n"
+	if err := os.WriteFile(gitignorePath, []byte(legacyGitignore), 0o600); err != nil {
 		t.Fatalf("seed legacy gitignore: %v", err)
 	}
 
@@ -192,11 +192,20 @@ func TestWriteDoc_LegacyGitignoreOwnershipStillRecognized(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WriteDoc: %v", err)
 	}
-	if len(backedUp) != 0 {
-		t.Errorf(
-			"backedUp = %v, want none (recognized via the legacy .gitignore fingerprint)",
-			backedUp,
+	wantDocMsg := marker.BackupMessage(docPath, docPath+marker.BackupSuffix)
+	wantGitignoreMsg := marker.BackupMessage(gitignorePath, gitignorePath+marker.BackupSuffix)
+	if len(backedUp) != 2 || backedUp[0] != wantDocMsg || backedUp[1] != wantGitignoreMsg {
+		t.Fatalf(
+			"backedUp = %v, want [%q %q] (the legacy fingerprint no longer proves ownership)",
+			backedUp, wantDocMsg, wantGitignoreMsg,
 		)
+	}
+	got, readErr := os.ReadFile(docPath + marker.BackupSuffix) //nolint:gosec // test fixture.
+	if readErr != nil {
+		t.Fatalf("read doc backup: %v", readErr)
+	}
+	if string(got) != legacyDoc {
+		t.Errorf("doc backup content = %q, want %q", got, legacyDoc)
 	}
 }
 
