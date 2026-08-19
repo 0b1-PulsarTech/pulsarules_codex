@@ -105,6 +105,12 @@ func bindGovernanceFlags(fs *flag.FlagSet, opts *Options) {
 		"",
 		"how hard a typographic-marker finding lands (error|warning|info)",
 	)
+	fs.StringVar(
+		&opts.BranchExtraTypes,
+		"branch-extra-types",
+		"",
+		"comma-separated branch types allowed beyond the Conventional Commit and gitflow types",
+	)
 	fs.BoolVar(
 		&opts.AllFiles,
 		"all-files",

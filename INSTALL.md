@@ -30,7 +30,7 @@ pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude
 pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info]
+pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
 pulsarules_cli clean [--project DIR] [--write]
 pulsarules_cli evals --artifact FILE [--scenario ID]
 pulsarules_cli version
@@ -211,7 +211,8 @@ instead (skipping `.git/`, `.claude/`, `.opencode/`, `generated/`, `build/`, and
 uses); `--scope full` (default) adds architecture, delegation, and the `branch-name` check.
 `--preset recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity`
 overrides how hard a `typographic-markers` finding lands for this run (see the install flag of the
-same name for the baked-in variant). Findings in generated files (detected by the
+same name for the baked-in variant); `--branch-extra-types` widens the branch-type prefixes
+`branch-name` accepts. Findings in generated files (detected by the
 `// Code generated ... DO NOT EDIT.` marker) are suppressed by default; `--include-generated` turns
 that off.
 
