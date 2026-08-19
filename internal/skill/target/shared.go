@@ -73,7 +73,7 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 }
 
 func removeSkills(dest string, report *Report) error {
-	removed, restored, err := output.RemoveDocs(dest, "SKILL.md")
+	removed, restored, orphaned, err := output.RemoveDocs(dest, "SKILL.md")
 	if err != nil {
 		return fmt.Errorf("remove skills from %q: %w", dest, err)
 	}
@@ -83,11 +83,14 @@ func removeSkills(dest string, report *Report) error {
 	for _, msg := range restored {
 		report.Note("%s", msg)
 	}
+	for _, msg := range orphaned {
+		report.Warn("%s", msg)
+	}
 	return nil
 }
 
 func removeWorkflows(dest string, report *Report) error {
-	removed, restored, err := output.RemoveDocs(dest, "WORKFLOW.md")
+	removed, restored, orphaned, err := output.RemoveDocs(dest, "WORKFLOW.md")
 	if err != nil {
 		return fmt.Errorf("remove workflows from %q: %w", dest, err)
 	}
@@ -96,6 +99,9 @@ func removeWorkflows(dest string, report *Report) error {
 	}
 	for _, msg := range restored {
 		report.Note("%s", msg)
+	}
+	for _, msg := range orphaned {
+		report.Warn("%s", msg)
 	}
 	return nil
 }

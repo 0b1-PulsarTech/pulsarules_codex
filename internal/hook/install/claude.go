@@ -43,7 +43,7 @@ func (claudeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
 	if settingsFile == "" {
 		settingsFile = "settings.json"
 	}
-	restored, err := hookwire.UninstallHook(claudeDir)
+	restored, orphaned, err := hookwire.UninstallHook(claudeDir)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("uninstall claude hook: %w", err)
 	}
@@ -58,6 +58,9 @@ func (claudeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
 	var rpt report.Report
 	if changed {
 		rpt.Note("removed hook wiring from %s", filepath.Join(claudeDir, settingsFile))
+	}
+	for _, msg := range orphaned {
+		rpt.Warn("%s", msg)
 	}
 	for _, msg := range restored {
 		rpt.Note("%s", msg)

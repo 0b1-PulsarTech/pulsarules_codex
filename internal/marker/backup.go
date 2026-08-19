@@ -96,6 +96,19 @@ func Orphans(path string) ([]string, error) {
 	return slots, nil
 }
 
+func OrphanNotes(paths ...string) (notes []string, err error) {
+	for _, path := range paths {
+		slots, slotsErr := Orphans(path)
+		if slotsErr != nil {
+			return notes, fmt.Errorf("list backups of %q: %w", path, slotsErr)
+		}
+		if len(slots) > 0 {
+			notes = append(notes, OrphanMessage(path, slots))
+		}
+	}
+	return notes, nil
+}
+
 func OrphanMessage(path string, slots []string) string {
 	return fmt.Sprintf(
 		"left %d earlier backup(s) of %s in place: %s",

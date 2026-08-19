@@ -99,6 +99,48 @@ func TestRegistryUninstall_GitRemovedHooks(t *testing.T) {
 	}
 }
 
+func TestRegistryUninstall_GitOrphanedBackup(
+	t *testing.T,
+) {
+	t.Parallel()
+
+	reg := NewRegistry()
+	dir := t.TempDir()
+	hooksPath := filepath.Join(dir, ".git", "hooks")
+	if err := os.MkdirAll(hooksPath, 0o750); err != nil {
+		t.Fatalf("mkdir hooks: %v", err)
+	}
+	hookPath := filepath.Join(hooksPath, "pre-commit")
+	writeForeignReplacingReadOnlyHookViaUnlinkFirst := func(body string) {
+		t.Helper()
+		_ = os.Remove(hookPath)
+		if err := os.WriteFile(hookPath, []byte(body), 0o700); err != nil {
+			t.Fatalf("seed foreign hook: %v", err)
+		}
+	}
+
+	writeForeignReplacingReadOnlyHookViaUnlinkFirst("#!/bin/sh\n# first hand-written hook\n")
+	if _, err := githook.Install(dir, []string{"pre-commit"}, githook.Options{}); err != nil {
+		t.Fatalf("first githook.Install: %v", err)
+	}
+	writeForeignReplacingReadOnlyHookViaUnlinkFirst("#!/bin/sh\n# second hand-written hook\n")
+	if _, err := githook.Install(dir, []string{"pre-commit"}, githook.Options{}); err != nil {
+		t.Fatalf("second githook.Install: %v", err)
+	}
+
+	rpt, err := reg.Uninstall("git", UninstallContext{Dir: dir})
+	if err != nil {
+		t.Fatalf("Uninstall(git): %v", err)
+	}
+	wantSlot := hookPath + marker.BackupSuffix + ".1"
+	gotOrphan := slices.ContainsFunc(rpt.Warnings, func(text string) bool {
+		return strings.Contains(text, wantSlot)
+	})
+	if !gotOrphan {
+		t.Fatalf("Warnings = %v, want a note naming %s", rpt.Warnings, wantSlot)
+	}
+}
+
 func TestInstall_Git_ContextHooks(
 	t *testing.T,
 ) {

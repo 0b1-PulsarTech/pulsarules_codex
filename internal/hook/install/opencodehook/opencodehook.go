@@ -54,29 +54,33 @@ func InstallBinary(dir string) error {
 	return nil
 }
 
-func Uninstall(dir string) (removed bool, restored []string, err error) {
+func Uninstall(dir string) (removed bool, restored, orphaned []string, err error) {
 	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
 	pluginPath := filepath.Join(pluginsDir, pluginName)
 	var note string
 	removed, note, err = marker.UninstallFile(pluginPath)
 	if err != nil {
-		return false, nil, fmt.Errorf("uninstall plugin: %w", err)
+		return false, nil, nil, fmt.Errorf("uninstall plugin: %w", err)
+	}
+	// Queried before the dir goes: a numbered slot survives Restore.
+	if orphaned, err = marker.OrphanNotes(pluginPath); err != nil {
+		return removed, restored, orphaned, err
 	}
 	if note != "" {
 		restored = append(restored, note)
 	}
 	if err = fsx.RemoveEmptyDir(pluginsDir); err != nil {
-		return removed, restored, fmt.Errorf("remove empty plugins dir: %w", err)
+		return removed, restored, orphaned, fmt.Errorf("remove empty plugins dir: %w", err)
 	}
 	binDir := filepath.Join(dir, ".opencode", "bin")
 	if err = os.RemoveAll(filepath.Join(dir, binaryRel)); err != nil {
-		return removed, restored, fmt.Errorf("remove installer binary: %w", err)
+		return removed, restored, orphaned, fmt.Errorf("remove installer binary: %w", err)
 	}
 	if err = fsx.RemoveEmptyDir(binDir); err != nil {
-		return removed, restored, fmt.Errorf("remove empty bin dir: %w", err)
+		return removed, restored, orphaned, fmt.Errorf("remove empty bin dir: %w", err)
 	}
 	if _, err = gitignore.Remove(filepath.Join(dir, ".opencode"), "/bin/"); err != nil {
-		return removed, restored, fmt.Errorf("remove opencode gitignore entry: %w", err)
+		return removed, restored, orphaned, fmt.Errorf("remove opencode gitignore entry: %w", err)
 	}
-	return removed, restored, nil
+	return removed, restored, orphaned, nil
 }
