@@ -9,7 +9,7 @@ const (
 	// ScopeCommit runs static + AST + commit analyzers for pre-commit hooks.
 	ScopeCommit
 	// ScopeChanged runs static + AST + arch analyzers over the changed
-	// files, skipping external-tool delegation (golangci-lint, gopls).
+	// files, skipping external-tool delegation (golangci-lint).
 	ScopeChanged
 )
 

@@ -22,7 +22,6 @@ var presetAnalyzers = map[string]map[string]AnalyzerConfig{
 		"arch-boundary": {Enabled: false},
 		"import-cycle":  {Enabled: false},
 		"golangci-lint": {Enabled: false},
-		"gopls":         {Enabled: false},
 	},
 	PresetStrict: {
 		// Same number as the analyzer's own default today. It is stated here

@@ -42,7 +42,7 @@ var staticScopes = []Scope{ScopeFull, ScopeCommit, ScopeChanged}
 var archScopes = []Scope{ScopeFull, ScopeChanged}
 
 // delegationScopes is every scope that pays the cost of spawning an external
-// tool (golangci-lint, gopls): only a full run does.
+// tool (golangci-lint): only a full run does.
 var delegationScopes = []Scope{ScopeFull}
 
 // registerForScope registers only the analyzers relevant to the given scope.

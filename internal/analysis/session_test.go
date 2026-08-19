@@ -24,7 +24,7 @@ func TestSession_NoChanges(t *testing.T) {
 	// A nil repo trips every analyzer's own guard (empty CommitMsg, nil
 	// Sources, no StagedRenames), so this must return zero findings.
 	// ScopeChanged, not ScopeFull, keeps it deterministic - ScopeFull also
-	// runs the golangci-lint/gopls delegation analyzers against the ambient
+	// runs the golangci-lint delegation analyzer against the ambient
 	// toolchain, leaking environment-dependent findings.
 	sess := NewSession(nil, "", idx, cfg)
 	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
@@ -151,7 +151,7 @@ func TestSession_ScopeChanged(t *testing.T) {
 
 	foundStatic := false
 	for _, f := range findings {
-		if f.AnalyzerID == "golangci-lint" || f.AnalyzerID == "gopls" {
+		if f.AnalyzerID == "golangci-lint" {
 			t.Fatalf(
 				"ScopeChanged must not invoke external-tool delegation, got analyzer %q",
 				f.AnalyzerID,

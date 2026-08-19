@@ -36,13 +36,6 @@ var pipelineAnalyzerSpecs = []analyzerSpec{
 		scopes: delegationScopes,
 	},
 	{
-		id: "gopls",
-		build: func(_ *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
-			return delegation.NewGoplsAnalyzer()
-		},
-		scopes: delegationScopes,
-	},
-	{
 		id: "rule-injection",
 		build: func(index *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository) core.Analyzer {
 			return ruleinjection.NewAnalyzer(index)
