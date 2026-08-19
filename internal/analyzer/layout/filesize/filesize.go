@@ -27,31 +27,24 @@ func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	limits := newLineLimits(a.resolveMaxLines(ctx))
 	reporter := pass.ResolveReporter(a.reporter, ctx)
-	if ctx.Sources == nil {
-		return nil
-	}
-	var findings []pass.Finding
-	for _, fc := range ctx.ChangedFiles {
-		if fc.Extension != ".go" {
-			continue
-		}
-		src, ok := ctx.Sources.Read(fc.Path)
-		if !ok {
-			continue
-		}
+	return pass.EachChangedFile(ctx, isGoFile, func(
+		fc pass.FileChange, src []byte,
+	) []pass.Finding {
 		limit := limits.forFile(fc)
 		lines := countLines(src)
-		if lines > limit {
-			findings = append(findings, reporter.At(
-				fc.Path,
-				0,
-				fmt.Sprintf("file is %d lines, max %d", lines, limit),
-				fmt.Sprintf("split into smaller files (max %d lines per file)", limit),
-			))
+		if lines <= limit {
+			return nil
 		}
-	}
-	return findings
+		return []pass.Finding{reporter.At(
+			fc.Path,
+			0,
+			fmt.Sprintf("file is %d lines, max %d", lines, limit),
+			fmt.Sprintf("split into smaller files (max %d lines per file)", limit),
+		)}
+	})
 }
+
+func isGoFile(fc pass.FileChange) bool { return fc.Extension == ".go" }
 
 func (a *Analyzer) resolveMaxLines(ctx *pass.Context) int {
 	return ctx.Params(a.ID()).Int("max_lines", a.maxLines)

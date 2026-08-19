@@ -22,37 +22,29 @@ func (a *Analyzer) ID() string          { return "top-of-file" }
 func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
 func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	if a.langs == nil || ctx.Sources == nil {
+	if a.langs == nil {
 		return nil
 	}
 	reporter := pass.ResolveReporter(a.reporter, ctx)
-	var findings []pass.Finding
-	for _, fc := range ctx.ChangedFiles {
+	eligible := func(fc pass.FileChange) bool { return a.langs.Lookup(fc.Extension) != nil }
+	return pass.EachChangedFile(ctx, eligible, func(
+		fc pass.FileChange, src []byte,
+	) []pass.Finding {
 		lang := a.langs.Lookup(fc.Extension)
-		if lang == nil {
-			continue
-		}
-		src, ok := ctx.Sources.Read(fc.Path)
-		if !ok {
-			continue
-		}
 		line, lineNum, ok := firstNonBlank(src)
-		if !ok {
-			continue
-		}
-		if pass.IsExemptHeaderLine(line) {
-			continue
+		if !ok || pass.IsExemptHeaderLine(line) {
+			return nil
 		}
 		if lang.IsCommentLine(line) && !lang.IsPackageDeclaration(line) {
-			findings = append(findings, reporter.At(
+			return []pass.Finding{reporter.At(
 				fc.Path,
 				lineNum,
 				"file starts with a comment before the package declaration",
 				"remove the comment; no package docstrings",
-			))
+			)}
 		}
-	}
-	return findings
+		return nil
+	})
 }
 
 func firstNonBlank(src []byte) (string, int, bool) {

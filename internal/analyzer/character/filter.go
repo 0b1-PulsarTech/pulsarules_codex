@@ -13,21 +13,14 @@ func eachMarkedFile(
 	check func(pass.FileChange, string) []pass.Finding,
 ) []pass.Finding {
 	scanned := map[string]bool{".go": true, ".md": true}
-	if ctx.Sources == nil {
-		return nil
+	eligible := func(fc pass.FileChange) bool {
+		return scanned[strings.ToLower(fc.Extension)] && !isFixture(fc.Path)
 	}
-	var findings []pass.Finding
-	for _, fc := range ctx.ChangedFiles {
-		if !scanned[strings.ToLower(fc.Extension)] || isFixture(fc.Path) {
-			continue
-		}
-		src, ok := ctx.Sources.Read(fc.Path)
-		if !ok {
-			continue
-		}
-		findings = append(findings, check(fc, string(src))...)
-	}
-	return findings
+	return pass.EachChangedFile(ctx, eligible, func(
+		fc pass.FileChange, src []byte,
+	) []pass.Finding {
+		return check(fc, string(src))
+	})
 }
 
 func isFixture(path string) bool {
