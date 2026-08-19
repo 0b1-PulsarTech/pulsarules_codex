@@ -67,6 +67,10 @@ func bindInstallWiringFlags(fs *flag.FlagSet, opts *Options) {
 		false,
 		"prompt for unset customizations (e.g. the layout) before installing",
 	)
+	bindGitHookFlags(fs, opts)
+}
+
+func bindGitHookFlags(fs *flag.FlagSet, opts *Options) {
 	fs.StringVar(
 		&opts.GitHooks,
 		"git-hooks",
