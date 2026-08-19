@@ -15,7 +15,7 @@ import (
 
 const binaryName = "pulsarules_cli"
 
-func Install(dir string, hooks []string) (backedUp []string, err error) {
+func Install(dir string, hooks []string, opts Options) (backedUp []string, err error) {
 	if len(hooks) == 0 {
 		return nil, nil
 	}
@@ -24,7 +24,7 @@ func Install(dir string, hooks []string) (backedUp []string, err error) {
 		return nil, fmt.Errorf("mkdir %q: %w", dest, err)
 	}
 	for _, name := range hooks {
-		script, ok := hookScript(name)
+		script, ok := hookScript(name, opts)
 		if !ok {
 			return backedUp, fmt.Errorf(
 				"unknown git hook %q (want %s)", name, strings.Join(HookNames(), "|"),

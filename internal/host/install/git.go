@@ -12,7 +12,9 @@ func (gitInstaller) Name() string { return "git" }
 
 func (gitInstaller) Install(ctx Context) error {
 	// Pass ctx.GitHooks verbatim: the default lives only on --git-hooks.
-	backedUp, err := githook.Install(ctx.Dir, ctx.GitHooks)
+	backedUp, err := githook.Install(ctx.Dir, ctx.GitHooks, githook.Options{
+		TypographicSeverity: ctx.TypographicSeverity,
+	})
 	if err != nil {
 		return fmt.Errorf("install git hooks: %w", err)
 	}

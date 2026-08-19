@@ -21,7 +21,7 @@ func TestInstall(t *testing.T) {
 	}
 
 	hooks := []string{"commit-msg", "pre-commit"}
-	if _, err := Install(dir, hooks); err != nil {
+	if _, err := Install(dir, hooks, Options{}); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
@@ -47,7 +47,7 @@ func TestInstall(t *testing.T) {
 func TestInstall_NoHooks(t *testing.T) {
 	t.Parallel()
 
-	if _, err := Install(t.TempDir(), nil); err != nil {
+	if _, err := Install(t.TempDir(), nil, Options{}); err != nil {
 		t.Fatalf("Install with nil should succeed: %v", err)
 	}
 }
@@ -55,7 +55,7 @@ func TestInstall_NoHooks(t *testing.T) {
 func TestInstall_UnknownHook(t *testing.T) {
 	t.Parallel()
 
-	_, err := Install(t.TempDir(), []string{"nonexistent"})
+	_, err := Install(t.TempDir(), []string{"nonexistent"}, Options{})
 	if err == nil {
 		t.Fatal("expected error for unknown hook")
 	}
@@ -64,7 +64,7 @@ func TestInstall_UnknownHook(t *testing.T) {
 func TestInstall_NoGitDir(t *testing.T) {
 	t.Parallel()
 
-	_, err := Install(t.TempDir(), []string{"commit-msg"})
+	_, err := Install(t.TempDir(), []string{"commit-msg"}, Options{})
 	if err != nil {
 		t.Fatalf("expected dir to be created: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestInstall_OwnReadOnlyHook(t *testing.T) {
 		t.Fatalf("write old hook: %v", err)
 	}
 
-	backedUp, err := Install(dir, []string{"pre-commit"})
+	backedUp, err := Install(dir, []string{"pre-commit"}, Options{})
 	if err != nil {
 		t.Fatalf("Install over read-only hook: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestInstall_ForeignHookBackup(t *testing.T) {
 		t.Fatalf("seed foreign hook: %v", err)
 	}
 
-	backedUp, err := Install(dir, []string{"pre-commit"})
+	backedUp, err := Install(dir, []string{"pre-commit"}, Options{})
 	if err != nil {
 		t.Fatalf("Install over foreign hook: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestInstall_ExistingBackupNextSlot(t *testing.T) {
 		t.Fatalf("seed prior backup: %v", err)
 	}
 
-	backedUp, err := Install(dir, []string{"pre-commit"})
+	backedUp, err := Install(dir, []string{"pre-commit"}, Options{})
 	if err != nil {
 		t.Fatalf("Install over foreign hook: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestUninstall_FingerprintedHooks(
 	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatalf("mkdir .git: %v", err)
 	}
-	if _, err := Install(dir, []string{"commit-msg", "pre-commit"}); err != nil {
+	if _, err := Install(dir, []string{"commit-msg", "pre-commit"}, Options{}); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 	if err := InstallBinary(dir); err != nil {
@@ -259,7 +259,7 @@ func TestUninstall_RestoresBackup(
 	if err := os.WriteFile(preCommit, []byte(foreign), 0o755); err != nil {
 		t.Fatalf("seed foreign hook: %v", err)
 	}
-	if _, err := Install(dir, []string{"pre-commit"}); err != nil {
+	if _, err := Install(dir, []string{"pre-commit"}, Options{}); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
