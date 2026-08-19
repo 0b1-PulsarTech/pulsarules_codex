@@ -74,8 +74,10 @@ func classifyLayer(pkgPath string) string {
 			return "cmd"
 		}
 	}
-	return "other"
+	return layerUnclassified
 }
+
+const layerUnclassified = ""
 
 func checkBoundaries(g depGraph, modulePath string) []string {
 	const (
@@ -83,7 +85,6 @@ func checkBoundaries(g depGraph, modulePath string) []string {
 		layerRankTransport
 		layerRankInfra
 		layerRankDomain
-		layerRankOther
 	)
 
 	var violations []string
@@ -92,13 +93,17 @@ func checkBoundaries(g depGraph, modulePath string) []string {
 		"transport": layerRankTransport,
 		"infra":     layerRankInfra,
 		"domain":    layerRankDomain,
-		"other":     layerRankOther,
 	}
 
 	for pkg, deps := range g {
 		pkgLayer := classifyLayer(pkg)
 		for _, dep := range deps {
 			depLayer := classifyLayer(dep)
+			// The zero value would rank an unclassified dependency as cmd, the outermost
+			// layer, and report every import of it as an inner layer depending on an outer one.
+			if depLayer == layerUnclassified {
+				continue
+			}
 			pkgOrd := layerOrder[pkgLayer]
 			depOrd := layerOrder[depLayer]
 			if pkgOrd > depOrd {
