@@ -6,31 +6,19 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-// repoStub reports a fixed branch. Two methods, so it is hand-rolled.
+// repoStub reports a fixed branch. One method, so it is hand-rolled.
 type repoStub struct {
 	branch string
 	err    error
 }
 
 func (r repoStub) CurrentBranch() (string, error) { return r.branch, r.err }
-func (r repoStub) Root() string                   { return "" }
-
-func (r repoStub) HeadSubject() (string, error)          { return "", nil }
-func (r repoStub) HeadAuthorEpoch() (int64, bool, error) { return 0, false, nil }
-func (r repoStub) RecentSubjects(int) ([]string, error)  { return nil, nil }
-func (r repoStub) WorktreeStatus() (vcs.Status, error)   { return vcs.Status{}, nil }
-
-func (r repoStub) StagedRenames(int) ([]vcs.Rename, error) { return nil, nil }
-func (r repoStub) StagedDiff(string) (string, error)       { return "", nil }
-
-func (r repoStub) StagedRenameDiff(string, string, int) (string, error) { return "", nil }
 
 var errStub = errors.New("git unavailable")
 
-var _ vcs.Repository = repoStub{}
+var _ branchReader = repoStub{}
 
 // TestAnalyze covers what the branch check accepts, what it blocks, and the
 // states where it must say nothing at all.

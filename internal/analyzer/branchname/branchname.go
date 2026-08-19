@@ -7,7 +7,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 const analyzerID = "branch-name"
@@ -24,15 +23,21 @@ var exemptBranches = []string{"main", "master", "develop"}
 // convention blocked by the rule meant to protect it.
 var gitflowTypes = []string{"feature", "release", "hotfix", "bugfix", "support"}
 
+// branchReader is the consumer-declared slice of the repository this analyzer
+// needs: only the checked-out branch's name.
+type branchReader interface {
+	CurrentBranch() (string, error)
+}
+
 // Analyzer checks that the checked-out branch names its change the way a commit
 // does, so `<type>/<description>` survives from branch to subject line.
 type Analyzer struct {
-	repo vcs.Repository
+	repo branchReader
 }
 
 var _ core.Analyzer = (*Analyzer)(nil)
 
-func NewAnalyzer(repo vcs.Repository) *Analyzer { return &Analyzer{repo: repo} }
+func NewAnalyzer(repo branchReader) *Analyzer { return &Analyzer{repo: repo} }
 
 func (a *Analyzer) ID() string   { return analyzerID }
 func (a *Analyzer) Name() string { return "Branch name" }
