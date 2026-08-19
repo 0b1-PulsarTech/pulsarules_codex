@@ -3,14 +3,13 @@ package mcp
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"text/template"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/gitignore"
 )
@@ -42,9 +41,9 @@ func Write(templates fs.FS, repoDir string) error {
 		return fmt.Errorf("render servers: %w", err)
 	}
 	path := filepath.Join(repoDir, ".mcp.json")
-	existing, err := os.ReadFile(path) //nolint:gosec // path is the caller's project root.
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("read %q: %w", path, err)
+	existing, err := disk.ReadOptional(path)
+	if err != nil {
+		return err
 	}
 	merged, err := mergeServers(existing, servers)
 	if err != nil {

@@ -3,7 +3,6 @@ package claude
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -24,9 +23,9 @@ func WireSettings(templates fs.FS, claudeDir, settingsFile string) error {
 		return fmt.Errorf("mkdir %q: %w", claudeDir, err)
 	}
 	path := filepath.Join(claudeDir, settingsFile)
-	existing, err := os.ReadFile(path) //nolint:gosec // path is under the caller's .claude dir.
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("read %q: %w", path, err)
+	existing, err := disk.ReadOptional(path)
+	if err != nil {
+		return err
 	}
 
 	merged, err := mergeSettings(existing, block)

@@ -3,24 +3,22 @@ package opencode
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 	"path/filepath"
 	"slices"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 func UnwireConfig(projectDir string) error {
 	path := filepath.Join(projectDir, configFile)
-	existing, err := os.ReadFile(path) //nolint:gosec // path is under the caller's project dir.
+	existing, err := disk.ReadOptional(path)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("read %q: %w", path, err)
+		return err
+	}
+	if existing == nil {
+		return nil
 	}
 
 	config := map[string]json.RawMessage{}

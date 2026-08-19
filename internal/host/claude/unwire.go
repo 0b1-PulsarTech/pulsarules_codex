@@ -2,24 +2,22 @@ package claude
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 func UnwireSettings(claudeDir, settingsFile string) (bool, error) {
 	path := filepath.Join(claudeDir, settingsFile)
-	existing, err := os.ReadFile(path) //nolint:gosec // path is under the caller's .claude dir.
+	existing, err := disk.ReadOptional(path)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return false, nil
-		}
-		return false, fmt.Errorf("read %q: %w", path, err)
+		return false, err
+	}
+	if existing == nil {
+		return false, nil
 	}
 
 	settings := map[string]json.RawMessage{}
