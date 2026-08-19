@@ -47,8 +47,8 @@ func (claudeInstaller) Install(ctx Context) (report.Report, error) {
 // Uninstall removes the hook script, README, binary, settings wiring, and
 // the "/bin/"/"/hooks/" gitignore entries Install wrote. Hook files and
 // gitignore go first, so an unparseable settings file still leaves the rest
-// reversed; its error propagates last for the caller to warn on. Any error
-// discards the Report entirely, mirroring Install's own partial-result rule.
+// reversed. An error discards only the caller-visible Report - the disk
+// work already done (removals, restores) stands, not rolled back.
 func (claudeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
 	claudeDir := ctx.Dir
 	settingsFile := ctx.SettingsFile

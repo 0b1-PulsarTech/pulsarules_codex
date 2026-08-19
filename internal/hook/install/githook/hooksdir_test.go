@@ -96,7 +96,7 @@ func TestUninstall_LinkedWorktree(t *testing.T) {
 		t.Fatalf("Install from worktree: %v", err)
 	}
 
-	removed, _, err := Uninstall(worktree)
+	removed, _, _, err := Uninstall(worktree)
 	if err != nil {
 		t.Fatalf("Uninstall from worktree: %v", err)
 	}
@@ -113,11 +113,12 @@ func TestUninstall_LinkedWorktree(t *testing.T) {
 	}
 }
 
-// TestOrphans_SurviveUninstall walks the only sequence that strands a backup: a
-// foreign hook is displaced twice, so the second rename takes the .1 slot, and
-// uninstall restores just the base one. Before this reported, the .1 file sat in
-// .git/hooks with nothing telling the operator it existed.
-func TestOrphans_SurviveUninstall(t *testing.T) {
+// TestUninstall_ReportsOrphanedBackup walks the only sequence that strands a
+// backup: a foreign hook is displaced twice, so the second rename takes the
+// .1 slot, and uninstall restores just the base one. Before Uninstall
+// reported its own orphaned return, the .1 file sat in .git/hooks with
+// nothing telling the operator it existed.
+func TestUninstall_ReportsOrphanedBackup(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -145,12 +146,9 @@ func TestOrphans_SurviveUninstall(t *testing.T) {
 		t.Fatalf("second Install: %v", err)
 	}
 
-	if _, _, err := Uninstall(dir); err != nil {
-		t.Fatalf("Uninstall: %v", err)
-	}
-	notes, err := Orphans(dir)
+	_, _, notes, err := Uninstall(dir)
 	if err != nil {
-		t.Fatalf("Orphans: %v", err)
+		t.Fatalf("Uninstall: %v", err)
 	}
 	if len(notes) != 1 {
 		t.Fatalf("notes = %v, want exactly one", notes)

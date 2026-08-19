@@ -224,7 +224,7 @@ func TestUninstall(t *testing.T) {
 		t.Fatalf("seed foreign hook: %v", err)
 	}
 
-	removed, _, err := Uninstall(dir)
+	removed, _, _, err := Uninstall(dir)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
@@ -255,7 +255,7 @@ func TestUninstall_Idempotent(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if _, _, err := Uninstall(dir); err != nil {
+	if _, _, _, err := Uninstall(dir); err != nil {
 		t.Fatalf("Uninstall on untouched dir: %v", err)
 	}
 }
@@ -281,7 +281,7 @@ func TestUninstall_RestoresBackup(t *testing.T) {
 		t.Fatalf("Install: %v", err)
 	}
 
-	removed, restored, err := Uninstall(dir)
+	removed, restored, _, err := Uninstall(dir)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}

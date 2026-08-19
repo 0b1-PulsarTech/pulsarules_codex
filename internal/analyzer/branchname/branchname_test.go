@@ -111,6 +111,55 @@ func TestAnalyze_NilRepo(t *testing.T) {
 	}
 }
 
+// TestAnalyze_SeverityParam asserts the reporter resolves its severity
+// against the run's config each call instead of freezing SeverityError at
+// package init: a configured "severity" overrides the default, and an
+// unset or unrecognized value keeps the blocking default rather than
+// collapsing to SeverityInfo, the Severity zero value.
+func TestAnalyze_SeverityParam(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		severity string
+		want     core.Severity
+	}{
+		{name: "unset keeps the blocking default", want: core.SeverityError},
+		{
+			name:     "configured warning overrides the default",
+			severity: "warning",
+			want:     core.SeverityWarning,
+		},
+		{
+			name:     "unrecognized value keeps the blocking default",
+			severity: "bogus",
+			want:     core.SeverityError,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := &core.AnalysisContext{}
+			if testCase.severity != "" {
+				ctx.Config = &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
+					analyzerID: {
+						Enabled: true,
+						Params:  map[string]any{"severity": testCase.severity},
+					},
+				}}
+			}
+			got := NewAnalyzer(repoStub{branch: "spike/idea"}).Analyze(ctx)
+			if len(got) != 1 {
+				t.Fatalf("findings = %+v, want exactly one", got)
+			}
+			if got[0].Severity != testCase.want {
+				t.Errorf("severity = %v, want %v", got[0].Severity, testCase.want)
+			}
+		})
+	}
+}
+
 // TestValidExtraTypes guards the boundary where the value is written into a
 // generated shell script: anything outside the allowed alphabet is refused, so
 // nothing has to be quoted and hoped for at the point the hook runs.

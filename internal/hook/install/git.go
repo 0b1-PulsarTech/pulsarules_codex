@@ -39,13 +39,16 @@ func (gitInstaller) Install(ctx Context) (report.Report, error) {
 // Uninstall removes the git hook scripts and installer binary Install wrote
 // into ctx.Dir/.git/hooks/. The "removed git hooks" note fires only once
 // nothing failed, mirroring githook.Uninstall's all-or-partial return; the
-// restore notes print regardless, since a restore that already happened is
-// worth reporting even if a later step in the same call errors.
+// orphan and restore notes print regardless, since work that already
+// happened is worth reporting even if a later step in the same call errors.
 func (gitInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
-	removed, restored, err := githook.Uninstall(ctx.Dir)
+	removed, restored, orphaned, err := githook.Uninstall(ctx.Dir)
 	var rpt report.Report
 	if err == nil && len(removed) > 0 {
 		rpt.Note("removed git hooks")
+	}
+	for _, msg := range orphaned {
+		rpt.Warn("%s", msg)
 	}
 	for _, msg := range restored {
 		rpt.Note("%s", msg)

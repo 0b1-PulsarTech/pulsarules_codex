@@ -107,6 +107,53 @@ func TestRegistryUninstall_Git(t *testing.T) {
 	}
 }
 
+// TestRegistryUninstall_Git_WarnsOrphanedBackup asserts the "git" installer
+// warns on a leftover numbered backup slot, the same way claude and
+// opencode already do. A foreign hook displaced twice strands its older
+// copy at ".1" since Restore only ever consumes the base slot; before
+// githook.Uninstall returned its own orphaned notes, nothing named it.
+func TestRegistryUninstall_Git_WarnsOrphanedBackup(t *testing.T) {
+	t.Parallel()
+
+	reg := NewRegistry()
+	dir := t.TempDir()
+	hooksPath := filepath.Join(dir, ".git", "hooks")
+	if err := os.MkdirAll(hooksPath, 0o750); err != nil {
+		t.Fatalf("mkdir hooks: %v", err)
+	}
+	hookPath := filepath.Join(hooksPath, "pre-commit")
+	writeForeign := func(body string) {
+		t.Helper()
+		// Install leaves the hook read-only (0o500); unlink first, same as a
+		// person hand-editing the file would have to.
+		_ = os.Remove(hookPath)
+		if err := os.WriteFile(hookPath, []byte(body), 0o700); err != nil {
+			t.Fatalf("seed foreign hook: %v", err)
+		}
+	}
+
+	writeForeign("#!/bin/sh\n# first hand-written hook\n")
+	if _, err := githook.Install(dir, []string{"pre-commit"}, githook.Options{}); err != nil {
+		t.Fatalf("first githook.Install: %v", err)
+	}
+	writeForeign("#!/bin/sh\n# second hand-written hook\n")
+	if _, err := githook.Install(dir, []string{"pre-commit"}, githook.Options{}); err != nil {
+		t.Fatalf("second githook.Install: %v", err)
+	}
+
+	rpt, err := reg.Uninstall("git", UninstallContext{Dir: dir})
+	if err != nil {
+		t.Fatalf("Uninstall(git): %v", err)
+	}
+	wantSlot := hookPath + marker.BackupSuffix + ".1"
+	gotOrphan := slices.ContainsFunc(rpt.Warnings, func(s string) bool {
+		return strings.Contains(s, wantSlot)
+	})
+	if !gotOrphan {
+		t.Fatalf("Warnings = %v, want a note naming %s", rpt.Warnings, wantSlot)
+	}
+}
+
 // TestInstall_Git_GitHooks asserts the "git" installer writes exactly the
 // hooks named in ctx.GitHooks - proving --git-hooks reaches githook.Install
 // instead of falling back to its hardcoded pair - and that a zero-value (or

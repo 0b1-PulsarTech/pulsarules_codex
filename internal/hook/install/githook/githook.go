@@ -77,15 +77,20 @@ func HookNames() []string {
 
 // Uninstall removes every git hook script Install could have written from the
 // shared hooks dir, plus the installer binary. Only a hook carrying
-// marker.Installed is removed - a git hook is un-mergeable - and removing one
-// restores any backup Install left behind; absent/foreign hooks are skipped.
-func Uninstall(dir string) (removed, restored []string, err error) {
+// marker.Installed is removed, restoring any backup Install left behind;
+// absent/foreign hooks are skipped. orphaned names any numbered backup slot
+// Restore could not consume, for a caller to warn on.
+func Uninstall(dir string) (removed, restored, orphaned []string, err error) {
 	dest := hooksDir(dir)
+	paths := make([]string, 0, len(hookSpecs))
 	for name := range hookSpecs {
 		path := filepath.Join(dest, name)
+		paths = append(paths, path)
 		removedOK, note, uninstallErr := marker.UninstallFile(path)
 		if uninstallErr != nil {
-			return removed, restored, fmt.Errorf("uninstall hook %q: %w", name, uninstallErr)
+			return removed, restored, orphaned, fmt.Errorf(
+				"uninstall hook %q: %w", name, uninstallErr,
+			)
 		}
 		if !removedOK {
 			continue
@@ -95,8 +100,13 @@ func Uninstall(dir string) (removed, restored []string, err error) {
 			restored = append(restored, note)
 		}
 	}
-	if err = os.RemoveAll(filepath.Join(dest, binaryName)); err != nil {
-		return removed, restored, fmt.Errorf("remove installer binary: %w", err)
+	// Queried before the binary goes: a numbered slot survives Restore and
+	// would otherwise sit in the shared hooks dir unmentioned forever.
+	if orphaned, err = marker.OrphanNotes(paths...); err != nil {
+		return removed, restored, orphaned, err
 	}
-	return removed, restored, nil
+	if err = os.RemoveAll(filepath.Join(dest, binaryName)); err != nil {
+		return removed, restored, orphaned, fmt.Errorf("remove installer binary: %w", err)
+	}
+	return removed, restored, orphaned, nil
 }

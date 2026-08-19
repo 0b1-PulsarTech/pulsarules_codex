@@ -11,7 +11,10 @@ import (
 
 const analyzerID = "branch-name"
 
-var reporter = core.NewReporter(analyzerID, core.SeverityError, core.CatCommit)
+// baseReporter carries this analyzer's id and category; Analyze resolves its
+// severity against the run's config each call (see core.Reporter.Resolved),
+// the same mechanism every other analyzer's reporter uses.
+var baseReporter = core.NewReporter(analyzerID, core.SeverityError, core.CatCommit)
 
 // exemptBranches carry no type prefix because they are not a change: a
 // long-lived trunk names a line of history, not the work landing on it.
@@ -58,7 +61,7 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if hasAllowedType(branch, allowed) {
 		return nil
 	}
-	return []core.Finding{reporter.New(fmt.Sprintf(
+	return []core.Finding{baseReporter.Resolved(ctx).New(fmt.Sprintf(
 		"branch %q does not start with a type prefix (want <type>/<description>, type one of %s)",
 		branch, strings.Join(allowed, "|"),
 	))}
