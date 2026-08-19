@@ -1,6 +1,12 @@
 package core
 
-import "strconv"
+import (
+	"fmt"
+	"maps"
+	"slices"
+	"strconv"
+	"strings"
+)
 
 type ParamSet map[string]any
 
@@ -38,6 +44,24 @@ func severityByName() map[string]Severity {
 		"warning": SeverityWarning,
 		"info":    SeverityInfo,
 	}
+}
+
+func severityNames() []string {
+	return slices.Sorted(maps.Keys(severityByName()))
+}
+
+func ValidateSeverityName(name string) error {
+	if name == "" || validSeverityName(name) {
+		return nil
+	}
+	return fmt.Errorf(
+		"unknown severity %q (want %s)", name, strings.Join(severityNames(), "|"),
+	)
+}
+
+func validSeverityName(name string) bool {
+	_, ok := severityByName()[name]
+	return ok
 }
 
 func (params ParamSet) Severity(fallback Severity) Severity {

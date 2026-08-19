@@ -30,7 +30,7 @@ pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude
 pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
+pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info]
 pulsarules_cli clean [--project DIR] [--write]
 pulsarules_cli evals --artifact FILE [--scenario ID]
 pulsarules_cli version
@@ -205,7 +205,8 @@ analyzes only files `git status` reports as changed; `--all-files` walks the who
 instead (skipping `.git/`, `.claude/`, `.opencode/`, `generated/`, `build/`, and `vendor/`).
 `--scope commit` runs the lightweight static + AST + commit checks only (what the pre-commit hook
 uses); `--scope full` (default) adds architecture and delegation.
-`--preset recommended|strict|minimal` selects analyzer thresholds. Findings in generated files
+`--preset recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity`
+overrides how hard a `typographic-markers` finding lands for this run. Findings in generated files
 (detected by the `// Code generated ... DO NOT EDIT.` marker) are suppressed by default;
 `--include-generated` turns that off.
 

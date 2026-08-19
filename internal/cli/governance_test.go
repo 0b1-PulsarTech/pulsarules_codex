@@ -168,3 +168,39 @@ func TestGovernanceConfig_StrictLowersFileSize(t *testing.T) {
 		t.Errorf("strict max_complexity = %v, want 10", got)
 	}
 }
+
+func TestGovernanceConfig_TypographicSeverity(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		severity string
+		wantErr  bool
+		want     any
+	}{
+		{name: "unset leaves the params alone", want: nil},
+		{name: "warning reaches the analyzer", severity: "warning", want: "warning"},
+		{name: "info reaches the analyzer", severity: "info", want: "info"},
+		{name: "a typo is rejected", severity: "fatal", wantErr: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg, err := governanceConfig(&cliopts.Options{TypographicSeverity: testCase.severity})
+			if testCase.wantErr {
+				if err == nil {
+					t.Fatalf("governanceConfig(%q) err = nil, want an error", testCase.severity)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("governanceConfig: %v", err)
+			}
+			params := cfg.Analyzers["typographic-markers"].Params
+			if got := params["severity"]; got != testCase.want {
+				t.Errorf("severity param = %v, want %v", got, testCase.want)
+			}
+		})
+	}
+}

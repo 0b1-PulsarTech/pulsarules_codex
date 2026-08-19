@@ -171,3 +171,31 @@ func TestParamSetSeverity(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateSeverityName(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		severity string
+		wantErr  bool
+	}{
+		{name: "empty keeps the analyzer default"},
+		{name: "error", severity: "error"},
+		{name: "warning", severity: "warning"},
+		{name: "info", severity: "info"},
+		{name: "a typo is rejected", severity: "fatal", wantErr: true},
+		{name: "capitalised is rejected", severity: "Warning", wantErr: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := ValidateSeverityName(testCase.severity)
+			if (err != nil) != testCase.wantErr {
+				t.Errorf("ValidateSeverityName(%q) err = %v, wantErr %v",
+					testCase.severity, err, testCase.wantErr)
+			}
+		})
+	}
+}
