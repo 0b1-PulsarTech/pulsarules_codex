@@ -109,3 +109,31 @@ func TestAnalyze_NilRepo(t *testing.T) {
 		t.Errorf("findings = %+v, want none", got)
 	}
 }
+
+func TestValidExtraTypes(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		spec string
+		want bool
+	}{
+		{name: "empty is allowed", spec: "", want: true},
+		{name: "one name", spec: "release", want: true},
+		{name: "several names", spec: "spike,experiment", want: true},
+		{name: "digits and dashes", spec: "release-2,hot-fix9", want: true},
+		{name: "a trailing comma leaves an empty entry", spec: "release,"},
+		{name: "a leading comma leaves an empty entry", spec: ",release"},
+		{name: "spaces are refused rather than trimmed", spec: "spike, experiment"},
+		{name: "uppercase is refused", spec: "Release"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := validExtraTypes(testCase.spec); got != testCase.want {
+				t.Errorf("ValidExtraTypes(%q) = %v, want %v", testCase.spec, got, testCase.want)
+			}
+		})
+	}
+}

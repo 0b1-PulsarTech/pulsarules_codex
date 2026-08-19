@@ -8,7 +8,7 @@ Usage:
   pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
   pulsarules_cli package [--root DIR] [--out FILE]
   pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-  pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info]
+  pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
   pulsarules_cli clean [--project DIR] [--write]
   pulsarules_cli evals --artifact FILE [--scenario ID]
   pulsarules_cli hook <mode>

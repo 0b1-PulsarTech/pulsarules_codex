@@ -90,3 +90,35 @@ func hasAllowedType(branch string, allowed []string) bool {
 	}
 	return slices.Contains(allowed, prefix)
 }
+
+func ValidateExtraTypes(spec string) error {
+	if validExtraTypes(spec) {
+		return nil
+	}
+	return fmt.Errorf(
+		"invalid --branch-extra-types %q (want a comma-separated list of "+
+			"lowercase names, e.g. spike,experiment)",
+		spec,
+	)
+}
+
+func validExtraTypes(spec string) bool {
+	if spec == "" {
+		return true
+	}
+	// Only lowercase names, digits and dashes are valid branch types.
+	for entry := range strings.SplitSeq(spec, ",") {
+		if entry == "" {
+			return false
+		}
+		for _, char := range entry {
+			isAllowed := char == '-' ||
+				(char >= 'a' && char <= 'z') ||
+				(char >= '0' && char <= '9')
+			if !isAllowed {
+				return false
+			}
+		}
+	}
+	return true
+}

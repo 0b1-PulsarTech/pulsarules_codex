@@ -8,6 +8,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/branch"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
@@ -107,6 +108,12 @@ func governanceConfig(opts *version.Options) (*config.GovernanceConfig, error) {
 	}
 	if opts.TypographicSeverity != "" {
 		cfg.SetParam("typographic-markers", "severity", opts.TypographicSeverity)
+	}
+	if err := branch.ValidateExtraTypes(opts.BranchExtraTypes); err != nil {
+		return nil, err
+	}
+	if opts.BranchExtraTypes != "" {
+		cfg.SetParam("branch-name", "extra_types", opts.BranchExtraTypes)
 	}
 	return cfg, nil
 }
