@@ -3,12 +3,17 @@ package cliopts
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
+	"strings"
 )
 
-// version is the installer's release version. Bump it whenever the rendered
-// skills, the hook wiring, or the MCP/opencode install behaviour change so
-// existing projects know to re-pull. Pre-1.0: the API may still shift.
-const version = "0.2.0"
+// fallbackVersion names a build the toolchain stamped nothing into (`go run`).
+// It used to BE the reported version, frozen by hand while the module moved on,
+// so every installed copy answered "0.2.0" whatever it actually was.
+const fallbackVersion = "0.2.0"
+
+// shortRevisionLen trims a stamped commit to the length a person reads.
+const shortRevisionLen = 12
 
 // IsVersion reports whether the command requests the version banner.
 func IsVersion(command string) bool {
@@ -20,5 +25,51 @@ func IsVersion(command string) bool {
 }
 
 func PrintVersion() {
-	_, _ = fmt.Fprintf(os.Stdout, "pulsarules_cli %s\n", version)
+	_, _ = fmt.Fprintf(os.Stdout, "pulsarules_cli %s\n", Version())
+}
+
+// Version reports the running binary's version, preferring what the toolchain
+// stamped into it over any literal in this source.
+func Version() string {
+	build, _ := debug.ReadBuildInfo()
+	return formatVersion(build)
+}
+
+// formatVersion renders build as a version string: the stamped module version,
+// "devel" plus the commit for a local build, or the bare fallback when build is
+// nil or carries neither.
+func formatVersion(build *debug.BuildInfo) string {
+	// simplification: the stamped vcs.revision is trusted. Go derives it from
+	// the build directory, so a build made from a worktree nested inside its own
+	// main checkout carries the MAIN checkout's revision. Upgrade path: hash the
+	// embedded knowledge instead of reading the stamp.
+	if build == nil {
+		return fallbackVersion
+	}
+	revision := buildRevision(build)
+	version := build.Main.Version
+	if version == "" || version == "(devel)" {
+		if revision == "" {
+			return fallbackVersion
+		}
+		return "devel+" + revision
+	}
+	// A pseudo-version already ends in the revision it was derived from.
+	if revision == "" || strings.Contains(version, revision) {
+		return version
+	}
+	return version + "+" + revision
+}
+
+func buildRevision(build *debug.BuildInfo) string {
+	for _, setting := range build.Settings {
+		if setting.Key != "vcs.revision" {
+			continue
+		}
+		if len(setting.Value) > shortRevisionLen {
+			return setting.Value[:shortRevisionLen]
+		}
+		return setting.Value
+	}
+	return ""
 }
