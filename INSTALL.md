@@ -26,11 +26,11 @@ go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
 pulsarules_cli generate [--root DIR] [--out DIR]
 pulsarules_cli validate [--root DIR]
 pulsarules_cli list [skills|rules|patterns|workflows] [--root DIR]
-pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--git-hooks commit-msg,pre-commit] [--no-git-hooks]
+pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude|opencode|agents|cursor ...] (--all | --skills a,b,c | --router-only) [--no-hooks] [--no-mcp] [--print-hooks] [--hooks-scope project|local] [--layout PROFILE] [--interactive] [--git-hooks commit-msg,pre-commit] [--no-git-hooks] [--typographic-severity error|warning|info]
 pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
+pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info]
 pulsarules_cli clean [--project DIR] [--write]
 pulsarules_cli evals --artifact FILE [--scenario ID]
 pulsarules_cli version
@@ -155,6 +155,10 @@ Additional install flags:
   are `commit-msg`, `pre-commit`, and `pre-push`; an unrecognized name fails the whole `install`
   command before anything is written, naming the valid set. `--no-git-hooks` skips installing git
   hooks entirely.
+- `--typographic-severity error|warning|info`: bake into the generated governance hooks how hard a
+  `typographic-markers` finding lands (the analyzer's own default is `error`); a git hook receives
+  no arguments from the person committing, so install time is the only chance to set it. The same
+  flag on `governance` applies to a single run.
 
 ### Uninstall
 
@@ -205,7 +209,9 @@ analyzes only files `git status` reports as changed; `--all-files` walks the who
 instead (skipping `.git/`, `.claude/`, `.opencode/`, `generated/`, `build/`, and `vendor/`).
 `--scope commit` runs the lightweight static + AST + commit checks only (what the pre-commit hook
 uses); `--scope full` (default) adds architecture and delegation. `--preset
-recommended|strict|minimal` selects analyzer thresholds. Findings in generated files (detected by
+recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity` overrides how
+hard a `typographic-markers` finding lands for this run (see the install flag of the same name for
+the baked-in variant). Findings in generated files (detected by
 the `// Code generated ... DO NOT EDIT.` marker) are suppressed by default; `--include-generated`
 turns that off.
 

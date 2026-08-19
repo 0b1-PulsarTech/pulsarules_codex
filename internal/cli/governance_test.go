@@ -179,3 +179,41 @@ func TestGovernanceConfig_StrictLowersFileSize(t *testing.T) {
 		t.Errorf("strict max_complexity = %v, want 10", got)
 	}
 }
+
+// TestGovernanceConfig_TypographicSeverity asserts the flag reaches the
+// analyzer's params and that an unrecognized value is rejected by name rather
+// than falling back silently to the blocking default.
+func TestGovernanceConfig_TypographicSeverity(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		severity string
+		wantErr  bool
+		wantSet  any
+	}{
+		{name: "unset leaves the params alone", wantSet: nil},
+		{name: "warning reaches the analyzer", severity: "warning", wantSet: "warning"},
+		{name: "info reaches the analyzer", severity: "info", wantSet: "info"},
+		{name: "a typo is rejected", severity: "fatal", wantErr: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg, err := governanceConfig(&cliopts.Options{TypographicSeverity: testCase.severity})
+			if testCase.wantErr {
+				if err == nil {
+					t.Fatalf("governanceConfig(%q) err = nil, want an error", testCase.severity)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("governanceConfig: %v", err)
+			}
+			if got := cfg.Param("typographic-markers", "severity", nil); got != testCase.wantSet {
+				t.Errorf("severity param = %v, want %v", got, testCase.wantSet)
+			}
+		})
+	}
+}

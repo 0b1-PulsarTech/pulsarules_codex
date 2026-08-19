@@ -41,3 +41,34 @@ func TestValidateGitHooks(t *testing.T) {
 		})
 	}
 }
+
+// TestValidateTypographicSeverity asserts a bad value is rejected at install,
+// before it is baked into a script that would then fail every commit from a
+// place the person committing cannot see.
+func TestValidateTypographicSeverity(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		severity string
+		wantErr  bool
+	}{
+		{name: "empty keeps the analyzer default"},
+		{name: "error", severity: "error"},
+		{name: "warning", severity: "warning"},
+		{name: "info", severity: "info"},
+		{name: "a typo is rejected", severity: "fatal", wantErr: true},
+		{name: "capitalised is rejected", severity: "Warning", wantErr: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := validateTypographicSeverity(testCase.severity)
+			if (err != nil) != testCase.wantErr {
+				t.Errorf("validateTypographicSeverity(%q) err = %v, wantErr %v",
+					testCase.severity, err, testCase.wantErr)
+			}
+		})
+	}
+}

@@ -128,9 +128,10 @@ func installPostTargets(
 ) error {
 	if !opts.NoGitHooks {
 		hookErr := hookReg.Install("git", install.Context{
-			Dir:       projectDir,
-			Templates: templates,
-			GitHooks:  gitHooks,
+			Dir:                 projectDir,
+			Templates:           templates,
+			GitHooks:            gitHooks,
+			TypographicSeverity: opts.TypographicSeverity,
 			Warn: func(format string, args ...any) {
 				_, _ = fmt.Fprintf(os.Stderr, "warning: "+format+"\n", args...)
 			},

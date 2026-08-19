@@ -27,6 +27,10 @@ type Options struct {
 	Interactive bool   // --interactive: prompt for unset customizations (e.g. the layout)
 	GitHooks    string // --git-hooks: comma-separated git hooks to install (commit-msg,pre-commit,pre-push) (default: commit-msg,pre-commit)
 	NoGitHooks  bool   // --no-git-hooks: skip git hooks installation
+	// --typographic-severity: how hard a typographic-marker finding lands
+	// (error|warning|info). Set at install, it is baked into the generated hook
+	// scripts; passed to governance, it applies to that run.
+	TypographicSeverity string
 
 	// uninstall (also reuses --root, --project, --global, --target, --hooks-scope)
 	KeepSkills bool // --keep-skills: uninstall keeps the rendered skill/workflow docs; hook wiring is still removed

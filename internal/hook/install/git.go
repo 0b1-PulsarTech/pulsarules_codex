@@ -17,7 +17,9 @@ func (gitInstaller) Name() string { return "git" }
 // written always agree; a second default here would let an explicit empty
 // list silently resurrect it.
 func (gitInstaller) Install(ctx Context) error {
-	backedUp, err := githook.Install(ctx.Dir, ctx.GitHooks)
+	backedUp, err := githook.Install(ctx.Dir, ctx.GitHooks, githook.Options{
+		TypographicSeverity: ctx.TypographicSeverity,
+	})
 	if err != nil {
 		return fmt.Errorf("install git hooks: %w", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install/githook"
 )
@@ -20,7 +21,25 @@ func resolveGitHooks(opts *cliopts.Options) ([]string, error) {
 	if err := validateGitHooks(hooks); err != nil {
 		return nil, err
 	}
+	// why: rejected HERE, before the value is baked into a script. A typo that
+	// installs cleanly would instead fail every commit from inside the hook,
+	// where the person committing cannot see which flag was wrong.
+	if err := validateTypographicSeverity(opts.TypographicSeverity); err != nil {
+		return nil, err
+	}
 	return hooks, nil
+}
+
+// validateTypographicSeverity rejects a --typographic-severity value the
+// analyzer would not recognize. An empty value keeps the analyzer default.
+func validateTypographicSeverity(severity string) error {
+	if severity == "" || core.ValidSeverityName(severity) {
+		return nil
+	}
+	return fmt.Errorf(
+		"invalid --typographic-severity %q (want %s)",
+		severity, strings.Join(core.SeverityNames(), "|"),
+	)
 }
 
 // validateGitHooks rejects any --git-hooks name githook does not recognize,

@@ -87,6 +87,12 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 			"",
 			"path to .golangci.yml (overrides auto-discovery)",
 		)
+		fs.StringVar(
+			&opts.TypographicSeverity,
+			"typographic-severity",
+			"",
+			"how hard a typographic-marker finding lands (error|warning|info)",
+		)
 		fs.BoolVar(
 			&opts.AllFiles,
 			"all-files",
