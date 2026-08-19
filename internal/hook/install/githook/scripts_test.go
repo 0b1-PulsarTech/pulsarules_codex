@@ -36,7 +36,8 @@ func TestHookScript_Rendering(t *testing.T) {
 				return
 			}
 			for _, want := range []string{
-				"#!/bin/sh", marker.Installed, binaryRel, testCase.wantCommand,
+				"#!/bin/sh", marker.Installed, "--git-common-dir", binaryName,
+				testCase.wantCommand,
 			} {
 				if !strings.Contains(script, want) {
 					t.Errorf("script for %q is missing %q", testCase.hook, want)

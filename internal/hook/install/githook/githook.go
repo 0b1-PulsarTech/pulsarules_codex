@@ -13,15 +13,15 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
-const binaryRel = ".git/hooks/pulsarules_cli"
+const binaryName = "pulsarules_cli"
 
 func Install(dir string, hooks []string) (backedUp []string, err error) {
 	if len(hooks) == 0 {
 		return nil, nil
 	}
-	hooksDir := filepath.Join(dir, ".git", "hooks")
-	if err = os.MkdirAll(hooksDir, fsperm.DirPrivate); err != nil {
-		return nil, fmt.Errorf("mkdir .git/hooks: %w", err)
+	dest := hooksDir(dir)
+	if err = os.MkdirAll(dest, fsperm.DirPrivate); err != nil {
+		return nil, fmt.Errorf("mkdir %q: %w", dest, err)
 	}
 	for _, name := range hooks {
 		script, ok := hookScript(name)
@@ -30,7 +30,7 @@ func Install(dir string, hooks []string) (backedUp []string, err error) {
 				"unknown git hook %q (want %s)", name, strings.Join(HookNames(), "|"),
 			)
 		}
-		path := filepath.Join(hooksDir, name)
+		path := filepath.Join(dest, name)
 		exists, ours, checkErr := marker.Check(path)
 		if checkErr != nil {
 			return backedUp, fmt.Errorf("check %q: %w", path, checkErr)
@@ -48,14 +48,14 @@ func Install(dir string, hooks []string) (backedUp []string, err error) {
 		}
 		const hookMode = 0o500
 		if writeErr := os.WriteFile(path, []byte(script), hookMode); writeErr != nil {
-			return backedUp, fmt.Errorf("write .git/hooks/%s: %w", name, writeErr)
+			return backedUp, fmt.Errorf("write hook %q: %w", name, writeErr)
 		}
 	}
 	return backedUp, nil
 }
 
 func InstallBinary(dir string) error {
-	dst := filepath.Join(dir, ".git", "hooks", "pulsarules_cli")
+	dst := filepath.Join(hooksDir(dir), binaryName)
 	if err := selfbin.Copy(dst); err != nil {
 		return fmt.Errorf("copy installer binary: %w", err)
 	}
@@ -67,9 +67,9 @@ func HookNames() []string {
 }
 
 func Uninstall(dir string) (removed, restored []string, err error) {
-	hooksDir := filepath.Join(dir, ".git", "hooks")
+	dest := hooksDir(dir)
 	for name := range hookSpecs() {
-		path := filepath.Join(hooksDir, name)
+		path := filepath.Join(dest, name)
 		_, ours, checkErr := marker.Check(path)
 		if checkErr != nil {
 			return removed, restored, fmt.Errorf("check %q: %w", path, checkErr)
@@ -89,7 +89,7 @@ func Uninstall(dir string) (removed, restored []string, err error) {
 			restored = append(restored, marker.RestoreMessage(path))
 		}
 	}
-	if err = os.RemoveAll(filepath.Join(hooksDir, "pulsarules_cli")); err != nil {
+	if err = os.RemoveAll(filepath.Join(dest, binaryName)); err != nil {
 		return removed, restored, fmt.Errorf("remove installer binary: %w", err)
 	}
 	return removed, restored, nil

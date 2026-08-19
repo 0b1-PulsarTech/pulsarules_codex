@@ -191,16 +191,18 @@ The families:
 ### internal/vcs
 
 `vcs.Repository` is the typed, read-only git port the whole governance pipeline depends on (`Root`,
-`HeadAuthorEpoch`, `RecentSubjects`, `WorktreeStatus`, `StagedRenames`). `vcs.Open` walks up from a
-directory to the repository root (resolving a linked worktree) and returns `ErrNoRepository` rather
-than a bare error when the directory is not a git repository, so callers can degrade quietly. Every
-git read in the product goes through `gitcmd.go`'s one `runGit` helper, which runs
-`git -C <dir> <args>` under a 2-second timeout with `LC_ALL=C` pinned (so `isEmptyRepoError`'s
-English-message match survives a localized git install). The one deliberate exception is
-`tools/emojigen`, documented in its own source: it shells out directly because it scans an entire
-reference repository's history (`git log --all --max-count=1000000`), which a per-object walk
-through this package would run orders of magnitude slower, and `tools/` is not a runtime dependency
-the vcs port needs to cover.
+`HeadAuthorEpoch`, `RecentSubjects`, `WorktreeStatus`, `StagedRenames`). The package-level
+`vcs.CommonDir` resolves the git dir every linked worktree of a repository shares - the git-hook
+installer joins it with `hooks` to find the dir git actually runs hook scripts from. `vcs.Open`
+walks up from a directory to the repository root (resolving a linked worktree) and returns
+`ErrNoRepository` rather than a bare error when the directory is not a git repository, so callers
+can degrade quietly. Every git read in the product goes through `gitcmd.go`'s one `runGit` helper,
+which runs `git -C <dir> <args>` under a 2-second timeout with `LC_ALL=C` pinned (so
+`isEmptyRepoError`'s English-message match survives a localized git install). The one deliberate
+exception is `tools/emojigen`, documented in its own source: it shells out directly because it scans
+an entire reference repository's history (`git log --all --max-count=1000000`), which a per-object
+walk through this package would run orders of magnitude slower, and `tools/` is not a runtime
+dependency the vcs port needs to cover.
 
 ### internal/hook
 
@@ -291,7 +293,7 @@ The governance pipeline (see above) adds its own package set:
 | `internal/analyzer/movepurity`    | flags a staged rename that is not a pure move                                                       |
 | `internal/analyzer/delegation/*`  | `golangcilint` - shells out to an external tool, gated to `ScopeFull`                              |
 | `internal/analyzer/golang`        | the `Language` handler for `.go` files                                                              |
-| `internal/vcs`                    | `Repository` port, `Open`, `Status`/`Rename` types, `gitcmd.go`'s `runGit` (the one git-exec point)  |
+| `internal/vcs`                    | `Repository` port, `Open`, `CommonDir`, `Status`/`Rename` types, `gitcmd.go`'s `runGit` (the one git-exec point)  |
 | `internal/hook`                   | `hook.go`/`dispatcher_deps.go` (`Dispatcher`), `router.go` (`Router`), `session.go` (`SessionTracker`), `checklist.go`, `checks.go` (`RunGovernanceCheck`), `install/*` (per-target hook installers) |
 | `internal/config`                 | `GovernanceConfig` and its sub-configs, `presets.go`                                                 |
 | `internal/obs`                    | `New` (off-by-default `slog.Logger`), tail-truncating log rotation                                   |
