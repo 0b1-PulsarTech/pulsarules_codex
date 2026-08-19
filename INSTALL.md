@@ -208,7 +208,7 @@ project and print findings to stderr, exiting non-zero on any error-severity fin
 analyzes only files `git status` reports as changed; `--all-files` walks the whole source tree
 instead (skipping `.git/`, `.claude/`, `.opencode/`, `generated/`, `build/`, and `vendor/`).
 `--scope commit` runs the lightweight static + AST + commit checks only (what the pre-commit hook
-uses); `--scope full` (default) adds architecture and delegation.
+uses); `--scope full` (default) adds architecture, delegation, and the `branch-name` check.
 `--preset recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity`
 overrides how hard a `typographic-markers` finding lands for this run (see the install flag of the
 same name for the baked-in variant). Findings in generated files (detected by the

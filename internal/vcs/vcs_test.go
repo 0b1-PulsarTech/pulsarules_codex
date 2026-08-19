@@ -216,3 +216,61 @@ func TestOpen_LinkedWorktree(t *testing.T) {
 		t.Fatalf("RecentSubjects(1) = %v, want [main commit]", subjects)
 	}
 }
+
+func TestCurrentBranch(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		setup func(t *testing.T, dir string)
+		want  string
+	}{
+		{
+			name: "reports the checked-out branch",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				writeAndCommit(t, dir, "init", map[string]string{"a.txt": "a"})
+				runGitOrFatal(t, dir, "checkout", "-q", "-b", "feat/thing")
+			},
+			want: "feat/thing",
+		},
+		{
+			name: "an unborn branch still names itself",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				runGitOrFatal(t, dir, "checkout", "-q", "-b", "fix/unborn")
+			},
+			want: "fix/unborn",
+		},
+		{
+			name: "a detached head names no branch",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				writeAndCommit(t, dir, "init", map[string]string{"a.txt": "a"})
+				runGitOrFatal(t, dir, "checkout", "-q", "--detach")
+			},
+			want: "",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			initRepo(t, dir)
+			testCase.setup(t, dir)
+
+			repo, err := Open(dir)
+			if err != nil {
+				t.Fatalf("Open: %v", err)
+			}
+			got, err := repo.CurrentBranch()
+			if err != nil {
+				t.Fatalf("CurrentBranch: %v", err)
+			}
+			if got != testCase.want {
+				t.Errorf("CurrentBranch() = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}
