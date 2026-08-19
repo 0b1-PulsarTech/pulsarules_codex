@@ -1,5 +1,11 @@
 package core
 
+import (
+	"path/filepath"
+	"slices"
+	"strings"
+)
+
 func EachChangedFile(
 	ctx *AnalysisContext,
 	eligible func(fc FileChange) bool,
@@ -10,7 +16,7 @@ func EachChangedFile(
 	}
 	var findings []Finding
 	for _, fc := range ctx.ChangedFiles {
-		if !eligible(fc) {
+		if !eligible(fc) || isTestdataFixture(fc.Path) {
 			continue
 		}
 		src, ok := ctx.Sources.Read(fc.Path)
@@ -20,4 +26,8 @@ func EachChangedFile(
 		findings = append(findings, check(fc, src)...)
 	}
 	return findings
+}
+
+func isTestdataFixture(path string) bool {
+	return slices.Contains(strings.Split(filepath.ToSlash(path), "/"), "testdata")
 }

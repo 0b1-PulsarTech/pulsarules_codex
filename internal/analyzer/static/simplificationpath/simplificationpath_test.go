@@ -127,6 +127,33 @@ func TestAnalyze_NonexistentFileSkipped(t *testing.T) {
 	}
 }
 
+func TestAnalyze_SkipsTestdata(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	fixtureDir := filepath.Join(dir, "testdata")
+	if err := os.MkdirAll(fixtureDir, 0o750); err != nil {
+		t.Fatalf("mkdir testdata: %v", err)
+	}
+	path := filepath.Join(fixtureDir, "no_label.go")
+	content := "package fixture\n\n" +
+		"// simplification: skip the rare case because it never happens in practice.\n" +
+		"func f() {}\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	a := NewAnalyzer()
+	got := a.Analyze(&core.AnalysisContext{
+		ProjectDir:   dir,
+		Sources:      core.NewSourceProvider(dir),
+		ChangedFiles: []core.FileChange{{Path: "testdata/no_label.go", Extension: ".go"}},
+	})
+	if got != nil {
+		t.Fatalf("got %+v findings for a testdata fixture, want nil", got)
+	}
+}
+
 func TestBlockNamesUpgradePath_WrappedLabel(t *testing.T) {
 	t.Parallel()
 

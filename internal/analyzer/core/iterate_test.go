@@ -34,6 +34,20 @@ func eachChangedFileTestCases() []eachChangedFileTestCase {
 			wantNilCall: true,
 		},
 		{
+			name: "testdata fixture is skipped even when eligible",
+			ctx: &AnalysisContext{
+				Sources: fakeSourceProvider{contents: map[string][]byte{
+					"pkg/testdata/fixture.go": []byte("package fixture"),
+					"pkg/real.go":             []byte("package pkg"),
+				}},
+				ChangedFiles: []FileChange{
+					{Path: "pkg/testdata/fixture.go", Extension: ".go"},
+					{Path: "pkg/real.go", Extension: ".go"},
+				},
+			},
+			wantFiles: []string{"pkg/real.go"},
+		},
+		{
 			name: "ineligible extension is skipped",
 			ctx: &AnalysisContext{
 				Sources: fakeSourceProvider{contents: map[string][]byte{

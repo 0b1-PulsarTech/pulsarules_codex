@@ -126,3 +126,38 @@ func TestBigComment_GeneratedFileExempt(t *testing.T) {
 		t.Fatalf("generated file header should be exempt, got %d findings", len(findings))
 	}
 }
+
+func TestBigComment_SkipsTestdata(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	fixtureDir := filepath.Join(dir, "testdata")
+	if err := os.MkdirAll(fixtureDir, 0o750); err != nil {
+		t.Fatalf("mkdir testdata: %v", err)
+	}
+	var b strings.Builder
+	b.WriteString("package fixture\n\n")
+	for count := range 25 {
+		b.WriteString("// comment line ")
+		b.WriteByte(byte('A' + count))
+		b.WriteByte('\n')
+	}
+	path := filepath.Join(fixtureDir, "big.go")
+	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := core.NewLanguageRegistry()
+	langs.Register(golang.New())
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&core.AnalysisContext{
+		ProjectDir: dir,
+		Sources:    core.NewSourceProvider(dir),
+		ChangedFiles: []core.FileChange{
+			{Path: "testdata/big.go", Extension: ".go"},
+		},
+	})
+	if len(findings) != 0 {
+		t.Fatalf("got %d findings for a testdata fixture, want 0: %+v", len(findings), findings)
+	}
+}

@@ -166,9 +166,9 @@ Every analyzer implements the small `core.Analyzer` interface (`ID`, `Stage`, `A
 `internal/analyzer/core`, which also carries the shared `AnalysisContext`, `Finding`, and the
 `Language`/`LanguageRegistry` Strategy for file-extension-based dispatch. `Reporter.Resolved(ctx)`
 re-reads a reporter's severity from the run's config, and `core.EachChangedFile` iterates the
-changed files as text, while `core.RunPerGoFile` iterates the parsed Go files.
-`core.InPlaceAnalyzer` marks the second contract - an analyzer that rewrites `ctx.Findings` (rule
-injection, output) instead of returning new ones. The families:
+changed files as text, skipping `testdata/` fixtures, while `core.RunPerGoFile` iterates the parsed
+Go files. `core.InPlaceAnalyzer` marks the second contract - an analyzer that rewrites
+`ctx.Findings` (rule injection, output) instead of returning new ones. The families:
 
 - `static/*` - pure text/structure checks needing no parser: `filesize` (line-count ceiling),
   `textmarkers` (invisible carriers, exotic spaces and AI typographic punctuation), `topoffile` and
