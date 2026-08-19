@@ -84,28 +84,109 @@ func TestAnalyze_NoSources(t *testing.T) {
 	}
 }
 
-// TestSeverities pins the split the whole design rests on: typographic blocks,
-// carriers only warn.
-func TestSeverities(t *testing.T) {
+// TestCarrierSeverityByClass pins the split the design rests on: a carrier no
+// context can justify blocks, while one that MAY be load-bearing only advises.
+// Every marker here is written as a Go escape so the fixture does not trip the
+// very check it exercises.
+func TestCarrierSeverityByClass(t *testing.T) {
 	t.Parallel()
 
+	testCases := []struct {
+		name string
+		body string
+		want core.Severity
+	}{
+		{name: "zero width space blocks", body: "a\u200Bb\n", want: core.SeverityError},
+		{name: "bidi override blocks", body: "a\u202Eb\n", want: core.SeverityError},
+		{name: "no-break space blocks", body: "a\u00A0b\n", want: core.SeverityError},
+		// A joiner flanked by ASCII cannot be gluing an emoji, so mark demotes
+		// it to a plain carrier - which must block like any other.
+		{
+			name: "zero width joiner between ascii blocks",
+			body: "a\u200Db\n",
+			want: core.SeverityError,
+		},
+		{
+			name: "zero width joiner between emoji advises",
+			body: "\U0001F468\u200D\U0001F469\n",
+			want: core.SeverityWarning,
+		},
+		{name: "byte order mark advises", body: "a\uFEFFb\n", want: core.SeverityWarning},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := NewTextAnalyzer().Analyze(markdownContext(t, testCase.body))
+			if len(got) != 1 {
+				t.Fatalf("findings = %+v, want exactly one", got)
+			}
+			if got[0].Severity != testCase.want {
+				t.Errorf("severity = %v, want %v", got[0].Severity, testCase.want)
+			}
+		})
+	}
+}
+
+// TestTypographicSeverityIsConfigurable asserts the default blocks and that a
+// project can keep the report while dropping the gate, without the fallback
+// ever collapsing to Info (Severity's zero value) on an unknown value.
+func TestTypographicSeverityIsConfigurable(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		severity string
+		want     core.Severity
+	}{
+		{name: "default blocks", want: core.SeverityError},
+		{
+			name:     "warning keeps the report without the gate",
+			severity: "warning",
+			want:     core.SeverityWarning,
+		},
+		{name: "info reports quietly", severity: "info", want: core.SeverityInfo},
+		{
+			name:     "unrecognized value keeps the blocking default",
+			severity: "fatal",
+			want:     core.SeverityError,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := markdownContext(t, "a\u2014b\n")
+			if testCase.severity != "" {
+				ctx.Config = &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
+					"typographic-markers": {
+						Enabled: true,
+						Params:  map[string]any{"severity": testCase.severity},
+					},
+				}}
+			}
+			got := NewTypographicAnalyzer().Analyze(ctx)
+			if len(got) != 1 {
+				t.Fatalf("findings = %+v, want exactly one", got)
+			}
+			if got[0].Severity != testCase.want {
+				t.Errorf("severity = %v, want %v", got[0].Severity, testCase.want)
+			}
+		})
+	}
+}
+
+// markdownContext writes body to a markdown file in a fresh temp dir and
+// returns the context the analyzers read it through.
+func markdownContext(t *testing.T, body string) *core.AnalysisContext {
+	t.Helper()
 	dir := t.TempDir()
-	if err := os.WriteFile(
-		filepath.Join(dir, "a.md"),
-		[]byte("a\u200Bb\u2014c\n"),
-		0o600,
-	); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "a.md"), []byte(body), 0o600); err != nil {
 		t.Fatalf("seed: %v", err)
 	}
-	ctx := &core.AnalysisContext{
+	return &core.AnalysisContext{
 		ProjectDir:   dir,
 		Sources:      core.NewSourceProvider(dir),
 		ChangedFiles: []core.FileChange{{Path: "a.md", Extension: ".md"}},
-	}
-	if got := NewTextAnalyzer().Analyze(ctx); got[0].Severity != core.SeverityWarning {
-		t.Errorf("carrier severity = %v, want warning", got[0].Severity)
-	}
-	if got := NewTypographicAnalyzer().Analyze(ctx); got[0].Severity != core.SeverityError {
-		t.Errorf("typographic severity = %v, want error", got[0].Severity)
 	}
 }

@@ -8,8 +8,14 @@ import (
 )
 
 var (
-	textReporter = core.NewReporter("text-markers", core.SeverityWarning, core.CatSyntax)
-	typoReporter = core.NewReporter("typographic-markers", core.SeverityError, core.CatSyntax)
+	// carrierReporter covers the classes `clean --write` removes outright: no
+	// neighbouring context can justify them, and the bidi controls among them
+	// are the Trojan Source vector (CVE-2021-42574), so they block.
+	carrierReporter = core.NewReporter("text-markers", core.SeverityError, core.CatSyntax)
+	// contextualReporter covers the invisible characters that MAY be
+	// load-bearing - emoji glue, script joiners - which this analyzer is not
+	// able to judge, so they advise instead of blocking.
+	contextualReporter = core.NewReporter("text-markers", core.SeverityWarning, core.CatSyntax)
 )
 
 // TextAnalyzer reports invisible carriers and exotic spaces.
@@ -38,7 +44,11 @@ func checkCarriers(fc core.FileChange, src string) []core.Finding {
 		if found.Class == mark.ClassTypographic {
 			continue
 		}
-		findings = append(findings, textReporter.At(
+		reporter := carrierReporter
+		if found.Class == mark.ClassContextual {
+			reporter = contextualReporter
+		}
+		findings = append(findings, reporter.At(
 			fc.Path, found.Line,
 			fmt.Sprintf("%s (U+%04X)", found.Name, found.Rune),
 			carrierAdvice(found.Class),
@@ -70,19 +80,29 @@ func (a *TypographicAnalyzer) Category() core.Category { return core.CatSyntax }
 
 func (a *TypographicAnalyzer) Needs() core.Requirements { return core.Requirements{} }
 
+// Analyze builds its reporter per run: the default blocks, and a project that
+// treats ASCII punctuation as house style rather than a defect sets the
+// analyzer's "severity" param to "warning" to keep the report without the gate.
 func (a *TypographicAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	return eachMarkedFile(ctx, checkTypographic)
+	reporter := core.NewReporter(
+		a.ID(),
+		ctx.Params(a.ID()).Severity(core.SeverityError),
+		core.CatSyntax,
+	)
+	return eachMarkedFile(ctx, func(fc core.FileChange, src string) []core.Finding {
+		return checkTypographic(reporter, fc, src)
+	})
 }
 
 // why: never auto-fixed, only reported. Inside a string literal or a fenced
 // block the character is data, and no analyzer can tell that from prose.
-func checkTypographic(fc core.FileChange, src string) []core.Finding {
+func checkTypographic(reporter core.Reporter, fc core.FileChange, src string) []core.Finding {
 	var findings []core.Finding
 	for _, found := range mark.Scan(src) {
 		if found.Class != mark.ClassTypographic {
 			continue
 		}
-		findings = append(findings, typoReporter.At(
+		findings = append(findings, reporter.At(
 			fc.Path, found.Line,
 			fmt.Sprintf("%s (U+%04X)", found.Name, found.Rune),
 			"replace it with the ASCII form by hand",
