@@ -213,13 +213,13 @@ analyzes only files `git status` reports as changed; `--all-files` walks the who
 instead (skipping `.git/`, `.claude/`, `.opencode/`, `generated/`, `build/`, and `vendor/`).
 `--scope commit` runs the lightweight static + AST + commit checks only (what the pre-commit hook
 uses); `--scope changed` adds the architecture analyzers over the changed files (what the Stop hook
-uses); `--scope full` (default) adds delegation and the `branch-name` check.
-`--preset recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity`
-overrides how hard a `typographic-markers` finding lands for this run; `--branch-extra-types` widens
-the branch-type prefixes `branch-name` accepts (see the install flags of the same name for the
-baked-in variants). Findings in generated files (detected by the
-`// Code generated ... DO NOT EDIT.` marker) are suppressed by default; `--include-generated` turns
-that off.
+uses); `--scope full` (default) adds delegation and the `branch-name` check. An unrecognized value
+is rejected by name rather than silently running the full set. `--preset recommended|strict|minimal`
+selects analyzer thresholds. `--typographic-severity` overrides how hard a `typographic-markers`
+finding lands for this run; `--branch-extra-types` widens the branch-type prefixes `branch-name`
+accepts (see the install flags of the same name for the baked-in variants). Findings in generated
+files (detected by the `// Code generated ... DO NOT EDIT.` marker) are suppressed by default;
+`--include-generated` turns that off.
 
 ```sh
 # the exact governance gate task tools:governance / CI run:
