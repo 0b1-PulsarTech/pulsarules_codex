@@ -5,16 +5,27 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-const gitHistoryLimit = 20
+func (s *Session) emojiWindow() int {
+	params := core.ParamSet(s.cfgAnalysis.Analyzers[commit.AnalyzerID].Params)
+	hard := params.Int(commit.ParamEmojiHardWindow, 0)
+	// Fetch the wider window, so neither emoji rule sees fewer subjects than it counts.
+	return max(hard, params.Int(commit.ParamEmojiSoftWindow, 0))
+}
 
 func (s *Session) gitHistory() []core.GitCommitEntry {
 	if s.repo == nil {
 		return nil
 	}
-	subjects, err := s.repo.RecentSubjects(gitHistoryLimit)
+	window := s.emojiWindow()
+	if s.commitMsg != "" {
+		// Dropping HEAD below would otherwise leave the widest window one subject short.
+		window++
+	}
+	subjects, err := s.repo.RecentSubjects(window)
 	if err != nil || len(subjects) == 0 {
 		return nil
 	}

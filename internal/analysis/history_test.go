@@ -3,6 +3,8 @@ package analysis
 import (
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -110,6 +112,52 @@ func TestSessionReplacesHead_AuthorDate(t *testing.T) {
 			if gotReplaces != testCase.wantReplaces {
 				t.Fatalf("replacesHead = %v, want %v (entries = %+v)",
 					gotReplaces, testCase.wantReplaces, entries)
+			}
+		})
+	}
+}
+
+type limitRecordingRepo struct {
+	vcs.Repository
+	limit int
+}
+
+func (repo *limitRecordingRepo) RecentSubjects(limit int) ([]string, error) {
+	repo.limit = limit
+	return nil, nil
+}
+
+func TestSessionGitHistory_FetchesTheWidestEmojiWindow(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		hardWindow int
+		softWindow int
+		commitMsg  string
+		want       int
+	}{
+		{"the defaults", 0, 0, "", 20},
+		{"a soft window above twenty", 0, 30, "", 30},
+		{"a hard window above the soft one", 25, 10, "", 25},
+		{"a commit message fetches one more for the dropped HEAD", 1, 3, ":wrench: feat: Tip", 4},
+		{"no commit message fetches the window itself", 1, 3, "", 3},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := config.Defaults()
+			if testCase.hardWindow > 0 {
+				cfg.SetParam(commit.AnalyzerID, commit.ParamEmojiHardWindow, testCase.hardWindow)
+			}
+			if testCase.softWindow > 0 {
+				cfg.SetParam(commit.AnalyzerID, commit.ParamEmojiSoftWindow, testCase.softWindow)
+			}
+			repo := &limitRecordingRepo{}
+			NewSession(repo, testCase.commitMsg, nil, cfg).gitHistory()
+			if repo.limit != testCase.want {
+				t.Errorf("RecentSubjects limit = %d, want %d", repo.limit, testCase.want)
 			}
 		})
 	}
