@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
@@ -137,5 +138,41 @@ func TestFindMagicNumbers_SkipsTestFiles(t *testing.T) {
 				t.Errorf("findMagicNumbers = %+v, want %d finding(s)", got, testCase.want)
 			}
 		})
+	}
+}
+
+// TestFindMagicNumbers_ReportsEveryLiteral pins that the check does not stop at
+// the first hit. Reporting one at a time hid the next behind each fix, so a
+// function looked clean after one edit while its other literals remained.
+func TestFindMagicNumbers_ReportsEveryLiteral(t *testing.T) {
+	t.Parallel()
+
+	const source = "package foo\n" +
+		"func f() {\n" +
+		"	x := 42\n" +
+		"	y := 77\n" +
+		"	z := 91\n" +
+		"	_, _, _ = x, y, z\n" +
+		"}\n"
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "foo.go", source, 0)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	fn, ok := file.Decls[0].(*ast.FuncDecl)
+	if !ok {
+		t.Fatalf("decl 0 = %T, want *ast.FuncDecl", file.Decls[0])
+	}
+	reporter := core.NewReporter("complexity", core.SeverityInfo, core.CatAST)
+
+	got := findMagicNumbers(fset, core.FileChange{Path: "foo.go", Extension: ".go"}, fn, reporter)
+	if len(got) != 3 {
+		t.Fatalf("findMagicNumbers = %+v, want one finding per literal", got)
+	}
+	for i, want := range []string{"42", "77", "91"} {
+		if !strings.Contains(got[i].Message, want) {
+			t.Errorf("finding %d = %q, want it to name %s", i, got[i].Message, want)
+		}
 	}
 }

@@ -27,8 +27,10 @@ func findMagicNumbers(
 		return nil
 	}
 
+	// why: EVERY magic literal in the function is reported, not just the first.
+	// Reporting one at a time hid the next behind each fix, so the work looked
+	// finished while 44% of it was still there (measured on a real project).
 	var findings []core.Finding
-	fired := false
 	// exemptPos records literals whose ROLE, not their value, makes them
 	// self-documenting (e.g. a stdlib bit-size argument). ast.Inspect visits
 	// a *ast.CallExpr before it descends into that call's argument nodes, so
@@ -48,10 +50,9 @@ func findMagicNumbers(
 		if !ok || (lit.Kind != token.INT && lit.Kind != token.FLOAT) {
 			return true
 		}
-		if exemptPos[lit.Pos()] || isSkippableLiteralValue(lit.Value) || fired {
+		if exemptPos[lit.Pos()] || isSkippableLiteralValue(lit.Value) {
 			return true
 		}
-		fired = true
 		findings = append(findings, reporter.At(
 			fc.Path,
 			fset.Position(lit.Pos()).Line,
