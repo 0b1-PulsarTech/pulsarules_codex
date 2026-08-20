@@ -55,15 +55,39 @@ func classify(r rune, src string, offset int) (Class, string, bool) {
 // why: tag characters, the private use planes and the variation selectors are
 // too large to enumerate, and the trailing Cf test is the closing rule - a
 // format character nobody named is still a carrier.
+
+// The Unicode boundaries classifyRange and contextualClass turn on, named so a
+// reader need not look each one up.
+const (
+	runeLanguageTag  = 0xE0001
+	tagRangeFirst    = 0xE0020
+	tagRangeLast     = 0xE007F
+	privateUseFirst  = 0xE000
+	privateUseLast   = 0xF8FF
+	privatePlaneAF   = 0xF0000
+	privatePlaneALst = 0xFFFFD
+	privatePlaneBF   = 0x100000
+	privatePlaneBLst = 0x10FFFD
+	varSelectorFirst = 0xFE00
+	varSelectorLast  = 0xFE0F
+	varSupplementF   = 0xE0100
+	varSupplementL   = 0xE01EF
+	// why: the joiners are the only carriers whose neighbours decide whether
+	// they are load-bearing.
+	runeZWNJ = 0x200C
+	runeZWJ  = 0x200D
+)
+
 func classifyRange(r rune) (Class, string, bool) {
 	switch {
-	case r == 0xE0001 || (r >= 0xE0020 && r <= 0xE007F):
+	case r == runeLanguageTag || (r >= tagRangeFirst && r <= tagRangeLast):
 		return ClassContextual, "tag character", true
-	case r >= 0xE000 && r <= 0xF8FF,
-		r >= 0xF0000 && r <= 0xFFFFD,
-		r >= 0x100000 && r <= 0x10FFFD:
+	case r >= privateUseFirst && r <= privateUseLast,
+		r >= privatePlaneAF && r <= privatePlaneALst,
+		r >= privatePlaneBF && r <= privatePlaneBLst:
 		return ClassContextual, "private use character", true
-	case r >= 0xFE00 && r <= 0xFE0F, r >= 0xE0100 && r <= 0xE01EF:
+	case r >= varSelectorFirst && r <= varSelectorLast,
+		r >= varSupplementF && r <= varSupplementL:
 		return ClassContextual, "variation selector", true
 	case unicode.Is(unicode.Cf, r):
 		return ClassStrip, "unnamed format character", true
@@ -75,7 +99,7 @@ func classifyRange(r rune) (Class, string, bool) {
 // or shaping a script, so it is a carrier and safe to strip. Anything else keeps
 // its neighbours' benefit of the doubt.
 func contextualClass(r rune, src string, offset int) Class {
-	if r != 0x200C && r != 0x200D {
+	if r != runeZWNJ && r != runeZWJ {
 		return ClassContextual
 	}
 	if asciiBefore(src, offset) && asciiAfter(src, offset, r) {
