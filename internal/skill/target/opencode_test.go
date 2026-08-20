@@ -13,11 +13,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
 )
 
-// TestUnwireOpencodeConfig_NoNoteWhenNothingChanged is the regression test
-// for the bug where unwireOpencodeConfig printed "unwired opencode.json"
-// whenever opencodewire.UnwireConfig returned a nil error, even though
-// UnwireConfig returns nil for both an absent opencode.json and a present
-// one carrying none of this tool's wiring - neither case actually unwired
+// TestUnwireOpencodeConfig_NoNoteWhenNothingChanged is the regression test for the bug where
+// unwireOpencodeConfig printed "unwired opencode.json" whenever opencodewire.UnwireConfig
+// returned a nil error, even though UnwireConfig returns nil for both an absent opencode.json
+// and a present one carrying none of this tool's wiring - neither case actually unwired
 // anything.
 func TestUnwireOpencodeConfig_NoNoteWhenNothingChanged(t *testing.T) {
 	t.Parallel()

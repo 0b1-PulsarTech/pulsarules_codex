@@ -3,12 +3,10 @@ package report
 import "fmt"
 
 // Report collects a producer's progress notes and non-fatal warnings, so
-// exactly one type flows from a producer (an install/uninstall wire
-// function) through its installer to the printer that owns stdout/stderr. A
-// producer decides for itself whether its work is note-worthy before
-// returning, so a caller merges unconditionally instead of re-deriving
-// "did something happen" from a bool, a slice length, or a status field
-// scattered at the call site.
+// one type flows from a producer through its installer to the printer that
+// owns stdout/stderr. A producer decides for itself whether its work is
+// note-worthy, so a caller merges unconditionally instead of re-deriving
+// that from a bool, slice length, or status field.
 type Report struct {
 	Notes    []string
 	Warnings []string

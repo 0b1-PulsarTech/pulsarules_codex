@@ -47,11 +47,10 @@ func TestAgentsTargetPresent(t *testing.T) {
 	}
 }
 
-// TestAgentsTargetPresent_DefersToOpencode is the regression test for the
-// bug where agentsTarget and opencodeTarget both claimed a root AGENTS.md:
-// once an opencode dir is present, agentsTarget.Present must return false
-// even though the shared AGENTS.md still exists, since opencodeTarget's own
-// Uninstall already reverses it - claiming it here too would attempt the
+// TestAgentsTargetPresent_DefersToOpencode is the regression test for the bug where agentsTarget
+// and opencodeTarget both claimed a root AGENTS.md: once an opencode dir is present,
+// agentsTarget.Present must return false even though the shared AGENTS.md still exists, since
+// opencodeTarget's own Uninstall already reverses it - claiming it here too would attempt the
 // same removal twice.
 func TestAgentsTargetPresent_DefersToOpencode(t *testing.T) {
 	t.Parallel()

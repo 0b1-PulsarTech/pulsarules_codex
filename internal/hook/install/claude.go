@@ -48,15 +48,14 @@ func (claudeInstaller) Install(ctx Context) (report.Report, error) {
 // the "/bin/"/"/hooks/" gitignore entries Install wrote. Hook files and
 // gitignore go first, so an unparseable settings file still leaves the rest
 // reversed; its error propagates last for the caller to warn on. Any error
-// discards the Report entirely, mirroring Install: a caller only learns
-// what changed once the whole uninstall lands.
+// discards the Report entirely, mirroring Install's own partial-result rule.
 func (claudeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
 	claudeDir := ctx.Dir
 	settingsFile := ctx.SettingsFile
 	if settingsFile == "" {
 		settingsFile = "settings.json"
 	}
-	restored, err := hookwire.UninstallHook(claudeDir)
+	restored, orphaned, err := hookwire.UninstallHook(claudeDir)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("uninstall claude hook: %w", err)
 	}
@@ -70,6 +69,9 @@ func (claudeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
 	var rpt report.Report
 	if changed {
 		rpt.Note("removed hook wiring from %s", filepath.Join(claudeDir, settingsFile))
+	}
+	for _, msg := range orphaned {
+		rpt.Warn("%s", msg)
 	}
 	for _, msg := range restored {
 		rpt.Note("%s", msg)

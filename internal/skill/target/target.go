@@ -53,10 +53,8 @@ type Target interface {
 	Uninstall(ctx UninstallContext) (Report, error)
 }
 
-// Report collects a Strategy's human-facing output so the caller owns all
-// stdout/stderr; the package itself stays silent and easy to test. It is an
-// alias for report.Report, the one type every install/uninstall producer -
-// from the wire packages up through the hook installers - returns, so a
-// Strategy merges a collaborator's output instead of re-deriving whether it
-// did anything from a bool, a slice length, or a status field.
+// Report collects a Strategy's human-facing output so the caller owns all stdout/stderr; the
+// package itself stays silent and easy to test. It is an alias for report.Report, the one type
+// every install/uninstall producer returns, so a Strategy merges a collaborator's output instead
+// of re-deriving whether it did anything from a bool, a slice length, or a status field.
 type Report = report.Report

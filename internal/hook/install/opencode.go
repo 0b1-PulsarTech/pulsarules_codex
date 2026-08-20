@@ -40,7 +40,7 @@ func (opencodeInstaller) Install(ctx Context) (report.Report, error) {
 // existed, so a caller can tell a real removal from a no-op against a
 // project Install never touched.
 func (opencodeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
-	removed, restored, err := opencodehook.Uninstall(ctx.Dir)
+	removed, restored, orphaned, err := opencodehook.Uninstall(ctx.Dir)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("uninstall opencode hook: %w", err)
 	}
@@ -49,6 +49,9 @@ func (opencodeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) 
 	// was removed - the foreign file it uncovers is back on disk either way.
 	for _, msg := range restored {
 		rpt.Note("%s", msg)
+	}
+	for _, msg := range orphaned {
+		rpt.Warn("%s", msg)
 	}
 	if removed {
 		rpt.Note(

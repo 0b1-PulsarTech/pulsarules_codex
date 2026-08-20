@@ -96,12 +96,11 @@ func (claudeTarget) Uninstall(ctx UninstallContext) (Report, error) {
 	return report, nil
 }
 
-// unwireClaudeHooks removes the hook wiring from every file in files.
-// UnwireSettings filters at the command level, so unwiring a never-wired
-// file is a safe no-op, letting this unwire every candidate instead of
-// guessing --hooks-scope. Errors fold via errors.Join; claudeInstaller
-// already gates its own notes on what it actually changed, so this only
-// merges - no separate "did it change" check to get wrong here.
+// unwireClaudeHooks removes the hook wiring from every file in files. UnwireSettings filters at
+// the command level, so unwiring a never-wired file is a safe no-op, letting this unwire every
+// candidate instead of guessing --hooks-scope. Errors fold via errors.Join; claudeInstaller
+// already gates its own notes on what it actually changed, so this only merges - no separate
+// "did it change" check to get wrong here.
 func unwireClaudeHooks(
 	hooks *install.Registry, claudeDir string, files []string, report *Report,
 ) error {

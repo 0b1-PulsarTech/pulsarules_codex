@@ -10,18 +10,15 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsonconfig"
 )
 
-// RemoveMCP removes the managed servers (gopls) from <repoDir>/.mcp.json,
-// undoing WriteMCP. It drops the mcpServers key once empty, and deletes the
-// file (plus the ".mcp.json" gitignore entry) once nothing else remains.
-// Invalid JSON leaves the file untouched (wraps fsx.ErrUnparseableJSON);
-// an already-absent file, key, or server makes re-running a no-op. changed
-// reports whether anything on disk actually moved, so a caller can tell a
-// real removal from a no-op instead of assuming one from a nil error -
-// RemoveMCP returns nil error for both an absent file and a present file
-// with no gopls entry.
+// RemoveMCP removes the managed gopls entry from <repoDir>/.mcp.json,
+// undoing WriteMCP, and deletes the file once nothing else remains. Invalid
+// JSON leaves the file untouched (wraps fsx.ErrUnparseableJSON); an
+// already-absent file, key, or server is a no-op. changed distinguishes a
+// real removal from that no-op, since both return a nil error.
 func RemoveMCP(repoDir string) (changed bool, err error) {
 	path := filepath.Join(repoDir, ".mcp.json")
-	existing, err := jsonconfig.Read(path)
+	var existing []byte
+	existing, err = jsonconfig.Read(path)
 	if err != nil {
 		return false, err
 	}

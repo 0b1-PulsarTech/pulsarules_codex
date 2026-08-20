@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
@@ -38,7 +39,7 @@ func TestRemoveDocs_RemovesOwnedLeavesForeign(t *testing.T) {
 		t.Fatalf("seed user file: %v", err)
 	}
 
-	removed, _, err := RemoveDocs(dest, "SKILL.md")
+	removed, _, _, err := RemoveDocs(dest, "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
@@ -71,7 +72,7 @@ func TestRemoveDocs_RemovesDestWhenEmptied(t *testing.T) {
 		t.Fatalf("WriteDoc: %v", err)
 	}
 
-	if _, _, err := RemoveDocs(dest, "SKILL.md"); err != nil {
+	if _, _, _, err := RemoveDocs(dest, "SKILL.md"); err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
 
@@ -84,7 +85,7 @@ func TestRemoveDocs_RemovesDestWhenEmptied(t *testing.T) {
 func TestRemoveDocs_NoOpWhenAbsent(t *testing.T) {
 	t.Parallel()
 
-	removed, _, err := RemoveDocs(filepath.Join(t.TempDir(), "never-created"), "SKILL.md")
+	removed, _, _, err := RemoveDocs(filepath.Join(t.TempDir(), "never-created"), "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
@@ -115,7 +116,7 @@ func TestRemoveDocs_PreservesUserFileInsideOwnedDir(t *testing.T) {
 		t.Fatalf("seed nested file: %v", err)
 	}
 
-	removed, _, err := RemoveDocs(dest, "SKILL.md")
+	removed, _, _, err := RemoveDocs(dest, "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
@@ -154,10 +155,10 @@ func TestRemoveDocs_Idempotent(t *testing.T) {
 	); err != nil {
 		t.Fatalf("WriteDoc: %v", err)
 	}
-	if _, _, err := RemoveDocs(dest, "SKILL.md"); err != nil {
+	if _, _, _, err := RemoveDocs(dest, "SKILL.md"); err != nil {
 		t.Fatalf("RemoveDocs #1: %v", err)
 	}
-	if _, _, err := RemoveDocs(dest, "SKILL.md"); err != nil {
+	if _, _, _, err := RemoveDocs(dest, "SKILL.md"); err != nil {
 		t.Fatalf("RemoveDocs #2: %v", err)
 	}
 }
@@ -183,7 +184,7 @@ func TestRemoveDocs_RestoresBackup(t *testing.T) {
 		t.Fatalf("WriteDoc: %v", err)
 	}
 
-	removed, restored, err := RemoveDocs(dest, "SKILL.md")
+	removed, restored, _, err := RemoveDocs(dest, "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
@@ -219,7 +220,7 @@ func TestRemoveDocs_RemovesWithoutGitignore(t *testing.T) {
 		t.Fatalf("remove .gitignore: %v", err)
 	}
 
-	removed, _, err := RemoveDocs(dest, "SKILL.md")
+	removed, _, _, err := RemoveDocs(dest, "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
@@ -228,5 +229,31 @@ func TestRemoveDocs_RemovesWithoutGitignore(t *testing.T) {
 	}
 	if _, statErr := os.Stat(dir); !errors.Is(statErr, fs.ErrNotExist) {
 		t.Errorf("expected dir to be removed, stat err = %v", statErr)
+	}
+}
+
+// TestRemoveDocs_ReportsOrphanedBackup pins the gap-tolerant reporting: a
+// numbered slot Restore never consumes must be named, including one sitting
+// past a hole in the numbering, so it does not stay on disk unmentioned.
+func TestRemoveDocs_ReportsOrphanedBackup(t *testing.T) {
+	t.Parallel()
+
+	dest := t.TempDir()
+	dir := filepath.Join(dest, "security")
+	if _, err := WriteDoc(dir, "SKILL.md", "# rendered\n"+marker.Installed+"\n"); err != nil {
+		t.Fatalf("WriteDoc: %v", err)
+	}
+	docPath := filepath.Join(dir, "SKILL.md")
+	// .2 with no .1 is the case a sequential probe would miss entirely.
+	if err := os.WriteFile(docPath+marker.BackupSuffix+".2", []byte("older\n"), 0o600); err != nil {
+		t.Fatalf("seed orphan slot: %v", err)
+	}
+
+	_, _, orphaned, err := RemoveDocs(dest, "SKILL.md")
+	if err != nil {
+		t.Fatalf("RemoveDocs: %v", err)
+	}
+	if len(orphaned) != 1 || !strings.Contains(orphaned[0], docPath) {
+		t.Errorf("orphaned = %v, want one note naming %q", orphaned, docPath)
 	}
 }

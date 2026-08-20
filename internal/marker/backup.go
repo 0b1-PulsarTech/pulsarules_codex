@@ -112,6 +112,23 @@ func Orphans(path string) ([]string, error) {
 	return slots, nil
 }
 
+// OrphanNotes collects one ready-to-print message per path that still has
+// numbered backup slots beside it, skipping the paths that have none.
+// why: every uninstaller asks the same question about its own set of paths,
+// and a leftover slot no caller mentions sits on disk forever.
+func OrphanNotes(paths ...string) (notes []string, err error) {
+	for _, path := range paths {
+		slots, slotsErr := Orphans(path)
+		if slotsErr != nil {
+			return notes, fmt.Errorf("list backups of %q: %w", path, slotsErr)
+		}
+		if len(slots) > 0 {
+			notes = append(notes, OrphanMessage(path, slots))
+		}
+	}
+	return notes, nil
+}
+
 // OrphanMessage names the leftover slots for a person to reconcile by hand.
 func OrphanMessage(path string, slots []string) string {
 	return fmt.Sprintf(

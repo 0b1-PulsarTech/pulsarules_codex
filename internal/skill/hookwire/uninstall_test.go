@@ -20,7 +20,7 @@ func TestUninstallHook(t *testing.T) {
 		t.Fatalf("InstallHook: %v", err)
 	}
 
-	if _, err := UninstallHook(claudeDir); err != nil {
+	if _, _, err := UninstallHook(claudeDir); err != nil {
 		t.Fatalf("UninstallHook: %v", err)
 	}
 
@@ -50,7 +50,7 @@ func TestUninstallHook_LeavesUnrelatedContent(t *testing.T) {
 		t.Fatalf("seed extra file: %v", err)
 	}
 
-	if _, err := UninstallHook(claudeDir); err != nil {
+	if _, _, err := UninstallHook(claudeDir); err != nil {
 		t.Fatalf("UninstallHook: %v", err)
 	}
 
@@ -80,7 +80,7 @@ func TestUninstallHook_LeavesForeignReadme(t *testing.T) {
 		t.Fatalf("overwrite foreign readme: %v", err)
 	}
 
-	if _, err := UninstallHook(claudeDir); err != nil {
+	if _, _, err := UninstallHook(claudeDir); err != nil {
 		t.Fatalf("UninstallHook: %v", err)
 	}
 
@@ -118,7 +118,7 @@ func TestUninstallHook_RestoresBackup(t *testing.T) {
 		t.Fatalf("InstallHook: %v", err)
 	}
 
-	restored, err := UninstallHook(claudeDir)
+	restored, _, err := UninstallHook(claudeDir)
 	if err != nil {
 		t.Fatalf("UninstallHook: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestUninstallHook_Idempotent(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := filepath.Join(t.TempDir(), ".claude")
-	if _, err := UninstallHook(claudeDir); err != nil {
+	if _, _, err := UninstallHook(claudeDir); err != nil {
 		t.Fatalf("UninstallHook on untouched dir: %v", err)
 	}
 }
@@ -191,7 +191,7 @@ func TestUninstallHook_ForeignAssetSurvives(t *testing.T) {
 				t.Fatalf("write asset: %v", err)
 			}
 
-			if _, err := UninstallHook(claudeDir); err != nil {
+			if _, _, err := UninstallHook(claudeDir); err != nil {
 				t.Fatalf("UninstallHook: %v", err)
 			}
 

@@ -16,12 +16,11 @@ var _ Target = agentsTarget{}
 
 func (agentsTarget) Name() string { return "agents" }
 
-// Present reports whether base holds an AGENTS.md this layout could have
-// written on its own. opencodeTarget also writes the same root AGENTS.md as
-// a side effect and already reverses it from its own Uninstall, so Present
-// defers to it here rather than also claiming the file: without this,
-// DetectTargets would return both "agents" and "opencode" for an
-// opencode-only project, and both Uninstalls would attempt removeAgents.
+// Present reports whether base holds an AGENTS.md this layout could have written on its own.
+// opencodeTarget also writes the same root AGENTS.md as a side effect and already reverses it
+// from its own Uninstall, so Present defers to it here: without this, DetectTargets would return
+// both "agents" and "opencode" for an opencode-only project, and both Uninstalls would attempt
+// removeAgents.
 func (agentsTarget) Present(base string) bool {
 	if _, err := os.Stat(filepath.Join(base, "AGENTS.md")); err != nil {
 		return false

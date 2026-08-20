@@ -11,18 +11,15 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsonconfig"
 )
 
-// UnwireConfig removes the instruction globs and gopls MCP entry WireConfig
-// merged into <projectDir>/opencode.json, dropping "instructions"/"mcp"
-// once empty. It drops "$schema" only when it is the sole remaining key and
-// exactly WireConfig's URL, so a user's own $schema survives; invalid JSON
-// or an absent file leaves things untouched (wraps fsx.ErrUnparseableJSON).
-// changed reports whether anything on disk actually moved, so a caller can
-// tell a real removal from a no-op instead of assuming one from a nil error
-// - UnwireConfig returns nil error for both an absent file and a present
-// file carrying neither wired instructions nor a gopls entry.
+// UnwireConfig removes the instruction globs and gopls MCP entry WireConfig merged into
+// <projectDir>/opencode.json. It drops "$schema" only when it is the sole remaining key and
+// exactly WireConfig's URL, so a user's own $schema survives; invalid JSON or an absent file
+// leaves things untouched (wraps fsx.ErrUnparseableJSON). changed distinguishes a real removal
+// from a no-op, since both return a nil error.
 func UnwireConfig(projectDir string) (changed bool, err error) {
 	path := filepath.Join(projectDir, configFile)
-	existing, err := jsonconfig.Read(path)
+	var existing []byte
+	existing, err = jsonconfig.Read(path)
 	if err != nil {
 		return false, err
 	}
@@ -35,13 +32,15 @@ func UnwireConfig(projectDir string) (changed bool, err error) {
 		return false, fmt.Errorf("%w: %q: %w", fsx.ErrUnparseableJSON, path, err)
 	}
 
-	instructionsChanged, err := fsx.StripSliceSection(
+	var instructionsChanged bool
+	instructionsChanged, err = fsx.StripSliceSection(
 		config, "instructions", fmt.Sprintf("%q instructions", path), stripInstructions,
 	)
 	if err != nil {
 		return false, fmt.Errorf("strip instructions: %w", err)
 	}
-	mcpChanged, err := fsx.StripMapSection(
+	var mcpChanged bool
+	mcpChanged, err = fsx.StripMapSection(
 		config,
 		"mcp",
 		fmt.Sprintf("%q mcp", path),
