@@ -2,6 +2,7 @@ package character
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
@@ -97,9 +98,14 @@ func (a *TypographicAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 }
 
 func checkTypographic(fc pass.FileChange, src string, reporter pass.Reporter) []pass.Finding {
+	var code []region
+	if strings.EqualFold(fc.Extension, ".md") {
+		code = codeRegions(src)
+	}
+
 	var findings []pass.Finding
 	for _, found := range invisible.Scan(src) {
-		if found.Class != invisible.ClassTypographic {
+		if found.Class != invisible.ClassTypographic || inCode(code, found.Offset) {
 			continue
 		}
 		findings = append(findings, reporter.At(
