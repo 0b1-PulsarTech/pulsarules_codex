@@ -24,7 +24,6 @@ func findMagicNumbers(
 	}
 
 	var findings []pass.Finding
-	fired := false
 	// ast.Inspect visits a call before its arguments, so an exemption is marked in time.
 	exemptPos := map[token.Pos]bool{}
 
@@ -41,10 +40,9 @@ func findMagicNumbers(
 		if !ok || (lit.Kind != token.INT && lit.Kind != token.FLOAT) {
 			return true
 		}
-		if exemptPos[lit.Pos()] || isSkippableLiteralValue(lit.Value) || fired {
+		if exemptPos[lit.Pos()] || isSkippableLiteralValue(lit.Value) {
 			return true
 		}
-		fired = true
 		findings = append(findings, reporter.At(
 			fc.Path,
 			fset.Position(lit.Pos()).Line,
