@@ -3,8 +3,10 @@ package golangcilint
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
+	"time"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 )
 
 func TestRun_NoBinary(t *testing.T) {
@@ -17,31 +19,57 @@ func TestRun_NoBinary(t *testing.T) {
 	}
 }
 
+// TestRun_MissingBinary proves a binary that does not resolve on PATH (or
+// as a direct path) is a clean skip - no findings at all - instead of the
+// synthetic finding it used to surface before the LookPath probe.
 func TestRun_MissingBinary(t *testing.T) {
 	t.Parallel()
 
-	// A binary path guaranteed not to resolve fails the exec before any
-	// stdout exists, so the runner must report the real exec failure -
-	// never a misleading "failed to parse ... output" on empty JSON.
 	r := NewRunner("/nonexistent/golangci-lint")
 	findings := r.Run(".", "")
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 findings for a missing binary, got %d: %+v", len(findings), findings)
+	}
+}
 
+// TestRun_Timeout proves a binary that overruns Runner.timeout is reported
+// as a real failure (not silently skipped like a missing binary), and that
+// Run returns well before the script's own sleep would finish.
+func TestRun_Timeout(t *testing.T) {
+	t.Parallel()
+
+	script := writeSlowScript(t)
+	r := &Runner{path: script, timeout: 50 * time.Millisecond}
+
+	start := time.Now()
+	findings := r.Run(t.TempDir(), "")
+	elapsed := time.Since(start)
+
+	if elapsed > 2*time.Second {
+		t.Fatalf("Run took %v, want it killed near the 50ms timeout", elapsed)
+	}
 	if len(findings) != 1 {
-		t.Fatalf("expected 1 finding for a missing binary, got %d: %+v", len(findings), findings)
+		t.Fatalf("expected 1 finding for a timed-out run, got %d: %+v", len(findings), findings)
 	}
-	got := findings[0]
-	if got.AnalyzerID != "golangci-lint" {
-		t.Errorf("AnalyzerID = %q, want %q", got.AnalyzerID, "golangci-lint")
+	if findings[0].AnalyzerID != "golangci-lint" {
+		t.Errorf("AnalyzerID = %q, want %q", findings[0].AnalyzerID, "golangci-lint")
 	}
-	if strings.Contains(got.Message, "failed to parse golangci-lint output") {
-		t.Errorf("Message = %q, must not claim a JSON parse failure", got.Message)
+}
+
+// writeSlowScript writes an executable shell script that outlives any
+// timeout this package tests with, so Run's context cancellation is what
+// actually stops it.
+func writeSlowScript(t *testing.T) string {
+	t.Helper()
+
+	// exec replaces the shell instead of forking sleep as its child, so
+	// killing this one process is enough - no grandchild can outlive it
+	// and hold the captured stdout/stderr pipe open past ioWaitGrace.
+	path := filepath.Join(t.TempDir(), "slow-golangci-lint")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nexec sleep 5\n"), 0o700); err != nil {
+		t.Fatalf("write slow script: %v", err)
 	}
-	if !strings.Contains(got.Message, "/nonexistent/golangci-lint") {
-		t.Errorf(
-			"Message = %q, want it to name the real exec failure (missing binary path)",
-			got.Message,
-		)
-	}
+	return path
 }
 
 func TestLintArgs(t *testing.T) {
@@ -204,10 +232,8 @@ func TestResolvedConfigFlag_NotFound(t *testing.T) {
 func TestParseOutput_Raw(t *testing.T) {
 	t.Parallel()
 
-	out := []byte(
-		`{"Issues":[{"FromLinter":"errcheck","Text":"unchecked error","Severity":"warning","Pos":{"Filename":"foo.go","Line":42}}]}`,
-	)
-	findings := parseOutput(out, nil)
+	out := `{"Issues":[{"FromLinter":"errcheck","Text":"unchecked error","Severity":"warning","Pos":{"Filename":"foo.go","Line":42}}]}`
+	findings := parseOutput(execx.Result{Stdout: out}, nil)
 	if len(findings) != 1 {
 		t.Fatalf("expected 1 finding, got %d", len(findings))
 	}

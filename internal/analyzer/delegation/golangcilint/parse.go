@@ -9,13 +9,14 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 )
 
 var staleCacheReporter = core.NewReporter(
 	"golangci-lint", core.SeverityWarning, core.CatSyntax,
 )
 
-func parseOutput(out []byte, cmdErr error) []core.Finding {
+func parseOutput(result execx.Result, cmdErr error) []core.Finding {
 	if cmdErr != nil {
 		var exitErr *exec.ExitError
 		switch {
@@ -23,24 +24,24 @@ func parseOutput(out []byte, cmdErr error) []core.Finding {
 			if !isLintExit(exitErr.ExitCode()) {
 				return []core.Finding{
 					golangciLintReporter.New(
-						fmt.Sprintf("golangci-lint failed: %s", string(exitErr.Stderr)),
+						fmt.Sprintf("golangci-lint failed: %s", result.Stderr),
 					),
 				}
 			}
 		default:
-			// why: a non-ExitError (e.g. *exec.Error from a missing binary,
-			// or a permission error) means the command never produced
-			// stdout to parse; report the real cause instead of falling
-			// through to a JSON parse failure on empty output.
+			// why: a non-ExitError (e.g. a start failure, or the process
+			// killed on timeout) means the command never produced stdout to
+			// parse; report the real cause instead of falling through to a
+			// JSON parse failure on empty output.
 			return []core.Finding{
 				golangciLintReporter.New(fmt.Sprintf("golangci-lint failed: %s", cmdErr)),
 			}
 		}
 	}
 
-	jsonOut := extractJSON(out)
+	jsonOut := extractJSON([]byte(result.Stdout))
 
-	var result struct {
+	var parsed struct {
 		Issues []struct {
 			FromLinter string `json:"FromLinter"`
 			Text       string `json:"Text"`
@@ -52,7 +53,7 @@ func parseOutput(out []byte, cmdErr error) []core.Finding {
 		} `json:"Issues"`
 	}
 
-	if parseErr := json.Unmarshal(jsonOut, &result); parseErr != nil {
+	if parseErr := json.Unmarshal(jsonOut, &parsed); parseErr != nil {
 		return []core.Finding{
 			golangciLintReporter.New(
 				fmt.Sprintf("failed to parse golangci-lint output: %s", parseErr),
@@ -62,7 +63,7 @@ func parseOutput(out []byte, cmdErr error) []core.Finding {
 
 	var findings []core.Finding
 	var escaped int
-	for _, issue := range result.Issues {
+	for _, issue := range parsed.Issues {
 		if escapesProject(issue.Pos.Filename) {
 			escaped++
 			continue

@@ -1,14 +1,13 @@
 package vcs
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 )
 
 // gitTimeout bounds every git invocation so a hung process (e.g. a
@@ -35,23 +34,28 @@ func (e *gitError) Unwrap() error {
 // runGit runs git with args in dir under a timeout and returns trimmed
 // stdout. Every git call in this package goes through this one helper.
 func runGit(dir string, args ...string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), gitTimeout)
-	defer cancel()
-
 	full := append([]string{"-C", dir}, args...)
-	//nolint:gosec // dir and args are fixed subcommands over an operator-supplied local path, never user input.
-	cmd := exec.CommandContext(ctx, "git", full...)
-	// why: isEmptyRepoError matches an English git message, and git translates
-	// its diagnostics when the locale has them installed. Pinning LC_ALL keeps
-	// stderr in the language that match was written against.
-	cmd.Env = append(os.Environ(), "LC_ALL=C")
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return "", &gitError{args: full, stderr: strings.TrimSpace(stderr.String()), err: err}
+	result, err := execx.Run(context.Background(), execx.Command{
+		Name:    "git",
+		Args:    full,
+		Timeout: gitTimeout,
+		// why: isEmptyRepoError matches an English git message, and git
+		// translates its diagnostics when the locale has them installed.
+		// Pinning LC_ALL keeps stderr in the language that match was
+		// written against.
+		Env: []string{"LC_ALL=C"},
+	})
+	if err != nil {
+		// why: unwrap to execx.Error's own cause/stderr instead of execx.Error
+		// itself, so gitError.Error() keeps the pre-migration message shape.
+		cause, stderr := err, ""
+		var execErr *execx.Error
+		if errors.As(err, &execErr) {
+			cause, stderr = execErr.Err, execErr.Stderr
+		}
+		return "", &gitError{args: full, stderr: stderr, err: cause}
 	}
-	return strings.TrimRight(stdout.String(), "\n"), nil
+	return strings.TrimRight(result.Stdout, "\n"), nil
 }
 
 // isEmptyRepoError reports whether err came from a log/diff command run

@@ -72,8 +72,9 @@ func TestGolangcilintAnalyzer_Contract(t *testing.T) {
 	}
 }
 
-// TestGolangcilintAnalyzer_AnalyzeWithoutBinary proves the adapter reports the
-// failure instead of returning nothing when the binary cannot be executed.
+// TestGolangcilintAnalyzer_AnalyzeWithoutBinary proves the adapter skips
+// cleanly - no findings - when the configured binary cannot be resolved,
+// rather than surfacing the exec failure as a synthetic finding.
 func TestGolangcilintAnalyzer_AnalyzeWithoutBinary(t *testing.T) {
 	t.Parallel()
 
@@ -82,10 +83,7 @@ func TestGolangcilintAnalyzer_AnalyzeWithoutBinary(t *testing.T) {
 		ProjectDir: t.TempDir(),
 		Config:     &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{}},
 	})
-	if len(findings) != 1 {
-		t.Fatalf("got %d findings, want 1: %+v", len(findings), findings)
-	}
-	if findings[0].AnalyzerID != "golangci-lint" {
-		t.Errorf("AnalyzerID = %q, want %q", findings[0].AnalyzerID, "golangci-lint")
+	if len(findings) != 0 {
+		t.Fatalf("got %d findings, want 0 (missing binary is a skip): %+v", len(findings), findings)
 	}
 }

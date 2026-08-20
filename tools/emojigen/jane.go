@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 )
 
 // janeUsage is the measured emoji vocabulary of the reference repository: how
@@ -25,6 +25,10 @@ type janeUsage struct {
 // fraction of the real one.
 const gitMaxCount = "--max-count=1000000"
 
+// janeGitTimeout bounds the reference clone's full-history scan; a large
+// history walked with --all can genuinely take a while.
+const janeGitTimeout = 2 * time.Minute
+
 // estimatedEmojiVocabulary and estimatedTypeVocabulary size the usage maps
 // to roughly how many distinct shortcodes a reference repository's history
 // uses overall, and per Conventional Commit type, so tallying it doesn't
@@ -39,12 +43,12 @@ const (
 // would walk orders of magnitude slower, and tools/ is not a runtime
 // dependency the vcs migration needs to cover.
 func readJaneUsage(dir string) (janeUsage, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
-
-	//nolint:gosec // dir is an operator-supplied path to a local clone.
-	cmd := exec.CommandContext(ctx, "git", "-C", dir, "log", "--format=%s", "--all", gitMaxCount)
-	out, err := cmd.Output()
+	result, err := execx.Run(context.Background(), execx.Command{
+		Name:    "git",
+		Args:    []string{"log", "--format=%s", "--all", gitMaxCount},
+		Dir:     dir,
+		Timeout: janeGitTimeout,
+	})
 	if err != nil {
 		return janeUsage{}, fmt.Errorf("read git log of %s: %w", dir, err)
 	}
@@ -53,7 +57,7 @@ func readJaneUsage(dir string) (janeUsage, error) {
 		byEmoji: make(map[string]int, estimatedEmojiVocabulary),
 		byType:  make(map[string]map[string]int, len(commitmsg.AllowedTypes)),
 	}
-	for subject := range strings.SplitSeq(string(out), "\n") {
+	for subject := range strings.SplitSeq(result.Stdout, "\n") {
 		usage.add(commitmsg.Parse(subject))
 	}
 	if len(usage.byEmoji) == 0 {
