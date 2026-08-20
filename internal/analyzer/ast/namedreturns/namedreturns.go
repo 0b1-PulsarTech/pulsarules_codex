@@ -42,22 +42,20 @@ func checkFile(
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.FuncDecl:
-			findings = append(
-				findings,
-				checkResults(fset, fc, node.Name.Name, node.Pos(), node.Type.Results, reporter)...,
-			)
+			site := declSite{name: node.Name.Name, pos: node.Pos(), results: node.Type.Results}
+			findings = append(findings, checkResults(fset, fc, site, reporter)...)
 		case *ast.InterfaceType:
 			for _, field := range node.Methods.List {
 				funcType, ok := field.Type.(*ast.FuncType)
 				if !ok || len(field.Names) == 0 {
 					continue // embedded interface: no method name of its own to report
 				}
-				findings = append(
-					findings,
-					checkResults(
-						fset, fc, field.Names[0].Name, field.Pos(), funcType.Results, reporter,
-					)...,
-				)
+				site := declSite{
+					name:    field.Names[0].Name,
+					pos:     field.Pos(),
+					results: funcType.Results,
+				}
+				findings = append(findings, checkResults(fset, fc, site, reporter)...)
 			}
 		}
 		return true
@@ -66,25 +64,29 @@ func checkFile(
 	return findings
 }
 
+// declSite is the declaration checkResults inspects: a FuncDecl or an
+// InterfaceType method, reduced to the name/position/results triple both
+// branches in checkFile extract differently.
+type declSite struct {
+	name    string
+	pos     token.Pos
+	results *ast.FieldList
+}
+
 // why: shared by both the FuncDecl and InterfaceType branches above.
 func checkResults(
-	fset *token.FileSet,
-	fc core.FileChange,
-	name string,
-	pos token.Pos,
-	results *ast.FieldList,
-	reporter core.Reporter,
+	fset *token.FileSet, fc core.FileChange, site declSite, reporter core.Reporter,
 ) []core.Finding {
-	dup, found := duplicateResultType(results)
+	dup, found := duplicateResultType(site.results)
 	if !found {
 		return nil
 	}
 	return []core.Finding{reporter.At(
 		fc.Path,
-		fset.Position(pos).Line,
+		fset.Position(site.pos).Line,
 		fmt.Sprintf(
 			"%s returns more than one unnamed %s, so only the order tells them apart",
-			name,
+			site.name,
 			dup,
 		),
 		"name the results so the signature says which is which",

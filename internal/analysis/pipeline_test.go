@@ -82,11 +82,10 @@ func TestStageRunnerDisabledAnalyzer(t *testing.T) {
 }
 
 // TestStageRunnerRunsRegardlessOfContextShape pins the deletion of the
-// Needs()/Requirements gate: a registered analyzer used to be skipped when
-// its declared NeedsAST/NeedsGitHistory went unmet, and the AST gate tested
-// ctx.ChangedFiles instead of ctx.ASTCache, so a nil ASTCache alongside
-// non-nil ChangedFiles passed anyway. With the gate gone, an analyzer runs
-// on a context with neither ChangedFiles nor GitHistory populated.
+// Needs()/Requirements gate: it used to skip a registered analyzer when
+// NeedsAST/NeedsGitHistory went unmet, checking ctx.ChangedFiles instead of
+// ctx.ASTCache, so a nil ASTCache with non-nil ChangedFiles passed anyway.
+// The gate is gone; an analyzer now runs on a bare context.
 func TestStageRunnerRunsRegardlessOfContextShape(t *testing.T) {
 	t.Parallel()
 

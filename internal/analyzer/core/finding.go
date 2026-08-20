@@ -43,13 +43,11 @@ func NewReporter(analyzerID string, severity Severity, category Category) Report
 	return Reporter{analyzerID: analyzerID, severity: severity, category: category}
 }
 
-// Resolved returns a copy of r with its severity overridden by ctx's
-// ParamSeverity param for r's own analyzer id, when the run's config sets
-// one; otherwise r keeps its own default. Most Reporter values are built
-// once as a package-level var at init, frozen before any config exists;
-// calling Resolved(ctx) at the top of Analyze is what lets a run's config
-// reach a severity that would otherwise be a compile-time constant, without
-// every analyzer spelling out the ctx.Params lookup itself.
+// Resolved returns a copy of r with severity overridden by ctx's
+// ParamSeverity for r's analyzer id, if the run's config sets one.
+//
+// why: Reporter values are frozen as package-level vars at init; this is
+// what lets a run's config reach an otherwise compile-time-fixed severity.
 func (r Reporter) Resolved(ctx *AnalysisContext) Reporter {
 	r.severity = ctx.Params(r.analyzerID).Severity(r.severity)
 	return r

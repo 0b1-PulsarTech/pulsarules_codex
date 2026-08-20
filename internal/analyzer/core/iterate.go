@@ -6,16 +6,11 @@ import (
 	"strings"
 )
 
-// EachChangedFile calls check with the source text of every changed file
-// eligible accepts, skipping a testdata fixture the same way a full Walk
-// does (see walkSkipDirs): the FileSetChanged path never goes through
-// Walk, so this is the one place that skip has to be repeated for the
-// changed-file path every scanning analyzer shares.
+// EachChangedFile calls check with the source of every changed file
+// eligible accepts, skipping testdata fixtures the way Walk does.
 //
-// why: five analyzers hand-rolled this loop shape (nil-Sources guard,
-// range ChangedFiles, an eligibility filter, Sources.Read, skip on a
-// failed read); four of the five never skipped testdata, so a fixture
-// deliberately written wrong tripped a real finding.
+// why: five analyzers hand-rolled this loop, and four of the five never
+// skipped testdata, so a fixture deliberately written wrong tripped a finding.
 func EachChangedFile(
 	ctx *AnalysisContext,
 	eligible func(fc FileChange) bool,

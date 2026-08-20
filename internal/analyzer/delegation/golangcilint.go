@@ -16,16 +16,8 @@ func NewGolangcilintAnalyzer(path string) *GolangcilintAnalyzer {
 	return &GolangcilintAnalyzer{runner: golangcilint.NewRunner(path)}
 }
 
-func (a *GolangcilintAnalyzer) ID() string   { return golangciLintID }
-func (a *GolangcilintAnalyzer) Name() string { return "golangci-lint" }
-func (a *GolangcilintAnalyzer) Description() string {
-	return "Delegates to golangci-lint for lint checks"
-}
-func (a *GolangcilintAnalyzer) Stage() core.StageID     { return core.StageStatic }
-func (a *GolangcilintAnalyzer) Category() core.Category { return core.CatSyntax }
-func (a *GolangcilintAnalyzer) Needs() core.Requirements {
-	return core.Requirements{}
-}
+func (a *GolangcilintAnalyzer) ID() string          { return golangciLintID }
+func (a *GolangcilintAnalyzer) Stage() core.StageID { return core.StageStatic }
 
 func (a *GolangcilintAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	configPath := extractGolangciConfigPath(ctx)

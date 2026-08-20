@@ -84,14 +84,11 @@ func Defaults() *GovernanceConfig {
 	}
 }
 
-// Param returns a parameter value for an analyzer, or the default if not set.
+// Param returns a parameter value for an analyzer, or the default if unset.
 //
-// why: internal/analysis.toAnalysisConfig (and everything downstream of it)
-// reads params through core.AnalysisConfig/core.ParamSet instead - this
-// method has no production caller of its own. It survives only because
-// internal/cli/governance_test.go, outside this agent's file ownership,
-// still asserts through it; IsEnabled had no such dependency and was
-// deleted alongside it.
+// why: production reads params via core.AnalysisConfig/ParamSet instead;
+// this survives only because governance_test.go still asserts through it -
+// IsEnabled, lacking that dependency, was deleted alongside it.
 func (c *GovernanceConfig) Param(analyzerID, key string, def any) any {
 	cfg, ok := c.Analyzers[analyzerID]
 	if !ok {

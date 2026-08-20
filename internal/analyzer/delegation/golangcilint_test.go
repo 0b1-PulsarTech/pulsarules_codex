@@ -64,12 +64,6 @@ func TestGolangcilintAnalyzer_Contract(t *testing.T) {
 	if got := a.Stage(); got != core.StageStatic {
 		t.Errorf("Stage() = %v, want StageStatic", got)
 	}
-	if got := a.Category(); got != core.CatSyntax {
-		t.Errorf("Category() = %v, want CatSyntax", got)
-	}
-	if req := a.Needs(); req.NeedsAST || req.NeedsGitHistory {
-		t.Errorf("Needs() = %+v, want no requirements", req)
-	}
 }
 
 // TestGolangcilintAnalyzer_AnalyzeWithoutBinary proves the adapter skips

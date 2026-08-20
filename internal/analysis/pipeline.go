@@ -4,14 +4,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-// StageRunner holds the analyzers grouped by stage. Each stage runs after the
-// previous one, and its analyzers receive the accumulated context. Adding a
-// new rule is one file (implementing core.Analyzer) plus one line in boot.go.
+// StageRunner runs registered analyzers grouped by stage.
 //
-// why: cfg used to live wrapped in a second, otherwise-empty
-// *core.AnalysisContext built solely to carry it - a shadow of the real
-// context RunStages(ctx) evaluates analyzers against, and nothing kept the
-// two in sync. Storing the config directly removes that second context.
+// why: cfg once lived in a second, empty *core.AnalysisContext built only
+// to carry it and prone to drift from the real context RunStages
+// evaluates; storing cfg directly removes that duplicate.
 type StageRunner struct {
 	stages map[core.StageID][]core.Analyzer
 	cfg    *core.AnalysisConfig
@@ -30,14 +27,11 @@ func (r *StageRunner) Register(a core.Analyzer) {
 	r.stages[a.Stage()] = append(r.stages[a.Stage()], a)
 }
 
-// RunStages executes all enabled analyzers in stage order, accumulating
-// findings in the context. It returns the aggregated findings.
+// RunStages executes enabled analyzers in stage order, returning findings.
 //
-// why: a core.InPlaceAnalyzer (ruleinjection, output) already transforms
-// ctx.Findings itself; appending its Analyze return value on top would
-// double whatever it returned. Checking the marker interface, rather than
-// trusting every such analyzer to return nil, makes that contract explicit
-// instead of an unenforced convention.
+// why: a core.InPlaceAnalyzer already mutates ctx.Findings itself;
+// appending its return on top would double it, so the marker check makes
+// that contract explicit instead of an unenforced convention.
 func (r *StageRunner) RunStages(ctx *core.AnalysisContext) []core.Finding {
 	for stage := core.StageContext; stage <= core.StageOutput; stage++ {
 		analyzers := r.stages[stage]

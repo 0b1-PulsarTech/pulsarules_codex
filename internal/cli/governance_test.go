@@ -96,11 +96,9 @@ func TestGovernanceConfig_InvalidPreset(t *testing.T) {
 	}
 }
 
-// TestValidateScope pins the fix for --scope accepting any string:
-// analysis.ParseScope maps every unrecognized value, including "changed", to
-// ScopeFull, so a typo used to run the full analyzer set silently instead of
-// failing the way --preset already does. "changed" is deliberately rejected
-// here too, since ParseScope does not parse that spelling yet.
+// TestValidateScope pins the fix for --scope accepting any string: ParseScope
+// maps every unrecognized value to ScopeFull, so a typo used to run the full
+// analyzer set silently instead of failing the way --preset already does.
 func TestValidateScope(t *testing.T) {
 	t.Parallel()
 
@@ -112,7 +110,7 @@ func TestValidateScope(t *testing.T) {
 		{name: "empty defers to the flag default", scope: ""},
 		{name: "full is accepted", scope: "full"},
 		{name: "commit is accepted", scope: "commit"},
-		{name: "changed is not parsed by ParseScope yet", scope: "changed", wantErr: true},
+		{name: "changed is accepted", scope: "changed"},
 		{name: "typo is rejected", scope: "fulll", wantErr: true},
 	}
 	for _, testCase := range testCases {

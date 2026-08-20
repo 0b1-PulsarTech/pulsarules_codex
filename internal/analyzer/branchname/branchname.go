@@ -39,15 +39,8 @@ var _ core.Analyzer = (*Analyzer)(nil)
 
 func NewAnalyzer(repo branchReader) *Analyzer { return &Analyzer{repo: repo} }
 
-func (a *Analyzer) ID() string   { return analyzerID }
-func (a *Analyzer) Name() string { return "Branch name" }
-
-func (a *Analyzer) Description() string {
-	return "Checks the branch name uses a Conventional Commit type prefix"
-}
-func (a *Analyzer) Stage() core.StageID      { return core.StageStatic }
-func (a *Analyzer) Category() core.Category  { return core.CatCommit }
-func (a *Analyzer) Needs() core.Requirements { return core.Requirements{} }
+func (a *Analyzer) ID() string          { return analyzerID }
+func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 // Analyze reports the checked-out branch when its name carries no recognized
 // type prefix. A detached HEAD and an exempt trunk report nothing.

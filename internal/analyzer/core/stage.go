@@ -47,18 +47,3 @@ const (
 	// StageOutput aggregates and formats findings for the hook output.
 	StageOutput
 )
-
-// Requirements is a compatibility shim: the pipeline no longer gates an
-// analyzer on it (Needs was dropped from the Analyzer interface and
-// pipeline.requirementsMet was deleted - NeedsAST tested ctx.ChangedFiles
-// instead of ctx.ASTCache, so a nil cache with non-nil ChangedFiles passed
-// anyway, and NeedsGitHistory had zero callers). It survives only because
-// internal/analyzer/delegation still declares a Needs() core.Requirements
-// method this package does not own; deleting Requirements is the last step
-// once delegation drops that method too.
-type Requirements struct {
-	// NeedsAST is unread by the pipeline; kept for delegation's Needs().
-	NeedsAST bool
-	// NeedsGitHistory is unread by the pipeline; kept for delegation's Needs().
-	NeedsGitHistory bool
-}

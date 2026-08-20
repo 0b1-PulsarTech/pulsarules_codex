@@ -1,15 +1,10 @@
 package core
 
-// Analyzer is a single self-contained rule. The pipeline discovers analyzers
-// at boot, groups them by Stage, and calls Analyze for each event. An analyzer
-// must never block; it returns its findings synchronously.
+// Analyzer is a single self-contained rule that never blocks.
 //
-// why: Name, Description and Category used to be part of this interface,
-// but the pipeline never read them - only _test.go assertions did, and
-// Finding.Category (set by Reporter) could silently disagree with an
-// analyzer's own Category() anyway. 22 implementations carried 3 dead
-// methods each for metadata nothing production consumed; deleting them
-// shrinks the interface to exactly what RunStages reads.
+// why: Name, Description and Category once lived here; only tests read
+// them, and Category() could silently disagree with Finding.Category.
+// Dropping those 3 dead methods (22 implementations) tightened this.
 type Analyzer interface {
 	// ID returns a stable unique identifier (e.g. "commit-format").
 	ID() string
@@ -20,14 +15,10 @@ type Analyzer interface {
 }
 
 // InPlaceAnalyzer is the second, distinct Analyze contract: an analyzer
-// that transforms the WHOLE ctx.Findings slice already accumulated by
-// earlier stages (reordering, deduplicating, annotating) rather than
-// contributing new findings of its own. Its Analyze return value carries no
-// meaning - the pipeline never appends it - so a caller cannot test one by
-// its return value alone; it must inspect ctx.Findings afterward instead.
-// ruleinjection.Analyzer and output.Analyzer implement this at
-// StageRuleInjection/StageOutput; every other analyzer implements the
-// plain, additive Analyzer contract.
+// that transforms the WHOLE ctx.Findings slice in place (reordering,
+// deduplicating, annotating) instead of contributing new findings. Its
+// Analyze return carries no meaning - the pipeline never appends it - so
+// a caller inspects ctx.Findings afterward, not the return value.
 type InPlaceAnalyzer interface {
 	Analyzer
 	// TransformsInPlace is a marker method: it carries no behavior of its
