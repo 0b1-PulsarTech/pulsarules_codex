@@ -8,9 +8,9 @@ import (
 )
 
 // fallbackVersion names a build the toolchain stamped nothing into (`go run`).
-// It used to BE the reported version, frozen by hand while the module moved on,
-// so every installed copy answered "0.2.0" whatever it actually was.
-const fallbackVersion = "0.2.0"
+// why: it tracks the last cut tag, so an unstamped build names the release it
+// was built from rather than freezing at whatever it said when written.
+const fallbackVersion = "0.7.0"
 
 // shortRevisionLen trims a stamped commit to the length a person reads.
 const shortRevisionLen = 12
