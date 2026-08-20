@@ -18,6 +18,11 @@ func findMagicNumbers(
 	fn *ast.FuncDecl,
 	reporter core.Reporter,
 ) []core.Finding {
+	// A test's literals are its documentation: a table-driven case reads `want: 3`.
+	if fc.IsTest {
+		return nil
+	}
+
 	var findings []core.Finding
 	fired := false
 	// ast.Inspect visits a call before its arguments, so an exemption is marked in time.
