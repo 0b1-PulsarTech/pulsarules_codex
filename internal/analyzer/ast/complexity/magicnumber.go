@@ -20,6 +20,13 @@ func findMagicNumbers(
 	fn *ast.FuncDecl,
 	reporter core.Reporter,
 ) []core.Finding {
+	// why: a test's literals ARE its documentation - a table-driven case reads
+	// `want: 3`, and the house mandates that shape, so naming each expectation
+	// would obscure the very thing the row exists to state.
+	if fc.IsTest {
+		return nil
+	}
+
 	var findings []core.Finding
 	fired := false
 	// exemptPos records literals whose ROLE, not their value, makes them
