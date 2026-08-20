@@ -2,7 +2,9 @@ package movepurity
 
 import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 
-const analyzerID = "commit-move-purity"
+const ID = "commit-move-purity"
+
+const ParamMinSimilarity = "min_similarity"
 
 var _ pass.Analyzer = (*Analyzer)(nil)
 
@@ -17,11 +19,11 @@ func NewAnalyzer(diffs diffReader) *Analyzer {
 	return &Analyzer{
 		minSimilarity: defaultMinSimilarity,
 		diffs:         diffs,
-		reporter:      pass.NewReporter(analyzerID, pass.SeverityWarning, pass.CatCommit),
+		reporter:      pass.NewReporter(ID, pass.SeverityWarning, pass.CatCommit),
 	}
 }
 
-func (a *Analyzer) ID() string { return analyzerID }
+func (a *Analyzer) ID() string { return ID }
 
 func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
@@ -30,7 +32,7 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 		return nil
 	}
 	params := ctx.Params(a.ID())
-	minSimilarity := params.Int("min_similarity", a.minSimilarity)
+	minSimilarity := params.Int(ParamMinSimilarity, a.minSimilarity)
 	reporter := pass.ResolveReporter(a.reporter, ctx)
 
 	var findings []pass.Finding

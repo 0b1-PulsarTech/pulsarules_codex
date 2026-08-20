@@ -3,6 +3,8 @@ package governance
 import (
 	"maps"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/message"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 )
@@ -27,16 +29,26 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *pass.AnalysisConfig {
 }
 
 func withEmojiParams(analyzers map[string]pass.AnalyzerConfig, emojiCfg config.EmojiConfig) {
-	const commitAnalyzerID = "commit-lint"
-	setParam(analyzers, commitAnalyzerID, "emoji_hard_window", emojiCfg.WindowSize)
-	setParam(analyzers, commitAnalyzerID, "emoji_soft_window", emojiCfg.SoftWindowSize)
-	setParam(analyzers, commitAnalyzerID, "emoji_suggestions", emojiCfg.SuggestionCount)
+	setParam(analyzers, message.ID, message.ParamEmojiHardWindow, emojiCfg.WindowSize)
+	setParam(
+		analyzers,
+		message.ID,
+		message.ParamEmojiSoftWindow,
+		emojiCfg.SoftWindowSize,
+	)
+	setParam(
+		analyzers, message.ID, message.ParamEmojiSuggestions, emojiCfg.SuggestionCount,
+	)
 }
 
 func withMovePurityParams(analyzers map[string]pass.AnalyzerConfig, cfg config.MovePurityConfig) {
-	const movePurityAnalyzerID = "commit-move-purity"
-	setParam(analyzers, movePurityAnalyzerID, "min_similarity", cfg.MinSimilarity)
-	setParam(analyzers, movePurityAnalyzerID, "severity", cfg.Severity)
+	setParam(
+		analyzers,
+		movepurity.ID,
+		movepurity.ParamMinSimilarity,
+		cfg.MinSimilarity,
+	)
+	setParam(analyzers, movepurity.ID, pass.ParamSeverity, cfg.Severity)
 }
 
 func setParam(analyzers map[string]pass.AnalyzerConfig, id, key string, value any) {
