@@ -30,7 +30,7 @@ pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude
 pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
+pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit|changed] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
 pulsarules_cli clean [--project DIR] [--write]
 pulsarules_cli evals --artifact FILE [--scenario ID]
 pulsarules_cli version
@@ -156,7 +156,9 @@ Additional install flags:
   command before anything is written, naming the valid set. `--no-git-hooks` skips installing git
   hooks entirely.
 - `--typographic-severity error|warning|info`: bake into the generated governance hooks how hard a
-  `typographic-markers` finding lands (the analyzer's own default is `error`); a git hook receives
+  `typographic-markers` finding lands (the analyzer's own default is `error`). Every analyzer now
+  reads its own `severity` param the same way, so a project config can raise or lower any check; this
+  flag is the shortcut for the one people retune most. A git hook receives
   no arguments from the person committing, so install time is the only chance to set it. The same
   flag on `governance` applies to a single run.
 - `--branch-extra-types release,hotfix`: bake into the pre-push hook extra branch-type prefixes the
@@ -212,7 +214,9 @@ project and print findings to stderr, exiting non-zero on any error-severity fin
 analyzes only files `git status` reports as changed; `--all-files` walks the whole source tree
 instead (skipping `.git/`, `.claude/`, `.opencode/`, `generated/`, `build/`, and `vendor/`).
 `--scope commit` runs the lightweight static + AST + commit checks only (what the pre-commit hook
-uses); `--scope full` (default) adds architecture, delegation, and the `branch-name` check. `--preset
+uses); `--scope changed` adds the architecture analyzers over the changed files (what the Stop hook
+uses); `--scope full` (default) adds delegation and the `branch-name` check. An unrecognized value is
+rejected by name rather than silently running the full set. `--preset
 recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity` overrides how hard
 a `typographic-markers` finding lands for this run; `--branch-extra-types` widens the branch-type
 prefixes `branch-name` accepts (see the install flags of the same name for the baked-in variants). Findings in generated files (detected by
@@ -287,3 +291,23 @@ task gen:validate          # validate the embedded knowledge
 task gen:emoji             # regenerate the commit emoji catalog
 task list                  # list skills
 ```
+
+## Upgrading from an install made before this release
+
+One breaking change, and it only affects a project whose skill docs were written by an older
+binary. Ownership of an installed file used to be proved three different ways: the marker in the
+file's own content, the exact body of the sibling `.gitignore`, and a marker comment inside a
+managed `.gitignore` section. There is now ONE proof - the file's content carries
+`Installed by pulsarules_cli`, and a doc's sibling `.gitignore` carries that same marker as its
+first line.
+
+What that means in practice:
+
+- A skill or workflow doc written by an older binary is no longer recognised as ours. The next
+  `install` backs it up to `<path>.pulsarules-backup` and writes a fresh one, rather than replacing
+  it in place, and `uninstall` leaves it alone. Nothing is destroyed; you may delete the backup once
+  you have confirmed the new doc is what you want.
+- Every rendered doc's `.gitignore` gains a leading `# Installed by pulsarules_cli` comment line it
+  did not have before.
+
+Re-running `install` is the whole migration.

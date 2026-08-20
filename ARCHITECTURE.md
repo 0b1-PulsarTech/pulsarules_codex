@@ -162,10 +162,14 @@ scope.
 
 ### internal/analyzer/** families
 
-Every analyzer implements the small `core.Analyzer` interface (`ID`, `Name`, `Description`, `Stage`,
-`Category`, `Needs`, `Analyze`) declared in `internal/analyzer/core`, which also carries the shared
-`AnalysisContext`, `Finding`, `Requirements`, and the `Language`/`LanguageRegistry` Strategy for
-file-extension-based dispatch. The families:
+Every analyzer implements the small `core.Analyzer` interface (`ID`, `Stage`, `Analyze`) declared in
+`internal/analyzer/core`, which also carries the shared `AnalysisContext`, `Finding`, and the
+`Language`/`LanguageRegistry` Strategy for file-extension-based dispatch. Two mechanisms keep the
+analyzers uniform: `Reporter.Resolved(ctx)` re-reads a reporter's severity from the run's config, so
+a package-level reporter frozen at init still honours a project's `severity` param; and
+`core.EachChangedFile` is the one changed-file iteration helper, carrying the `testdata/` skip every
+hand-rolled copy used to miss. `core.InPlaceAnalyzer` marks the second contract - an analyzer that
+rewrites `ctx.Findings` (rule injection, output) instead of returning new ones. The families:
 
 - `static/*` - pure text/structure checks needing no parser: `filesize` (line-count ceiling),
   `textmarkers` (invisible carriers, exotic spaces and AI typographic punctuation), `topoffile` and
@@ -295,7 +299,7 @@ The governance pipeline (see above) adds its own package set:
 | Package                          | Responsibility                                                                                      |
 |----------------------------------|-----------------------------------------------------------------------------------------------------|
 | `internal/analysis`               | `session.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`analyzerSpecs`), `runner.go` (`toAnalysisConfig`), `rule_injection.go`, `output.go`, `format.go`, `history.go` |
-| `internal/analyzer/core`          | `Analyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Requirements`, `LanguageRegistry`, `core/astcache` (parsed-AST cache) |
+| `internal/analyzer/core`          | `Analyzer`/`InPlaceAnalyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Reporter.Resolved`, `EachChangedFile`, `LanguageRegistry`, `core/astcache` |
 | `internal/analyzer/static/*`      | `filesize`, `textmarkers`, `topoffile`, `bigcomment` - text/structure checks                        |
 | `internal/analyzer/ast/*`         | `complexity`, `controlflow`, `shadowing`, `imports`, `naming` - `go/ast`-based checks                |
 | `internal/analyzer/arch`          | `PackageBoundaryAnalyzer`, `ImportCycleAnalyzer` - multi-file architecture checks                   |
@@ -304,7 +308,10 @@ The governance pipeline (see above) adds its own package set:
 | `internal/analyzer/branchname`    | flags a branch name with no recognized type prefix; `ScopeFull` (pre-push) only                     |
 | `internal/analyzer/delegation/*`  | `golangcilint` - shells out to an external tool, gated to `ScopeFull`                              |
 | `internal/analyzer/golang`        | the `Language` handler for `.go` files                                                              |
-| `internal/vcs`                    | `Repository` port, `Open`, `Status`/`Rename` types, `gitcmd.go`'s `runGit` (the one git-exec point)  |
+| `internal/vcs`                    | `Repository` port, `Open`, `CommonDir`, `Status`/`Rename` types, `gitcmd.go`'s `runGit`              |
+| `internal/execx`                  | `Run` - the one external-process seam (timeout, env, captured stderr, typed `*execx.Error`)          |
+| `internal/report`                 | `Report{Notes,Warnings}` with `Note`/`Warn`/`Merge` - the one install/uninstall report value         |
+| `internal/jsonconfig`             | `Read` - read a JSON config file, tolerating an absent one, shared by every merge/unmerge site       |
 | `internal/hook`                   | `dispatcher.go` (`Dispatcher`), `router.go` (`Router`), `session.go` (`SessionTracker`), `checklist.go`, `checks.go` (`RunGovernanceCheck`), `install/*` (per-target hook installers) |
 | `internal/config`                 | `GovernanceConfig` and its sub-configs, `presets.go`                                                 |
 | `internal/obs`                    | `New` (off-by-default `slog.Logger`), tail-truncating log rotation                                   |
