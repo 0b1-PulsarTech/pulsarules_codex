@@ -2,6 +2,7 @@ package textmarkers
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/mark"
@@ -88,12 +89,20 @@ func (a *TypographicAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding 
 	})
 }
 
-// why: never auto-fixed, only reported. Inside a string literal or a fenced
-// block the character is data, and no analyzer can tell that from prose.
+// why: never auto-fixed, only reported - in a Go string literal the character
+// is data and nothing here can tell that from prose. Markdown is the exception:
+// a fence is unambiguous, so code regions are skipped rather than reported.
 func checkTypographic(fc core.FileChange, src string, reporter core.Reporter) []core.Finding {
+	// why: only markdown gets this - a fence is unambiguous, while the same
+	// character inside a Go string literal is indistinguishable from prose.
+	var code []region
+	if strings.EqualFold(fc.Extension, ".md") {
+		code = codeRegions(src)
+	}
+
 	var findings []core.Finding
 	for _, found := range mark.Scan(src) {
-		if found.Class != mark.ClassTypographic {
+		if found.Class != mark.ClassTypographic || inCode(code, found.Offset) {
 			continue
 		}
 		findings = append(findings, reporter.At(
