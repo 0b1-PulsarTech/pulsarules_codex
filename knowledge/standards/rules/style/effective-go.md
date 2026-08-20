@@ -79,17 +79,24 @@ newest stable the module pins (source repos use `go 1.26`).
     exotic spaces - are removed by `pulsarules_cli clean --write`, and only the ones no neighbouring
     context can justify. A marker that a test needs as DATA is written as a Go escape (`\u2014`),
     never as the character, so the fixture never trips the check that validates it.
-13. No AI provenance key in a markdown frontmatter block (`generator`, `ai_generated`, `claude`,
+13. How hard a marker lands depends on its CLASS. An invisible carrier no neighbouring context can
+    justify BLOCKS: the bidi controls among them are the Trojan Source vector (CVE-2021-42574), where
+    the diff a reviewer reads is not the code the compiler sees. One that MAY be load-bearing - a
+    joiner between emoji, a byte order mark - only advises, because this check cannot judge it.
+    Typographic punctuation blocks by default; a project that treats ASCII punctuation as house style
+    rather than a defect lowers it through the analyzer's `severity` param (`error`, `warning`,
+    `info`), which `--typographic-severity` bakes into the generated hooks at install time.
+14. No AI provenance key in a markdown frontmatter block (`generator`, `ai_generated`, `claude`,
     `synthid`, `c2pa`, ...). Prose that merely names a vendor is not provenance and is not flagged.
-14. No `regexp` for simple string work (prefix/suffix/contains/split/trim/case): use the `strings`
+15. No `regexp` for simple string work (prefix/suffix/contains/split/trim/case): use the `strings`
     stdlib or a small generic `[T ~string]` helper shared in a `pkg/strutils`-style package. Reserve
     `regexp` for genuinely pattern-based matching.
-15. Model an optional value with its ZERO VALUE (`0`, `""`, `false`, a nil slice/map), never a
+16. Model an optional value with its ZERO VALUE (`0`, `""`, `false`, a nil slice/map), never a
     pointer. Reach for `*T` only when a caller must distinguish "never set" from "set to the zero
     value" AND that distinction changes behaviour - a partial-update payload, a tri-state flag.
     Optionality alone does not earn a pointer: it costs every reader a nil check, every writer an
     allocation, and turns a missing value into a panic instead of a harmless default.
-15. The nil-slice zero value is right in general and WRONG on a REST `Output` DTO: `encoding/json`
+17. The nil-slice zero value is right in general and WRONG on a REST `Output` DTO: `encoding/json`
     serialises a nil slice as `null`, not `[]`, surprising a consumer expecting an array. A DTO
     field crossing a JSON boundary initialises its slice fields explicitly (`[]T{}` or a mapped
     result), even when the general zero-value principle above would otherwise leave it nil.
@@ -124,5 +131,7 @@ newest stable the module pins (source repos use `go 1.26`).
 - [ ] Optional values carry the zero value, not `*T`, unless "unset" must differ from zero.
 - [ ] Inferable generic type params omitted; no AI text marker in `.go` or `.md`; no `regexp` for simple
   string work (use `strings`/a generic `[T ~string]` helper).
+- [ ] A blocking marker finding was fixed, not silenced; any `severity` the project lowered is a
+  deliberate house-style choice, never a way past a bidi control.
 - [ ] Output DTO slice fields crossing a JSON boundary are initialised explicitly, not left nil.
 {{end}}
