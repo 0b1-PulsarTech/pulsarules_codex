@@ -185,3 +185,50 @@ func markdownContext(t *testing.T, body string) *core.AnalysisContext {
 		ChangedFiles: []core.FileChange{{Path: "a.md", Extension: ".md"}},
 	}
 }
+
+func TestTypographic_MarkdownCodeSkipped(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		ext  string
+		body string
+		want int
+	}{
+		{name: "markdown prose is reported", ext: ".md", body: "a \u2014 b\n", want: 1},
+		{name: "markdown fence is skipped", ext: ".md", body: "```\na \u2014 b\n```\n"},
+		{name: "markdown inline span is skipped", ext: ".md", body: "see `a \u2014 b`\n"},
+		{
+			name: "prose beside a fence is still reported",
+			ext:  ".md",
+			body: "a \u2014 b\n```\nc \u2014 d\n```\n",
+			want: 1,
+		},
+		{
+			name: "go source keeps reporting",
+			ext:  ".go",
+			body: "package x\n\nvar s = \"a \u2014 b\"\n",
+			want: 1,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			name := "a" + testCase.ext
+			path := filepath.Join(dir, name)
+			if err := os.WriteFile(path, []byte(testCase.body), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			ctx := &core.AnalysisContext{
+				ProjectDir:   dir,
+				Sources:      core.NewSourceProvider(dir),
+				ChangedFiles: []core.FileChange{{Path: name, Extension: testCase.ext}},
+			}
+			if got := NewTypographicAnalyzer().Analyze(ctx); len(got) != testCase.want {
+				t.Errorf("findings = %+v, want %d", got, testCase.want)
+			}
+		})
+	}
+}

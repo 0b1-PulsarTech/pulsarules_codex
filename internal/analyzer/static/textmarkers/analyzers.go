@@ -2,6 +2,7 @@ package textmarkers
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/mark"
@@ -97,9 +98,14 @@ func (a *TypographicAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding 
 }
 
 func checkTypographic(fc core.FileChange, src string, reporter core.Reporter) []core.Finding {
+	var code []region
+	if strings.EqualFold(fc.Extension, ".md") {
+		code = codeRegions(src)
+	}
+
 	var findings []core.Finding
 	for _, found := range mark.Scan(src) {
-		if found.Class != mark.ClassTypographic {
+		if found.Class != mark.ClassTypographic || inCode(code, found.Offset) {
 			continue
 		}
 		findings = append(findings, reporter.At(
