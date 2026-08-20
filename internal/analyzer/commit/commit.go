@@ -6,6 +6,14 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 )
 
+const AnalyzerID = "commit-lint"
+
+const (
+	ParamEmojiHardWindow  = "emoji_hard_window"
+	ParamEmojiSoftWindow  = "emoji_soft_window"
+	ParamEmojiSuggestions = "emoji_suggestions"
+)
+
 var _ core.Analyzer = (*Analyzer)(nil)
 
 type Analyzer struct {
@@ -28,7 +36,7 @@ func NewAnalyzer(catalog *emoji.Catalog) *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string { return "commit-lint" }
+func (a *Analyzer) ID() string { return AnalyzerID }
 
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
@@ -62,8 +70,8 @@ func historySubjects(entries []core.GitCommitEntry) []string {
 }
 
 func (cfg EmojiWindowConfig) merge(params core.ParamSet) EmojiWindowConfig {
-	cfg.HardWindow = params.Int("emoji_hard_window", cfg.HardWindow)
-	cfg.SoftWindow = params.Int("emoji_soft_window", cfg.SoftWindow)
-	cfg.Suggestions = params.Int("emoji_suggestions", cfg.Suggestions)
+	cfg.HardWindow = params.Int(ParamEmojiHardWindow, cfg.HardWindow)
+	cfg.SoftWindow = params.Int(ParamEmojiSoftWindow, cfg.SoftWindow)
+	cfg.Suggestions = params.Int(ParamEmojiSuggestions, cfg.Suggestions)
 	return cfg
 }

@@ -4,7 +4,9 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-const analyzerID = "commit-move-purity"
+const AnalyzerID = "commit-move-purity"
+
+const ParamMinSimilarity = "min_similarity"
 
 var _ core.Analyzer = (*Analyzer)(nil)
 
@@ -19,11 +21,11 @@ func NewAnalyzer(diffs diffReader) *Analyzer {
 	return &Analyzer{
 		minSimilarity: defaultMinSimilarity,
 		diffs:         diffs,
-		reporter:      core.NewReporter(analyzerID, core.SeverityWarning, core.CatCommit),
+		reporter:      core.NewReporter(AnalyzerID, core.SeverityWarning, core.CatCommit),
 	}
 }
 
-func (a *Analyzer) ID() string { return analyzerID }
+func (a *Analyzer) ID() string { return AnalyzerID }
 
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
@@ -32,7 +34,7 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		return nil
 	}
 	params := ctx.Params(a.ID())
-	minSimilarity := params.Int("min_similarity", a.minSimilarity)
+	minSimilarity := params.Int(ParamMinSimilarity, a.minSimilarity)
 	reporter := a.reporter.Resolved(ctx)
 
 	var findings []core.Finding
