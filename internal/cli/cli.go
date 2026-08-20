@@ -90,14 +90,18 @@ func BootstrapOptions(opts *cliopts.Options) bootstrap.Options {
 	}
 }
 
-// resolveProjectDir mirrors each command's pre-DI project-directory fallback,
-// so moving vcs.Repository behind the injector does not change behavior:
+// resolveProjectDir mirrors each command's pre-DI project-directory fallback:
 // governance requires an explicit project dir (--project or
-// PULSARULES_PROJECT_DIR) and reports that itself; every other command
-// tolerates a missing repository and defaults to ".".
+// PULSARULES_PROJECT_DIR) and reports that itself; install/uninstall bind
+// --project onto opts.Project (their install destination, resolved by
+// cliopts.Options.BaseDir) rather than opts.ProjectDir, so it is read here
+// too - the install target and the analyzed repository are the same checkout.
 func resolveProjectDir(opts *cliopts.Options) string {
 	if opts.ProjectDir != "" {
 		return opts.ProjectDir
+	}
+	if opts.Command == "install" || opts.Command == "uninstall" {
+		return opts.Project
 	}
 	if opts.Command == "governance" {
 		return os.Getenv("PULSARULES_PROJECT_DIR")

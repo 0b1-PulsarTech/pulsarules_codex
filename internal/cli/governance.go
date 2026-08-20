@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -21,6 +22,25 @@ var errProjectDirRequired = errors.New(
 	"governance requires --project DIR or PULSARULES_PROJECT_DIR",
 )
 
+// validScopes names the --scope spellings accepted before analysis.ParseScope
+// runs. It excludes "changed" on purpose: analysis.ScopeChanged exists, but
+// ParseScope does not parse a "changed" string onto it yet (that belongs to
+// internal/analysis's owner) - it falls back to ScopeFull like any other
+// unrecognized value, so accepting "changed" here would validate a spelling
+// ParseScope still silently downgrades.
+var validScopes = []string{"full", "commit"}
+
+// validateScope rejects an unrecognized --scope by name, the same way
+// governanceConfig rejects an unrecognized --preset, instead of letting
+// analysis.ParseScope's unrecognized-value-to-ScopeFull default run the full
+// analyzer set on a typo.
+func validateScope(scope string) error {
+	if scope == "" || slices.Contains(validScopes, scope) {
+		return nil
+	}
+	return fmt.Errorf("invalid --scope %q (want %s)", scope, strings.Join(validScopes, "|"))
+}
+
 // runGovernance runs the full analyzer pipeline against the project via
 // Session and prints findings to stderr. It returns an *ExitError{Code: 1} if
 // any error-severity finding is produced; main is the only caller that turns
@@ -28,6 +48,9 @@ var errProjectDirRequired = errors.New(
 func runGovernance(inj remy.Injector, opts *cliopts.Options) error {
 	if opts.ProjectDir == "" && os.Getenv("PULSARULES_PROJECT_DIR") == "" {
 		return errProjectDirRequired
+	}
+	if err := validateScope(opts.Scope); err != nil {
+		return err
 	}
 
 	repo, err := remy.Get[vcs.Repository](inj)

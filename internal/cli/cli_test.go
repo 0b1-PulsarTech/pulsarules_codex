@@ -10,6 +10,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 // TestRun_UnknownCommand could not be written before this package existed:
@@ -52,6 +53,48 @@ func TestRunCommitLint_ReturnsExitError(t *testing.T) {
 	}
 	if exitErr.Code != 1 {
 		t.Fatalf("Code = %d, want 1", exitErr.Code)
+	}
+}
+
+// TestRunCommitLint_PropagatesRepositoryError proves a vcs.Repository
+// resolution failure that is NOT vcs.ErrNoRepository (e.g. a DI wiring bug)
+// surfaces as an error instead of being discarded the way `repo, _ :=
+// remy.Get[...]` used to: that silently handed a nil repo to
+// analysis.NewSession regardless of why resolution failed.
+func TestRunCommitLint_PropagatesRepositoryError(t *testing.T) {
+	t.Parallel()
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	wantErr := errors.New("boom: injector wiring failed")
+	remy.RegisterConstructorErr(inj, remy.Factory[vcs.Repository], func() (vcs.Repository, error) {
+		return nil, wantErr
+	})
+
+	err := runCommitLint(inj, &cliopts.Options{CommitMsg: "valid enough message"})
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("runCommitLint() error = %v, want wrapping %v", err, wantErr)
+	}
+}
+
+// TestRunCommitLint_DegradesQuietlyWithoutRepository proves the intent the
+// pre-fix comment described is preserved: vcs.ErrNoRepository (no project
+// dir, or the dir is not a git repository) still lets commitlint proceed
+// with a nil repo instead of failing the commit.
+func TestRunCommitLint_DegradesQuietlyWithoutRepository(t *testing.T) {
+	t.Parallel()
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: t.TempDir()}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+
+	// "bad commit message" trips SeverityError findings that need no git
+	// history, so a nil repo (the temp dir is not a git repository) still
+	// reaches analysis and reports the same findings rather than erroring.
+	err := runCommitLint(inj, &cliopts.Options{CommitMsg: "bad commit message"})
+	var exitErr *ExitError
+	if !errors.As(err, &exitErr) {
+		t.Fatalf("expected *ExitError from analysis findings, got %v (%T)", err, err)
 	}
 }
 
@@ -152,6 +195,23 @@ func TestResolveProjectDir(t *testing.T) {
 				t.Errorf("resolveProjectDir() = %q, want %q", got, testCase.want)
 			}
 		})
+	}
+}
+
+// TestResolveProjectDir_InstallFlag proves --project reaches resolveProjectDir
+// for install the same way it does for governance: ParseArgs used to bind
+// install's --project onto opts.Project while resolveProjectDir only ever
+// read opts.ProjectDir, so install --project X silently registered vcs.
+// Repository against "." instead of X.
+func TestResolveProjectDir_InstallFlag(t *testing.T) {
+	t.Parallel()
+
+	opts, err := cliopts.ParseArgs([]string{"install", "--project", "/tmp/repo", "--all"})
+	if err != nil {
+		t.Fatalf("ParseArgs: %v", err)
+	}
+	if got := resolveProjectDir(opts); got != "/tmp/repo" {
+		t.Errorf("resolveProjectDir() = %q, want %q", got, "/tmp/repo")
 	}
 }
 

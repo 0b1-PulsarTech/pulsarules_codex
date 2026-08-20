@@ -13,7 +13,12 @@ type Options struct {
 	Out string
 
 	// install
-	Global      bool
+	Global bool
+	// Project is install/uninstall's --project (install destination), kept
+	// separate from ProjectDir (commitlint/clean/governance's repository to
+	// analyze) since BaseDir needs it in this package. cli.resolveProjectDir
+	// reads Project too for install/uninstall, so the flag still resolves to
+	// one directory at the point that wires vcs.Repository.
 	Project     string
 	All         bool // --all: install every skill (explicit; there is no implicit default)
 	Skills      string
@@ -56,6 +61,7 @@ type Options struct {
 	// commitlint
 	CommitMsg  string // --msg: commit message to validate
 	CommitFile string // --file: path to a commit-msg file (alternative to --msg)
+
 	ProjectDir string // --project: project dir for git history lookup
 
 	// governance (also reuses --project and --root)

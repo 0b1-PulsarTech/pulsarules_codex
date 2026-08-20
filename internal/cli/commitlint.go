@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -33,8 +34,13 @@ func runCommitLint(inj remy.Injector, opts *cliopts.Options) error {
 
 	// Without a project dir, or when it is not a git repository, there is no
 	// git history, and the emoji repetition window silently passes
-	// everything rather than failing the commit over a missing repo.
-	repo, _ := remy.Get[vcs.Repository](inj)
+	// everything rather than failing the commit over a missing repo. Any
+	// other resolution failure (a DI wiring bug, not an absent repo) is a
+	// real error and must not be discarded the same way.
+	repo, err := remy.Get[vcs.Repository](inj)
+	if err != nil && !errors.Is(err, vcs.ErrNoRepository) {
+		return fmt.Errorf("open repository: %w", err)
+	}
 
 	idx, err := remy.Get[*knowledge.Index](inj)
 	if err != nil {

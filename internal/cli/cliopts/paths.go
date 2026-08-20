@@ -11,7 +11,9 @@ import (
 )
 
 // BaseDir resolves the install base directory (the project root, or the home dir
-// for --global) from the install flags.
+// for --global) from the install flags. See Options.Project's doc comment for
+// why install/uninstall keep --project on its own field rather than
+// ProjectDir.
 func (opts *Options) BaseDir() (string, error) {
 	switch {
 	case opts.Global && opts.Project != "":
