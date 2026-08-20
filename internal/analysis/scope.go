@@ -19,6 +19,8 @@ func ParseScope(s string) Scope {
 	switch s {
 	case "commit":
 		return ScopeCommit
+	case "changed":
+		return ScopeChanged
 	default:
 		return ScopeFull
 	}

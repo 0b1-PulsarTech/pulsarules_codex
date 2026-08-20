@@ -97,13 +97,16 @@ func location(finding core.Finding) string {
 	return finding.File
 }
 
-// severityLabel returns the lowercase label for severity; the caller
-// upper-cases it for the styles that want that (see writeFinding), so the
-// case choice lives at the call site instead of a flag argument here.
+// severityLabel returns the lowercase label for severity, the same
+// error/warning/info vocabulary core.ParamSet.Severity parses back (see
+// core.ParamSeverity) - a rendered label always round-trips as a param.
+// The caller upper-cases it for the styles that want that (see
+// writeFinding), so the case choice lives at the call site instead of a
+// flag argument here.
 func severityLabel(severity core.Severity) string {
 	switch severity {
 	case core.SeverityWarning:
-		return "warn"
+		return "warning"
 	case core.SeverityError:
 		return "error"
 	default:
