@@ -29,32 +29,36 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *core.AnalysisConfig {
 }
 
 func withEmojiParams(analyzers map[string]core.AnalyzerConfig, emojiCfg config.EmojiConfig) {
-	setParam(analyzers, commit.AnalyzerID, commit.ParamEmojiHardWindow, emojiCfg.WindowSize)
-	setParam(
+	setDefaultParam(analyzers, commit.AnalyzerID, commit.ParamEmojiHardWindow, emojiCfg.WindowSize)
+	setDefaultParam(
 		analyzers,
 		commit.AnalyzerID,
 		commit.ParamEmojiSoftWindow,
 		emojiCfg.SoftWindowSize,
 	)
-	setParam(
+	setDefaultParam(
 		analyzers, commit.AnalyzerID, commit.ParamEmojiSuggestions, emojiCfg.SuggestionCount,
 	)
 }
 
 func withMovePurityParams(analyzers map[string]core.AnalyzerConfig, cfg config.MovePurityConfig) {
-	setParam(
+	setDefaultParam(
 		analyzers,
 		movepurity.AnalyzerID,
 		movepurity.ParamMinSimilarity,
 		cfg.MinSimilarity,
 	)
-	setParam(analyzers, movepurity.AnalyzerID, core.ParamSeverity, cfg.Severity)
+	setDefaultParam(analyzers, movepurity.AnalyzerID, core.ParamSeverity, cfg.Severity)
 }
 
-func setParam(analyzers map[string]core.AnalyzerConfig, id, key string, value any) {
+func setDefaultParam(analyzers map[string]core.AnalyzerConfig, id, key string, value any) {
 	entry, found := analyzers[id]
 	if !found {
 		entry = core.AnalyzerConfig{Enabled: true}
+	}
+	// An explicit param (e.g. via SetParam) wins over the projection.
+	if _, explicit := entry.Params[key]; explicit {
+		return
 	}
 	params := make(map[string]any, len(entry.Params)+1)
 	maps.Copy(params, entry.Params)
