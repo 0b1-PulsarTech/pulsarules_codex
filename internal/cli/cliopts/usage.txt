@@ -10,6 +10,7 @@ Usage:
   pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
   pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit] [--golangci-config PATH] [--all-files] [--include-generated]
   pulsarules_cli clean [--project DIR] [--write]
+  pulsarules_cli evals --artifact FILE [--scenario ID]
   pulsarules_cli hook <mode>
   pulsarules_cli version
 
@@ -134,6 +135,12 @@ filter off. It does not disable the per-line exemptions individual analyzers
 carry for legitimate machine headers (top-of-file and big-comment still accept
 a `// Code generated` line above the package clause, because that line is
 correct Go, not a defect to report).
+
+evals grades a produced artifact (code or transcript) against the scenario
+suite's machine assertions and prints a pass/fail tally per scenario, plus any
+assertion that needs a human judge. Use --artifact PATH to point at the file
+to grade and --scenario ID to grade only one scenario instead of the whole
+suite. Exits non-zero when a graded assertion fails.
 
 hook dispatches a single Claude Code (or opencode) hook event by mode, reading
 the tool/session JSON payload from stdin and writing the hookSpecificOutput

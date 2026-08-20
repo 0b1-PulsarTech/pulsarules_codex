@@ -2,7 +2,12 @@ package cli
 
 import (
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -239,5 +244,99 @@ func TestResolveLogPath(t *testing.T) {
 				t.Errorf("resolveLogPath() = %q, want %q", got, testCase.want)
 			}
 		})
+	}
+}
+
+// switchCaseCommands parses the named function in a Go source file and
+// returns the string-literal case labels of its first switch statement,
+// skipping default. It lets the parity tests below assert against the
+// dispatch code itself instead of a second hardcoded list that could drift
+// out from under it unnoticed.
+func switchCaseCommands(t *testing.T, path, funcName string) []string {
+	t.Helper()
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, path, nil, 0)
+	if err != nil {
+		t.Fatalf("parse %s: %v", path, err)
+	}
+
+	var commands []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		fn, ok := n.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != funcName {
+			return true
+		}
+		commands = caseLabelsInFirstSwitch(fn.Body)
+		return false
+	})
+	if commands == nil {
+		t.Fatalf("no switch statement found in %s.%s", path, funcName)
+	}
+	return commands
+}
+
+// caseLabelsInFirstSwitch collects every string case label from the first
+// switch statement found in body, including every name in a grouped case
+// ("list", "validate", "hook":), and stops descending once it is found.
+func caseLabelsInFirstSwitch(body *ast.BlockStmt) []string {
+	var commands []string
+	ast.Inspect(body, func(n ast.Node) bool {
+		sw, ok := n.(*ast.SwitchStmt)
+		if !ok {
+			return commands == nil
+		}
+		for _, stmt := range sw.Body.List {
+			clause, ok := stmt.(*ast.CaseClause)
+			if !ok {
+				continue
+			}
+			for _, expr := range clause.List {
+				lit, ok := expr.(*ast.BasicLit)
+				if !ok || lit.Kind != token.STRING {
+					continue
+				}
+				if unquoted, unquoteErr := strconv.Unquote(lit.Value); unquoteErr == nil {
+					commands = append(commands, unquoted)
+				}
+			}
+		}
+		return false
+	})
+	return commands
+}
+
+// TestDispatchCommands_InUsageText fails when a command Run dispatches is
+// missing from usage.txt's Usage: block - the drift that left "evals"
+// undocumented after its subcommand shipped.
+func TestDispatchCommands_InUsageText(t *testing.T) {
+	t.Parallel()
+
+	for _, command := range switchCaseCommands(t, "cli.go", "Run") {
+		if !strings.Contains(cliopts.UsageText(), "pulsarules_cli "+command) {
+			t.Errorf("usage.txt has no %q line for a command Run dispatches", command)
+		}
+	}
+}
+
+// TestDispatchCommands_ParityWithParseArgs proves cli.go's Run switch and
+// cliopts/parse.go's bindCommandFlags switch stay in sync: both dispatch
+// over the same 11 command names with the same "unknown command %q" error,
+// and a name added to one but not the other should fail loudly here instead
+// of surfacing as a confusing runtime mismatch.
+func TestDispatchCommands_ParityWithParseArgs(t *testing.T) {
+	t.Parallel()
+
+	runCommands := switchCaseCommands(t, "cli.go", "Run")
+	parseCommands := switchCaseCommands(
+		t, filepath.Join("cliopts", "parse.go"), "bindCommandFlags",
+	)
+	slices.Sort(runCommands)
+	slices.Sort(parseCommands)
+	if !slices.Equal(runCommands, parseCommands) {
+		t.Errorf(
+			"Run dispatches %v, bindCommandFlags binds %v - the two switches diverged",
+			runCommands, parseCommands,
+		)
 	}
 }
