@@ -76,19 +76,12 @@ func InstallHook(templates fs.FS, claudeDir string) (backedUp []string, err erro
 			}
 		}
 		dst := filepath.Join(hooksDir, asset.destName)
-		exists, ours, checkErr := marker.Check(dst)
-		if checkErr != nil {
-			return backedUp, fmt.Errorf("check %q: %w", dst, checkErr)
+		note, installErr := marker.InstallFile(dst, assetBytes, asset.mode)
+		if installErr != nil {
+			return backedUp, fmt.Errorf("install %q: %w", dst, installErr)
 		}
-		if exists && !ours {
-			backupPath, backupErr := marker.Backup(dst)
-			if backupErr != nil {
-				return backedUp, fmt.Errorf("%w", backupErr)
-			}
-			backedUp = append(backedUp, marker.BackupMessage(dst, backupPath))
-		}
-		if writeErr := os.WriteFile(dst, assetBytes, asset.mode); writeErr != nil {
-			return backedUp, fmt.Errorf("write %q: %w", dst, writeErr)
+		if note != "" {
+			backedUp = append(backedUp, note)
 		}
 	}
 	if err = installBinary(claudeDir); err != nil {

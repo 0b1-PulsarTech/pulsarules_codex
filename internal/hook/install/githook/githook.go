@@ -40,28 +40,14 @@ func Install(dir string, hooks []string, opts Options) (backedUp []string, err e
 			)
 		}
 		path := filepath.Join(dest, name)
-		exists, ours, checkErr := marker.Check(path)
-		if checkErr != nil {
-			return backedUp, fmt.Errorf("check %q: %w", path, checkErr)
-		}
-		if exists && !ours {
-			backupPath, backupErr := marker.Backup(path)
-			if backupErr != nil {
-				return backedUp, fmt.Errorf("%w", backupErr)
-			}
-			backedUp = append(backedUp, marker.BackupMessage(path, backupPath))
-		} else {
-			// Remove an owned (or absent) file first; os.WriteFile with
-			// O_TRUNC fails on read-only files left by a previous install
-			// (0o500). A foreign file above was already moved out of the
-			// way by Backup, so this branch never touches one.
-			// why: path is the trusted project hooks dir this installer maintains.
-			_ = os.Remove(path)
-		}
 		// A git hook must stay executable, so 0o500 is deliberate; it is
 		// already the tightest mode that still lets git run the script.
-		if writeErr := os.WriteFile(path, []byte(script), hookMode); writeErr != nil {
-			return backedUp, fmt.Errorf("write hook %q: %w", name, writeErr)
+		note, installErr := marker.InstallFile(path, []byte(script), hookMode)
+		if installErr != nil {
+			return backedUp, fmt.Errorf("install hook %q: %w", name, installErr)
+		}
+		if note != "" {
+			backedUp = append(backedUp, note)
 		}
 	}
 	return backedUp, nil
@@ -97,23 +83,16 @@ func Uninstall(dir string) (removed, restored []string, err error) {
 	dest := hooksDir(dir)
 	for name := range hookSpecs {
 		path := filepath.Join(dest, name)
-		_, ours, checkErr := marker.Check(path)
-		if checkErr != nil {
-			return removed, restored, fmt.Errorf("check %q: %w", path, checkErr)
+		removedOK, note, uninstallErr := marker.UninstallFile(path)
+		if uninstallErr != nil {
+			return removed, restored, fmt.Errorf("uninstall hook %q: %w", name, uninstallErr)
 		}
-		if !ours {
+		if !removedOK {
 			continue
 		}
-		if err = os.Remove(path); err != nil {
-			return removed, restored, fmt.Errorf("remove %q: %w", path, err)
-		}
 		removed = append(removed, name)
-		restoredOK, restoreErr := marker.Restore(path)
-		if restoreErr != nil {
-			return removed, restored, fmt.Errorf("%w", restoreErr)
-		}
-		if restoredOK {
-			restored = append(restored, marker.RestoreMessage(path))
+		if note != "" {
+			restored = append(restored, note)
 		}
 	}
 	if err = os.RemoveAll(filepath.Join(dest, binaryName)); err != nil {

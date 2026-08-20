@@ -18,19 +18,12 @@ func UninstallHook(claudeDir string) (restored []string, err error) {
 	hooksDir := filepath.Join(claudeDir, "hooks")
 	for _, asset := range hookAssets {
 		path := filepath.Join(hooksDir, asset.destName)
-		removedOK, removeErr := removeIfInstalled(path)
+		_, note, removeErr := marker.UninstallFile(path)
 		if removeErr != nil {
 			return restored, removeErr
 		}
-		if !removedOK {
-			continue
-		}
-		restoredOK, restoreErr := marker.Restore(path)
-		if restoreErr != nil {
-			return restored, fmt.Errorf("%w", restoreErr)
-		}
-		if restoredOK {
-			restored = append(restored, marker.RestoreMessage(path))
+		if note != "" {
+			restored = append(restored, note)
 		}
 	}
 	if err = fsx.RemoveEmptyDir(hooksDir); err != nil {
@@ -44,22 +37,4 @@ func UninstallHook(claudeDir string) (restored []string, err error) {
 		return restored, fmt.Errorf("remove empty bin dir: %w", err)
 	}
 	return restored, nil
-}
-
-// removeIfInstalled deletes path only when its content carries
-// marker.Installed, so a same-named file the user wrote survives untouched.
-// It reports whether it removed the file.
-func removeIfInstalled(path string) (removed bool, err error) {
-	var exists, ours bool
-	exists, ours, err = marker.Check(path)
-	if err != nil {
-		return false, fmt.Errorf("check %q: %w", path, err)
-	}
-	if !exists || !ours {
-		return false, nil
-	}
-	if err = os.Remove(path); err != nil {
-		return false, fmt.Errorf("remove %q: %w", path, err)
-	}
-	return true, nil
 }

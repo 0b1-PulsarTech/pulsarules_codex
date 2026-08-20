@@ -98,7 +98,7 @@ func TestUninstall(t *testing.T) {
 		t.Fatalf("Install: %v", err)
 	}
 
-	removed, err := Uninstall(dir)
+	removed, _, err := Uninstall(dir)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestUninstall(t *testing.T) {
 func TestUninstall_Idempotent(t *testing.T) {
 	t.Parallel()
 
-	removed, err := Uninstall(t.TempDir())
+	removed, _, err := Uninstall(t.TempDir())
 	if err != nil {
 		t.Fatalf("Uninstall on untouched dir: %v", err)
 	}
@@ -257,5 +257,37 @@ func TestPluginScript(t *testing.T) {
 				t.Errorf("Contains(%q) = %v, want %v", testCase.substr, has, testCase.wantHas)
 			}
 		})
+	}
+}
+
+// TestUninstall_RestoresBackedUpPlugin pins the round trip the other targets
+// already honour: a foreign plugin Install backed up comes back when the
+// installed one is removed.
+func TestUninstall_RestoresBackedUpPlugin(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	pluginPath := filepath.Join(dir, ".opencode", "plugins", pluginName)
+	if err := os.MkdirAll(filepath.Dir(pluginPath), 0o700); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	const foreign = "// a user's own plugin\n"
+	if err := os.WriteFile(pluginPath, []byte(foreign), 0o600); err != nil {
+		t.Fatalf("seed foreign plugin: %v", err)
+	}
+
+	if _, err := Install(dir, testTemplates(t)); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	removed, restored, err := Uninstall(dir)
+	if err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if !removed || len(restored) != 1 {
+		t.Fatalf("removed = %v, restored = %v, want a removal with one restore", removed, restored)
+	}
+	got, err := os.ReadFile(pluginPath)
+	if err != nil || string(got) != foreign {
+		t.Errorf("plugin content = %q (%v), want the foreign original back", got, err)
 	}
 }

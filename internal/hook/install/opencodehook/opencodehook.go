@@ -40,19 +40,12 @@ func Install(dir string, templates fs.FS) (backedUp []string, err error) {
 		return nil, fmt.Errorf("read plugin template: %w", err)
 	}
 	pluginPath := filepath.Join(pluginsDir, pluginName)
-	exists, ours, checkErr := marker.Check(pluginPath)
-	if checkErr != nil {
-		return nil, fmt.Errorf("check plugin: %w", checkErr)
+	note, installErr := marker.InstallFile(pluginPath, script, fsperm.FilePrivate)
+	if installErr != nil {
+		return backedUp, fmt.Errorf("install plugin: %w", installErr)
 	}
-	if exists && !ours {
-		backupPath, backupErr := marker.Backup(pluginPath)
-		if backupErr != nil {
-			return nil, fmt.Errorf("%w", backupErr)
-		}
-		backedUp = append(backedUp, marker.BackupMessage(pluginPath, backupPath))
-	}
-	if err = os.WriteFile(pluginPath, script, fsperm.FilePrivate); err != nil {
-		return backedUp, fmt.Errorf("write plugin: %w", err)
+	if note != "" {
+		backedUp = append(backedUp, note)
 	}
 	if err = InstallBinary(dir); err != nil {
 		return backedUp, fmt.Errorf("install binary: %w", err)
@@ -74,35 +67,33 @@ func InstallBinary(dir string) error {
 }
 
 // Uninstall removes the governance plugin, installer binary, and "/bin/"
-// gitignore entry Install wrote into <dir>/.opencode/. The plugin is
-// removed only when it carries marker.Installed, so a hand-authored
-// same-named file survives untouched. It is idempotent, and reports
-// whether the plugin was actually ours and removed.
-func Uninstall(dir string) (removed bool, err error) {
+// gitignore entry Install wrote into <dir>/.opencode/. Only a plugin carrying
+// marker.Installed is removed - restoring the backup Install left behind
+// (reported in restored) - so a hand-authored file survives. Idempotent, and
+// reports whether the plugin was actually ours and removed.
+func Uninstall(dir string) (removed bool, restored []string, err error) {
 	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
 	pluginPath := filepath.Join(pluginsDir, pluginName)
-	_, ours, checkErr := marker.Check(pluginPath)
-	if checkErr != nil {
-		return false, fmt.Errorf("check plugin: %w", checkErr)
+	var note string
+	removed, note, err = marker.UninstallFile(pluginPath)
+	if err != nil {
+		return false, nil, fmt.Errorf("uninstall plugin: %w", err)
 	}
-	if ours {
-		if err = os.Remove(pluginPath); err != nil {
-			return false, fmt.Errorf("remove plugin: %w", err)
-		}
-		removed = true
+	if note != "" {
+		restored = append(restored, note)
 	}
 	if err = fsx.RemoveEmptyDir(pluginsDir); err != nil {
-		return false, fmt.Errorf("remove empty plugins dir: %w", err)
+		return removed, restored, fmt.Errorf("remove empty plugins dir: %w", err)
 	}
 	binDir := filepath.Join(dir, ".opencode", "bin")
 	if err = os.RemoveAll(filepath.Join(dir, binaryRel)); err != nil {
-		return false, fmt.Errorf("remove installer binary: %w", err)
+		return removed, restored, fmt.Errorf("remove installer binary: %w", err)
 	}
 	if err = fsx.RemoveEmptyDir(binDir); err != nil {
-		return false, fmt.Errorf("remove empty bin dir: %w", err)
+		return removed, restored, fmt.Errorf("remove empty bin dir: %w", err)
 	}
 	if _, err = gitignore.Remove(filepath.Join(dir, ".opencode"), "/bin/"); err != nil {
-		return false, fmt.Errorf("remove opencode gitignore entry: %w", err)
+		return removed, restored, fmt.Errorf("remove opencode gitignore entry: %w", err)
 	}
-	return removed, nil
+	return removed, restored, nil
 }
