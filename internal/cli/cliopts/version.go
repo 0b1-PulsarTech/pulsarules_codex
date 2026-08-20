@@ -10,7 +10,7 @@ import (
 // fallbackVersion names a build the toolchain stamped nothing into (`go run`).
 // why: it tracks the last cut tag, so an unstamped build names the release it
 // was built from rather than freezing at whatever it said when written.
-const fallbackVersion = "0.7.0"
+const fallbackVersion = "0.7.1"
 
 // shortRevisionLen trims a stamped commit to the length a person reads.
 const shortRevisionLen = 12
