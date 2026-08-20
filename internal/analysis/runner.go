@@ -28,33 +28,25 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *core.AnalysisConfig {
 
 func withEmojiParams(analyzers map[string]core.AnalyzerConfig, emojiCfg config.EmojiConfig) {
 	const commitAnalyzerID = "commit-lint"
-
-	entry, found := analyzers[commitAnalyzerID]
-	if !found {
-		entry = core.AnalyzerConfig{Enabled: true}
-	}
-	params := make(map[string]any, len(entry.Params)+3)
-	maps.Copy(params, entry.Params)
-	params["emoji_hard_window"] = emojiCfg.WindowSize
-	params["emoji_soft_window"] = emojiCfg.SoftWindowSize
-	params["emoji_suggestions"] = emojiCfg.SuggestionCount
-
-	entry.Params = params
-	analyzers[commitAnalyzerID] = entry
+	setParam(analyzers, commitAnalyzerID, "emoji_hard_window", emojiCfg.WindowSize)
+	setParam(analyzers, commitAnalyzerID, "emoji_soft_window", emojiCfg.SoftWindowSize)
+	setParam(analyzers, commitAnalyzerID, "emoji_suggestions", emojiCfg.SuggestionCount)
 }
 
 func withMovePurityParams(analyzers map[string]core.AnalyzerConfig, cfg config.MovePurityConfig) {
 	const movePurityAnalyzerID = "commit-move-purity"
+	setParam(analyzers, movePurityAnalyzerID, "min_similarity", cfg.MinSimilarity)
+	setParam(analyzers, movePurityAnalyzerID, "severity", cfg.Severity)
+}
 
-	entry, found := analyzers[movePurityAnalyzerID]
+func setParam(analyzers map[string]core.AnalyzerConfig, id, key string, value any) {
+	entry, found := analyzers[id]
 	if !found {
 		entry = core.AnalyzerConfig{Enabled: true}
 	}
-	params := make(map[string]any, len(entry.Params)+2)
+	params := make(map[string]any, len(entry.Params)+1)
 	maps.Copy(params, entry.Params)
-	params["min_similarity"] = cfg.MinSimilarity
-	params["severity"] = cfg.Severity
-
+	params[key] = value
 	entry.Params = params
-	analyzers[movePurityAnalyzerID] = entry
+	analyzers[id] = entry
 }
