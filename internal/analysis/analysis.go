@@ -98,13 +98,11 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Disc
 		return d
 	}
 
-	// Every remaining scope reads file content: the static/AST analyzers are
-	// registered for ScopeCommit too (staticScopes), so the pre-commit hook
-	// needs Sources or they silently no-op on the very changeset they gate.
-	if scope != ScopeFull && scope != ScopeChanged && scope != ScopeCommit {
-		return d
-	}
-
+	// Every Scope reaches this point - the three-way guard that used to sit
+	// here could never be true, since those were Scope's only values - and
+	// every one of them reads file content: the static/AST analyzers are
+	// registered for ScopeCommit too, so the pre-commit hook needs Sources or
+	// they silently no-op on the very changeset they gate.
 	if renames, err := s.repo.StagedRenames(renameProbeScore); err == nil {
 		d.StagedRenames = toCoreRenames(renames)
 	}

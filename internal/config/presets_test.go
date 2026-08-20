@@ -12,7 +12,7 @@ func TestApplyPreset_Recommended(t *testing.T) {
 	cfg.ApplyPreset()
 
 	// recommended doesn't define overrides, so nothing changes
-	if cfg.IsEnabled("complexity") != true {
+	if isEnabled(cfg, "complexity") != true {
 		t.Error("complexity should be enabled in recommended")
 	}
 }
@@ -24,16 +24,16 @@ func TestApplyPreset_Minimal(t *testing.T) {
 	cfg.Preset = PresetMinimal
 	cfg.ApplyPreset()
 
-	if cfg.IsEnabled("complexity") {
+	if isEnabled(cfg, "complexity") {
 		t.Error("complexity should be disabled in minimal preset")
 	}
-	if cfg.IsEnabled("arch-boundary") {
+	if isEnabled(cfg, "arch-boundary") {
 		t.Error("arch-boundary should be disabled in minimal preset")
 	}
-	if !cfg.IsEnabled("file-size") {
+	if !isEnabled(cfg, "file-size") {
 		t.Error("file-size should be enabled in minimal preset")
 	}
-	if !cfg.IsEnabled("naming") {
+	if !isEnabled(cfg, "naming") {
 		t.Error("naming should be enabled in minimal preset")
 	}
 }
@@ -45,10 +45,10 @@ func TestApplyPreset_Strict(t *testing.T) {
 	cfg.Preset = PresetStrict
 	cfg.ApplyPreset()
 
-	if !cfg.IsEnabled("file-size") {
+	if !isEnabled(cfg, "file-size") {
 		t.Error("file-size should be enabled in strict preset")
 	}
-	if !cfg.IsEnabled("complexity") {
+	if !isEnabled(cfg, "complexity") {
 		t.Error("complexity should be enabled in strict preset")
 	}
 }
@@ -60,7 +60,7 @@ func TestApplyPreset_Unknown(t *testing.T) {
 	cfg.Preset = "unknown"
 	cfg.ApplyPreset() // should be a no-op
 
-	if !cfg.IsEnabled("complexity") {
+	if !isEnabled(cfg, "complexity") {
 		t.Error("complexity should still be enabled after unknown preset")
 	}
 }

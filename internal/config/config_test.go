@@ -20,29 +20,17 @@ func TestDefaults(t *testing.T) {
 	}
 }
 
-func TestIsEnabled(t *testing.T) {
-	t.Parallel()
-
-	cfg := Defaults()
-	cfg.Analyzers["disabled"] = AnalyzerConfig{Enabled: false}
-
-	testCases := []struct {
-		name string
-		id   string
-		want bool
-	}{
-		{"absent defaults to enabled", "nonexistent", true},
-		{"explicitly disabled", "disabled", false},
-		{"explicitly enabled", "other", true},
+// isEnabled reports whether an analyzer is enabled in cfg, absent analyzers
+// defaulting to enabled - the query surface GovernanceConfig.IsEnabled used
+// to provide before it was deleted for having zero production callers
+// (analyzer enablement is decided from core.AnalysisConfig, built by
+// internal/analysis.toAnalysisConfig, not from this type directly).
+func isEnabled(cfg *GovernanceConfig, analyzerID string) bool {
+	ac, ok := cfg.Analyzers[analyzerID]
+	if !ok {
+		return true
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			if got := cfg.IsEnabled(testCase.id); got != testCase.want {
-				t.Fatalf("IsEnabled(%q) = %v, want %v", testCase.id, got, testCase.want)
-			}
-		})
-	}
+	return ac.Enabled
 }
 
 func TestParam(t *testing.T) {

@@ -84,17 +84,14 @@ func Defaults() *GovernanceConfig {
 	}
 }
 
-// IsEnabled reports whether an analyzer is enabled in the config. Absent
-// analyzers default to enabled.
-func (c *GovernanceConfig) IsEnabled(analyzerID string) bool {
-	cfg, ok := c.Analyzers[analyzerID]
-	if !ok {
-		return true
-	}
-	return cfg.Enabled
-}
-
 // Param returns a parameter value for an analyzer, or the default if not set.
+//
+// why: internal/analysis.toAnalysisConfig (and everything downstream of it)
+// reads params through core.AnalysisConfig/core.ParamSet instead - this
+// method has no production caller of its own. It survives only because
+// internal/cli/governance_test.go, outside this agent's file ownership,
+// still asserts through it; IsEnabled had no such dependency and was
+// deleted alongside it.
 func (c *GovernanceConfig) Param(analyzerID, key string, def any) any {
 	cfg, ok := c.Analyzers[analyzerID]
 	if !ok {
