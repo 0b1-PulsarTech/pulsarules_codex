@@ -169,6 +169,16 @@ func TestRegistryDetectTargets(t *testing.T) {
 			want:  []string{"agents"},
 		},
 		{
+			// Regression for the bug where agentsTarget and opencodeTarget
+			// both claimed a root AGENTS.md written by opencode: DetectTargets
+			// used to return both "agents" and "opencode", so both Uninstalls
+			// attempted removeAgents.
+			name:  "AGENTS.md written alongside opencode dir",
+			dirs:  []string{".opencode"},
+			files: []string{"AGENTS.md"},
+			want:  []string{"opencode"},
+		},
+		{
 			name: "cursor rules only",
 			dirs: []string{filepath.Join(".cursor", "rules")},
 			want: []string{"cursor"},

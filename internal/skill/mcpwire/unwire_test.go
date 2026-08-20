@@ -23,7 +23,7 @@ func TestRemoveMCP_DeletesFileWhenOnlyOurs(t *testing.T) {
 		t.Fatalf("WriteMCP: %v", err)
 	}
 
-	if err := RemoveMCP(repoDir); err != nil {
+	if _, err := RemoveMCP(repoDir); err != nil {
 		t.Fatalf("RemoveMCP: %v", err)
 	}
 
@@ -55,7 +55,7 @@ func TestRemoveMCP_PreservesUnrelated(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := RemoveMCP(repoDir); err != nil {
+	if _, err := RemoveMCP(repoDir); err != nil {
 		t.Fatalf("RemoveMCP: %v", err)
 	}
 
@@ -108,7 +108,7 @@ func TestRemoveMCP_StripsGitignoreWhenFileSurvives(t *testing.T) {
 		t.Fatalf(".gitignore missing .mcp.json entry after WriteMCP: %q", giBefore)
 	}
 
-	if err = RemoveMCP(repoDir); err != nil {
+	if _, err = RemoveMCP(repoDir); err != nil {
 		t.Fatalf("RemoveMCP: %v", err)
 	}
 
@@ -141,7 +141,7 @@ func TestRemoveMCP_Unparseable(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	err := RemoveMCP(repoDir)
+	_, err := RemoveMCP(repoDir)
 	if !errors.Is(err, fsx.ErrUnparseableJSON) {
 		t.Fatalf("err = %v, want fsx.ErrUnparseableJSON", err)
 	}
@@ -154,12 +154,62 @@ func TestRemoveMCP_Unparseable(t *testing.T) {
 	}
 }
 
-// TestRemoveMCP_NoOpWhenAbsent asserts a missing .mcp.json is not an error.
+// TestRemoveMCP_NoOpWhenAbsent asserts a missing .mcp.json is not an error,
+// and reports changed = false since nothing was there to remove.
 func TestRemoveMCP_NoOpWhenAbsent(t *testing.T) {
 	t.Parallel()
 
-	if err := RemoveMCP(t.TempDir()); err != nil {
+	changed, err := RemoveMCP(t.TempDir())
+	if err != nil {
 		t.Fatalf("RemoveMCP: %v", err)
+	}
+	if changed {
+		t.Error("changed = true, want false (nothing was there to remove)")
+	}
+}
+
+// TestRemoveMCP_ChangedSignal is the regression test for the bug where a
+// caller could not tell a real removal from a no-op: RemoveMCP returns a nil
+// error for both an absent file and a present file with no gopls entry, so
+// callers must key off changed, not off a nil error.
+func TestRemoveMCP_ChangedSignal(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		seed        string // empty means no .mcp.json is written at all
+		wantChanged bool
+	}{
+		{name: "absent file", wantChanged: false},
+		{
+			name:        "present with no gopls entry",
+			seed:        `{"mcpServers": {"other": {"command": "other"}}}`,
+			wantChanged: false,
+		},
+		{
+			name:        "present with gopls entry",
+			seed:        `{"mcpServers": {"gopls": {"command": "gopls", "args": ["mcp"]}}}`,
+			wantChanged: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			repoDir := t.TempDir()
+			if testCase.seed != "" {
+				path := filepath.Join(repoDir, ".mcp.json")
+				if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+					t.Fatalf("seed: %v", err)
+				}
+			}
+			changed, err := RemoveMCP(repoDir)
+			if err != nil {
+				t.Fatalf("RemoveMCP: %v", err)
+			}
+			if changed != testCase.wantChanged {
+				t.Errorf("changed = %v, want %v", changed, testCase.wantChanged)
+			}
+		})
 	}
 }
 
@@ -171,10 +221,10 @@ func TestRemoveMCP_Idempotent(t *testing.T) {
 	if err := WriteMCP(fakeTemplates(), repoDir); err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
-	if err := RemoveMCP(repoDir); err != nil {
+	if _, err := RemoveMCP(repoDir); err != nil {
 		t.Fatalf("RemoveMCP #1: %v", err)
 	}
-	if err := RemoveMCP(repoDir); err != nil {
+	if _, err := RemoveMCP(repoDir); err != nil {
 		t.Fatalf("RemoveMCP #2: %v", err)
 	}
 }

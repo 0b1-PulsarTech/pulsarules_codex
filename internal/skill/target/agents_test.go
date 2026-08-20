@@ -47,6 +47,28 @@ func TestAgentsTargetPresent(t *testing.T) {
 	}
 }
 
+// TestAgentsTargetPresent_DefersToOpencode is the regression test for the
+// bug where agentsTarget and opencodeTarget both claimed a root AGENTS.md:
+// once an opencode dir is present, agentsTarget.Present must return false
+// even though the shared AGENTS.md still exists, since opencodeTarget's own
+// Uninstall already reverses it - claiming it here too would attempt the
+// same removal twice.
+func TestAgentsTargetPresent_DefersToOpencode(t *testing.T) {
+	t.Parallel()
+
+	base := t.TempDir()
+	if err := os.WriteFile(filepath.Join(base, "AGENTS.md"), []byte("# AGENTS.md\n"), 0o600); err != nil {
+		t.Fatalf("seed AGENTS.md: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(base, ".opencode"), 0o750); err != nil {
+		t.Fatalf("mkdir .opencode: %v", err)
+	}
+
+	if got := (agentsTarget{}).Present(base); got {
+		t.Error("Present() = true, want false (opencode already owns this AGENTS.md)")
+	}
+}
+
 // TestAgentsTargetInstall asserts Install writes only the root AGENTS.md - no
 // skills dir, no config file - reflecting the thin layout's one job.
 func TestAgentsTargetInstall(t *testing.T) {

@@ -150,15 +150,21 @@ func retireLegacyAgents(base string, report *Report) error {
 }
 
 // unwireOpencodeConfig removes the standards wiring from opencode.json,
-// warning instead of failing when the file exists but does not parse.
+// warning instead of failing when the file exists but does not parse. It
+// notes the removal only when UnwireConfig actually changed something, so
+// the report never claims to have unwired a file that was absent, or
+// present but carrying none of this tool's wiring.
 func unwireOpencodeConfig(projectDir string, report *Report) error {
-	if err := opencodewire.UnwireConfig(projectDir); err != nil {
+	changed, err := opencodewire.UnwireConfig(projectDir)
+	if err != nil {
 		if errors.Is(err, fsx.ErrUnparseableJSON) {
 			report.warn("%v", err)
 			return nil
 		}
 		return fmt.Errorf("unwire opencode config: %w", err)
 	}
-	report.note("unwired %s", filepath.Join(projectDir, "opencode.json"))
+	if changed {
+		report.note("unwired %s", filepath.Join(projectDir, "opencode.json"))
+	}
 	return nil
 }

@@ -13,6 +13,68 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
 )
 
+// TestUnwireOpencodeConfig_NoNoteWhenNothingChanged is the regression test
+// for the bug where unwireOpencodeConfig printed "unwired opencode.json"
+// whenever opencodewire.UnwireConfig returned a nil error, even though
+// UnwireConfig returns nil for both an absent opencode.json and a present
+// one carrying none of this tool's wiring - neither case actually unwired
+// anything.
+func TestUnwireOpencodeConfig_NoNoteWhenNothingChanged(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		seedConfig string // empty means no opencode.json is written at all
+	}{
+		{name: "absent opencode.json"},
+		{name: "present opencode.json with no wiring", seedConfig: `{"theme": "dark"}`},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			base := t.TempDir()
+			if testCase.seedConfig != "" {
+				path := filepath.Join(base, "opencode.json")
+				if err := os.WriteFile(path, []byte(testCase.seedConfig), 0o600); err != nil {
+					t.Fatalf("seed opencode.json: %v", err)
+				}
+			}
+
+			var report Report
+			if err := unwireOpencodeConfig(base, &report); err != nil {
+				t.Fatalf("unwireOpencodeConfig: %v", err)
+			}
+			if len(report.Notes) != 0 {
+				t.Errorf("Notes = %v, want none (nothing was unwired)", report.Notes)
+			}
+		})
+	}
+}
+
+// TestUnwireOpencodeConfig_NotesWhenWiringRemoved asserts the note still
+// fires when UnwireConfig actually strips wiring, so the fix does not simply
+// silence the note entirely.
+func TestUnwireOpencodeConfig_NotesWhenWiringRemoved(t *testing.T) {
+	t.Parallel()
+
+	base := t.TempDir()
+	seed := `{"instructions": ["AGENTS.md"]}`
+	path := filepath.Join(base, "opencode.json")
+	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+		t.Fatalf("seed opencode.json: %v", err)
+	}
+
+	var report Report
+	if err := unwireOpencodeConfig(base, &report); err != nil {
+		t.Fatalf("unwireOpencodeConfig: %v", err)
+	}
+	if !slices.ContainsFunc(report.Notes, func(note string) bool {
+		return strings.Contains(note, "unwired")
+	}) {
+		t.Errorf("Notes = %v, want an 'unwired' entry", report.Notes)
+	}
+}
+
 func TestOpencodeTargetName(t *testing.T) {
 	t.Parallel()
 	if got := (opencodeTarget{}).Name(); got != "opencode" {

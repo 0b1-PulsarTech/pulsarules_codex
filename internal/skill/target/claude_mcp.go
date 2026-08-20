@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -38,22 +37,22 @@ func wireClaudeMCP(templates fs.FS, repoDir, skillsDir string, report *Report) e
 }
 
 // unwireClaudeMCP removes the gopls server entry from .mcp.json, warning
-// instead of failing when the file exists but does not parse. It skips the
-// note entirely when .mcp.json was never written (NoMCP, or gopls was never
-// on PATH), so the report never claims to have unwired gopls it never wired.
+// instead of failing when the file exists but does not parse. It notes the
+// removal only when mcpwire.RemoveMCP actually changed something, so the
+// report never claims to have unwired gopls from a file that was absent, or
+// present but carrying no gopls entry.
 func unwireClaudeMCP(repoDir string, report *Report) error {
-	mcpPath := filepath.Join(repoDir, ".mcp.json")
-	if _, statErr := os.Stat(mcpPath); errors.Is(statErr, fs.ErrNotExist) {
-		return nil
-	}
-	if err := mcpwire.RemoveMCP(repoDir); err != nil {
+	changed, err := mcpwire.RemoveMCP(repoDir)
+	if err != nil {
 		if errors.Is(err, fsx.ErrUnparseableJSON) {
 			report.warn("%v", err)
 			return nil
 		}
 		return fmt.Errorf("remove mcp: %w", err)
 	}
-	report.note("unwired gopls from %s", mcpPath)
+	if changed {
+		report.note("unwired gopls from %s", filepath.Join(repoDir, ".mcp.json"))
+	}
 	return nil
 }
 

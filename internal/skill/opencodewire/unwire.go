@@ -18,26 +18,30 @@ import (
 // once empty. It drops "$schema" only when it is the sole remaining key and
 // exactly WireConfig's URL, so a user's own $schema survives; invalid JSON
 // or an absent file leaves things untouched (wraps fsx.ErrUnparseableJSON).
-func UnwireConfig(projectDir string) error {
+// changed reports whether anything on disk actually moved, so a caller can
+// tell a real removal from a no-op instead of assuming one from a nil error
+// - UnwireConfig returns nil error for both an absent file and a present
+// file carrying neither wired instructions nor a gopls entry.
+func UnwireConfig(projectDir string) (changed bool, err error) {
 	path := filepath.Join(projectDir, configFile)
 	existing, err := os.ReadFile(path) //nolint:gosec // path is under the caller's project dir.
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil
+			return false, nil
 		}
-		return fmt.Errorf("read %q: %w", path, err)
+		return false, fmt.Errorf("read %q: %w", path, err)
 	}
 
 	config := map[string]json.RawMessage{}
 	if err = json.Unmarshal(existing, &config); err != nil {
-		return fmt.Errorf("%w: %q: %w", fsx.ErrUnparseableJSON, path, err)
+		return false, fmt.Errorf("%w: %q: %w", fsx.ErrUnparseableJSON, path, err)
 	}
 
 	instructionsChanged, err := fsx.StripSliceSection(
 		config, "instructions", fmt.Sprintf("%q instructions", path), stripInstructions,
 	)
 	if err != nil {
-		return fmt.Errorf("strip instructions: %w", err)
+		return false, fmt.Errorf("strip instructions: %w", err)
 	}
 	mcpChanged, err := fsx.StripMapSection(
 		config,
@@ -46,16 +50,16 @@ func UnwireConfig(projectDir string) error {
 		stripGoplsMCP,
 	)
 	if err != nil {
-		return fmt.Errorf("strip mcp: %w", err)
+		return false, fmt.Errorf("strip mcp: %w", err)
 	}
 	if !instructionsChanged && !mcpChanged {
-		return nil
+		return false, nil
 	}
 	removeOwnedSchema(config)
 	if _, err = fsx.SaveOrRemove(path, config); err != nil {
-		return fmt.Errorf("write opencode config: %w", err)
+		return false, fmt.Errorf("write opencode config: %w", err)
 	}
-	return nil
+	return true, nil
 }
 
 // removeOwnedSchema deletes config's "$schema" key when it is the only key

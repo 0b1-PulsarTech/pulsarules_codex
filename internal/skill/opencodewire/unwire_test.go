@@ -24,7 +24,7 @@ func TestUnwireConfig_RemovesOurWiring(t *testing.T) {
 		t.Fatalf("WireConfig: %v", err)
 	}
 
-	if err := UnwireConfig(projectDir); err != nil {
+	if _, err := UnwireConfig(projectDir); err != nil {
 		t.Fatalf("UnwireConfig: %v", err)
 	}
 
@@ -47,7 +47,7 @@ func TestUnwireConfig_KeepsSchemaWhenOtherContentSurvives(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := UnwireConfig(projectDir); err != nil {
+	if _, err := UnwireConfig(projectDir); err != nil {
 		t.Fatalf("UnwireConfig: %v", err)
 	}
 
@@ -73,7 +73,7 @@ func TestUnwireConfig_KeepsForeignSchema(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := UnwireConfig(projectDir); err != nil {
+	if _, err := UnwireConfig(projectDir); err != nil {
 		t.Fatalf("UnwireConfig: %v", err)
 	}
 
@@ -99,7 +99,7 @@ func TestUnwireConfig_PreservesUnrelated(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := UnwireConfig(projectDir); err != nil {
+	if _, err := UnwireConfig(projectDir); err != nil {
 		t.Fatalf("UnwireConfig: %v", err)
 	}
 
@@ -142,7 +142,7 @@ func TestUnwireConfig_RemovesLegacyInstructionEntry(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := UnwireConfig(projectDir); err != nil {
+	if _, err := UnwireConfig(projectDir); err != nil {
 		t.Fatalf("UnwireConfig: %v", err)
 	}
 
@@ -164,7 +164,7 @@ func TestUnwireConfig_Unparseable(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	err := UnwireConfig(projectDir)
+	_, err := UnwireConfig(projectDir)
 	if !errors.Is(err, fsx.ErrUnparseableJSON) {
 		t.Fatalf("err = %v, want fsx.ErrUnparseableJSON", err)
 	}
@@ -178,12 +178,53 @@ func TestUnwireConfig_Unparseable(t *testing.T) {
 }
 
 // TestUnwireConfig_NoOpWhenAbsent asserts a missing opencode.json is not an
-// error.
+// error, and reports changed = false since nothing was there to unwire.
 func TestUnwireConfig_NoOpWhenAbsent(t *testing.T) {
 	t.Parallel()
 
-	if err := UnwireConfig(t.TempDir()); err != nil {
+	changed, err := UnwireConfig(t.TempDir())
+	if err != nil {
 		t.Fatalf("UnwireConfig: %v", err)
+	}
+	if changed {
+		t.Error("changed = true, want false (nothing was there to unwire)")
+	}
+}
+
+// TestUnwireConfig_ChangedSignal is the regression test for the bug where a
+// caller could not tell a real unwire from a no-op: UnwireConfig returns a
+// nil error for both an absent file and a present file carrying none of
+// this tool's wiring, so callers must key off changed, not off a nil error.
+func TestUnwireConfig_ChangedSignal(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		seed        string // empty means no opencode.json is written at all
+		wantChanged bool
+	}{
+		{name: "absent file", wantChanged: false},
+		{name: "present with no wiring", seed: `{"theme": "dark"}`, wantChanged: false},
+		{name: "present with instructions wired", seed: `{"instructions": ["AGENTS.md"]}`, wantChanged: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			projectDir := t.TempDir()
+			if testCase.seed != "" {
+				path := filepath.Join(projectDir, configFile)
+				if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+					t.Fatalf("seed: %v", err)
+				}
+			}
+			changed, err := UnwireConfig(projectDir)
+			if err != nil {
+				t.Fatalf("UnwireConfig: %v", err)
+			}
+			if changed != testCase.wantChanged {
+				t.Errorf("changed = %v, want %v", changed, testCase.wantChanged)
+			}
+		})
 	}
 }
 
@@ -196,10 +237,10 @@ func TestUnwireConfig_Idempotent(t *testing.T) {
 	if err := WireConfig(projectDir, WithGopls); err != nil {
 		t.Fatalf("WireConfig: %v", err)
 	}
-	if err := UnwireConfig(projectDir); err != nil {
+	if _, err := UnwireConfig(projectDir); err != nil {
 		t.Fatalf("UnwireConfig #1: %v", err)
 	}
-	if err := UnwireConfig(projectDir); err != nil {
+	if _, err := UnwireConfig(projectDir); err != nil {
 		t.Fatalf("UnwireConfig #2: %v", err)
 	}
 }
