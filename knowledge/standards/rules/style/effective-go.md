@@ -75,11 +75,13 @@ stable the module pins (source repos use `go 1.26`).
     inference cannot (no value of the type appears in the call).
 12. No AI text marker in `.go` or `.md`. Two classes, and they are handled differently. Typographic
     punctuation - em dash U+2014, en dash, ellipsis U+2026, curly quotes - is reported and never
-    rewritten, because inside a string literal or a fenced block it is data; replace it with its
-    ASCII form by hand. Invisible carriers - zero-width characters, bidi controls, soft hyphens,
-    exotic spaces - are removed by `pulsarules_cli clean --write`, and only the ones no neighbouring
-    context can justify. A marker that a test needs as data is written as a Go escape (`\u2014`),
-    never as the character, so the fixture never trips the check that validates it.
+    rewritten, because inside a Go string literal it is data; replace it with its ASCII form by
+    hand. In markdown the fence is machine-readable, so a fenced block or an inline code span is
+    skipped outright - the character there is content being shown, not prose style. Invisible
+    carriers - zero-width characters, bidi controls, soft hyphens, exotic spaces - are removed by
+    `pulsarules_cli clean --write`, and only the ones no neighbouring context can justify. A marker
+    that a test needs as data is written as a Go escape (`\u2014`), never as the character, so the
+    fixture never trips the check that validates it.
 13. How hard a marker lands depends on its class. An invisible carrier no neighbouring context can
     justify blocks: the bidi controls among them are the Trojan Source vector (CVE-2021-42574),
     where the diff a reviewer reads is not the code the compiler sees. One that may be
