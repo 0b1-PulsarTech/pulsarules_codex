@@ -5,7 +5,7 @@ vars:
   # pinned per knowledge/standards/rules/infra/build.md #8: no curl|sh downloads,
   # tool versions must be pinned. govulncheck has no tools/go.mod entry point in
   # this single-module repo, so it is pinned via `go run <module>@<version>`.
-  GOVULNCHECK_VERSION: v1.6.0
+  GOVULNCHECK_VERSION: v1.7.0
 
 tasks:
   default:
