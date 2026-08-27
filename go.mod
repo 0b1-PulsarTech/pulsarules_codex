@@ -3,7 +3,7 @@ module github.com/0b1-PulsarTech/pulsarules_codex
 go 1.27
 
 require (
-	github.com/wrapped-owls/goremy-di/remy v1.12.0
+	github.com/wrapped-owls/goremy-di/remy v1.17.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
