@@ -51,6 +51,7 @@ func Run(ctx context.Context, cmd Command) (Result, error) {
 	// stdout/stderr pipe open; without WaitDelay, exec.Cmd.Wait blocks on that
 	// pipe closing, silently defeating Command.Timeout (see os/exec's docs).
 	execCmd.WaitDelay = ioWaitGrace
+	KillGroupOnCancel(execCmd)
 	if len(cmd.Env) > 0 {
 		// Extra pairs extend the inherited environment instead of replacing it.
 		execCmd.Env = append(os.Environ(), cmd.Env...)

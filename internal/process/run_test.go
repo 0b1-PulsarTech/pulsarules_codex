@@ -74,7 +74,7 @@ func TestRun_MissingBinary(t *testing.T) {
 	}
 }
 
-func TestRun_Timeout(t *testing.T) {
+func TestRun_TimeoutKillsGrandchild(t *testing.T) {
 	t.Parallel()
 
 	const overrunBudget = 2 * time.Second
@@ -82,7 +82,7 @@ func TestRun_Timeout(t *testing.T) {
 	start := time.Now()
 	_, err := Run(context.Background(), Command{
 		Name:    "sh",
-		Args:    []string{"-c", "sleep 5"},
+		Args:    []string{"-c", "sleep 5 & wait"},
 		Timeout: shortTimeout,
 	})
 	elapsed := time.Since(start)
