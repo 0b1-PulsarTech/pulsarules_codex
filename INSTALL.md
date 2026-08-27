@@ -6,7 +6,7 @@ The installer is a single Go binary, `cmd/pulsarules_cli`. It embeds the knowled
 
 ## Prerequisites
 
-- Go 1.26+ (the module pins `go 1.26`).
+- Go 1.27+ (the module pins `go 1.27`).
 - Optional: [Taskfile](https://taskfile.dev/) for the convenience targets.
 - Optional but recommended: `gopls` on PATH (`go install golang.org/x/tools/gopls@latest`). When
   present, `install` wires the gopls MCP into the target's `.mcp.json` and (re)generates the
