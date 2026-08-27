@@ -15,8 +15,8 @@ permissions:
 env:
   # Pinned tool versions, no curl | sh: task and govulncheck come from the Go module proxy,
   # golangci-lint from its official action (knowledge/standards/rules/infra/build.md #8).
-  TASK_VERSION: v3.50.0
-  GOLANGCI_LINT_VERSION: v2.12.2
+  TASK_VERSION: v3.53.1
+  GOLANGCI_LINT_VERSION: v2.13.1
 
 jobs:
   build-test:
