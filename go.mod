@@ -1,6 +1,6 @@
 module github.com/0b1-PulsarTech/pulsarules_codex
 
-go 1.26
+go 1.27
 
 require (
 	github.com/wrapped-owls/goremy-di/remy v1.12.0

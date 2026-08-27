@@ -53,7 +53,7 @@ apps/<name>/                 # or cmd/<name>/
 Register in `go.work`:
 
 ```
-go 1.26
+go 1.27
 
 use (
     ./apps/<name>

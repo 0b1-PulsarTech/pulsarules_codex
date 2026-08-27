@@ -36,7 +36,7 @@ jobs:
       # actually checks they did, plus that every recorded checksum verifies.
       - name: task tools:tidy
         run: task tools:tidy
-      # go.mod pins `go 1.26` with no toolchain directive on purpose; there is
+      # go.mod pins `go 1.27` with no toolchain directive on purpose; there is
       # no `task` target that runs a full-module CGO-free build, so this
       # mirrors the Taskfile's own CGO_ENABLED=0 convention directly.
       - name: go build ./...

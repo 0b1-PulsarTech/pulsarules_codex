@@ -36,9 +36,9 @@ analyzers:
 
 > The enforceable Effective Go / Code Review Comments baseline every Go file must meet.
 
-Applies to: all Go code. Canonical references: [Effective Go](https://go.dev/doc/effective_go), [Go
-Code Review Comments](https://go.dev/wiki/CodeReviewComments). Target Go version: track the newest
-stable the module pins (source repos use `go 1.26`).
+Applies to: all Go code. Canonical references: [Effective Go](https://go.dev/doc/effective_go),
+[Go Code Review Comments](https://go.dev/wiki/CodeReviewComments). Target Go version: track the
+newest stable the module pins (source repos use `go 1.27`).
 
 {{define "when"}}
 - Writing or editing any `.go` file.

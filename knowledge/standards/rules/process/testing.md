@@ -44,12 +44,12 @@ Applies to: all test code.
    `t.Helper()` first and accept `testing.TB`.
 4. Deterministic time: code under test never reads the wall clock or sleeps just so a test can pass,
    and you NEVER add a `now func() time.Time` (or similar) field merely to seam time in tests. Drive
-   timing-dependent behaviour (TTL/expiry, backoff, debounce, ticker, timeout) with
-   `testing/synctest` (stable in Go 1.25; target 1.26): run the body in
-   `synctest.Test(t, func(t *testing.T){ ... })`, where the bubble's fake clock advances
-   `time.Now`/`time.Sleep`/timers with no real wait and `synctest.Wait()` blocks until goroutines
-   settle. Domain/use-case/worker code that needs richer time takes a small injected `Clock`
-   interface (`Now`/`Since`/`After`/`NewTicker`), never direct `time.*`.
+   timing-dependent behaviour (TTL/expiry, backoff, debounce, ticker, timeout) with `testing/synctest`
+   (stable in Go 1.25; target 1.27): run the body in `synctest.Test(t, func(t *testing.T){ ... })`,
+   where the bubble's fake clock advances `time.Now`/`time.Sleep`/timers with no real wait and
+   `synctest.Wait()` blocks until goroutines settle. Domain/use-case/worker code that needs richer
+   time takes a small injected `Clock` interface (`Now`/`Since`/`After`/`NewTicker`), never direct
+   `time.*`.
 5. Repository tests are real-DB round-trips via a test factory, guarded by `//go:build integration`,
    colocated in the repo package. `TestMain` builds the factory once; each test gets a fresh DB via
    `factory.NewDB(t)` (auto `t.Cleanup`). Never a SQL mock.
