@@ -7,6 +7,7 @@ tags:
     - style
 linters:
     - gosec
+    - modernize
 analyzers:
     - golangci-lint
 ---
@@ -36,9 +37,14 @@ conversions.
 2. Never place a `defer` inside a `for`/`range` loop body; extract the loop body into its own
    function (or an immediately-invoked closure) so the deferred call fires at the end of each
    iteration instead of accumulating until the enclosing function returns.
-3. When handing a slice derived from another slice to code that appends, cut it with the full slice
-   expression `s[:len(s):len(s)]` so the append is forced to allocate a new backing array instead of
-   silently overwriting the tail the original slice still shares.
+3. When handing a slice derived from another slice to code that appends and the original's tail
+   must survive, clip its capacity with `slices.Clip(values)` (exactly
+   `values[:len(values):len(values)]`, nilness preserved) so the append allocates a new backing
+   array instead of overwriting the shared tail.
+   Clipping buys that safety with an allocation, so it is a per-call-site decision, not a blanket
+   rewrite: where reusing the existing capacity is the deliberate intent - a pooled buffer, scratch
+   space a hot path appends into - leave the slice unclipped and make the shared ownership explicit
+   where the slices are handed over.
 4. Bounds-check a narrowing integer conversion against the target type's max/min before converting;
    never convert on the assumption the value already fits the narrower type.
 {{end}}
@@ -46,8 +52,8 @@ conversions.
 {{define "forbidden"}}
 - Returning a typed nil pointer (`*T`) through an `error`- or interface-typed return value.
 - A `defer` statement inside a `for`/`range` loop body.
-- Appending to a slice taken from another slice without a full slice expression bounding its
-  capacity, where the original slice's tail must not be overwritten.
+- Appending to a slice taken from another slice without clipping its capacity, where the original
+  slice's tail must not be overwritten.
 - A narrowing integer conversion with no bounds check against the target type's range.
 {{end}}
 
@@ -56,8 +62,8 @@ conversions.
   returns use the untyped `nil` literal, not a nil `*T` variable.
 - [ ] No `defer` sits inside a `for`/`range` loop body; per-iteration cleanup is extracted into a
   function.
-- [ ] A slice derived from another slice that is handed to appending code uses the full slice
-  expression `s[:len(s):len(s)]` wherever the original's tail must survive.
+- [ ] A slice handed to appending code is clipped with `slices.Clip` wherever the original's tail
+  must survive, and left unclipped only where reusing the capacity is the stated intent.
 - [ ] Every narrowing integer conversion is preceded by a bounds check against the target type's
   max/min (gosec `G115`).
 {{end}}

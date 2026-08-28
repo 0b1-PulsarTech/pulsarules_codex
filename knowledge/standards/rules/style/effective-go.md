@@ -62,8 +62,11 @@ newest stable the module pins (source repos use `go 1.27`).
    return of a literal or field, unless it carries a `why:` marker or a second sentence.
 4. Comments explain why, not what; the code shows what. Do not narrate the obvious.
 5. Reach for the newest fitting stdlib: `slices`/`maps`/`cmp`, `errors.Join`, `min`/`max`/`clear`,
-   `for range int`, `iter.Seq` (range-over-func), typed atomics, generic type aliases. Prefer
-   `slices.Equal` over hand-rolled comparison. Target the module's pinned Go version.
+   `for range int`, `iter.Seq` (range-over-func), typed atomics, generic type aliases, and
+   `cmp.Or(flagValue, envValue, defaultValue)` for a first-non-zero fallback chain. Prefer
+   `slices.Equal` over hand-rolled comparison. `cmp.Or` evaluates every argument before the call, so
+   keep an `if` chain where a fallback is expensive or has a side effect. Target the module's pinned
+   Go version.
 6. Pick value or pointer receivers and apply consistently per type. Design zero values to be safe.
 7. Use `any`, never `interface{}`.
 8. Add a compile-time `var _ Iface = (*impl)(nil)` assertion to any file whose type implements an interface.
