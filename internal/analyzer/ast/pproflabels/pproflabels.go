@@ -130,7 +130,7 @@ func normalizeLabelKey(raw string) string {
 }
 
 func isPIILabelKey(key string) bool {
-	// PII and secret key names, matched after normalizeLabelKey.
+	// PII and secret key names (security.md #9), matched after normalizeLabelKey.
 	switch key {
 	case "userid", "user", "email", "phone", "token", "password", "passwd", "secret",
 		"apikey", "authorization", "ssn", "cpf", "cnpj", "creditcard", "cardnumber":

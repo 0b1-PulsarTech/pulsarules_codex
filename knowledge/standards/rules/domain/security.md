@@ -12,6 +12,7 @@ linters:
     - gosec
 analyzers:
     - golangci-lint
+    - pprof-labels
 ---
 
 # Security
@@ -25,6 +26,7 @@ Applies to: any code touching secrets, input, SQL, auth, or containers.
 {{define "when"}}
 - Loading secrets or credentials.
 - Writing a log line that could touch PII or tokens.
+- Attaching `runtime/pprof` goroutine labels for profiling or tracing correlation.
 - Validating user/network input at a boundary.
 - Constructing or executing SQL.
 - Working with JWT/identity verification.
@@ -49,6 +51,17 @@ Applies to: any code touching secrets, input, SQL, auth, or containers.
    expiration is mandatory.
 7. Pin container base images by digest (no `:latest`); pin dependencies (`go mod tidy`).
 8. Obey gosec; justify any suppression inline: `// #nosec G<n>: <reason>`.
+9. Never put PII or a secret in a `runtime/pprof` goroutine label. A module declaring `go 1.27`
+   prints a goroutine's pprof labels in its traceback header
+   (`goroutine 1 [running] {user_id: "..."}:`), so a value attached purely for profiling
+   correlation becomes cleartext in the crash dump that `recover()` middleware, a supervisor, or a
+   crash reporter forwards straight into logs. It leaks through two paths:
+   `pprof.SetGoroutineLabels` with no restore leaks on its own goroutine's panic, and
+   `pprof.Do` - whose deferred restore does protect its own goroutine - still leaks under
+   `GOTRACEBACK=all` when a different goroutine panics while the labeled one is alive. Label with an
+   opaque correlation id (trace/span id) instead of a user id, email, or token. Do not treat
+   `GODEBUG=tracebacklabels=0` as the fix: it is a deployment flag the consumer can lose, not a
+   property of the code.
 {{end}}
 
 {{define "forbidden"}}
@@ -58,6 +71,8 @@ Applies to: any code touching secrets, input, SQL, auth, or containers.
   through.
 - String-concatenated SQL; hand-rolled JSON bypassing proto contracts.
 - `:latest` or unpinned base images; mutating `Config` after boot.
+- A user id, email, token, or any PII as a `runtime/pprof` goroutine label value - Go 1.27 prints
+  labels in panic traceback headers.
 - Re-parsing a JWT inside a use case.
 {{end}}
 
@@ -68,4 +83,5 @@ Applies to: any code touching secrets, input, SQL, auth, or containers.
 - [ ] SQL only via generated queries; zero string-built queries (gosec G201 clean).
 - [ ] JWT verified at middleware; use cases read the principal, not raw tokens; expiry enforced.
 - [ ] Container base images pinned by digest; deps pinned in `go.mod`.
+- [ ] No `runtime/pprof` goroutine label carries PII or a secret; correlation labels are opaque ids.
 {{end}}
