@@ -10,6 +10,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/security/pproflabel"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/rulesummary"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -19,6 +20,7 @@ func pipelineAnalyzerSpecs() []analyzerSpec {
 	return slices.Concat([]analyzerSpec{
 		staticSpec("time-discipline", clock.NewAnalyzer),
 		staticSpec("context-discipline", loopexit.NewAnalyzer),
+		staticSpec("pprof-labels", pproflabel.NewAnalyzer),
 		{
 			id: "branch-name",
 			build: func(
