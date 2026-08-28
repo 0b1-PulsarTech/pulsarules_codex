@@ -174,6 +174,27 @@ remy.RegisterConstructorArgs1(inj, remy.Singleton[*httpdatasource.Client], httpd
 remy.RegisterConstructorArgs2(inj, remy.Factory[UseCase], NewUseCase)
 ```
 
+Past three registrations a feature is a `Module` ([[dependency-injection]]): one value that carries
+its own registrations, registered in a single call. The `With*` helpers take an error-returning
+constructor (`func(Dep) (T, error)`), unlike the `RegisterConstructorArgsN` form, whose non-`Err`
+variant takes a plain constructor: a `func() *Store` passed to `WithConstructor` does not compile.
+
+```go
+func userModule() remy.Module {
+    return remy.NewModule(
+        remy.WithConstructor(remy.Singleton[*Store], NewStore),      // func() (*Store, error)
+        remy.WithConstructor1(remy.Factory[*Service], NewService),   // func(*Store) (*Service, error)
+    )
+}
+
+// In bootstrap, one call registers the whole feature. Registration runs inside
+// the void DoInjections above, and a bad wire-up is boot-fatal, so it panics
+// rather than returning - same as the composition root's other failures.
+if err := remy.RegisterModule(inj, userModule()); err != nil {
+    panic(fmt.Errorf("register user module: %w", err))
+}
+```
+
 Config-driven impl selection - only in bootstrap:
 
 ```go
