@@ -105,11 +105,32 @@ func checkTickerLoop(
 		return nil
 	}
 
+	forLine := check.fset.Position(shape.forPos).Line
+	reason, hasMarker := findProcessLifetimeMarker(
+		check.fset,
+		check.comments,
+		forLine,
+		check.codeLines,
+	)
+	if hasMarker && reason != "" {
+		return nil
+	}
+	if hasMarker {
+		return []core.Finding{check.reporter.At(
+			check.fc.Path,
+			forLine,
+			"pulsarules:process-lifetime marker has no stated reason; explain "+
+				"why this loop is deliberately process-scoped",
+			"add a reason after the marker, e.g. //pulsarules:process-lifetime <reason>",
+		)}
+	}
 	return []core.Finding{check.reporter.At(
 		check.fc.Path,
-		check.fset.Position(shape.forPos).Line,
-		"ticker-paced loop has no <-ctx.Done() arm; this leaks the goroutine on "+
+		forLine,
+		"ticker-paced loop has no <-ctx.Done() arm and no "+
+			"//pulsarules:process-lifetime marker; this leaks the goroutine on "+
 			"shutdown per concurrency.md #5",
-		"add a case <-ctx.Done(): return arm",
+		"add a case <-ctx.Done(): return arm, or mark the loop "+
+			"//pulsarules:process-lifetime <reason> if it truly lives for the process",
 	)}
 }
