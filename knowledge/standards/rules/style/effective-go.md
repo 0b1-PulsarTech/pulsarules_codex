@@ -62,11 +62,13 @@ newest stable the module pins (source repos use `go 1.27`).
    return of a literal or field, unless it carries a `why:` marker or a second sentence.
 4. Comments explain why, not what; the code shows what. Do not narrate the obvious.
 5. Reach for the newest fitting stdlib: `slices`/`maps`/`cmp`, `errors.Join`, `min`/`max`/`clear`,
-   `for range int`, `iter.Seq` (range-over-func), typed atomics, generic type aliases, and
-   `cmp.Or(flagValue, envValue, defaultValue)` for a first-non-zero fallback chain. Prefer
-   `slices.Equal` over hand-rolled comparison. `cmp.Or` evaluates every argument before the call, so
-   keep an `if` chain where a fallback is expensive or has a side effect. Target the module's pinned
-   Go version.
+   `for range int`, `iter.Seq` (range-over-func), typed atomics, generic type aliases,
+   `cmp.Or(flagValue, envValue, defaultValue)` for a first-non-zero fallback chain,
+   `strings.CutLast`/`bytes.CutLast` for a last-separator split, and the standard library's `uuid`
+   package (`uuid.NewV7` for a time-ordered id). Prefer `slices.Equal` over hand-rolled comparison.
+   `cmp.Or` evaluates every argument before the call, so keep an `if` chain where a fallback is
+   expensive or has a side effect. A `uuid` value is a raw scalar and crosses a boundary wrapped in
+   a named type (see [[types]]). Target the module's pinned Go version.
 6. Pick value or pointer receivers and apply consistently per type. Design zero values to be safe.
 7. Use `any`, never `interface{}`.
 8. Add a compile-time `var _ Iface = (*impl)(nil)` assertion to any file whose type implements an interface.
@@ -107,6 +109,10 @@ newest stable the module pins (source repos use `go 1.27`).
     serialises a nil slice as `null`, not `[]`, surprising a consumer expecting an array. A DTO
     field crossing a JSON boundary initialises its slice fields explicitly (`[]T{}` or a mapped
     result), even when the general zero-value principle above would otherwise leave it nil.
+18. Set a promoted field directly in a keyed struct literal - `Outer{ID: 7}`, not
+    `Outer{Base: Base{ID: 7}}` (Go 1.27). A literal may not name both a promoted field and the
+    embedded field that promotes it, and the form does not reach through a pointer-embedded type,
+    which still needs the embedded value spelled out.
 {{end}}
 
 {{define "forbidden"}}
