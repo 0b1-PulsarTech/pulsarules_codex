@@ -30,6 +30,8 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 type fileCheck struct {
 	fset             *token.FileSet
 	fc               pass.FileChange
+	comments         []*ast.CommentGroup
+	codeLines        map[int]bool
 	tickerFieldNames map[string]bool
 	reporter         pass.Reporter
 }
@@ -38,8 +40,10 @@ func checkFile(
 	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter pass.Reporter,
 ) []pass.Finding {
 	check := fileCheck{
-		fset: fset,
-		fc:   fc,
+		fset:      fset,
+		fc:        fc,
+		comments:  file.Comments,
+		codeLines: linesWithCode(fset, file),
 		// A field's type is the same across every function that reads it, so names are file-wide.
 		tickerFieldNames: collectTickerFieldNames(file),
 		reporter:         reporter,
