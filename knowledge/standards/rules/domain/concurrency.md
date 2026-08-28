@@ -11,6 +11,7 @@ linters:
 analyzers:
     - golangci-lint
     - time-discipline
+    - context-discipline
 ---
 
 # Concurrency
@@ -42,7 +43,12 @@ Applies to: any concurrent Go code.
    and waits for the rest.
 5. Long-running workers: `for { select { case <-ctx.Done(): return ctx.Err(); case <-ticker.C: ...
    } }`. Pace with a ticker, never `time.Sleep`. Inject the clock as an interface so timing is
-   testable under `testing/synctest`.
+   testable under `testing/synctest`. `time.Tick` is permitted in exactly one case: a loop with no
+   shutdown obligation because it lives and dies with the process. Go 1.23 made an unreferenced
+   ticker collectable, which removes the GC leak but not the goroutine leak this rule is about - a
+   collected ticker does not make a running loop return. Declare that single case with a
+   `//pulsarules:process-lifetime <reason>` comment on or directly above the `for`; an unmarked
+   ticker loop with no `<-ctx.Done()` arm is a leak, not a style choice.
 6. Document who closes each channel (sender closes; receiver never). Read with the two-value form
    `val, ok := <-ch`. Default to unbuffered channels.
 7. Embed `sync.Mutex` as an unexported field; lock the smallest scope; never call a user callback
@@ -69,6 +75,11 @@ Applies to: any concurrent Go code.
 14. For simple bounded fan-out with no per-key ordering requirement, cap concurrency with
     `errgroup.SetLimit(n)`. Reach for the heavier `[[dispatch-pool]]` only when work must stay
     ordered per key or needs a durable backlog.
+15. Register cancellation-triggered cleanup with `context.AfterFunc(ctx, cleanup)`, never a goroutine
+    whose entire body is `<-ctx.Done()` followed by the cleanup. That goroutine is the
+    fire-and-forget shape #1 already forbids, in its most common disguise; `AfterFunc` runs the work
+    when the context ends and returns a `stop` function that both unregisters it and reports whether
+    it had already fired.
 {{end}}
 
 {{define "forbidden"}}
@@ -78,6 +89,9 @@ Applies to: any concurrent Go code.
 - Storing a `ctx` (on a struct or in a map) to cancel later; store the `CancelFunc`.
 - Omitting `defer cancel()` for `WithCancel`/`WithTimeout`.
 - `select{}` to block forever instead of returning from main.
+- A goroutine whose only job is to wait on `ctx.Done()` and then clean up; use `context.AfterFunc`.
+- A `time.Tick` loop, or any ticker loop, with no `<-ctx.Done()` arm and no
+  `//pulsarules:process-lifetime` marker declaring it process-scoped.
 - A blocking producer signal (`ch <- v` with no `default`) where a coalescing non-blocking wake fits.
 - An unbounded in-memory queue/buffer that grows under load instead of bounded-channel backpressure.
 - Silencing the race detector; shipping any `-race` finding.
@@ -104,4 +118,7 @@ Applies to: any concurrent Go code.
   fan-out uses `[[dispatch-pool]]` instead.
 - [ ] `recover()` appears only at a worker-supervisor boundary or transport panic-recovery
   middleware/interceptor.
+- [ ] Cancellation cleanup uses `context.AfterFunc`, not a goroutine dedicated to `<-ctx.Done()`.
+- [ ] Any ticker loop without a `<-ctx.Done()` arm carries the `//pulsarules:process-lifetime`
+  marker and a reason; none is assumed.
 {{end}}
