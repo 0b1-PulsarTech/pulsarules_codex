@@ -24,9 +24,11 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 		"complexity":         {Enabled: false},
 		"named-returns":      {Enabled: false},
 		"context-discipline": {Enabled: false},
-		"arch-boundary":      {Enabled: false},
-		"import-cycle":       {Enabled: false},
-		"golangci-lint":      {Enabled: false},
+		// pprof-labels stays enabled even in minimal: it catches PII leaking
+		// into panic tracebacks, so the lightest preset must not disable it.
+		"arch-boundary": {Enabled: false},
+		"import-cycle":  {Enabled: false},
+		"golangci-lint": {Enabled: false},
 	}
 }
 

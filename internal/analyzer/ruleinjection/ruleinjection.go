@@ -50,6 +50,7 @@ func defaultRuleMap() map[string]string {
 		"named-returns":      "named-returns",
 		"time-discipline":    "concurrency",
 		"context-discipline": "concurrency",
+		"pprof-labels":       "security",
 		"arch-boundary":      "dependency-rule",
 		"import-cycle":       "module-boundaries",
 		"golangci-lint":      "code-smells",

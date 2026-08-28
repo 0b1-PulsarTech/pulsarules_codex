@@ -38,6 +38,9 @@ func TestApplyPreset_Minimal(t *testing.T) {
 	if isEnabled(cfg, "context-discipline") {
 		t.Error("context-discipline should be disabled in minimal preset")
 	}
+	if !isEnabled(cfg, "pprof-labels") {
+		t.Error("pprof-labels should stay enabled in minimal preset: it is a security check")
+	}
 }
 
 func TestApplyPreset_Strict(t *testing.T) {
