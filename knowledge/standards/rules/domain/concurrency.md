@@ -80,6 +80,11 @@ Applies to: any concurrent Go code.
     fire-and-forget shape #1 already forbids, in its most common disguise; `AfterFunc` runs the work
     when the context ends and returns a `stop` function that both unregisters it and reports whether
     it had already fired.
+16. When a caller must distinguish why a context ended, cancel with a cause -
+    `context.WithCancelCause(ctx)` plus `cancel(err)`, or `WithTimeoutCause`/`WithDeadlineCause` -
+    and read it with `context.Cause(ctx)`. `ctx.Err()` collapses every reason into `Canceled` or
+    `DeadlineExceeded`, which is too coarse to wrap into a domain error (see [[errors]]) or to branch
+    on. Plain `WithCancel`/`WithTimeout` stay correct where no caller inspects the reason.
 {{end}}
 
 {{define "forbidden"}}
@@ -92,6 +97,7 @@ Applies to: any concurrent Go code.
 - A goroutine whose only job is to wait on `ctx.Done()` and then clean up; use `context.AfterFunc`.
 - A `time.Tick` loop, or any ticker loop, with no `<-ctx.Done()` arm and no
   `//pulsarules:process-lifetime` marker declaring it process-scoped.
+- Reporting a cancellation reason through `ctx.Err()` where a caller must tell the causes apart.
 - A blocking producer signal (`ch <- v` with no `default`) where a coalescing non-blocking wake fits.
 - An unbounded in-memory queue/buffer that grows under load instead of bounded-channel backpressure.
 - Silencing the race detector; shipping any `-race` finding.
@@ -121,4 +127,6 @@ Applies to: any concurrent Go code.
 - [ ] Cancellation cleanup uses `context.AfterFunc`, not a goroutine dedicated to `<-ctx.Done()`.
 - [ ] Any ticker loop without a `<-ctx.Done()` arm carries the `//pulsarules:process-lifetime`
   marker and a reason; none is assumed.
+- [ ] Where the reason matters, cancellation carries a cause read via `context.Cause`, not
+  `ctx.Err()`.
 {{end}}
