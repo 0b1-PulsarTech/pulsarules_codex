@@ -35,6 +35,9 @@ func TestApplyPreset_Minimal(t *testing.T) {
 	if !isEnabled(cfg, "naming") {
 		t.Error("naming should be enabled in minimal preset")
 	}
+	if isEnabled(cfg, "context-discipline") {
+		t.Error("context-discipline should be disabled in minimal preset")
+	}
 }
 
 func TestApplyPreset_Strict(t *testing.T) {
