@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/arch"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/contextdiscipline"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/timediscipline"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/branchname"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
@@ -17,6 +18,7 @@ import (
 func pipelineAnalyzerSpecs() []analyzerSpec {
 	return slices.Concat([]analyzerSpec{
 		staticSpec("time-discipline", timediscipline.NewAnalyzer),
+		staticSpec("context-discipline", contextdiscipline.NewAnalyzer),
 		{
 			id: "branch-name",
 			build: func(
