@@ -1,7 +1,7 @@
 ---
 id: safety
-name: Safety - nil interfaces, loop defers, slice aliasing, integer truncation
-description: Four classic Go footguns - a typed nil pointer boxed into an interface reading as non-nil, a defer inside a loop body waiting for the function instead of the iteration, append silently reusing a shared backing array, and a narrowing integer conversion truncating without a bounds check.
+name: Safety - nil interfaces, loop defers, slice aliasing, retained substrings, integer truncation
+description: Five classic Go footguns - a typed nil pointer boxed into an interface reading as non-nil, a defer inside a loop body waiting for the function instead of the iteration, append silently reusing a shared backing array, a retained substring pinning the whole buffer it was cut from, and a narrowing integer conversion truncating without a bounds check.
 tags:
     - go
     - style
@@ -12,22 +12,23 @@ analyzers:
     - golangci-lint
 ---
 
-# Safety - nil interfaces, loop defers, slice aliasing, integer truncation
+# Safety - nil interfaces, loop defers, slice aliasing, retained substrings, integer truncation
 
 > A typed nil pointer boxed into an interface is not `== nil`; a `defer` inside a loop body waits
 > for the function to return, not the iteration to end; `append` can silently overwrite a slice's
-> shared backing array; and a narrowing integer conversion truncates without complaint. None of
-> these are syntax errors - each compiles clean and ships a binary that misbehaves on the right
-> input.
+> shared backing array; a retained substring keeps the entire buffer it was cut from alive; and a
+> narrowing integer conversion truncates without complaint. None of these are syntax errors - each
+> compiles clean and ships a binary that misbehaves on the right input.
 
 Applies to: returning a pointer type through an `error`/interface return, deferring inside a
-`for`/`range` loop body, handing a derived slice to code that appends, and narrowing integer
-conversions.
+`for`/`range` loop body, handing a derived slice to code that appends, retaining a substring past
+its source buffer, and narrowing integer conversions.
 
 {{define "when"}}
 - Returning a pointer-receiver type through an `error`- or interface-typed return value.
 - Writing a `defer` statement inside a `for`/`range` loop body.
 - Slicing a value out of another slice and handing it to code that appends.
+- Keeping a substring or sub-slice of a large buffer alive after the buffer's own use ends.
 - Converting an integer to a narrower type (`int64`->`int32`, `int`->`int8`, `uint`->`int`, etc).
 {{end}}
 
@@ -45,7 +46,13 @@ conversions.
    rewrite: where reusing the existing capacity is the deliberate intent - a pooled buffer, scratch
    space a hot path appends into - leave the slice unclipped and make the shared ownership explicit
    where the slices are handed over.
-4. Bounds-check a narrowing integer conversion against the target type's max/min before converting;
+4. Copy a small string or byte slice out of a much larger one with `strings.Clone`/`bytes.Clone`
+   whenever the small value outlives the large one - stored on a struct, put in a cache, appended to
+   a long-lived slice. A substring shares its source's backing array, so retaining ten bytes of a
+   ten-megabyte response body keeps all ten megabytes reachable; the symptom is unexplained heap
+   growth far from the slicing site, never a failure where the slice was taken. Slicing for
+   immediate use inside the same call needs no clone.
+5. Bounds-check a narrowing integer conversion against the target type's max/min before converting;
    never convert on the assumption the value already fits the narrower type.
 {{end}}
 
@@ -54,6 +61,8 @@ conversions.
 - A `defer` statement inside a `for`/`range` loop body.
 - Appending to a slice taken from another slice without clipping its capacity, where the original
   slice's tail must not be overwritten.
+- Retaining a substring or sub-slice of a much larger buffer past that buffer's useful life without
+  `strings.Clone`/`bytes.Clone`.
 - A narrowing integer conversion with no bounds check against the target type's range.
 {{end}}
 
@@ -64,6 +73,7 @@ conversions.
   function.
 - [ ] A slice handed to appending code is clipped with `slices.Clip` wherever the original's tail
   must survive, and left unclipped only where reusing the capacity is the stated intent.
+- [ ] Substrings and sub-slices retained beyond their source buffer's life are cloned, not aliased.
 - [ ] Every narrowing integer conversion is preceded by a bounds check against the target type's
   max/min (gosec `G115`).
 {{end}}
