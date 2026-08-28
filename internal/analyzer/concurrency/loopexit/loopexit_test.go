@@ -55,7 +55,8 @@ type checkFileTestCase struct {
 func TestCheckFile(t *testing.T) {
 	t.Parallel()
 
-	testCases := append(fireAndForgetCases(), checkFileCleanCases()...)
+	testCases := append(fireAndForgetCases(), tickerLoopCases()...)
+	testCases = append(testCases, checkFileCleanCases()...)
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
@@ -123,6 +124,35 @@ func checkFileCleanCases() []checkFileTestCase {
 		{
 			name:   "no results has nothing to inspect",
 			source: "package foo\nfunc run() {}\n",
+			expect: 0,
+		},
+		{
+			name: "a plain counting loop is not ticker-paced",
+			source: "package foo\n" +
+				"func run() {\n" +
+				"\tfor index := 0; index < 10; index++ {\n" +
+				"\t}\n" +
+				"}\n",
+			expect: 0,
+		},
+		{
+			name: "ranging over a slice is not ticker-paced",
+			source: "package foo\n" +
+				"func run(items []int) {\n" +
+				"\tfor range items {\n" +
+				"\t}\n" +
+				"}\n",
+			expect: 0,
+		},
+		{
+			name: "ranging over a plain struct's C field is not ticker-paced",
+			source: "package foo\n" +
+				"type Watcher struct{ C chan int }\n" +
+				"func watch(w *Watcher, handle func(int)) {\n" +
+				"\tfor v := range w.C {\n" +
+				"\t\thandle(v)\n" +
+				"\t}\n" +
+				"}\n",
 			expect: 0,
 		},
 	}

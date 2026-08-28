@@ -28,50 +28,56 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 }
 
 type fileCheck struct {
-	fset     *token.FileSet
-	fc       pass.FileChange
-	reporter pass.Reporter
+	fset             *token.FileSet
+	fc               pass.FileChange
+	tickerFieldNames map[string]bool
+	reporter         pass.Reporter
 }
 
 func checkFile(
 	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter pass.Reporter,
 ) []pass.Finding {
 	check := fileCheck{
-		fset:     fset,
-		fc:       fc,
-		reporter: reporter,
+		fset: fset,
+		fc:   fc,
+		// A field's type is the same across every function that reads it, so names are file-wide.
+		tickerFieldNames: collectTickerFieldNames(file),
+		reporter:         reporter,
 	}
 	var findings []pass.Finding
 	ast.Inspect(file, func(node ast.Node) bool {
-		body := funcBody(node)
+		params, body := funcSignature(node)
 		if body == nil {
 			return true
 		}
-		findings = append(findings, checkFuncBody(check, body)...)
+		findings = append(findings, checkFuncBody(check, params, body)...)
 		return false
 	})
 	return findings
 }
 
-func funcBody(target ast.Node) *ast.BlockStmt {
+func funcSignature(target ast.Node) (*ast.FieldList, *ast.BlockStmt) {
 	switch node := target.(type) {
 	case *ast.FuncDecl:
-		return node.Body
+		return node.Type.Params, node.Body
 	case *ast.FuncLit:
-		return node.Body
+		return node.Type.Params, node.Body
 	default:
-		return nil
+		return nil, nil
 	}
 }
 
-func checkFuncBody(check fileCheck, body *ast.BlockStmt) []pass.Finding {
+func checkFuncBody(check fileCheck, params *ast.FieldList, body *ast.BlockStmt) []pass.Finding {
 	if body == nil {
 		return nil
 	}
+	scope := collectChannelScope(params, body, check.tickerFieldNames)
+	labels := collectLoopLabels(body)
+
 	var findings []pass.Finding
 	ast.Inspect(body, func(node ast.Node) bool {
 		if funcLit, ok := node.(*ast.FuncLit); ok {
-			findings = append(findings, checkFuncBody(check, funcLit.Body)...)
+			findings = append(findings, checkFuncBody(check, funcLit.Type.Params, funcLit.Body)...)
 			return false
 		}
 		if goStmt, ok := node.(*ast.GoStmt); ok && isFireAndForgetDone(goStmt) {
@@ -84,6 +90,10 @@ func checkFuncBody(check fileCheck, body *ast.BlockStmt) []pass.Finding {
 				"replace the goroutine with context.AfterFunc",
 			))
 		}
+		if shape, ok := tickerLoopShape(node, scope); ok {
+			stmt, _ := node.(ast.Stmt)
+			findings = append(findings, checkTickerLoop(check, shape, scope, labels[stmt])...)
+		}
 		return true
 	})
 	return findings
@@ -94,22 +104,5 @@ func isFireAndForgetDone(goStmt *ast.GoStmt) bool {
 	if !ok || funcLit.Body == nil || len(funcLit.Body.List) == 0 {
 		return false
 	}
-	return isDoneReceive(funcLit.Body.List[0])
-}
-
-func isDoneReceive(node ast.Node) bool {
-	exprStmt, ok := node.(*ast.ExprStmt)
-	if !ok {
-		return false
-	}
-	unary, ok := exprStmt.X.(*ast.UnaryExpr)
-	if !ok || unary.Op != token.ARROW {
-		return false
-	}
-	call, ok := unary.X.(*ast.CallExpr)
-	if !ok {
-		return false
-	}
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	return ok && sel.Sel != nil && sel.Sel.Name == "Done"
+	return isDoneReceiveNode(funcLit.Body.List[0], nil)
 }
