@@ -23,6 +23,7 @@ Applies to: all test code.
 - Writing unit tests for business logic.
 - Writing repository tests against a real database.
 - Writing end-to-end tests that exercise the booted server.
+- Testing an HTTP handler's round-trip under deterministic time.
 - Building fixtures or mocking a dependency.
 {{end}}
 
@@ -72,6 +73,16 @@ Applies to: all test code.
     leaves goroutines running outside one. A package that owns a worker, pool, or relay MUST prove
     its shutdown releases every goroutine it started; `go.uber.org/goleak`'s
     `VerifyTestMain`/`VerifyNone` is one way to satisfy this.
+12. An HTTP round-trip test that runs inside a `synctest.Test` bubble builds its server with
+    `httptest.NewTestServer(t, handler)` (Go 1.27), never `httptest.NewServer`/`NewTLSServer`.
+    `NewTestServer` serves over an in-memory network the bubble can see; the older constructors bind
+    a real loopback socket, whose I/O the bubble does not count as durably blocked, so the fake clock
+    never advances and the test deadlocks rather than failing. This is a lighter tool than the E2E
+    engine factory of #6, not a replacement for it: use it for handler-level round-trips, and keep
+    the booted-server harness where real wiring is what is under test.
+13. Inside a bubble, sleep with `synctest.Sleep(delay)` rather than writing `time.Sleep(delay)`
+    followed by `synctest.Wait()`; `Sleep` is exactly that pair, and the hand-written version races
+    on whether the system under test has settled before the assertion reads it.
 {{end}}
 
 {{define "examples"}}
@@ -135,6 +146,9 @@ synctest.Test(t, func(t *testing.T) {
 - Tests touching real external systems without isolation (use interfaces + fakes).
 - A worker/pool/relay package with a shutdown path and no test proving every started goroutine
   actually exits.
+- `httptest.NewServer`/`NewTLSServer` inside a `synctest.Test` bubble - the real socket deadlocks
+  the bubble; use `httptest.NewTestServer(t, handler)`.
+- A hand-written `time.Sleep(delay)` + `synctest.Wait()` pair where `synctest.Sleep(delay)` says it.
 {{end}}
 
 {{define "validation"}}
@@ -152,4 +166,7 @@ synctest.Test(t, func(t *testing.T) {
   `-race`.
 - [ ] A package owning a worker, pool, or relay proves its shutdown releases every goroutine it
   started.
+- [ ] HTTP round-trips inside a bubble use `httptest.NewTestServer`; no real-socket server is
+  constructed inside `synctest.Test`.
+- [ ] In-bubble sleeps use `synctest.Sleep`, not a hand-written `time.Sleep` + `synctest.Wait`.
 {{end}}
