@@ -42,10 +42,23 @@ Applies to: wiring services, repositories, facades, and routers. Canonical refer
    when a feature has more than 3 registrations.
 6. Constructors take every dependency as a parameter; never read globals mid-method, never store
    the injector for later `Get`.
-7. To inject something at resolve time, use typed pairs (`GetWithPairs` with `BindInstance`) over a
-   `GetWith(callback)` that hides what is being added.
+7. To inject something at resolve time, use typed pairs - `GetWithPairs` with
+   `remy.NewBindEntry(value)` (or `NewBindEntryTagged(value, tag)` when the bind is tagged) - over
+   a `GetWith(callback)` that hides what is being added.
 8. The injector is built once in `cmd/<binary>` (`serve.go`/`main.go`), populated by bootstrap, and
    consulted only to resolve the top-level service.
+9. Keep `Config{DuckTypeElements: true}` on: it is what resolves a consumer-declared port to the
+   concrete that satisfies it structurally, which [[interop]] depends on for every facade. Its scan
+   costs nothing on a concrete `Get` or on an interface `Get` that hits a direct bind - only an
+   interface resolve that misses one pays it. Add `Config{MultiBinding: true}` alongside it when
+   code must also list every bind under a tag, read through the `GetAll` family. `MultiBinding`
+   answers "list them"; it is not a cheaper substitute for structural discovery.
+10. Layer a cross-cutting concern (retry, tracing, audit) onto a bind whose registration you do not
+    own with `remy.Decorate[T](bind, decorator)`; it keeps the wrapped bind's kind and lifecycle, so
+    a `Factory` is decorated on every build and a `Singleton` exactly once. Where you do own the
+    registration, plain constructor composition - the wrapper struct taking the inner port as a
+    constructor parameter - stays the default (see [[retry-backoff]]); reach for `Decorate` when
+    rewriting the original registration is not yours to do.
 {{end}}
 
 {{define "forbidden"}}
@@ -55,6 +68,10 @@ Applies to: wiring services, repositories, facades, and routers. Canonical refer
   receiving deps through constructor parameters.
 - Global `var inj = NewInjector(...)`; a `switch driver`/`switch code` outside bootstrap.
 - Storing the injector on a struct for later `Get`.
+- Reaching for `MultiBinding`/`GetAll` to satisfy an interface-discovery `Get`, which is what
+  `DuckTypeElements` resolves.
+- Re-registering a bind this package does not own to add a cross-cutting concern, instead of
+  layering it with `remy.Decorate`.
 {{end}}
 
 {{define "validation"}}
@@ -64,4 +81,8 @@ Applies to: wiring services, repositories, facades, and routers. Canonical refer
 - [ ] Impl/dialect/provider selection happens only in bootstrap.
 - [ ] Singletons vs factories chosen correctly; constructors take all deps.
 - [ ] No injector stored on a struct; no `Get` outside bootstrap/constructor/handler-first-lines.
+- [ ] `DuckTypeElements` stays on wherever a port is resolved structurally; `MultiBinding` is added
+  for listing, never substituted for discovery.
+- [ ] A bind whose registration this code does not own is layered via `remy.Decorate`, not a
+  duplicate registration.
 {{end}}
