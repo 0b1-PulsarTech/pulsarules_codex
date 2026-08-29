@@ -1,7 +1,7 @@
 ---
 id: agent-orchestration
 name: Agent orchestration
-description: Delegate to agents safely - the main session orchestrates and integrates, implementation runs the staged loop (implement, review, fix, test) inside the cheap tier before it returns, scouts and reviewers are read-only, parallel writers get isolated worktrees, git-history operations are never delegated, and delegated results are verified before they land.
+description: Delegate to agents safely - a read-only planner scopes the slices before any fan-out, the main session orchestrates and integrates, implementation runs the staged loop (implement, review, fix, test) inside the cheap tier before it returns, scouts and reviewers are read-only, parallel writers get isolated worktrees, git-history operations are never delegated, and delegated results are verified before they land.
 tags:
     - process
     - agents
@@ -46,13 +46,30 @@ Applies to: any task that fans work out to subagents or runs agents in parallel.
    into the expectation.
 10. Tell the agent which commit to work from, and verify the base yourself: a worktree cut from the
     wrong base silently produces work against code that no longer exists.
+11. Plan before you fan out. Any time more than one agent will run, a single read-only planner runs
+    first and returns the slice plan: the slices, the files each one owns, the base commit, the
+    return contract per slice, and any ordering the slices impose on each other. The orchestrator
+    launches from that plan rather than inventing slices while writing briefs. Writing briefs one at
+    a time hides overlap, because the second brief is written without the first in view, and the
+    collision surfaces only when two agents have already edited the same file. One read-only pass
+    over the whole surface costs a fraction of an aborted parallel phase.
+12. The plan is the orchestrator's to accept, amend or reject. A planner proposes slices; it does
+    not authorise them, and a slice that the orchestrator cannot state the purpose of does not get
+    launched.
 {{end}}
 
 {{define "recipe"}}
-The staged loop for one bounded slice of work:
+planner (fresh agent, read-only), whenever more than one agent will run:
 
-1. Orchestrator: bound the slice, name the files the agent owns (disjoint from every other
-   concurrent writer), and state the return contract - commits, per-task status, the test that
+0. Planner: survey the work and return the slice plan - the slices, the files each owns, the base
+   commit, the per-slice return contract, and the ordering between slices. It writes nothing and
+   decides nothing; it reports. The orchestrator reads the plan, checks that the ownership lists are
+   genuinely disjoint, and amends what it disagrees with before anything else starts.
+
+Then the staged loop, for each bounded slice:
+
+1. Orchestrator: bound the slice from the plan, name the files the agent owns (disjoint from every
+   other concurrent writer), and state the return contract - commits, per-task status, the test that
    proves each item, and the verbatim output of the verification commands.
 2. Implementer (fresh agent): implement the slice.
 3. Reviewer (fresh agent, read-only, told nothing of the implementer's reasoning): review the diff
@@ -82,6 +99,9 @@ reported verbatim.
 - Accepting an agent's "tests pass" as verification instead of re-running them on the integrated
   tree.
 - Delegating a slice without naming the files it owns, or letting two writers own the same file.
+- Fanning out to more than one agent with no planner pass first, so the slices are invented one brief
+  at a time and overlap is found only after work has been done.
+- Giving the planner write tools, or treating its plan as an authorisation rather than a proposal.
 {{end}}
 
 {{define "validation"}}
@@ -93,4 +113,6 @@ reported verbatim.
 - [ ] The staged loop ran with a separate fresh agent per stage; nobody reviewed their own work.
 - [ ] The orchestrator audited independently rather than trusting the agent's own report.
 - [ ] Every agent had an explicit file-ownership list and a stated base commit, both verified.
+- [ ] A read-only planner ran before any multi-agent fan-out, and its ownership lists were checked
+  for overlap by the orchestrator rather than trusted.
 {{end}}
