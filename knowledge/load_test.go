@@ -17,7 +17,7 @@ func TestLoad_EmbeddedCountsAndTransclusionBodies(t *testing.T) {
 		name      string
 		got, want int
 	}{
-		{"rules", len(idx.Rules), 41},
+		{"rules", len(idx.Rules), 46},
 		{"patterns", len(idx.Patterns), 30},
 		{"workflows", len(idx.Workflows), 8},
 		{"skills", len(idx.Skills), 36},

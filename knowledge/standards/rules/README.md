@@ -1,8 +1,11 @@
 # `rules/`
 
-Mandatory, enforceable rules for Go services. Each file describes one decision area; together they
-form the engineering contract for any new or modified Go code. Rules are phrased as tool-agnostic
-principles; where a rule is automateable, the `## Linters` section names the linter.
+Mandatory, enforceable rules for any project this repo governs - Go and language-neutral alike. Each
+file describes one decision area; together they form the engineering contract for any new or
+modified code. Rules are phrased as tool-agnostic principles; where a rule is automateable, the
+`## Linters` section names the linter. A rule whose mechanics are specific to one language ships as
+a sibling file (for example `dependency-rule` + `dependency-rule-go`) composed alongside the neutral
+rule, never inlined into it.
 
 Rules are grouped into themed subdirectories to reduce directory noise. The ID in each file's
 frontmatter is the canonical reference - file location does not affect how skills compose rules.
@@ -65,9 +68,10 @@ multi-language variants.
 
 | Rule                                                                             | Topic                                            |
 |-----------------------------------------------------------------------------------|----------------------------------------------------|
-| [code-placement.md](architecture/code-placement.md)                             | apps/libs/tools/build vs cmd/internal/pkg        |
-| [code-placement-monorepo.md](architecture/code-placement-monorepo.md)           | Monorepo variant of code placement               |
-| [code-placement-inner-modules.md](architecture/code-placement-inner-modules.md) | Inner-module variant of code placement           |
+| [code-placement.md](architecture/code-placement.md)                             | Language-neutral placement invariants (dependency direction, non-API code, capability naming, entry-point separation) |
+| [code-placement-go.md](architecture/code-placement-go.md)                       | Go concrete map: single-module cmd/internal/pkg  |
+| [code-placement-monorepo.md](architecture/code-placement-monorepo.md)           | Go concrete map: monorepo variant                |
+| [code-placement-inner-modules.md](architecture/code-placement-inner-modules.md) | Go concrete map: inner-modules variant           |
 | [dependency-injection.md](architecture/dependency-injection.md)                 | Constructor-based DI; bootstrap is the switchboard |
 | [dependency-rule.md](architecture/dependency-rule.md)                           | Inward-only layer dependencies                   |
 | [fitness-functions.md](architecture/fitness-functions.md)                       | Architecture invariants as automated CI checks   |

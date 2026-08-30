@@ -8,10 +8,16 @@ profiles:
     description: Multi-module monorepo (apps/libs/tools/build/database/test), one go.mod per module.
     overrides:
       code-placement:
-        compose_rules: [ code-placement-monorepo ]
+        compose_rules: [ code-placement-monorepo, dependency-rule-go ]
   - id: inner-modules
     axis: code-layout
     description: Single repository with several inner Go modules joined by one root go.work.
     overrides:
       code-placement:
-        compose_rules: [ code-placement-inner-modules ]
+        compose_rules: [ code-placement-inner-modules, dependency-rule-go ]
+  - id: go
+    axis: language
+    description: Go project - composes the concrete Go command gate alongside the neutral definition-of-done rule.
+    overrides:
+      verification-before-done:
+        compose_rules: [ verification, verification-go ]

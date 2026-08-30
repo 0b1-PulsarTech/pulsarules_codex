@@ -1,7 +1,7 @@
 ---
 id: code-placement-inner-modules
 name: Code placement - single repo with inner modules
-description: One repository with several inner Go modules joined by a root go.work - cmd/internal/pkg inside each, one-way deps via facade ports, replace directives for local cross-module deps, non-API under internal/.
+description: One repository with several inner Go modules joined by a root go.work - cmd/internal/pkg inside each, deps via facade ports, replace directives for local cross-module deps; concrete directory map for the code-placement invariants.
 tags:
     - go
     - layout
@@ -16,11 +16,14 @@ analyzers:
 # Code placement - single repo with inner modules
 
 > One repository containing several inner Go modules (each its own `go.mod`) joined by a root
-> `go.work`, each module using the `cmd/` + `internal/` + `pkg/` layout; one-way dependency direction
-> across modules; non-API code under `internal/`.
+> `go.work`, each module using the `cmd/` + `internal/` + `pkg/` layout. This is the inner-modules
+> concrete instantiation of [[code-placement]]'s language-neutral invariants.
 
 Applies to: a single repo that hosts a handful of inner modules (e.g. `modules/<name>/go.mod`, or a
-root module plus a few nested ones) wired by one `go.work`.
+root module plus a few nested ones) wired by one `go.work`, selected by the `inner-modules`
+code-layout profile in `profiles.yaml`. That profile replaces the default `code-placement`
+composition wholesale, so this file restates [[code-placement]]'s invariants in their concrete
+inner-modules form rather than relying on it being composed alongside.
 
 {{define "when"}}
 - Creating a new inner module, app, or lib.
@@ -30,15 +33,15 @@ root module plus a few nested ones) wired by one `go.work`.
 {{end}}
 
 {{define "must"}}
-1. Each inner module is a self-contained Go module with its own `go.mod` and the standard `cmd/` +
-   `internal/` + `pkg/` layout; deployable binaries live under `<module>/cmd/<binary>`.
+1. Each inner module is a self-contained Go module with its own `go.mod` and the standard
+   `cmd/` + `internal/` + `pkg/` layout; deployable binaries live under `<module>/cmd/<binary>` -
+   [[code-placement]]'s entry point, kept separate from the module's library code.
 2. Public API lives at a module's root packages or `pkg/`; everything else stays under `internal/` so
    the compiler enforces the boundary across modules.
-3. Dependency direction is one-way across inner modules: a binary module may import a library
-   module; a library module never imports a binary module; resolve cross-module calls through a
-   consumer-declared facade port - not a deep import - whose contract carries only Connascence of
-   Name
-    + Type (named interface + typed DTOs), per [[module-boundaries]].
+3. A binary module may import a library module; a library module never imports a binary module;
+   resolve cross-module calls through a consumer-declared facade port - not a deep import - whose
+   contract carries only Connascence of Name + Type (named interface + typed DTOs), per
+   [[module-boundaries]].
 4. A single root `go.work` lists every inner module; it declares no out-of-repo packages (private deps
    via `GOPRIVATE`). Local cross-module deps use a grouped `replace ( ... )` block per `go.mod` with
    clean `../` relative paths (see [[build]]).
@@ -47,7 +50,7 @@ root module plus a few nested ones) wired by one `go.work`.
 6. App internal layout still applies inside a module: `internal/bootstrap/`,
    `internal/domain/{entities,usecases/<feature>/,interop/}`, `internal/infra/...`,
    `internal/transport/...`. Name each `<feature>` for its business capability, not a framework or
-   technical layer (see [[module-boundaries]]).
+   technical layer (see [[code-placement]]).
 {{end}}
 
 {{define "forbidden"}}
@@ -60,7 +63,7 @@ root module plus a few nested ones) wired by one `go.work`.
 
 {{define "validation"}}
 - [ ] Each inner module has its own `go.mod` and `cmd/internal/pkg` layout; joined by one root `go.work`.
-- [ ] Cross-module deps via grouped `replace ( ... )` blocks; one-way direction preserved.
+- [ ] Cross-module deps via grouped `replace ( ... )` blocks; a library never imports a binary module.
 - [ ] Cross-module calls go through facade ports; non-API under `internal/`.
 - [ ] Module set is minimal and boundary-justified.
 {{end}}
