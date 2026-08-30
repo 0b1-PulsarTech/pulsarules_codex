@@ -72,7 +72,9 @@ skills:
     order: 30
     compose_rules:
       - code-placement
+      - code-placement-go
       - dependency-rule
+      - dependency-rule-go
   - id: commits
     name: Commits
     description: Emoji-prefixed Conventional Commits; one logical change per commit; no tool-attribution trailers; each commit builds and passes tests standalone. Loaded last by the router before committing.
@@ -148,6 +150,7 @@ skills:
     compose_rules:
       - errors
       - logging
+      - logging-go
       - command-query-separation
   - id: eventing-outbox
     name: Eventing & outbox
@@ -197,6 +200,7 @@ skills:
       - flag-arguments
       - named-returns
       - safety
+      - minimalism-go
     compose_patterns:
       - iterator-seq
   - id: git-history

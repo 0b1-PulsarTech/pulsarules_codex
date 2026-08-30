@@ -16,7 +16,7 @@ func TestApplyProfiles_TargetedSkill(t *testing.T) {
 	if err = idx.ApplyProfiles([]string{"monorepo"}); err != nil {
 		t.Fatalf("ApplyProfiles: %v", err)
 	}
-	want := []string{"code-placement-monorepo"}
+	want := []string{"code-placement-monorepo", "dependency-rule-go"}
 
 	t.Run("updates the by-id skill map", func(t *testing.T) {
 		t.Parallel()

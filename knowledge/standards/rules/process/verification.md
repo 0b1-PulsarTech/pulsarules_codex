@@ -24,9 +24,9 @@ Applies to: finishing any change, before reporting it done or committing.
 {{define "must"}}
 1. Report only verified state. Never say "done", "fixed", "passing", or "should work" without having
    run the check and read its output this session; if you did not run it, say so.
-2. Run the full gate before declaring done: `go build ./...`, `go vet ./...`, `go test -race ./...`,
-   `gofmt -l` clean, and the project linter (`task lint` / `golangci-lint run`). Where a governance
-   pipeline exists, run it and treat any error-severity finding as a blocker.
+2. Run the project's full definition-of-done gate before declaring done: a compile/build check, the
+   full test suite, and static analysis/lint, all clean. Where a governance pipeline exists, run it
+   and treat any error-severity finding as a blocker.
 3. Prove behavior changes with a test that fails against the old code; a green suite that never
    touched the change proves nothing.
 4. Report faithfully: state failures with their output, state which steps were skipped and why, and
@@ -42,7 +42,8 @@ Applies to: finishing any change, before reporting it done or committing.
 {{end}}
 
 {{define "validation"}}
-- [ ] Build, vet, `-race` tests, `gofmt -l`, and the linter were run and read this session.
+- [ ] Build/compile check, the full test suite, and lint/static analysis were run and read this
+  session.
 - [ ] Governance (where present) ran clean on the final tree.
 - [ ] Every behavior change is covered by a test that fails against the old code.
 - [ ] The report matches reality: failures and skips stated, nothing rounded up.
