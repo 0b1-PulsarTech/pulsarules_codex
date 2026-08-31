@@ -28,7 +28,11 @@ Applies to: finishing any change, before reporting it done or committing.
    full test suite, and static analysis/lint, all clean. Where a governance pipeline exists, run it
    and treat any error-severity finding as a blocker.
 3. Prove behavior changes with a test that fails against the old code; a green suite that never
-   touched the change proves nothing.
+   touched the change proves nothing. Run that test against the code without the fix first and keep
+   the literal failure output verbatim before touching the fix. Anchoring the test to the actual,
+   observed wrong behaviour - not the behaviour you expect it to have - is what stops a different
+   failure (a container dying, a stale base, a flaky dependency) from disguising itself as the wrong
+   expectation and getting "fixed" by loosening the assert.
 4. Report faithfully: state failures with their output, state which steps were skipped and why, and
    never round a partial result up to success.
 5. Re-verify after the final edit - the gate must pass on the exact tree you are about to commit.
@@ -38,6 +42,8 @@ Applies to: finishing any change, before reporting it done or committing.
 - Claiming "done" / "fixed" / "passing" without having run the check this session.
 - Committing or reporting complete while the build, tests, or linters are red.
 - Declaring a bug fixed with no test that reproduces it.
+- Adjusting a test's expectation to match an unexplained failure instead of capturing that failure
+  verbatim first and investigating it.
 - Verifying an earlier state and then editing again without re-running the gate.
 {{end}}
 
@@ -45,6 +51,7 @@ Applies to: finishing any change, before reporting it done or committing.
 - [ ] Build/compile check, the full test suite, and lint/static analysis were run and read this
   session.
 - [ ] Governance (where present) ran clean on the final tree.
-- [ ] Every behavior change is covered by a test that fails against the old code.
+- [ ] Every behavior change is covered by a test that failed against the old code, with that literal
+  failure captured before the fix.
 - [ ] The report matches reality: failures and skips stated, nothing rounded up.
 {{end}}
