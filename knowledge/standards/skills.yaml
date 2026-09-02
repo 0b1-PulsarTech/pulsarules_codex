@@ -73,8 +73,19 @@ skills:
     compose_rules:
       - code-placement
       - code-placement-go
-      - dependency-rule
       - dependency-rule-go
+  - id: dependency-rule
+    name: Dependency rule
+    description: Source-code dependencies point only inward - the domain imports no infra, transport, persistence driver, or framework package; cross a boundary through a consumer-declared port; the concrete detail is chosen only at the composition root. Language-neutral Clean Architecture.
+    triggers:
+      - adding an import/dependency to a domain (entities/use-cases) module
+      - deciding where a type that touches a framework, driver, or transport belongs
+      - reviewing a diff for an inward-pointing dependency violation
+      - wiring the concrete detail at the composition root
+    always_load: true
+    order: 31
+    compose_rules:
+      - dependency-rule
   - id: commits
     name: Commits
     description: Emoji-prefixed Conventional Commits; one logical change per commit; no tool-attribution trailers; each commit builds and passes tests standalone. Loaded last by the router before committing.
@@ -149,9 +160,20 @@ skills:
     order: 20
     compose_rules:
       - errors
-      - logging
       - logging-go
+  - id: domain-hygiene
+    name: Domain hygiene
+    description: Command-query separation (a command mutates and returns only an error outcome; a query is side-effect-free) plus structured, no-PII logging hygiene (injected logger, typed attributes, log an error exactly once). Language-neutral; Go idiom lives in errors-logging.
+    triggers:
+      - deciding what a state-changing method returns
+      - reviewing a query that quietly mutates, or a command that returns a status code
+      - adding any log statement
+      - deciding a log level or whether to log vs return
+    always_load: true
+    order: 21
+    compose_rules:
       - command-query-separation
+      - logging
   - id: eventing-outbox
     name: Eventing & outbox
     description: Cross-boundary side effects via the mandatory transactional outbox; deterministic idempotency keys; idempotent sinks deduped by a DB unique index; replay-safe projections; ephemeral fan-out via a weak-pointer bus.

@@ -20,7 +20,7 @@ func TestLoad_EmbeddedCountsAndTransclusionBodies(t *testing.T) {
 		{"rules", len(idx.Rules), 46},
 		{"patterns", len(idx.Patterns), 30},
 		{"workflows", len(idx.Workflows), 8},
-		{"skills", len(idx.Skills), 36},
+		{"skills", len(idx.Skills), 38},
 		{"references", len(idx.References), 14},
 	}
 	for _, testCase := range testCases {
