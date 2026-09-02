@@ -7,7 +7,9 @@ router:
     always:
       - { skill: go-style, note: "formatting, naming, imports, types." }
       - { skill: errors-logging, note: "`%w` wrapping, domain-error contract, slog." }
+      - { skill: domain-hygiene, note: "command/query split; structured no-PII logging hygiene (language-neutral; composes with errors-logging in Go)." }
       - { skill: code-placement, note: "where the file/package belongs." }
+      - { skill: dependency-rule, note: "dependencies point inward; cross a boundary via a consumer-declared port (language-neutral; composes with code-placement in Go)." }
       - { skill: code-minimalism, note: "the minimum that works at function scope (never trims mandated patterns)." }
     commit_last:
       - { skill: verification-before-done, note: "definition of done - build, race tests, lint, governance green before you commit." }
@@ -63,7 +65,7 @@ router:
       skills: [ integration-tests ]
       note: plus whatever is under test
     - signal: Module boundary / facade / cross-module call
-      skills: [ code-placement, design-patterns ]
+      skills: [ code-placement, dependency-rule, design-patterns ]
       note: cohesion high, connascence weak across the facade
     - signal: Refactoring / cleaning up a code smell
       skills: [ refactoring, design-patterns ]
@@ -89,7 +91,7 @@ router:
     - signal: Reporting a task done / finishing a change
       skills: [ verification-before-done ]
   order:
-    - { skills: [ code-placement ], note: "decide where it lives." }
+    - { skills: [ code-placement, dependency-rule ], note: "decide where it lives; keep dependencies pointing inward." }
     - { skills: [ app-bootstrap ], note: "wiring/DI (if a new app or new registration)." }
     - { skills: [ usecase-layout ], note: "domain: the use case plus the relevant feature skill (the business invariants)." }
     - { skills: [ database-persistence, transactions ], note: "persistence, then transactions if multi-write." }
