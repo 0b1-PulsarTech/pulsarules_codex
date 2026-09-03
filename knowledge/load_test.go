@@ -17,11 +17,11 @@ func TestLoad_EmbeddedCountsAndTransclusionBodies(t *testing.T) {
 		name      string
 		got, want int
 	}{
-		{"rules", len(idx.Rules), 46},
+		{"rules", len(idx.Rules), 50},
 		{"patterns", len(idx.Patterns), 30},
 		{"workflows", len(idx.Workflows), 8},
-		{"skills", len(idx.Skills), 38},
-		{"references", len(idx.References), 14},
+		{"skills", len(idx.Skills), 42},
+		{"references", len(idx.References), 16},
 	}
 	for _, testCase := range testCases {
 		if testCase.got != testCase.want {

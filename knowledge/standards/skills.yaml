@@ -555,3 +555,53 @@ skills:
     order: 99
     compose_rules:
       - skill-authoring
+  - id: dart-style
+    name: Dart style
+    description: Dart naming, three-group imports (dart:/external package:/workspace package:), const constructors on immutable value types, sealed hierarchies for closed variant sets, and no dynamic - Object? with one cast at the boundary instead. The Dart analogue of go-style.
+    triggers:
+      - writing or editing any .dart file
+      - naming a package, directory, or file
+      - writing an import block
+      - choosing between Object? and dynamic at a JSON/JS-interop boundary
+      - modeling a closed set of variants (a domain-error hierarchy, a result type)
+    always_load: false
+    order: 11
+    compose_rules:
+      - dart-style
+  - id: dart-testing
+    name: Dart testing
+    description: One _test.dart per source file, colocated by mirroring the lib/src path; table-driven cases named testCases/testCase (never tt); package:test, never package:flutter_test; cover the success path and every failure variant a unit can produce.
+    triggers:
+      - writing a unit test for a Dart function, class, or use case
+      - adding a new .dart source file that has no test yet
+      - testing a function/use case that can produce more than one failure variant
+    always_load: false
+    order: 71
+    compose_rules:
+      - dart-testing
+  - id: dart-errors
+    name: Dart errors
+    description: A Dart function that can fail returns a result record, either positional with the error last (T?, DomainError?) or named ({T? value, DomainError? error}), never throws to signal it - Dart has no throws clause, so a thrown error is invisible at the call site and the compiler. Throwing stays for a broken invariant or a framework-mandated throw. The Dart delivery counterpart to errors-logging's (T, error); the error type stays dart-style's sealed DomainError.
+    triggers:
+      - writing a Dart function whose outcome can fail with a domain error
+      - deciding whether to throw or return a DomainError
+      - consuming a result record at a call site
+      - wiring a framework boundary that itself requires a throw
+    always_load: false
+    order: 20
+    compose_rules:
+      - dart-errors
+  - id: dart-placement
+    name: Dart placement
+    description: A pubspec workspace's packages/<name>/lib/src/** for internals, lib/<name>.dart as the sole public export barrel, an executable's bin/ kept separate from lib/, and one capability name reused across every package/transport it touches. The Dart concrete instantiation of code-placement.
+    triggers:
+      - creating a new package inside a Dart pubspec workspace
+      - deciding whether a new Dart file belongs in lib/ or lib/src/
+      - adding to or reviewing a package's public export barrel
+      - adding an executable to a Dart package
+      - naming a business-capability directory shared across packages/transports
+    always_load: false
+    order: 30
+    compose_rules:
+      - code-placement
+      - dart-placement
