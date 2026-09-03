@@ -1,7 +1,7 @@
 ---
 id: code-placement
 name: Code placement
-description: One-way dependency direction between a deployable and the libraries it uses; non-API code kept unreachable from outside the boundary that owns it; a package/directory named for the business capability, never the technical layer; a deployable's entry point kept separate from its library code. Language-neutral; see code-placement-go, code-placement-monorepo, and code-placement-inner-modules for the concrete directory maps.
+description: One-way dependency direction between a deployable and the libraries it uses; non-API code kept unreachable from outside the boundary that owns it; a package/directory named for the business capability, never the technical layer; a deployable's entry point kept separate from its library code. Language-neutral; see code-placement-go, code-placement-monorepo, code-placement-inner-modules, and dart-placement for the concrete directory maps.
 tags:
     - architecture
     - layout
@@ -23,9 +23,9 @@ violation, in any language or repo layout. The horizontal counterpart to [[depen
 vertical layer direction - this rule is about which top-level boundary a file lives in and which way
 a dependency between boundaries may point; [[dependency-rule]] is about the domain's inward-only
 layering inside one such boundary. See [[module-boundaries]] for the facade/connascence contract at
-a crossed boundary. The concrete directory map is language- and layout-specific:
-[[code-placement-go]] (single Go module), [[code-placement-monorepo]], and
-[[code-placement-inner-modules]].
+a crossed boundary. The concrete directory map is language- and layout-specific: [[code-placement-go]]
+(single Go module), [[code-placement-monorepo]], [[code-placement-inner-modules]], and
+[[dart-placement]] (Dart pubspec workspace).
 
 {{define "when"}}
 - Creating a new module, app, or lib.

@@ -1,11 +1,11 @@
 # `rules/`
 
-Mandatory, enforceable rules for any project this repo governs - Go and language-neutral alike. Each
-file describes one decision area; together they form the engineering contract for any new or
-modified code. Rules are phrased as tool-agnostic principles; where a rule is automateable, the
-`## Linters` section names the linter. A rule whose mechanics are specific to one language ships as
-a sibling file (for example `dependency-rule` + `dependency-rule-go`) composed alongside the neutral
-rule, never inlined into it.
+Mandatory, enforceable rules for any project this repo governs - Go, Dart, and language-neutral
+alike. Each file describes one decision area; together they form the engineering contract for any
+new or modified code. Rules are phrased as tool-agnostic principles; where a rule is automateable,
+the `## Linters` section names the linter. A rule whose mechanics are specific to one language ships
+as a sibling file (for example `dependency-rule` + `dependency-rule-go`) composed alongside the
+neutral rule, never inlined into it.
 
 Rules are grouped into themed subdirectories to reduce directory noise. The ID in each file's
 frontmatter is the canonical reference - file location does not affect how skills compose rules.
@@ -72,6 +72,7 @@ multi-language variants.
 | [code-placement-go.md](architecture/code-placement-go.md)                       | Go concrete map: single-module cmd/internal/pkg  |
 | [code-placement-monorepo.md](architecture/code-placement-monorepo.md)           | Go concrete map: monorepo variant                |
 | [code-placement-inner-modules.md](architecture/code-placement-inner-modules.md) | Go concrete map: inner-modules variant           |
+| [dart-placement.md](architecture/dart-placement.md)                             | Dart concrete map: pubspec workspace variant      |
 | [dependency-injection.md](architecture/dependency-injection.md)                 | Constructor-based DI; bootstrap is the switchboard |
 | [dependency-rule.md](architecture/dependency-rule.md)                           | Inward-only layer dependencies                   |
 | [fitness-functions.md](architecture/fitness-functions.md)                       | Architecture invariants as automated CI checks   |
@@ -89,6 +90,7 @@ multi-language variants.
 | [concurrency.md](domain/concurrency.md)                               | Goroutine ownership, `context` discipline      |
 | [config.md](domain/config.md)                                         | Typed `Config` via a config loader             |
 | [errors.md](domain/errors.md)                                         | Sentinel errors, `%w` wrapping                 |
+| [dart-errors.md](domain/dart-errors.md)                               | Dart: return a result, no recoverable throw    |
 | [logging.md](domain/logging.md)                                       | `log/slog` structured logging                  |
 | [security.md](domain/security.md)                                     | Secrets, validation, JWT, SQL, containers      |
 | [startup.md](domain/startup.md)                                       | Zero side effects in `init()`                  |

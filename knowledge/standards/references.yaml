@@ -55,3 +55,10 @@ references:
     title: text/template
     url: https://pkg.go.dev/text/template
     note: the rendering primitive behind the template engine
+  - id: effective-dart
+    title: Effective Dart
+    url: https://dart.dev/effective-dart
+  - id: dart-test-package
+    title: package:test
+    url: https://pub.dev/packages/test
+    note: the Dart test runner, not package:flutter_test

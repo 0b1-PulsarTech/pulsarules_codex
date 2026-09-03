@@ -90,8 +90,16 @@ router:
       note: scouts read-only; isolate writers in worktrees; never delegate git ops
     - signal: Reporting a task done / finishing a change
       skills: [ verification-before-done ]
+    - signal: Writing or editing a .dart file
+      skills: [ dart-style ]
+    - signal: Writing or editing a _test.dart file
+      skills: [ dart-testing ]
+    - signal: A Dart function returning or wrapping an error
+      skills: [ dart-errors ]
+    - signal: Creating a Dart package, or deciding where a Dart file belongs
+      skills: [ dart-placement ]
   order:
-    - { skills: [ code-placement, dependency-rule ], note: "decide where it lives; keep dependencies pointing inward." }
+    - { skills: [ code-placement, dart-placement, dependency-rule ], note: "decide where it lives; keep dependencies pointing inward." }
     - { skills: [ app-bootstrap ], note: "wiring/DI (if a new app or new registration)." }
     - { skills: [ usecase-layout ], note: "domain: the use case plus the relevant feature skill (the business invariants)." }
     - { skills: [ database-persistence, transactions ], note: "persistence, then transactions if multi-write." }

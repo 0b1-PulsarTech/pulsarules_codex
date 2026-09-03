@@ -324,9 +324,10 @@ skills to load, in composition order; the rows live in `knowledge/standards/rout
 `knowledge/templates/skills/router.md.tmpl` renders them. The rows include engineering tasks such as
 new app, bootstrap/DI, use case, REST/gRPC endpoint, entity/migration, sqlc query, multi-write tx,
 outbox event, worker, permission, external provider, test, module boundary, refactoring and
-architecture review, and others for the agent-delegation area. The vertical Dependency Rule
-(`dependency-rule`) and architecture fitness functions (`fitness-functions`) govern layer direction
-and CI enforcement; an `architecture-decision-records` workflow records significant decisions.
+architecture review, and others for the Dart and agent-delegation areas. The vertical Dependency
+Rule (`dependency-rule`) and architecture fitness functions (`fitness-functions`) govern layer
+direction and CI enforcement; an `architecture-decision-records` workflow records significant
+decisions.
 
 ## Skill-effectiveness evals
 
