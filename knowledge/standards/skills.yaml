@@ -605,3 +605,15 @@ skills:
     compose_rules:
       - code-placement
       - dart-placement
+  - id: atomic-design
+    name: Atomic design for Svelte
+    description: Every .svelte component under web/src/lib/presentation/ belongs to exactly one level (atoms, molecules, organisms, templates); the route is the only level that reads data from load() and navigates; templates hold no state; files stay under ~150 lines.
+    triggers:
+      - creating a new .svelte component
+      - deciding which presentation/ directory a component belongs in
+      - an organism reaching for state, data, or navigation it should not own
+      - a presentation/ file growing toward or past ~150 lines
+    always_load: false
+    order: 62
+    compose_rules:
+      - atomic-design

@@ -1,11 +1,11 @@
 # `rules/`
 
-Mandatory, enforceable rules for any project this repo governs - Go, Dart, and language-neutral
-alike. Each file describes one decision area; together they form the engineering contract for any
-new or modified code. Rules are phrased as tool-agnostic principles; where a rule is automateable,
-the `## Linters` section names the linter. A rule whose mechanics are specific to one language ships
-as a sibling file (for example `dependency-rule` + `dependency-rule-go`) composed alongside the
-neutral rule, never inlined into it.
+Mandatory, enforceable rules for any project this repo governs - Go, Dart, Svelte, and
+language-neutral alike. Each file describes one decision area; together they form the engineering
+contract for any new or modified code. Rules are phrased as tool-agnostic principles; where a rule
+is automateable, the `## Linters` section names the linter. A rule whose mechanics are specific to
+one language ships as a sibling file (for example `dependency-rule` + `dependency-rule-go`) composed
+alongside the neutral rule, never inlined into it.
 
 Rules are grouped into themed subdirectories to reduce directory noise. The ID in each file's
 frontmatter is the canonical reference - file location does not affect how skills compose rules.
