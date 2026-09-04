@@ -98,6 +98,8 @@ router:
       skills: [ dart-errors ]
     - signal: Creating a Dart package, or deciding where a Dart file belongs
       skills: [ dart-placement ]
+    - signal: Creating, moving, or classifying a .svelte component
+      skills: [ atomic-design ]
   order:
     - { skills: [ code-placement, dart-placement, dependency-rule ], note: "decide where it lives; keep dependencies pointing inward." }
     - { skills: [ app-bootstrap ], note: "wiring/DI (if a new app or new registration)." }
