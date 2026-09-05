@@ -617,3 +617,26 @@ skills:
     order: 62
     compose_rules:
       - atomic-design
+  - id: l10n
+    name: Localization catalogue
+    description: No user-facing literal outside the message catalogue; every message declares all locales together in one declaration so none can be left behind; locales are a closed enum. Language-neutral; see l10n-svelte for the SvelteKit server-resolution instantiation.
+    triggers:
+      - adding or editing any user-facing string
+      - adding a new message key to the catalogue
+      - adding a new supported locale
+      - rendering a raw backend status/code that reaches the user unmapped
+    always_load: false
+    order: 63
+    compose_rules:
+      - l10n
+  - id: l10n-svelte
+    name: Localization catalogue - SvelteKit
+    description: The SvelteKit instantiation of l10n - the root layout's load() negotiates the locale server-side before the template renders; no i18n runtime or catalogue copy ships in the client bundle.
+    triggers:
+      - adding or editing any user-facing string in a SvelteKit project
+      - wiring or reviewing locale negotiation in the root layout's load()
+      - adding a new supported locale to a SvelteKit project
+    always_load: false
+    order: 63
+    compose_rules:
+      - l10n-svelte

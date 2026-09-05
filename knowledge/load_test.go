@@ -17,10 +17,10 @@ func TestLoad_EmbeddedCountsAndTransclusionBodies(t *testing.T) {
 		name      string
 		got, want int
 	}{
-		{"rules", len(idx.Rules), 51},
+		{"rules", len(idx.Rules), 53},
 		{"patterns", len(idx.Patterns), 30},
 		{"workflows", len(idx.Workflows), 8},
-		{"skills", len(idx.Skills), 43},
+		{"skills", len(idx.Skills), 45},
 		{"references", len(idx.References), 16},
 	}
 	for _, testCase := range testCases {

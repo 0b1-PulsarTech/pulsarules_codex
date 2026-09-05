@@ -100,6 +100,11 @@ router:
       skills: [ dart-placement ]
     - signal: Creating, moving, or classifying a .svelte component
       skills: [ atomic-design ]
+    - signal: Adding or editing any user-facing string
+      skills: [ l10n ]
+    - signal: Adding or editing any user-facing string in a SvelteKit project
+      skills: [ l10n-svelte ]
+      note: l10n-svelte composes with l10n above for the SvelteKit-specific server-resolution mechanics
   order:
     - { skills: [ code-placement, dart-placement, dependency-rule ], note: "decide where it lives; keep dependencies pointing inward." }
     - { skills: [ app-bootstrap ], note: "wiring/DI (if a new app or new registration)." }
