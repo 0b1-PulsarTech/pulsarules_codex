@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/golang"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/langspec"
 )
 
 func TestTopOfFile_CleanFile(t *testing.T) {
@@ -19,7 +19,7 @@ func TestTopOfFile_CleanFile(t *testing.T) {
 	}
 
 	langs := core.NewLanguageRegistry()
-	langs.Register(golang.New())
+	langs.Register(langspec.Lookup("go"))
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
@@ -47,7 +47,7 @@ func TestTopOfFile_CommentBeforePackage(t *testing.T) {
 	}
 
 	langs := core.NewLanguageRegistry()
-	langs.Register(golang.New())
+	langs.Register(langspec.Lookup("go"))
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
@@ -77,7 +77,7 @@ func TestTopOfFile_BlankLinesBeforePackage(t *testing.T) {
 	}
 
 	langs := core.NewLanguageRegistry()
-	langs.Register(golang.New())
+	langs.Register(langspec.Lookup("go"))
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
@@ -128,7 +128,7 @@ func TestTopOfFile_GeneratedFileExempt(t *testing.T) {
 	}
 
 	langs := core.NewLanguageRegistry()
-	langs.Register(golang.New())
+	langs.Register(langspec.Lookup("go"))
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
@@ -156,7 +156,7 @@ func TestTopOfFile_BuildTagExempt(t *testing.T) {
 	}
 
 	langs := core.NewLanguageRegistry()
-	langs.Register(golang.New())
+	langs.Register(langspec.Lookup("go"))
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
@@ -188,7 +188,7 @@ func TestTopOfFile_SkipsTestdataFixture(t *testing.T) {
 	}
 
 	langs := core.NewLanguageRegistry()
-	langs.Register(golang.New())
+	langs.Register(langspec.Lookup("go"))
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,

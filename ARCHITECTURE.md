@@ -157,8 +157,8 @@ Full+Commit+Changed for static/AST/commit/rule-injection/output work that stays 
 commit message or only changed files; `archScopes` = Full+Changed for the architecture analyzers,
 which need a source set; `delegationScopes` = Full only, since only a full run pays the cost of
 spawning golangci-lint). Adding an analyzer is one entry in this table. `registerForScope` builds
-the `core.LanguageRegistry` (Go registered via `internal/analyzer/golang`) once and registers only
-the specs whose scopes contain the requested scope.
+the `core.LanguageRegistry` (via `langspec.RegisterAll`, the one data-driven registration for every
+language) once and registers only the specs whose scopes contain the requested scope.
 
 ### internal/analyzer/** families
 
@@ -191,8 +191,8 @@ Go files. `core.InPlaceAnalyzer` marks the second contract - an analyzer that re
   the cost on a full run.
 - `core/astcache` - a per-invocation cache of parsed Go ASTs, populated once in `Session.Load` so
   analyzers call `Get(path)` instead of each re-parsing the same file.
-- `golang` - the one `Language` handler registered today, implementing comment/blank/package-
-  declaration detection for `.go` files.
+- `langspec` - the single data-driven `Language` handler and the spec table behind it. The table
+  holds the `go` spec, whose `package` clause is its package-declaration predicate.
 
 ### internal/vcs
 
@@ -304,7 +304,7 @@ The governance pipeline (see above) adds its own package set:
 | `internal/analyzer/movepurity`    | flags a staged rename that is not a pure move                                                       |
 | `internal/analyzer/branchname`    | flags a branch name with no recognized type prefix; `ScopeFull` (pre-push) only                     |
 | `internal/analyzer/delegation/*`  | `golangcilint` - shells out to an external tool, gated to `ScopeFull`                              |
-| `internal/analyzer/golang`        | the `Language` handler for `.go` files                                                              |
+| `internal/analyzer/langspec`      | one data-driven `Language` handler plus the spec table (the `go` spec)                              |
 | `internal/vcs`                    | `Repository` port, `Open`, `CommonDir`, `Status`/`Rename` types, `gitcmd.go`'s `runGit`              |
 | `internal/execx`                  | `Run` - the one external-process seam (timeout, env, captured stderr, typed `*execx.Error`)          |
 | `internal/report`                 | `Report{Notes,Warnings}` with `Note`/`Warn`/`Merge` - the one install/uninstall report value         |

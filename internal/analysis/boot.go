@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/golang"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/langspec"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -35,7 +35,7 @@ func delegationScopes() []Scope {
 
 func (r *StageRunner) registerForScope(index *knowledge.Index, repo vcs.Repository, scope Scope) {
 	langs := core.NewLanguageRegistry()
-	langs.Register(golang.New())
+	langspec.RegisterAll(langs)
 
 	for _, spec := range analyzerSpecs() {
 		if !slices.Contains(spec.scopes, scope) {
