@@ -1,9 +1,8 @@
 package pass
 
 type Language interface {
-	ID() string
 	Extensions() []string
-	IsCommentLine(line string) bool
+	CommentSyntax() CommentSyntax
 	IsPackageDeclaration(line string) bool
 }
 

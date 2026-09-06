@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/golang"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func TestBigComment_SmallComment(t *testing.T) {
@@ -24,7 +24,7 @@ func TestBigComment_SmallComment(t *testing.T) {
 	}
 
 	langs := pass.NewLanguageRegistry()
-	langs.Register(golang.New())
+	langs.Register(language.Lookup("go"))
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
@@ -57,7 +57,7 @@ func TestBigComment_LargeBlock(t *testing.T) {
 	}
 
 	langs := pass.NewLanguageRegistry()
-	langs.Register(golang.New())
+	langs.Register(language.Lookup("go"))
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
@@ -113,7 +113,7 @@ func TestBigComment_GeneratedFileExempt(t *testing.T) {
 	}
 
 	langs := pass.NewLanguageRegistry()
-	langs.Register(golang.New())
+	langs.Register(language.Lookup("go"))
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
@@ -148,7 +148,7 @@ func TestBigComment_SkipsTestdata(t *testing.T) {
 	}
 
 	langs := pass.NewLanguageRegistry()
-	langs.Register(golang.New())
+	langs.Register(language.Lookup("go"))
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,

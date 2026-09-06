@@ -37,22 +37,28 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 		ctx,
 		eligible,
 		func(fc pass.FileChange, src []byte) []pass.Finding {
-			return scanFile(src, fc, a.langs.Lookup(fc.Extension), ml, reporter)
+			syntax := a.langs.Lookup(fc.Extension).CommentSyntax()
+			return scanFile(src, fc, syntax, ml, reporter)
 		},
 	)
 }
 
 func scanFile(
-	src []byte, fc pass.FileChange, lang pass.Language, maxLines int, reporter pass.Reporter,
+	src []byte,
+	fc pass.FileChange,
+	syntax pass.CommentSyntax,
+	maxLines int,
+	reporter pass.Reporter,
 ) []pass.Finding {
 	var findings []pass.Finding
+	scanner := pass.NewCommentScanner(syntax)
 	blockStart := 0
 	blockLines := 0
 	lineNum := 0
 	exempt := false
 	for line := range strings.SplitSeq(string(src), "\n") {
 		lineNum++
-		if lang.IsCommentLine(line) {
+		if scanner.IsCommentLine(line) {
 			if blockLines == 0 {
 				blockStart = lineNum
 				exempt = pass.IsExemptHeaderLine(line)

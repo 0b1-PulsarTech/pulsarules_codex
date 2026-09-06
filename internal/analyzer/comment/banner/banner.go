@@ -35,7 +35,8 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 		if !ok || pass.IsExemptHeaderLine(line) {
 			return nil
 		}
-		if lang.IsCommentLine(line) && !lang.IsPackageDeclaration(line) {
+		scanner := pass.NewCommentScanner(lang.CommentSyntax())
+		if scanner.IsCommentLine(line) && !lang.IsPackageDeclaration(line) {
 			return []pass.Finding{reporter.At(
 				fc.Path,
 				lineNum,
