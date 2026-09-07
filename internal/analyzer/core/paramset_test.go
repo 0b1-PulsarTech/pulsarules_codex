@@ -1,6 +1,9 @@
 package core
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestParamSetInt(t *testing.T) {
 	t.Parallel()
@@ -61,6 +64,90 @@ func TestParamSetString(t *testing.T) {
 			got := testCase.params.String(testCase.key, testCase.fallback)
 			if got != testCase.want {
 				t.Errorf("String(%q) = %q, want %q", testCase.key, got, testCase.want)
+			}
+		})
+	}
+}
+
+type paramSetStringTestCase struct {
+	name     string
+	params   ParamSet
+	key      string
+	fallback []string
+	want     []string
+}
+
+func paramSetStringCases() []paramSetStringTestCase {
+	return []paramSetStringTestCase{
+		{"nil params keeps fallback", nil, "extensions", []string{".go"}, []string{".go"}},
+		{
+			"missing key keeps fallback",
+			ParamSet{},
+			"extensions",
+			[]string{".go"},
+			[]string{".go"},
+		},
+		{
+			"[]string value wins",
+			ParamSet{"extensions": []string{".dart", ".ts"}},
+			"extensions",
+			[]string{".go"},
+			[]string{".dart", ".ts"},
+		},
+		{
+			"[]any value wins (YAML/JSON decoder shape)",
+			ParamSet{"extensions": []any{".dart", ".ts"}},
+			"extensions",
+			[]string{".go"},
+			[]string{".dart", ".ts"},
+		},
+		{
+			"[]any with a non-string entry drops it",
+			ParamSet{"extensions": []any{".dart", 7, ".ts"}},
+			"extensions",
+			[]string{".go"},
+			[]string{".dart", ".ts"},
+		},
+		{
+			"comma-separated string wins",
+			ParamSet{"extensions": ".dart, .ts ,.js"},
+			"extensions",
+			[]string{".go"},
+			[]string{".dart", ".ts", ".js"},
+		},
+		{
+			"empty []string keeps fallback",
+			ParamSet{"extensions": []string{}},
+			"extensions",
+			[]string{".go"},
+			[]string{".go"},
+		},
+		{
+			"empty string keeps fallback",
+			ParamSet{"extensions": ""},
+			"extensions",
+			[]string{".go"},
+			[]string{".go"},
+		},
+		{
+			"wrong type keeps fallback",
+			ParamSet{"extensions": 7},
+			"extensions",
+			[]string{".go"},
+			[]string{".go"},
+		},
+	}
+}
+
+func TestParamSetStrings(t *testing.T) {
+	t.Parallel()
+
+	for _, testCase := range paramSetStringCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := testCase.params.Strings(testCase.key, testCase.fallback)
+			if !slices.Equal(got, testCase.want) {
+				t.Errorf("Strings(%q) = %v, want %v", testCase.key, got, testCase.want)
 			}
 		})
 	}

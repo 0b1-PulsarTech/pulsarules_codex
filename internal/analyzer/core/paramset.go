@@ -30,6 +30,34 @@ func (params ParamSet) Int(key string, fallback int) int {
 	return value
 }
 
+func (params ParamSet) Strings(key string, fallback []string) []string {
+	var values []string
+	switch val := params[key].(type) {
+	case []string:
+		values = val
+	case []any:
+		values = make([]string, 0, len(val))
+		for _, item := range val {
+			if text, ok := item.(string); ok {
+				values = append(values, text)
+			}
+		}
+	case string:
+		values = strings.Split(val, ",")
+	}
+	trimmed := make([]string, 0, len(values))
+	for _, value := range values {
+		if text := strings.TrimSpace(value); text != "" {
+			trimmed = append(trimmed, text)
+		}
+	}
+	// An empty configured list keeps the default instead of silently disabling the check.
+	if len(trimmed) == 0 {
+		return fallback
+	}
+	return trimmed
+}
+
 func (params ParamSet) String(key string, fallback string) string {
 	val, ok := params[key].(string)
 	if !ok {

@@ -26,7 +26,10 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		return nil
 	}
 	reporter := a.reporter.Resolved(ctx)
-	eligible := func(fc core.FileChange) bool { return a.langs.Lookup(fc.Extension) != nil }
+	extFilter := core.ExtensionFilter(ctx, a.ID(), []string{".go"})
+	eligible := func(fc core.FileChange) bool {
+		return extFilter(fc) && a.langs.Lookup(fc.Extension) != nil
+	}
 	return core.EachChangedFile(ctx, eligible, func(
 		fc core.FileChange, src []byte,
 	) []core.Finding {
