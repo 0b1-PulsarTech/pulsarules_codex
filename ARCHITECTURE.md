@@ -191,8 +191,10 @@ Go files. `core.InPlaceAnalyzer` marks the second contract - an analyzer that re
   the cost on a full run.
 - `core/astcache` - a per-invocation cache of parsed Go ASTs, populated once in `Session.Load` so
   analyzers call `Get(path)` instead of each re-parsing the same file.
-- `langspec` - the single data-driven `Language` handler and the spec table behind it. The table
-  holds the `go` spec, whose `package` clause is its package-declaration predicate.
+- `langspec` - the single data-driven `Language` handler and the spec table behind it (go, clike,
+  hash, sql, lua, markup, sfc). The `clike` spec covers the `//` and `/* */` family (`.dart`, `.ts`,
+  `.js`, `.java`, `.rs`, `.c`, ...). Only the `go` spec (`package` clause) and the `sql` spec
+  (`CREATE SCHEMA`) carry a package-declaration predicate.
 
 ### internal/vcs
 
@@ -304,7 +306,7 @@ The governance pipeline (see above) adds its own package set:
 | `internal/analyzer/movepurity`    | flags a staged rename that is not a pure move                                                       |
 | `internal/analyzer/branchname`    | flags a branch name with no recognized type prefix; `ScopeFull` (pre-push) only                     |
 | `internal/analyzer/delegation/*`  | `golangcilint` - shells out to an external tool, gated to `ScopeFull`                              |
-| `internal/analyzer/langspec`      | one data-driven `Language` handler plus the spec table (the `go` spec)                              |
+| `internal/analyzer/langspec`      | one data-driven `Language` handler plus the spec table for every language (go, clike, hash, sql, lua, markup, sfc) |
 | `internal/vcs`                    | `Repository` port, `Open`, `CommonDir`, `Status`/`Rename` types, `gitcmd.go`'s `runGit`              |
 | `internal/execx`                  | `Run` - the one external-process seam (timeout, env, captured stderr, typed `*execx.Error`)          |
 | `internal/report`                 | `Report{Notes,Warnings}` with `Note`/`Warn`/`Merge` - the one install/uninstall report value         |

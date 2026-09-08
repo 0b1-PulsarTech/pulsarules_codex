@@ -24,6 +24,12 @@ func TestLookup_Grammar(t *testing.T) {
 		wantExts     []string
 	}{
 		{"go", "go", []string{".go"}},
+		{"clike", "clike", []string{".dart", ".ts", ".java", ".rs"}},
+		{"hash", "hash", []string{".py", ".rb", ".sh", ".yaml", ".toml"}},
+		{"sql", "sql", []string{".sql"}},
+		{"lua", "lua", []string{".lua"}},
+		{"markup", "markup", []string{".html"}},
+		{"sfc", "sfc", []string{".svelte", ".vue"}},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -48,10 +54,17 @@ func TestRegisterAll_RegistersEveryExtension(t *testing.T) {
 	reg := core.NewLanguageRegistry()
 	RegisterAll(reg)
 
-	testCases := []string{".go"}
-	for _, ext := range testCases {
-		if lang := reg.Lookup(ext); lang == nil {
-			t.Errorf("registry lookup for %q returned nil after RegisterAll", ext)
+	testCases := []string{
+		".go",
+		".dart", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+		".java", ".kt", ".kts", ".scala", ".swift",
+		".rs", ".c", ".h", ".cpp", ".hpp", ".cs", ".php", ".proto",
+		".py", ".rb", ".sh", ".bash", ".zsh", ".yaml", ".yml", ".toml",
+		".sql", ".lua", ".html", ".svelte", ".vue",
+	}
+	for _, testCase := range testCases {
+		if lang := reg.Lookup(testCase); lang == nil {
+			t.Errorf("registry lookup for %q returned nil after RegisterAll", testCase)
 		}
 	}
 }

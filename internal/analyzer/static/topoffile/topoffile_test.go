@@ -201,3 +201,42 @@ func TestTopOfFile_SkipsTestdataFixture(t *testing.T) {
 		t.Fatalf("got %d findings for a testdata fixture, want 0: %+v", len(findings), findings)
 	}
 }
+
+func TestTopOfFile_NonGoDefaultsToSkipped(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "licensed.dart")
+	if err := os.WriteFile(
+		path, []byte("// Copyright 2026\nclass Foo {}\n"), 0o644,
+	); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := core.NewLanguageRegistry()
+	langs.Register(langspec.Lookup("clike"))
+	a := NewAnalyzer(langs)
+	ctx := &core.AnalysisContext{
+		ProjectDir: dir,
+		Sources:    core.NewSourceProvider(dir),
+		ChangedFiles: []core.FileChange{
+			{Path: "licensed.dart", Extension: ".dart"},
+		},
+	}
+
+	if findings := a.Analyze(ctx); len(findings) != 0 {
+		t.Fatalf("expected 0 findings for .dart by default, got %d: %+v", len(findings), findings)
+	}
+
+	ctx.Config = &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
+		"top-of-file": {
+			Enabled: true,
+			Params:  map[string]any{"extensions": []string{".go", ".dart"}},
+		},
+	}}
+	if findings := a.Analyze(ctx); len(findings) != 1 {
+		t.Fatalf(
+			"expected 1 finding for .dart once opted in, got %d: %+v", len(findings), findings,
+		)
+	}
+}
