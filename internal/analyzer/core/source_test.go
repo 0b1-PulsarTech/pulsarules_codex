@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 )
 
 func writeTestFile(t *testing.T, dir, relPath, content string) {
@@ -17,7 +18,7 @@ func writeTestFile(t *testing.T, dir, relPath, content string) {
 	}
 }
 
-func TestFileSourceProvider_WalkSkipsExcludedDirs(t *testing.T) {
+func TestFSSourceProvider_WalkSkipsExcludedDirs(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -52,7 +53,7 @@ func TestFileSourceProvider_WalkSkipsExcludedDirs(t *testing.T) {
 	}
 }
 
-func TestFileSourceProvider_WalkStopsOnFalse(t *testing.T) {
+func TestFSSourceProvider_WalkStopsOnFalse(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -72,7 +73,7 @@ func TestFileSourceProvider_WalkStopsOnFalse(t *testing.T) {
 	}
 }
 
-func TestFileSourceProvider_WalkLowercasesExtension(t *testing.T) {
+func TestFSSourceProvider_WalkLowercasesExtension(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -87,5 +88,68 @@ func TestFileSourceProvider_WalkLowercasesExtension(t *testing.T) {
 
 	if gotExt != ".md" {
 		t.Fatalf("ext = %q, want %q", gotExt, ".md")
+	}
+}
+
+func TestFSSourceProvider_InMemoryFS(t *testing.T) {
+	t.Parallel()
+
+	provider := NewFSSourceProvider(fstest.MapFS{
+		"a.go":           &fstest.MapFile{Data: []byte("package a\n")},
+		"generated/b.go": &fstest.MapFile{Data: []byte("package b\n")},
+	}, "")
+
+	content, ok := provider.Read("a.go")
+	if !ok || string(content) != "package a\n" {
+		t.Fatalf("Read(a.go) = %q, %v, want the file's bytes", content, ok)
+	}
+	if _, ok = provider.Read("/abs/outside.go"); ok {
+		t.Error("Read of an absolute path on a virtual fs must report not found")
+	}
+
+	var walked []string
+	provider.Walk(func(path, _ string) bool {
+		walked = append(walked, path)
+		return true
+	})
+	if len(walked) != 1 || walked[0] != "a.go" {
+		t.Errorf("Walk = %v, want only a.go (generated/ is skipped)", walked)
+	}
+}
+
+func TestFSSourceProvider_ReadAbsolutePaths(t *testing.T) {
+	t.Parallel()
+
+	projectDir, outsideDir := t.TempDir(), t.TempDir()
+	writeTestFile(t, projectDir, "pkg/a.go", "package a\n")
+	writeTestFile(t, outsideDir, "secret.go", "package secret\n")
+	provider := NewSourceProvider(projectDir)
+	insideFile := filepath.Join(projectDir, "pkg", "a.go")
+	outsideFile := filepath.Join(outsideDir, "secret.go")
+	missingFile := filepath.Join(projectDir, "none.go")
+
+	testCases := []struct {
+		name   string
+		path   string
+		want   string
+		wantOK bool
+	}{
+		{"an absolute path inside the project", insideFile, "package a\n", true},
+		{"a relative path inside the project", "pkg/a.go", "package a\n", true},
+		{"an absolute path outside the project", outsideFile, "", false},
+		{"a missing absolute path inside the project", missingFile, "", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, ok := provider.Read(testCase.path)
+			if ok != testCase.wantOK || string(got) != testCase.want {
+				t.Errorf(
+					"Read(%q) = %q, %v, want %q, %v",
+					testCase.path, got, ok, testCase.want, testCase.wantOK,
+				)
+			}
+		})
 	}
 }

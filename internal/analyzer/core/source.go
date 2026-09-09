@@ -1,6 +1,7 @@
 package core
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +13,8 @@ type SourceProvider interface {
 	Walk(fn func(path string, ext string) bool)
 }
 
-type fileSourceProvider struct {
+type fsSourceProvider struct {
+	fsys       fs.FS
 	projectDir string
 	mu         sync.RWMutex
 	cache      map[string][]byte
@@ -20,24 +22,36 @@ type fileSourceProvider struct {
 
 //nolint:ireturn // factory constructor returns interface
 func NewSourceProvider(projectDir string) SourceProvider {
-	return &fileSourceProvider{
+	return NewFSSourceProvider(os.DirFS(projectDir), projectDir)
+}
+
+//nolint:ireturn // factory constructor returns interface
+func NewFSSourceProvider(fsys fs.FS, projectDir string) SourceProvider {
+	return &fsSourceProvider{
+		fsys:       fsys,
 		projectDir: projectDir,
 		cache:      make(map[string][]byte),
 	}
 }
 
-func (p *fileSourceProvider) Read(path string) ([]byte, bool) {
+func (p *fsSourceProvider) Read(path string) ([]byte, bool) {
 	p.mu.RLock()
 	content, ok := p.cache[path]
 	p.mu.RUnlock()
 	if ok {
 		return content, true
 	}
-	abs := path
-	if !filepath.IsAbs(abs) {
-		abs = filepath.Join(p.projectDir, path)
+	rel := path
+	if filepath.IsAbs(rel) {
+		if p.projectDir == "" {
+			return nil, false
+		}
+		var relErr error
+		if rel, relErr = filepath.Rel(p.projectDir, rel); relErr != nil {
+			return nil, false
+		}
 	}
-	content, err := os.ReadFile(abs) //nolint:gosec // project file path.
+	content, err := fs.ReadFile(p.fsys, filepath.ToSlash(rel))
 	if err != nil {
 		return nil, false
 	}
@@ -47,7 +61,7 @@ func (p *fileSourceProvider) Read(path string) ([]byte, bool) {
 	return content, true
 }
 
-func (p *fileSourceProvider) Walk(fn func(path string, ext string) bool) {
+func (p *fsSourceProvider) Walk(fn func(path string, ext string) bool) {
 	skipDirs := map[string]bool{
 		".git":      true,
 		".claude":   true,
@@ -57,23 +71,19 @@ func (p *fileSourceProvider) Walk(fn func(path string, ext string) bool) {
 		"vendor":    true,
 		"testdata":  true,
 	}
-	_ = filepath.WalkDir(p.projectDir, func(full string, d os.DirEntry, err error) error {
+	_ = fs.WalkDir(p.fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil //nolint:nilerr // WalkDir callback: skip the bad entry, keep walking.
 		}
 		if d.IsDir() {
-			if full != p.projectDir && skipDirs[d.Name()] {
-				return filepath.SkipDir
+			if path != "." && skipDirs[d.Name()] {
+				return fs.SkipDir
 			}
 			return nil
 		}
-		rel, relErr := filepath.Rel(p.projectDir, full)
-		if relErr != nil {
-			return nil //nolint:nilerr // unrelatable entry: skip it, keep walking.
-		}
-		ext := strings.ToLower(filepath.Ext(full))
-		if !fn(rel, ext) {
-			return filepath.SkipAll
+		ext := strings.ToLower(filepath.Ext(path))
+		if !fn(path, ext) {
+			return fs.SkipAll
 		}
 		return nil
 	})
