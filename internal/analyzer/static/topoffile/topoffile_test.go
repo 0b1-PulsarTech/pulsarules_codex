@@ -23,7 +23,7 @@ func TestTopOfFile_CleanFile(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir),
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "clean.go", Extension: ".go"},
 		},
@@ -51,7 +51,7 @@ func TestTopOfFile_CommentBeforePackage(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir),
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "bad.go", Extension: ".go"},
 		},
@@ -81,7 +81,7 @@ func TestTopOfFile_BlankLinesBeforePackage(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir),
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "blanks.go", Extension: ".go"},
 		},
@@ -104,7 +104,7 @@ func TestTopOfFile_NoLanguage(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir),
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "file.txt", Extension: ".txt"},
 		},
@@ -132,7 +132,7 @@ func TestTopOfFile_GeneratedFileExempt(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir),
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "gen.go", Extension: ".go"},
 		},
@@ -160,7 +160,7 @@ func TestTopOfFile_BuildTagExempt(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir),
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "tag.go", Extension: ".go"},
 		},
@@ -192,7 +192,7 @@ func TestTopOfFile_SkipsTestdataFixture(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir),
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "testdata/bad.go", Extension: ".go"},
 		},
@@ -218,7 +218,7 @@ func TestTopOfFile_NonGoDefaultsToSkipped(t *testing.T) {
 	a := NewAnalyzer(langs)
 	ctx := &core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir),
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "licensed.dart", Extension: ".dart"},
 		},

@@ -19,6 +19,7 @@ type Session struct {
 	commitMsg   string
 	index       *knowledge.Index
 	cfgAnalysis *core.AnalysisConfig
+	skips       core.SkipSet
 }
 
 func NewSession(
@@ -36,6 +37,7 @@ func NewSession(
 		commitMsg:   commitMsg,
 		index:       index,
 		cfgAnalysis: toAnalysisConfig(cfg),
+		skips:       core.NewSkipSet(core.DefaultSkipDirs()),
 	}
 }
 
@@ -71,7 +73,7 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Disc
 		d.StagedRenames = toCoreRenames(renames)
 	}
 
-	d.Sources = core.NewSourceProvider(s.repo.Root())
+	d.Sources = core.NewSourceProvider(s.repo.Root(), s.skips)
 
 	if files == FileSetAll {
 		d.ChangedFiles = walkAllFiles(d.Sources)
@@ -103,6 +105,7 @@ func (s *Session) Load(d *Discovery) *core.AnalysisContext {
 		ChangedFiles:  d.ChangedFiles,
 		GitHistory:    d.GitHistory,
 		StagedRenames: d.StagedRenames,
+		Skips:         s.skips,
 	}
 
 	if len(d.ChangedFiles) > 0 && d.Sources != nil {

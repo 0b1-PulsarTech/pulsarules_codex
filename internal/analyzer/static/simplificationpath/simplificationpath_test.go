@@ -48,7 +48,7 @@ func TestAnalyze(t *testing.T) {
 		"// f applies a simplification the caller already validated, nothing more.\n"+
 		"func f() {}\n")
 
-	srcs := core.NewSourceProvider(dir)
+	srcs := core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs()))
 
 	testCases := []struct {
 		name    string
@@ -104,7 +104,7 @@ func TestAnalyze_NonGoFileSkipped(t *testing.T) {
 	a := NewAnalyzer()
 	got := a.Analyze(&core.AnalysisContext{
 		ProjectDir:   dir,
-		Sources:      core.NewSourceProvider(dir),
+		Sources:      core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{{Path: "notes.md", Extension: ".md"}},
 	})
 	if got != nil {
@@ -119,7 +119,7 @@ func TestAnalyze_NonexistentFileSkipped(t *testing.T) {
 	a := NewAnalyzer()
 	got := a.Analyze(&core.AnalysisContext{
 		ProjectDir:   dir,
-		Sources:      core.NewSourceProvider(dir),
+		Sources:      core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{{Path: "gone.go", Extension: ".go"}},
 	})
 	if got != nil {
@@ -146,7 +146,7 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 	a := NewAnalyzer()
 	got := a.Analyze(&core.AnalysisContext{
 		ProjectDir:   dir,
-		Sources:      core.NewSourceProvider(dir),
+		Sources:      core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{{Path: "testdata/no_label.go", Extension: ".go"}},
 	})
 	if got != nil {

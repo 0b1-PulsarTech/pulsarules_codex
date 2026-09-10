@@ -34,6 +34,7 @@ type AnalysisContext struct {
 	Config        *AnalysisConfig
 	ASTCache      *astcache.Cache
 	Sources       SourceProvider
+	Skips         SkipSet
 	Findings      []Finding
 }
 
