@@ -7,9 +7,14 @@ import (
 
 func DefaultSkipDirs() []string {
 	return []string{
-		".git", ".claude", ".opencode",
-		"build", "generated", "testdata",
+		".git", ".claude", ".opencode", ".idea", ".vscode",
+		"build", "generated", "testdata", "dist", "out", "coverage",
 		"vendor",
+		"node_modules", ".next", ".nuxt", ".svelte-kit",
+		".dart_tool",
+		"__pycache__", ".venv", "venv",
+		"target", ".gradle",
+		"Pods",
 	}
 }
 

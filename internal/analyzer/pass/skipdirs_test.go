@@ -11,14 +11,14 @@ func TestSkipSet_SkipsDir(t *testing.T) {
 		dir  string
 		want bool
 	}{
-		{"zero value falls back to defaults", SkipSet{}, "vendor", true},
+		{"zero value falls back to defaults", SkipSet{}, "node_modules", true},
 		{"zero value keeps go tree", SkipSet{}, "internal", false},
-		{"configured empty set skips nothing", NewSkipSet(nil), "vendor", false},
+		{"configured empty set skips nothing", NewSkipSet(nil), "node_modules", false},
 		{"configured set matches its own entries", NewSkipSet([]string{"dist"}), "dist", true},
 		{
 			"configured set does not fall back to defaults",
 			NewSkipSet([]string{"dist"}),
-			"vendor",
+			"node_modules",
 			false,
 		},
 	}
@@ -41,10 +41,11 @@ func TestSkipSet_SkipsPath(t *testing.T) {
 		path string
 		want bool
 	}{
+		{"file inside node_modules is skipped", SkipSet{}, "node_modules/pkg/index.js", true},
 		{
 			"file inside a nested vendored dir is skipped",
 			SkipSet{},
-			"apps/web/vendor/pkg/index.js",
+			"apps/web/node_modules/pkg/index.js",
 			true,
 		},
 		{"file directly under root is not skipped", SkipSet{}, "main.go", false},
