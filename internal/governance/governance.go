@@ -20,6 +20,7 @@ type Session struct {
 	commitMsg   string
 	index       *knowledge.Index
 	cfgAnalysis *pass.AnalysisConfig
+	skips       pass.SkipSet
 }
 
 func NewSession(
@@ -37,6 +38,7 @@ func NewSession(
 		commitMsg:   commitMsg,
 		index:       index,
 		cfgAnalysis: toAnalysisConfig(cfg),
+		skips:       pass.NewSkipSet(pass.DefaultSkipDirs()),
 	}
 }
 
@@ -72,7 +74,7 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Requ
 		d.StagedRenames = discovery.ToCoreRenames(renames)
 	}
 
-	d.Sources = pass.NewSourceProvider(s.repo.Root())
+	d.Sources = pass.NewSourceProvider(s.repo.Root(), s.skips)
 
 	if files == FileSetAll {
 		d.ChangedFiles = discovery.WalkAllFiles(d.Sources)
@@ -104,6 +106,7 @@ func (s *Session) Load(d *Request) *pass.Context {
 		ChangedFiles:  d.ChangedFiles,
 		GitHistory:    d.GitHistory,
 		StagedRenames: d.StagedRenames,
+		Skips:         s.skips,
 	}
 
 	if len(d.ChangedFiles) > 0 && d.Sources != nil {

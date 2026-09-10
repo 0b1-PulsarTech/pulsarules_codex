@@ -97,7 +97,7 @@ func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
 	write("huge_test.go", 500)
 
 	a := NewAnalyzer()
-	srcs := pass.NewSourceProvider(dir)
+	srcs := pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs()))
 
 	testCases := []struct {
 		name   string
@@ -152,7 +152,7 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 	a := NewAnalyzer()
 	got := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    pass.NewSourceProvider(dir),
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "testdata/big.go", Extension: ".go"},
 		},

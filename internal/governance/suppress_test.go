@@ -119,7 +119,7 @@ func TestSplitGenerated_UnlistedFiles(t *testing.T) {
 
 	ctx := &pass.Context{
 		ChangedFiles: nil,
-		Sources:      pass.NewSourceProvider(dir),
+		Sources:      pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
 	}
 	findings := []pass.Finding{
 		{AnalyzerID: "golangci-lint", File: "gen.go"},

@@ -16,20 +16,22 @@ type SourceProvider interface {
 type fsSourceProvider struct {
 	fsys       fs.FS
 	projectDir string
+	skips      SkipSet
 	mu         sync.RWMutex
 	cache      map[string][]byte
 }
 
 //nolint:ireturn // factory constructor returns interface
-func NewSourceProvider(projectDir string) SourceProvider {
-	return NewFSSourceProvider(os.DirFS(projectDir), projectDir)
+func NewSourceProvider(projectDir string, skips SkipSet) SourceProvider {
+	return NewFSSourceProvider(os.DirFS(projectDir), projectDir, skips)
 }
 
 //nolint:ireturn // factory constructor returns interface
-func NewFSSourceProvider(fsys fs.FS, projectDir string) SourceProvider {
+func NewFSSourceProvider(fsys fs.FS, projectDir string, skips SkipSet) SourceProvider {
 	return &fsSourceProvider{
 		fsys:       fsys,
 		projectDir: projectDir,
+		skips:      skips,
 		cache:      make(map[string][]byte),
 	}
 }
@@ -62,21 +64,12 @@ func (p *fsSourceProvider) Read(path string) ([]byte, bool) {
 }
 
 func (p *fsSourceProvider) Walk(fn func(path string, ext string) bool) {
-	skipDirs := map[string]bool{
-		".git":      true,
-		".claude":   true,
-		".opencode": true,
-		"generated": true,
-		"build":     true,
-		"vendor":    true,
-		"testdata":  true,
-	}
 	_ = fs.WalkDir(p.fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil //nolint:nilerr // WalkDir callback: skip the bad entry, keep walking.
 		}
 		if d.IsDir() {
-			if path != "." && skipDirs[d.Name()] {
+			if path != "." && p.skips.SkipsDir(d.Name()) {
 				return fs.SkipDir
 			}
 			return nil

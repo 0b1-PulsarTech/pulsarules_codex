@@ -61,7 +61,7 @@ func TestAnalyzers(t *testing.T) {
 			}
 			ctx := &pass.Context{
 				ProjectDir: dir,
-				Sources:    pass.NewSourceProvider(dir),
+				Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
 				ChangedFiles: []pass.FileChange{
 					{Path: testCase.rel, Extension: filepath.Ext(testCase.rel)},
 				},
@@ -181,7 +181,7 @@ func markdownContext(t *testing.T, body string) *pass.Context {
 	}
 	return &pass.Context{
 		ProjectDir:   dir,
-		Sources:      pass.NewSourceProvider(dir),
+		Sources:      pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{{Path: "a.md", Extension: ".md"}},
 	}
 }
@@ -223,7 +223,7 @@ func TestTypographic_MarkdownCodeSkipped(t *testing.T) {
 			}
 			ctx := &pass.Context{
 				ProjectDir:   dir,
-				Sources:      pass.NewSourceProvider(dir),
+				Sources:      pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
 				ChangedFiles: []pass.FileChange{{Path: name, Extension: testCase.ext}},
 			}
 			if got := NewTypographicAnalyzer().Analyze(ctx); len(got) != testCase.want {

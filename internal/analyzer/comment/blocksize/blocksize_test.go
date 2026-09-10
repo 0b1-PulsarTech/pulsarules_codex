@@ -28,7 +28,7 @@ func TestBigComment_SmallComment(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    pass.NewSourceProvider(dir),
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "small.go", Extension: ".go"},
 		},
@@ -61,7 +61,7 @@ func TestBigComment_LargeBlock(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    pass.NewSourceProvider(dir),
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "big.go", Extension: ".go"},
 		},
@@ -87,7 +87,7 @@ func TestBigComment_NoLanguage(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    pass.NewSourceProvider(dir),
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "file.txt", Extension: ".txt"},
 		},
@@ -117,7 +117,7 @@ func TestBigComment_GeneratedFileExempt(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    pass.NewSourceProvider(dir),
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "gen.go", Extension: ".go"},
 		},
@@ -152,7 +152,7 @@ func TestBigComment_SkipsTestdata(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    pass.NewSourceProvider(dir),
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "testdata/big.go", Extension: ".go"},
 		},
