@@ -240,3 +240,58 @@ func TestTopOfFile_NonGoDefaultsToSkipped(t *testing.T) {
 		)
 	}
 }
+
+func TestTopOfFile_DartIgnoreForFileDirectiveExemptWhenOptedIn(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		src  string
+		want int
+	}{
+		{
+			name: "required dart directive is exempt",
+			src:  "// ignore_for_file: implementation_imports\nclass Foo {}\n",
+			want: 0,
+		},
+		{
+			name: "typescript nocheck directive is exempt",
+			src:  "// @ts-nocheck\nclass Foo {}\n",
+			want: 0,
+		},
+		{
+			name: "an ordinary leading comment still reports",
+			src:  "// just a note about this class\nclass Foo {}\n",
+			want: 1,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			if err := os.WriteFile(
+				filepath.Join(dir, "opted.dart"), []byte(testCase.src), 0o644,
+			); err != nil {
+				t.Fatalf("write fixture: %v", err)
+			}
+
+			langs := pass.NewLanguageRegistry()
+			langs.Register(language.Lookup("clike"))
+			findings := NewAnalyzer(langs).Analyze(&pass.Context{
+				ProjectDir: dir,
+				Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+				Config: &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
+					"top-of-file": {
+						Enabled: true,
+						Params:  map[string]any{pass.ParamExtensions: []string{".dart"}},
+					},
+				}},
+				ChangedFiles: []pass.FileChange{{Path: "opted.dart", Extension: ".dart"}},
+			})
+			if len(findings) != testCase.want {
+				t.Fatalf("got %d findings, want %d: %+v", len(findings), testCase.want, findings)
+			}
+		})
+	}
+}
