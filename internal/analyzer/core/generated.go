@@ -100,11 +100,27 @@ func isGeneratedMarker(content string) bool {
 	})
 }
 
+func directiveHeaderPrefixes() []string {
+	return []string{
+		"//go:build", "// +build",
+		"//go:generate", "//go:embed", "//nolint:",
+		"// ignore_for_file:",
+		"// @ts-nocheck", "// @ts-check", "// @ts-ignore", "// @ts-expect-error",
+		"// eslint-disable", "/* eslint", "// prettier-ignore",
+		"<!-- svelte-ignore",
+		"#!",
+		"# -*- coding:", "# coding:",
+	}
+}
+
 func IsExemptHeaderLine(line string) bool {
 	trimmed := strings.TrimSpace(line)
-	return isGeneratedMarkerLine(trimmed) ||
-		strings.HasPrefix(trimmed, "//go:build") ||
-		strings.HasPrefix(trimmed, "// +build")
+	if isGeneratedMarkerLine(trimmed) {
+		return true
+	}
+	return slices.ContainsFunc(directiveHeaderPrefixes(), func(prefix string) bool {
+		return strings.HasPrefix(trimmed, prefix)
+	})
 }
 
 func isGeneratedMarkerLine(trimmed string) bool {
