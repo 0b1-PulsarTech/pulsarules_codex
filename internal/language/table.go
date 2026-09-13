@@ -17,6 +17,7 @@ func goSpec() Spec {
 	return Spec{
 		Name:               "go",
 		Extensions:         []string{".go"},
+		CommentPrefixValue: "//",
 		Syntax:             pass.CommentSyntax{Line: []string{"//"}, Blocks: cBlockComment()},
 		PackageDeclaration: isGoPackageDeclaration,
 	}
@@ -31,7 +32,8 @@ func clikeSpec() Spec {
 			".java", ".kt", ".kts", ".scala", ".swift",
 			".rs", ".c", ".h", ".cpp", ".hpp", ".cs", ".php", ".proto",
 		},
-		Syntax: pass.CommentSyntax{Line: []string{"//"}, Blocks: cBlockComment()},
+		CommentPrefixValue: "//",
+		Syntax:             pass.CommentSyntax{Line: []string{"//"}, Blocks: cBlockComment()},
 	}
 }
 
@@ -41,7 +43,8 @@ func hashSpec() Spec {
 		Extensions: []string{
 			".py", ".rb", ".sh", ".bash", ".zsh", ".yaml", ".yml", ".toml",
 		},
-		Syntax: pass.CommentSyntax{Line: []string{"#"}},
+		CommentPrefixValue: "#",
+		Syntax:             pass.CommentSyntax{Line: []string{"#"}},
 	}
 }
 
@@ -49,6 +52,7 @@ func sqlSpec() Spec {
 	return Spec{
 		Name:               "sql",
 		Extensions:         []string{".sql"},
+		CommentPrefixValue: "--",
 		Syntax:             pass.CommentSyntax{Line: []string{"--"}, Blocks: cBlockComment()},
 		PackageDeclaration: isSQLPackageDeclaration,
 	}
@@ -56,8 +60,9 @@ func sqlSpec() Spec {
 
 func luaSpec() Spec {
 	return Spec{
-		Name:       "lua",
-		Extensions: []string{".lua"},
+		Name:               "lua",
+		Extensions:         []string{".lua"},
+		CommentPrefixValue: "--",
 		Syntax: pass.CommentSyntax{
 			Line:   []string{"--"},
 			Blocks: []pass.BlockDelim{{Open: "--[[", Close: "]]"}},
@@ -67,8 +72,9 @@ func luaSpec() Spec {
 
 func markupSpec() Spec {
 	return Spec{
-		Name:       "markup",
-		Extensions: []string{".html"},
+		Name:               "markup",
+		Extensions:         []string{".html"},
+		CommentPrefixValue: "<!--",
 		Syntax: pass.CommentSyntax{
 			Blocks: []pass.BlockDelim{{Open: "<!--", Close: "-->"}},
 		},
@@ -77,8 +83,9 @@ func markupSpec() Spec {
 
 func sfcSpec() Spec {
 	return Spec{
-		Name:       "sfc",
-		Extensions: []string{".svelte", ".vue"},
+		Name:               "sfc",
+		Extensions:         []string{".svelte", ".vue"},
+		CommentPrefixValue: "//",
 		Syntax: pass.CommentSyntax{
 			Line: []string{"//"},
 			Blocks: []pass.BlockDelim{

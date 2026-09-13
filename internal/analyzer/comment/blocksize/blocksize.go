@@ -7,8 +7,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-const defaultMaxCommentLines = 5
-
 type Analyzer struct {
 	langs    *pass.LanguageRegistry
 	maxLines int
@@ -16,8 +14,11 @@ type Analyzer struct {
 }
 
 func NewAnalyzer(langs *pass.LanguageRegistry) *Analyzer {
+	const defaultMaxCommentLines = 3
 	return &Analyzer{
-		langs:    langs,
+		langs: langs,
+		// A kept comment justifies itself in one sentence: three lines fits it, wrapped;
+		// a fourth is the first line of a paragraph.
 		maxLines: defaultMaxCommentLines,
 		reporter: pass.NewReporter("big-comment", pass.SeverityWarning, pass.CatSyntax),
 	}
@@ -32,7 +33,7 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	}
 	ml := a.resolveMaxLines(ctx)
 	reporter := pass.ResolveReporter(a.reporter, ctx)
-	extFilter := pass.ExtensionFilter(ctx, a.ID(), []string{".go"})
+	extFilter := pass.ExtensionFilter(ctx, a.ID(), pass.DefaultSourceExtensions())
 	eligible := func(fc pass.FileChange) bool {
 		return extFilter(fc) && a.langs.Lookup(fc.Extension) != nil
 	}
@@ -64,7 +65,9 @@ func scanFile(
 		if scanner.IsCommentLine(line) {
 			if blockLines == 0 {
 				blockStart = lineNum
-				exempt = pass.IsExemptHeaderLine(line)
+				// A simplification block states the ceiling and an upgrade path, which no
+				// 3-line cap holds.
+				exempt = pass.IsExemptHeaderLine(line) || pass.IsSimplificationMarker(line)
 			}
 			blockLines++
 			continue

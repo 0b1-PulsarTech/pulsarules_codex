@@ -59,23 +59,33 @@ func TestLineLimits(t *testing.T) {
 	testCases := []struct {
 		name     string
 		maxLines int
-		isTest   bool
+		path     string
 		want     int
 	}{
-		{name: "production keeps the configured max", maxLines: 180, isTest: false, want: 180},
-		{name: "test file gets 2.6x the max", maxLines: 180, isTest: true, want: 468},
-		{name: "allowance follows a lowered max", maxLines: 100, isTest: true, want: 260},
-		{name: "allowance rounds instead of truncating", maxLines: 75, isTest: true, want: 195},
-		{name: "a disabling zero stays zero", maxLines: 0, isTest: true, want: 0},
+		{name: "production keeps the configured max", maxLines: 180, path: "foo.go", want: 180},
+		{name: "test file gets 2.6x the max", maxLines: 180, path: "foo_test.go", want: 468},
+		{name: "allowance follows a lowered max", maxLines: 100, path: "foo_test.go", want: 260},
+		{
+			name:     "allowance rounds instead of truncating",
+			maxLines: 75,
+			path:     "foo_test.go",
+			want:     195,
+		},
+		{name: "a raw zero limit stays zero", maxLines: 0, path: "foo_test.go", want: 0},
+		{
+			name:     "a non-go test path gets the allowance too",
+			maxLines: 180,
+			path:     "foo.spec.ts",
+			want:     468,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := newLineLimits(testCase.maxLines).
-				forFile(pass.FileChange{IsTest: testCase.isTest})
+			got := newLineLimits(testCase.maxLines).forFile(testCase.path)
 			if got != testCase.want {
-				t.Errorf("limit for maxLines=%d isTest=%v = %d, want %d",
-					testCase.maxLines, testCase.isTest, got, testCase.want)
+				t.Errorf("limit for maxLines=%d path=%q = %d, want %d",
+					testCase.maxLines, testCase.path, got, testCase.want)
 			}
 		})
 	}
@@ -159,6 +169,28 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 	})
 	if len(got) != 0 {
 		t.Fatalf("got %d findings for a testdata fixture, want 0: %+v", len(got), got)
+	}
+}
+
+func TestAnalyze_ReportsOnADartFileJustLikeGo(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	body := "class Foo {\n" + strings.Repeat("  // filler\n", 300) + "}\n"
+	if err := os.WriteFile(filepath.Join(dir, "big.dart"), []byte(body), disk.File); err != nil {
+		t.Fatalf("write big.dart: %v", err)
+	}
+
+	a := NewAnalyzer()
+	got := a.Analyze(&pass.Context{
+		ProjectDir: dir,
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ChangedFiles: []pass.FileChange{
+			{Path: "big.dart", Extension: ".dart"},
+		},
+	})
+	if len(got) != 1 {
+		t.Fatalf("got %d findings for an oversized .dart file, want 1: %+v", len(got), got)
 	}
 }
 

@@ -74,6 +74,55 @@ func TestBigComment_LargeBlock(t *testing.T) {
 	}
 }
 
+func TestBigComment_Boundary(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		commentLines int
+		wantFindings int
+	}{
+		{"at_cap_passes", 3, 0},
+		{"over_cap_fails", 4, 1},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			path := filepath.Join(dir, "boundary.go")
+			var b strings.Builder
+			b.WriteString("package foo\n\n")
+			for count := range testCase.commentLines {
+				b.WriteString("// comment line ")
+				b.WriteByte(byte('A' + count))
+				b.WriteByte('\n')
+			}
+			b.WriteString("func bar() {}\n")
+			if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+				t.Fatalf("write fixture: %v", err)
+			}
+
+			langs := pass.NewLanguageRegistry()
+			langs.Register(language.Lookup("go"))
+			a := NewAnalyzer(langs)
+			findings := a.Analyze(&pass.Context{
+				ProjectDir: dir,
+				Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+				ChangedFiles: []pass.FileChange{
+					{Path: "boundary.go", Extension: ".go"},
+				},
+			})
+			if len(findings) != testCase.wantFindings {
+				t.Fatalf(
+					"commentLines=%d: got %d findings, want %d",
+					testCase.commentLines, len(findings), testCase.wantFindings,
+				)
+			}
+		})
+	}
+}
+
 func TestBigComment_NoLanguage(t *testing.T) {
 	t.Parallel()
 
@@ -159,5 +208,165 @@ func TestBigComment_SkipsTestdata(t *testing.T) {
 	})
 	if len(findings) != 0 {
 		t.Fatalf("got %d findings for a testdata fixture, want 0: %+v", len(findings), findings)
+	}
+}
+
+func TestBigComment_ReportsOnADartFileJustLikeGo(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "big.dart")
+	var b strings.Builder
+	b.WriteString("class Foo {\n")
+	for count := range 25 {
+		b.WriteString("  // comment line ")
+		b.WriteByte(byte('A' + count))
+		b.WriteByte('\n')
+	}
+	b.WriteString("}\n")
+	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := pass.NewLanguageRegistry()
+	langs.Register(language.Lookup("clike"))
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&pass.Context{
+		ProjectDir: dir,
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ChangedFiles: []pass.FileChange{
+			{Path: "big.dart", Extension: ".dart"},
+		},
+	})
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding for an oversized .dart comment, got %d", len(findings))
+	}
+}
+
+func TestBigComment_SvelteCSSSelector(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "widget.svelte")
+	content := "<style>\n" +
+		"* { margin: 0; }\n" +
+		"* { padding: 0; }\n" +
+		"* { border: 0; }\n" +
+		"* { outline: 0; }\n" +
+		"* { box-sizing: border-box; }\n" +
+		"</style>\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := pass.NewLanguageRegistry()
+	langs.Register(language.Lookup("sfc"))
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&pass.Context{
+		ProjectDir: dir,
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ChangedFiles: []pass.FileChange{
+			{Path: "widget.svelte", Extension: ".svelte"},
+		},
+	})
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 findings for CSS selectors, got %d: %+v", len(findings), findings)
+	}
+}
+
+func TestBigComment_MultilineBlock(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "block.go")
+	content := "package foo\n\n" +
+		"/* line one\n" +
+		" * line two\n" +
+		" * line three\n" +
+		" * line four\n" +
+		" * line five\n" +
+		" * line six\n" +
+		" * line seven\n" +
+		" * line eight\n" +
+		" */\n" +
+		"func bar() {}\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := pass.NewLanguageRegistry()
+	langs.Register(language.Lookup("go"))
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&pass.Context{
+		ProjectDir: dir,
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ChangedFiles: []pass.FileChange{
+			{Path: "block.go", Extension: ".go"},
+		},
+	})
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding for a 9-line /* */ block, got %d", len(findings))
+	}
+}
+
+func TestBigComment_ReportsOnAMultilineHTMLComment(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "block.html")
+	content := "<!--\n" +
+		" line one\n" +
+		" line two\n" +
+		" line three\n" +
+		" line four\n" +
+		"-->\n" +
+		"<html></html>\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := pass.NewLanguageRegistry()
+	langs.Register(language.Lookup("markup"))
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&pass.Context{
+		ProjectDir: dir,
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ChangedFiles: []pass.FileChange{
+			{Path: "block.html", Extension: ".html"},
+		},
+	})
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding for a 6-line <!-- --> block, got %d", len(findings))
+	}
+}
+
+func TestBigComment_ReportsOnAMultilineLuaComment(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "block.lua")
+	content := "--[[\n" +
+		" line one\n" +
+		" line two\n" +
+		" line three\n" +
+		" line four\n" +
+		"]]\n" +
+		"local x = 1\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := pass.NewLanguageRegistry()
+	langs.Register(language.Lookup("lua"))
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&pass.Context{
+		ProjectDir: dir,
+		Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ChangedFiles: []pass.FileChange{
+			{Path: "block.lua", Extension: ".lua"},
+		},
+	})
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding for a 6-line --[[ ]] block, got %d", len(findings))
 	}
 }

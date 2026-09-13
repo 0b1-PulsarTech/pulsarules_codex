@@ -5,6 +5,7 @@ import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 type Spec struct {
 	Name               string
 	Extensions         []string
+	CommentPrefixValue string
 	Syntax             pass.CommentSyntax
 	PackageDeclaration func(line string) bool
 }
@@ -14,6 +15,8 @@ type handler struct{ spec Spec }
 var _ pass.Language = handler{}
 
 func (language handler) Extensions() []string { return language.spec.Extensions }
+
+func (language handler) CommentPrefix() string { return language.spec.CommentPrefixValue }
 
 func (language handler) CommentSyntax() pass.CommentSyntax { return language.spec.Syntax }
 

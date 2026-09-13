@@ -2,6 +2,7 @@ package pass
 
 type Language interface {
 	Extensions() []string
+	CommentPrefix() string
 	CommentSyntax() CommentSyntax
 	IsPackageDeclaration(line string) bool
 }

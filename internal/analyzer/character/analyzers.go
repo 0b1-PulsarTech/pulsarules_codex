@@ -41,7 +41,7 @@ func (a *TextAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 		contextual:  pass.ResolveReporter(a.reporters.contextual, ctx),
 		frontmatter: pass.ResolveReporter(a.reporters.frontmatter, ctx),
 	}
-	return eachMarkedFile(ctx, func(fc pass.FileChange, src string) []pass.Finding {
+	return eachMarkedFile(ctx, a.ID(), func(fc pass.FileChange, src string) []pass.Finding {
 		return checkCarriers(fc, src, reporters)
 	})
 }
@@ -92,7 +92,7 @@ func (a *TypographicAnalyzer) Stage() pass.StageID { return pass.StageStatic }
 
 func (a *TypographicAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	reporter := pass.ResolveReporter(a.reporter, ctx)
-	return eachMarkedFile(ctx, func(fc pass.FileChange, src string) []pass.Finding {
+	return eachMarkedFile(ctx, a.ID(), func(fc pass.FileChange, src string) []pass.Finding {
 		return checkTypographic(fc, src, reporter)
 	})
 }

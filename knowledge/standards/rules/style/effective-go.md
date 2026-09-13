@@ -58,7 +58,7 @@ newest stable the module pins (source repos use `go 1.27`).
    `// ID returns the analyzer's unique identifier` above `func (a *A) ID() string`, it costs a
    reader a pause and repays nothing. A comment kept on an exported symbol still starts with its
    name (staticcheck ST1020-ST1022 enforce that, and only that). No `// Package foo` docstrings, and
-   no doc comments on unexported symbols beyond a `// why` that clears the bar. Cap any block at 5
+   no doc comments on unexported symbols beyond a `// why` that clears the bar. Cap any block at 3
    lines (`big-comment`) - one sentence of why, not a paragraph; `vacuous-doc` flags a doc comment
    on a function whose whole body is one return of a literal or field, unless it carries a `why:`
    marker or a second sentence.
@@ -128,7 +128,7 @@ newest stable the module pins (source repos use `go 1.27`).
 - `interface{}` instead of `any`; mixed value/pointer receivers on the same type.
 - `fmt.Println`/`log.Println` in non-test code.
 - A comment written by default. One that restates a signature, narrates control flow, or names what
-  a well-named function already names; a comment block over 5 lines; package docstrings; doc
+  a well-named function already names; a comment block over 3 lines; package docstrings; doc
   comments on unexported symbols beyond a `// why` that clears the bar.
 - A why parked in a function header when one line inside owns the reason - put it on that line.
 - Re-implementing what the stdlib already does (`slices.Equal`, `min`/`max`, `iter.Seq`).
@@ -146,7 +146,7 @@ newest stable the module pins (source repos use `go 1.27`).
 - [ ] Functions under ~80 lines, complexity under ~15; early returns used.
 - [ ] No comment by default; every kept one clears the bar (says what the code cannot). None
   restates a signature, narrates control flow, or names what the code already names; every kept doc
-  comment begins with its symbol's name and fits in 5 lines; no package docstrings; no doc comments
+  comment begins with its symbol's name and fits in 3 lines; no package docstrings; no doc comments
   on unexported symbols beyond a `// why` that clears the bar.
 - [ ] Every surviving why sits at the line it explains; a header comment carries only a reason that
   spans the whole function.
