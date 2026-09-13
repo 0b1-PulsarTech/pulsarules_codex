@@ -22,14 +22,15 @@ func TestLookup_Grammar(t *testing.T) {
 		name         string
 		languageName string
 		wantExts     []string
+		wantPrefix   string
 	}{
-		{"go", "go", []string{".go"}},
-		{"clike", "clike", []string{".dart", ".ts", ".java", ".rs"}},
-		{"hash", "hash", []string{".py", ".rb", ".sh", ".yaml", ".toml"}},
-		{"sql", "sql", []string{".sql"}},
-		{"lua", "lua", []string{".lua"}},
-		{"markup", "markup", []string{".html"}},
-		{"sfc", "sfc", []string{".svelte", ".vue"}},
+		{"go", "go", []string{".go"}, "//"},
+		{"clike", "clike", []string{".dart", ".ts", ".java", ".rs"}, "//"},
+		{"hash", "hash", []string{".py", ".rb", ".sh", ".yaml", ".toml"}, "#"},
+		{"sql", "sql", []string{".sql"}, "--"},
+		{"lua", "lua", []string{".lua"}, "--"},
+		{"markup", "markup", []string{".html"}, "<!--"},
+		{"sfc", "sfc", []string{".svelte", ".vue"}, "//"},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -38,6 +39,9 @@ func TestLookup_Grammar(t *testing.T) {
 			if language == nil {
 				t.Fatalf("Lookup(%q) = nil, want a handler", testCase.languageName)
 			}
+			if got := language.CommentPrefix(); got != testCase.wantPrefix {
+				t.Errorf("CommentPrefix() = %q, want %q", got, testCase.wantPrefix)
+			}
 			exts := language.Extensions()
 			for _, ext := range testCase.wantExts {
 				if !slices.Contains(exts, ext) {
@@ -45,6 +49,23 @@ func TestLookup_Grammar(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestLookup_MarkupExcludesXML(t *testing.T) {
+	t.Parallel()
+
+	language := Lookup("markup")
+	if slices.Contains(language.Extensions(), ".xml") {
+		t.Error(
+			"markup registers .xml, but core.DefaultSourceExtensions excludes it; " +
+				"no consumer could ever reach a .xml registration",
+		)
+	}
+	if slices.Contains(core.DefaultSourceExtensions(), ".xml") {
+		t.Error(
+			"core.DefaultSourceExtensions started including .xml; keep markup and it consistent",
+		)
 	}
 }
 

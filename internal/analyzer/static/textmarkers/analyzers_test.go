@@ -22,6 +22,8 @@ func TestAnalyzers(t *testing.T) {
 	testCases := []markerCase{
 		{"zero width space in go", "a.go", "package a // x\u200By\n", 1, 0},
 		{"em dash in go", "a.go", "package a // x\u2014y\n", 0, 1},
+		{"zero width space in dart, a default source extension", "a.dart", "// x\u200By\n", 1, 0},
+		{"em dash in dart, a default source extension", "a.dart", "// x\u2014y\n", 0, 1},
 		{"em dash in markdown", "a.md", "# x\u2014y\n", 0, 1},
 		{"ellipsis in markdown", "a.md", "wait\u2026\n", 0, 1},
 		{"nbsp in markdown", "a.md", "a\u00A0b\n", 1, 0},
@@ -102,7 +104,8 @@ func TestCarrierSeverityByClass(t *testing.T) {
 		{name: "bidi override blocks", body: "a\u202Eb\n", want: core.SeverityError},
 		{name: "no-break space blocks", body: "a\u00A0b\n", want: core.SeverityError},
 		{
-			name: "zero width joiner between ascii blocks",
+			name: "zero width joiner between ascii blocks (no emoji to glue, so it's " +
+				"a plain carrier)",
 			body: "a\u200Db\n",
 			want: core.SeverityError,
 		},

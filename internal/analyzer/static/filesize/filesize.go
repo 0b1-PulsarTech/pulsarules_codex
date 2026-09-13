@@ -27,10 +27,11 @@ func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	limits := newLineLimits(a.resolveMaxLines(ctx))
 	reporter := a.reporter.Resolved(ctx)
-	return core.EachChangedFile(ctx, isGoFile, func(
+	eligible := core.ExtensionFilter(ctx, a.ID(), core.DefaultSourceExtensions())
+	return core.EachChangedFile(ctx, eligible, func(
 		fc core.FileChange, src []byte,
 	) []core.Finding {
-		limit := limits.forFile(fc)
+		limit := limits.forFile(fc.Path)
 		lines := countLines(src)
 		if lines <= limit {
 			return nil
@@ -43,8 +44,6 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		)}
 	})
 }
-
-func isGoFile(fc core.FileChange) bool { return fc.Extension == ".go" }
 
 func (a *Analyzer) resolveMaxLines(ctx *core.AnalysisContext) int {
 	return ctx.Params(a.ID()).Int("max_lines", a.maxLines)
@@ -65,8 +64,8 @@ func newLineLimits(maxLines int) lineLimits {
 	}
 }
 
-func (l lineLimits) forFile(fc core.FileChange) int {
-	if fc.IsTest {
+func (l lineLimits) forFile(path string) int {
+	if core.IsTestPath(path) {
 		return l.test
 	}
 	return l.production

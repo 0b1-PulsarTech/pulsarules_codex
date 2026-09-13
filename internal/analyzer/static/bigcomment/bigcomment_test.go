@@ -161,3 +161,162 @@ func TestBigComment_SkipsTestdata(t *testing.T) {
 		t.Fatalf("got %d findings for a testdata fixture, want 0: %+v", len(findings), findings)
 	}
 }
+func TestBigComment_ReportsOnADartFileJustLikeGo(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "big.dart")
+	var b strings.Builder
+	b.WriteString("class Foo {\n")
+	for count := range 25 {
+		b.WriteString("  // comment line ")
+		b.WriteByte(byte('A' + count))
+		b.WriteByte('\n')
+	}
+	b.WriteString("}\n")
+	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := core.NewLanguageRegistry()
+	langs.Register(langspec.Lookup("clike"))
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&core.AnalysisContext{
+		ProjectDir: dir,
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		ChangedFiles: []core.FileChange{
+			{Path: "big.dart", Extension: ".dart"},
+		},
+	})
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding for an oversized .dart comment, got %d", len(findings))
+	}
+}
+
+func TestBigComment_SvelteCSSSelector(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "widget.svelte")
+	content := "<style>\n" +
+		"* { margin: 0; }\n" +
+		"* { padding: 0; }\n" +
+		"* { border: 0; }\n" +
+		"* { outline: 0; }\n" +
+		"* { box-sizing: border-box; }\n" +
+		"</style>\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := core.NewLanguageRegistry()
+	langs.Register(langspec.Lookup("sfc"))
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&core.AnalysisContext{
+		ProjectDir: dir,
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		ChangedFiles: []core.FileChange{
+			{Path: "widget.svelte", Extension: ".svelte"},
+		},
+	})
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 findings for CSS selectors, got %d: %+v", len(findings), findings)
+	}
+}
+
+func TestBigComment_MultilineBlock(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "block.go")
+	content := "package foo\n\n" +
+		"/* line one\n" +
+		" * line two\n" +
+		" * line three\n" +
+		" * line four\n" +
+		" * line five\n" +
+		" * line six\n" +
+		" * line seven\n" +
+		" * line eight\n" +
+		" */\n" +
+		"func bar() {}\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := core.NewLanguageRegistry()
+	langs.Register(langspec.Lookup("go"))
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&core.AnalysisContext{
+		ProjectDir: dir,
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		ChangedFiles: []core.FileChange{
+			{Path: "block.go", Extension: ".go"},
+		},
+	})
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding for a 9-line /* */ block, got %d", len(findings))
+	}
+}
+
+func TestBigComment_ReportsOnAMultilineHTMLComment(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "block.html")
+	content := "<!--\n" +
+		" line one\n" +
+		" line two\n" +
+		" line three\n" +
+		" line four\n" +
+		"-->\n" +
+		"<html></html>\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := core.NewLanguageRegistry()
+	langs.Register(langspec.Lookup("markup"))
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&core.AnalysisContext{
+		ProjectDir: dir,
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		ChangedFiles: []core.FileChange{
+			{Path: "block.html", Extension: ".html"},
+		},
+	})
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding for a 6-line <!-- --> block, got %d", len(findings))
+	}
+}
+
+func TestBigComment_ReportsOnAMultilineLuaComment(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "block.lua")
+	content := "--[[\n" +
+		" line one\n" +
+		" line two\n" +
+		" line three\n" +
+		" line four\n" +
+		"]]\n" +
+		"local x = 1\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	langs := core.NewLanguageRegistry()
+	langs.Register(langspec.Lookup("lua"))
+	a := NewAnalyzer(langs)
+	findings := a.Analyze(&core.AnalysisContext{
+		ProjectDir: dir,
+		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		ChangedFiles: []core.FileChange{
+			{Path: "block.lua", Extension: ".lua"},
+		},
+	})
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding for a 6-line --[[ ]] block, got %d", len(findings))
+	}
+}

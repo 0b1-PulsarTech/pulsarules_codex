@@ -32,7 +32,7 @@ func analyzerSpecs() []analyzerSpec {
 		staticSpec("naming", naming.NewAnalyzer),
 		langSpec("top-of-file", topoffile.NewAnalyzer),
 		langSpec("big-comment", bigcomment.NewAnalyzer),
-		staticSpec("simplification-path", simplificationpath.NewAnalyzer),
+		langSpec("simplification-path", simplificationpath.NewAnalyzer),
 		{
 			id: "commit-lint",
 			build: func(

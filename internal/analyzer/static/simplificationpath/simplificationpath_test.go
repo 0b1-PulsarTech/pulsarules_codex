@@ -6,7 +6,15 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/langspec"
 )
+
+func testLangs() *core.LanguageRegistry {
+	langs := core.NewLanguageRegistry()
+	langs.Register(langspec.Lookup("go"))
+	langs.Register(langspec.Lookup("clike"))
+	return langs
+}
 
 func TestAnalyze(t *testing.T) {
 	t.Parallel()
@@ -48,29 +56,37 @@ func TestAnalyze(t *testing.T) {
 		"// f applies a simplification the caller already validated, nothing more.\n"+
 		"func f() {}\n")
 
+	dartNoLabel := writeFixture(t, "no_label.dart", "class Foo {\n"+
+		"  // simplification: skip the rare case because it never happens in practice.\n"+
+		"  void f() {}\n"+
+		"}\n")
+
 	srcs := core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs()))
+	langs := testLangs()
 
 	testCases := []struct {
 		name    string
 		path    string
+		ext     string
 		wantLen int
 	}{
-		{"upgrade path label on the marker line", sameLinePath, 0},
-		{"revisit when label on the marker line", revisitWhen, 0},
-		{"no label at all fires", noLabel, 1},
-		{"upgrade path label on a later block line", laterLine, 0},
-		{"no marker at all", noMarker, 0},
-		{"word simplification in prose, not a marker", prosemention, 0},
+		{"upgrade path label on the marker line", sameLinePath, ".go", 0},
+		{"revisit when label on the marker line", revisitWhen, ".go", 0},
+		{"no label at all fires", noLabel, ".go", 1},
+		{"upgrade path label on a later block line", laterLine, ".go", 0},
+		{"no marker at all", noMarker, ".go", 0},
+		{"word simplification in prose, not a marker", prosemention, ".go", 0},
+		{"no label fires in a clike file too", dartNoLabel, ".dart", 1},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			a := NewAnalyzer()
+			a := NewAnalyzer(langs)
 			got := a.Analyze(&core.AnalysisContext{
 				ProjectDir: dir,
 				Sources:    srcs,
 				ChangedFiles: []core.FileChange{
-					{Path: testCase.path, Extension: ".go"},
+					{Path: testCase.path, Extension: testCase.ext},
 				},
 			})
 			if len(got) != testCase.wantLen {
@@ -80,10 +96,22 @@ func TestAnalyze(t *testing.T) {
 	}
 }
 
+func TestAnalyze_NoLangs(t *testing.T) {
+	t.Parallel()
+
+	a := NewAnalyzer(nil)
+	got := a.Analyze(
+		&core.AnalysisContext{ChangedFiles: []core.FileChange{{Path: "x.go", Extension: ".go"}}},
+	)
+	if got != nil {
+		t.Fatalf("expected nil findings with no language registry, got %+v", got)
+	}
+}
+
 func TestAnalyze_NoSources(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	a := NewAnalyzer(testLangs())
 	got := a.Analyze(
 		&core.AnalysisContext{ChangedFiles: []core.FileChange{{Path: "x.go", Extension: ".go"}}},
 	)
@@ -92,23 +120,23 @@ func TestAnalyze_NoSources(t *testing.T) {
 	}
 }
 
-func TestAnalyze_NonGoFileSkipped(t *testing.T) {
+func TestAnalyze_UnknownLanguageSkipped(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	path := filepath.Join(dir, "notes.md")
-	if err := os.WriteFile(path, []byte("// simplification: not go\n"), 0o644); err != nil {
+	path := filepath.Join(dir, "notes.json")
+	if err := os.WriteFile(path, []byte(`{"simplification": "not code"}`), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	a := NewAnalyzer()
+	a := NewAnalyzer(testLangs())
 	got := a.Analyze(&core.AnalysisContext{
 		ProjectDir:   dir,
 		Sources:      core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
-		ChangedFiles: []core.FileChange{{Path: "notes.md", Extension: ".md"}},
+		ChangedFiles: []core.FileChange{{Path: "notes.json", Extension: ".json"}},
 	})
 	if got != nil {
-		t.Fatalf("expected nil findings for a non-Go file, got %+v", got)
+		t.Fatalf("expected nil findings for an unregistered extension, got %+v", got)
 	}
 }
 
@@ -116,7 +144,7 @@ func TestAnalyze_NonexistentFileSkipped(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	a := NewAnalyzer()
+	a := NewAnalyzer(testLangs())
 	got := a.Analyze(&core.AnalysisContext{
 		ProjectDir:   dir,
 		Sources:      core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
@@ -143,7 +171,7 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	a := NewAnalyzer()
+	a := NewAnalyzer(testLangs())
 	got := a.Analyze(&core.AnalysisContext{
 		ProjectDir:   dir,
 		Sources:      core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
@@ -154,9 +182,10 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 	}
 }
 
-func TestBlockNamesUpgradePath_WrappedLabel(t *testing.T) {
+func TestBlockNamesUpgradePath_Wrapped(t *testing.T) {
 	t.Parallel()
 
+	lang := langspec.Lookup("go")
 	testCases := []struct {
 		name  string
 		lines []string
@@ -178,7 +207,7 @@ func TestBlockNamesUpgradePath_WrappedLabel(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			if got := blockNamesUpgradePath(testCase.lines); got != testCase.want {
+			if got := blockNamesUpgradePath(lang, testCase.lines); got != testCase.want {
 				t.Errorf(
 					"blockNamesUpgradePath(%q) = %v, want %v",
 					testCase.lines,

@@ -32,7 +32,7 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	}
 	ml := a.resolveMaxLines(ctx)
 	reporter := a.reporter.Resolved(ctx)
-	extFilter := core.ExtensionFilter(ctx, a.ID(), []string{".go"})
+	extFilter := core.ExtensionFilter(ctx, a.ID(), core.DefaultSourceExtensions())
 	eligible := func(fc core.FileChange) bool {
 		return extFilter(fc) && a.langs.Lookup(fc.Extension) != nil
 	}

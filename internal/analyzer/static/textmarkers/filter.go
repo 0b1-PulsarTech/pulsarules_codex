@@ -1,17 +1,16 @@
 package textmarkers
 
 import (
-	"strings"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
 func eachMarkedFile(
 	ctx *core.AnalysisContext,
+	analyzerID string,
 	check func(core.FileChange, string) []core.Finding,
 ) []core.Finding {
-	scanned := map[string]bool{".go": true, ".md": true}
-	eligible := func(fc core.FileChange) bool { return scanned[strings.ToLower(fc.Extension)] }
+	scanned := append(core.DefaultSourceExtensions(), ".md")
+	eligible := core.ExtensionFilter(ctx, analyzerID, scanned)
 	return core.EachChangedFile(ctx, eligible, func(
 		fc core.FileChange, src []byte,
 	) []core.Finding {

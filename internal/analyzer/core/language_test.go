@@ -22,6 +22,9 @@ func TestLanguageRegistry_RegisterAndLookup(t *testing.T) {
 	if got == nil {
 		t.Fatal("expected non-nil for .go")
 	}
+	if got.CommentPrefix() != "//" {
+		t.Errorf("expected comment prefix //, got %q", got.CommentPrefix())
+	}
 }
 
 type mockLang struct {
@@ -29,7 +32,8 @@ type mockLang struct {
 	prefix string
 }
 
-func (lang mockLang) Extensions() []string { return lang.exts }
+func (lang mockLang) Extensions() []string  { return lang.exts }
+func (lang mockLang) CommentPrefix() string { return lang.prefix }
 
 func (lang mockLang) CommentSyntax() CommentSyntax {
 	return CommentSyntax{Line: []string{lang.prefix}}

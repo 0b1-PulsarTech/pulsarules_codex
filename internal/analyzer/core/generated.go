@@ -113,6 +113,8 @@ func directiveHeaderPrefixes() []string {
 	}
 }
 
+const SimplificationMarker = "simplification:"
+
 func IsExemptHeaderLine(line string) bool {
 	trimmed := strings.TrimSpace(line)
 	if isGeneratedMarkerLine(trimmed) {

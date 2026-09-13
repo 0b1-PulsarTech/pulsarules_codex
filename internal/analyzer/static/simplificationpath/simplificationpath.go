@@ -6,15 +6,17 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-const markerPrefix = "simplification:"
-
 type Analyzer struct {
+	langs    *core.LanguageRegistry
 	reporter core.Reporter
 }
 
-func NewAnalyzer() *Analyzer {
+func NewAnalyzer(langs *core.LanguageRegistry) *Analyzer {
 	return &Analyzer{
-		reporter: core.NewReporter("simplification-path", core.SeverityWarning, core.CatSyntax),
+		langs: langs,
+		reporter: core.NewReporter(
+			"simplification-path", core.SeverityWarning, core.CatSyntax,
+		),
 	}
 }
 
@@ -22,30 +24,38 @@ func (a *Analyzer) ID() string          { return "simplification-path" }
 func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
 
 func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	if a.langs == nil {
+		return nil
+	}
 	reporter := a.reporter.Resolved(ctx)
+	extFilter := core.ExtensionFilter(ctx, a.ID(), core.DefaultSourceExtensions())
+	eligible := func(fc core.FileChange) bool {
+		return extFilter(fc) && a.langs.Lookup(fc.Extension) != nil
+	}
 	return core.EachChangedFile(
 		ctx,
-		isGoFile,
+		eligible,
 		func(fc core.FileChange, src []byte) []core.Finding {
-			return scanFile(src, fc.Path, reporter)
+			return scanFile(src, fc.Path, a.langs.Lookup(fc.Extension), reporter)
 		},
 	)
 }
 
-func isGoFile(fc core.FileChange) bool { return fc.Extension == ".go" }
-
-func scanFile(src []byte, path string, reporter core.Reporter) []core.Finding {
+func scanFile(src []byte, path string, lang core.Language, reporter core.Reporter) []core.Finding {
 	var findings []core.Finding
 	lines := strings.Split(string(src), "\n")
+	// A block is the marker line plus every comment line immediately after it. One
+	// scanner runs in file order first, so continuations match big-comment's reading.
+	isComment := scanComments(lines, lang.CommentSyntax())
 	for lineIdx := 0; lineIdx < len(lines); lineIdx++ {
-		if !isMarkerLine(lines[lineIdx]) {
+		if !isMarkerLine(lang, lines[lineIdx]) {
 			continue
 		}
 		blockEnd := lineIdx + 1
-		for blockEnd < len(lines) && isCommentLine(lines[blockEnd]) {
+		for blockEnd < len(lines) && isComment[blockEnd] {
 			blockEnd++
 		}
-		if !blockNamesUpgradePath(lines[lineIdx:blockEnd]) {
+		if !blockNamesUpgradePath(lang, lines[lineIdx:blockEnd]) {
 			findings = append(findings, reporter.At(
 				path,
 				lineIdx+1,
@@ -58,22 +68,27 @@ func scanFile(src []byte, path string, reporter core.Reporter) []core.Finding {
 	return findings
 }
 
-func isCommentLine(line string) bool {
-	return strings.HasPrefix(strings.TrimSpace(line), "//")
+func scanComments(lines []string, syntax core.CommentSyntax) []bool {
+	scanner := core.NewCommentScanner(syntax)
+	isComment := make([]bool, len(lines))
+	for lineIdx, line := range lines {
+		isComment[lineIdx] = scanner.IsCommentLine(line)
+	}
+	return isComment
 }
 
-func isMarkerLine(line string) bool {
-	comment, ok := strings.CutPrefix(strings.TrimSpace(line), "//")
+func isMarkerLine(lang core.Language, line string) bool {
+	comment, ok := strings.CutPrefix(strings.TrimSpace(line), lang.CommentPrefix())
 	if !ok {
 		return false
 	}
-	return strings.HasPrefix(strings.TrimSpace(comment), markerPrefix)
+	return strings.HasPrefix(strings.TrimSpace(comment), core.SimplificationMarker)
 }
 
-func blockNamesUpgradePath(lines []string) bool {
+func blockNamesUpgradePath(lang core.Language, lines []string) bool {
 	words := make([]string, 0, len(lines))
 	for _, line := range lines {
-		comment, _ := strings.CutPrefix(strings.TrimSpace(line), "//")
+		comment, _ := strings.CutPrefix(strings.TrimSpace(line), lang.CommentPrefix())
 		words = append(words, strings.TrimSpace(comment))
 	}
 	// Joined with a space: golines wraps prose, and a label split across two lines is

@@ -41,7 +41,7 @@ func (a *TextAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		contextual:  a.reporters.contextual.Resolved(ctx),
 		frontmatter: a.reporters.frontmatter.Resolved(ctx),
 	}
-	return eachMarkedFile(ctx, func(fc core.FileChange, src string) []core.Finding {
+	return eachMarkedFile(ctx, a.ID(), func(fc core.FileChange, src string) []core.Finding {
 		return checkCarriers(fc, src, reporters)
 	})
 }
@@ -92,7 +92,7 @@ func (a *TypographicAnalyzer) Stage() core.StageID { return core.StageStatic }
 
 func (a *TypographicAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	reporter := a.reporter.Resolved(ctx)
-	return eachMarkedFile(ctx, func(fc core.FileChange, src string) []core.Finding {
+	return eachMarkedFile(ctx, a.ID(), func(fc core.FileChange, src string) []core.Finding {
 		return checkTypographic(fc, src, reporter)
 	})
 }
