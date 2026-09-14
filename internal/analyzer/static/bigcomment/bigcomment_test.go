@@ -74,6 +74,55 @@ func TestBigComment_LargeBlock(t *testing.T) {
 	}
 }
 
+func TestBigComment_Boundary(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		commentLines int
+		wantFindings int
+	}{
+		{"at_cap_passes", 3, 0},
+		{"over_cap_fails", 4, 1},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			path := filepath.Join(dir, "boundary.go")
+			var b strings.Builder
+			b.WriteString("package foo\n\n")
+			for count := range testCase.commentLines {
+				b.WriteString("// comment line ")
+				b.WriteByte(byte('A' + count))
+				b.WriteByte('\n')
+			}
+			b.WriteString("func bar() {}\n")
+			if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+				t.Fatalf("write fixture: %v", err)
+			}
+
+			langs := core.NewLanguageRegistry()
+			langs.Register(langspec.Lookup("go"))
+			a := NewAnalyzer(langs)
+			findings := a.Analyze(&core.AnalysisContext{
+				ProjectDir: dir,
+				Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+				ChangedFiles: []core.FileChange{
+					{Path: "boundary.go", Extension: ".go"},
+				},
+			})
+			if len(findings) != testCase.wantFindings {
+				t.Fatalf(
+					"commentLines=%d: got %d findings, want %d",
+					testCase.commentLines, len(findings), testCase.wantFindings,
+				)
+			}
+		})
+	}
+}
+
 func TestBigComment_NoLanguage(t *testing.T) {
 	t.Parallel()
 

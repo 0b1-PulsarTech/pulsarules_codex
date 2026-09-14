@@ -7,8 +7,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-const defaultMaxCommentLines = 5
-
 type Analyzer struct {
 	langs    *core.LanguageRegistry
 	maxLines int
@@ -16,8 +14,11 @@ type Analyzer struct {
 }
 
 func NewAnalyzer(langs *core.LanguageRegistry) *Analyzer {
+	const defaultMaxCommentLines = 3
 	return &Analyzer{
-		langs:    langs,
+		langs: langs,
+		// A kept comment justifies itself in one sentence: three lines fits it, wrapped;
+		// a fourth is the first line of a paragraph.
 		maxLines: defaultMaxCommentLines,
 		reporter: core.NewReporter("big-comment", core.SeverityWarning, core.CatSyntax),
 	}
@@ -64,7 +65,9 @@ func scanFile(
 		if scanner.IsCommentLine(line) {
 			if blockLines == 0 {
 				blockStart = lineNum
-				exempt = core.IsExemptHeaderLine(line)
+				// A simplification block states the ceiling and an upgrade path, which no
+				// 3-line cap holds.
+				exempt = core.IsExemptHeaderLine(line) || core.IsSimplificationMarker(line)
 			}
 			blockLines++
 			continue
