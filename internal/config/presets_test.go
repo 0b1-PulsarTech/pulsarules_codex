@@ -41,6 +41,9 @@ func TestApplyPreset_Minimal(t *testing.T) {
 	if !isEnabled(cfg, "pprof-labels") {
 		t.Error("pprof-labels should stay enabled in minimal preset: it is a security check")
 	}
+	if isEnabled(cfg, "test-comment") {
+		t.Error("test-comment should be disabled in minimal preset")
+	}
 }
 
 func TestApplyPreset_Strict(t *testing.T) {

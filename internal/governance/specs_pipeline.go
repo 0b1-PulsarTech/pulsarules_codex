@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/arch"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/testdoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/branch"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/concurrency/clock"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/concurrency/loopexit"
@@ -18,6 +19,7 @@ import (
 
 func pipelineAnalyzerSpecs() []analyzerSpec {
 	return slices.Concat([]analyzerSpec{
+		staticSpec("test-comment", testdoc.NewAnalyzer),
 		staticSpec("time-discipline", clock.NewAnalyzer),
 		staticSpec("context-discipline", loopexit.NewAnalyzer),
 		staticSpec("pprof-labels", pproflabel.NewAnalyzer),
