@@ -19,6 +19,7 @@ func defaultRuleMap() map[string]string {
 		"top-of-file":              "effective-go",
 		"big-comment":              "effective-go",
 		"vacuous-doc":              "effective-go",
+		"test-comment":             "effective-go",
 		"simplification-path":      "minimalism",
 		"branch-name":              "commits",
 		"commit-lint":              "commits",
