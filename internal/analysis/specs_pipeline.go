@@ -6,6 +6,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/arch"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/contextdiscipline"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/pproflabels"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/singleusedecl"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/testcomment"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/timediscipline"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/branchname"
@@ -20,6 +21,7 @@ import (
 func pipelineAnalyzerSpecs() []analyzerSpec {
 	return slices.Concat([]analyzerSpec{
 		staticSpec("test-comment", testcomment.NewAnalyzer),
+		staticSpec("single-use-declaration", singleusedecl.NewAnalyzer),
 		staticSpec("time-discipline", timediscipline.NewAnalyzer),
 		staticSpec("context-discipline", contextdiscipline.NewAnalyzer),
 		staticSpec("pprof-labels", pproflabels.NewAnalyzer),

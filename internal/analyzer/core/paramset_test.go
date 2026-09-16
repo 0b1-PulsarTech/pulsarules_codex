@@ -43,6 +43,34 @@ func TestParamSetInt(t *testing.T) {
 	}
 }
 
+func TestParamSetBool(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		params   ParamSet
+		key      string
+		fallback bool
+		want     bool
+	}{
+		{"nil params keeps fallback", nil, "enabled", true, true},
+		{"missing key keeps fallback", ParamSet{}, "enabled", false, false},
+		{"bool value wins", ParamSet{"enabled": true}, "enabled", false, true},
+		{"parseable string wins", ParamSet{"enabled": "false"}, "enabled", true, false},
+		{"unparseable string keeps fallback", ParamSet{"enabled": "nope"}, "enabled", true, true},
+		{"wrong type keeps fallback", ParamSet{"enabled": 1}, "enabled", false, false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := testCase.params.Bool(testCase.key, testCase.fallback)
+			if got != testCase.want {
+				t.Errorf("Bool(%q) = %v, want %v", testCase.key, got, testCase.want)
+			}
+		})
+	}
+}
+
 func TestParamSetString(t *testing.T) {
 	t.Parallel()
 

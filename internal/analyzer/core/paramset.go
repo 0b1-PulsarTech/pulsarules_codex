@@ -30,6 +30,21 @@ func (params ParamSet) Int(key string, fallback int) int {
 	return value
 }
 
+func (params ParamSet) Bool(key string, fallback bool) bool {
+	switch val := params[key].(type) {
+	case bool:
+		return val
+	case string:
+		parsed, err := strconv.ParseBool(val)
+		if err != nil {
+			return fallback
+		}
+		return parsed
+	default:
+		return fallback
+	}
+}
+
 func (params ParamSet) Strings(key string, fallback []string) []string {
 	var values []string
 	switch val := params[key].(type) {
