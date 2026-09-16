@@ -44,6 +44,9 @@ func TestApplyPreset_Minimal(t *testing.T) {
 	if isEnabled(cfg, "test-comment") {
 		t.Error("test-comment should be disabled in minimal preset")
 	}
+	if isEnabled(cfg, "single-use-declaration") {
+		t.Error("single-use-declaration should be disabled in minimal preset")
+	}
 }
 
 func TestApplyPreset_Strict(t *testing.T) {

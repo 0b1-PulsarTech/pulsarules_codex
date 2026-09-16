@@ -1,6 +1,7 @@
 package rulesummary
 
 import (
+	"maps"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -9,18 +10,39 @@ import (
 
 func defaultRuleMap() map[string]string {
 	// A new analyzer goes here by exact ID; sub-ID tools also need a lookupRule prefix.
+	rules := map[string]string{
+		"file-size":              "effective-go",
+		"text-markers":           "effective-go",
+		"typographic-markers":    "effective-go",
+		"ai-frontmatter":         "effective-go",
+		"import-groups":          "imports",
+		"naming":                 "naming",
+		"top-of-file":            "effective-go",
+		"big-comment":            "effective-go",
+		"vacuous-doc":            "effective-go",
+		"test-comment":           "effective-go",
+		"simplification-path":    "minimalism",
+		"single-use-declaration": "minimalism",
+		"control-flow":           "code-smells",
+		"shadowing":              "effective-go",
+		"complexity":             "code-smells",
+		// The short-decl-reuse finding comes from the shadowing analyzer, but the fix it asks
+		// for, a var declaration above the call, is the named-returns rule's territory.
+		"short-decl-reuse":   "named-returns",
+		"named-returns":      "named-returns",
+		"time-discipline":    "concurrency",
+		"context-discipline": "concurrency",
+		"pprof-labels":       "security",
+		"arch-boundary":      "dependency-rule",
+		"import-cycle":       "module-boundaries",
+		"golangci-lint":      "code-smells",
+	}
+	maps.Copy(rules, commitRuleMap())
+	return rules
+}
+
+func commitRuleMap() map[string]string {
 	return map[string]string{
-		"file-size":                "effective-go",
-		"text-markers":             "effective-go",
-		"typographic-markers":      "effective-go",
-		"ai-frontmatter":           "effective-go",
-		"import-groups":            "imports",
-		"naming":                   "naming",
-		"top-of-file":              "effective-go",
-		"big-comment":              "effective-go",
-		"vacuous-doc":              "effective-go",
-		"test-comment":             "effective-go",
-		"simplification-path":      "minimalism",
 		"branch-name":              "commits",
 		"commit-lint":              "commits",
 		"commit-initial":           "commits",
@@ -42,19 +64,6 @@ func defaultRuleMap() map[string]string {
 		"commit-body-total-length": "commits",
 		"commit-no-coauthor":       "commits",
 		"commit-move-purity":       "commits",
-		"control-flow":             "code-smells",
-		"shadowing":                "effective-go",
-		"complexity":               "code-smells",
-		// The short-decl-reuse finding comes from the shadowing analyzer, but the fix it asks
-		// for, a var declaration above the call, is the named-returns rule's territory.
-		"short-decl-reuse":   "named-returns",
-		"named-returns":      "named-returns",
-		"time-discipline":    "concurrency",
-		"context-discipline": "concurrency",
-		"pprof-labels":       "security",
-		"arch-boundary":      "dependency-rule",
-		"import-cycle":       "module-boundaries",
-		"golangci-lint":      "code-smells",
 	}
 }
 

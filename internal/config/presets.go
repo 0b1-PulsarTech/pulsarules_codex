@@ -29,8 +29,10 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 		"arch-boundary": {Enabled: false},
 		"import-cycle":  {Enabled: false},
 		"golangci-lint": {Enabled: false},
-		// First-adoption noise: it flags hundreds of tests written before its rule.
-		"test-comment": {Enabled: false},
+		// First-adoption noise: both flag hundreds of tests and declarations
+		// written before their rules.
+		"test-comment":           {Enabled: false},
+		"single-use-declaration": {Enabled: false},
 	}
 }
 

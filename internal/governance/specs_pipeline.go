@@ -8,6 +8,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/branch"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/concurrency/clock"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/concurrency/loopexit"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/singleuse"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -20,6 +21,7 @@ import (
 func pipelineAnalyzerSpecs() []analyzerSpec {
 	return slices.Concat([]analyzerSpec{
 		staticSpec("test-comment", testdoc.NewAnalyzer),
+		staticSpec("single-use-declaration", singleuse.NewAnalyzer),
 		staticSpec("time-discipline", clock.NewAnalyzer),
 		staticSpec("context-discipline", loopexit.NewAnalyzer),
 		staticSpec("pprof-labels", pproflabel.NewAnalyzer),
