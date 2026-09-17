@@ -69,6 +69,27 @@ func TestCheckFile(t *testing.T) {
 func checkFileSleepCases() []checkFileTestCase {
 	return []checkFileTestCase{
 		{
+			name: "a sleep inside synctest.Test drives the fake clock, not the wall clock",
+			source: "package foo\n" +
+				"import (\n\t\"testing\"\n\t\"testing/synctest\"\n\t\"time\"\n)\n" +
+				"func TestX(t *testing.T) {\n" +
+				"\tsynctest.Test(t, func(t *testing.T) {\n" +
+				"\t\ttime.Sleep(700 * time.Millisecond)\n" +
+				"\t})\n" +
+				"}\n",
+			expect: 0,
+		},
+		{
+			name: "a sleep beside a bubble is still a real sleep",
+			source: "package foo\n" +
+				"import (\n\t\"testing\"\n\t\"testing/synctest\"\n\t\"time\"\n)\n" +
+				"func TestX(t *testing.T) {\n" +
+				"\tsynctest.Test(t, func(t *testing.T) {})\n" +
+				"\ttime.Sleep(time.Second)\n" +
+				"}\n",
+			expect: 1,
+		},
+		{
 			name:   "a bare time.Sleep call",
 			source: "package foo\nimport \"time\"\nfunc f() { time.Sleep(time.Second) }\n",
 			expect: 1,

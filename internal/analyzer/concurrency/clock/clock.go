@@ -32,10 +32,13 @@ func checkFile(
 ) []pass.Finding {
 	var findings []pass.Finding
 
+	bubbles := synctestBubbles(f)
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.CallExpr:
-			if isTimeSleepCall(node) {
+			// A sleep in a synctest bubble advances the fake clock, so flagging it
+			// would ask the author to replace correct code.
+			if isTimeSleepCall(node) && !insideBubble(bubbles, node.Pos()) {
 				findings = append(findings, reporter.At(
 					fc.Path,
 					fset.Position(node.Pos()).Line,
@@ -65,6 +68,44 @@ func checkFile(
 	})
 
 	return findings
+}
+
+func synctestBubbles(file *ast.File) [][2]token.Pos {
+	var bubbles [][2]token.Pos
+	ast.Inspect(file, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok || !isSynctestRunner(call) {
+			return true
+		}
+		for _, arg := range call.Args {
+			if lit, isLit := arg.(*ast.FuncLit); isLit {
+				bubbles = append(bubbles, [2]token.Pos{lit.Pos(), lit.End()})
+			}
+		}
+		return true
+	})
+	return bubbles
+}
+
+func isSynctestRunner(call *ast.CallExpr) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok || sel.Sel == nil {
+		return false
+	}
+	if sel.Sel.Name != "Test" && sel.Sel.Name != "Run" {
+		return false
+	}
+	pkg, ok := sel.X.(*ast.Ident)
+	return ok && pkg.Name == "synctest"
+}
+
+func insideBubble(bubbles [][2]token.Pos, pos token.Pos) bool {
+	for _, bubble := range bubbles {
+		if pos >= bubble[0] && pos < bubble[1] {
+			return true
+		}
+	}
+	return false
 }
 
 func isTimeSleepCall(call *ast.CallExpr) bool {
