@@ -12,6 +12,13 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
+func unavailable(stderr string) bool {
+	const lockContention = "parallel golangci-lint is running"
+	// Blocking the gate on lock contention fails a commit for something outside
+	// the author's code, which is how a gate stops being run at all.
+	return strings.Contains(stderr, lockContention)
+}
+
 type lintReport struct {
 	Issues []lintIssue `json:"Issues"`
 }
@@ -65,6 +72,11 @@ func (r *Runner) exitFailure(result process.Result, cmdErr error) []pass.Finding
 	}
 	if isLintExit(exitErr.ExitCode()) {
 		return nil
+	}
+	if unavailable(result.Stderr) {
+		return []pass.Finding{r.warning.New(
+			"golangci-lint was busy elsewhere; its checks did not run",
+		)}
 	}
 	return []pass.Finding{
 		r.failure.New(fmt.Sprintf("golangci-lint failed: %s", result.Stderr)),
