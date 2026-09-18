@@ -11,6 +11,41 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 )
 
+func TestParseOutput_LockContention(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		stderr      string
+		wantBlocked bool
+	}{
+		{
+			name:   "another copy holds the lock",
+			stderr: "Error: parallel golangci-lint is running\n",
+		},
+		{
+			name:        "a real linter failure still blocks",
+			stderr:      "Error: can't load config: unknown linter\n",
+			wantBlocked: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := execx.Result{Stderr: testCase.stderr}
+			got := NewRunner("").parseOutput(result, &exec.ExitError{})
+			if len(got) != 1 {
+				t.Fatalf("got %d findings, want 1: %+v", len(got), got)
+			}
+			blocked := got[0].Severity == core.SeverityError
+			if blocked != testCase.wantBlocked {
+				t.Fatalf("blocked = %v, want %v: %+v", blocked, testCase.wantBlocked, got[0])
+			}
+		})
+	}
+}
+
 func failedExit(code string) error {
 	return exec.CommandContext(context.Background(), "sh", "-c", "exit "+code).Run()
 }
