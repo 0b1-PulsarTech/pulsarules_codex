@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/opencodewire"
 )
 
 func TestUnwireOpencodeConfig_NoNote(t *testing.T) {
@@ -201,12 +202,21 @@ func TestOpencodeInstall_LegacyAgents(t *testing.T) {
 	}
 	var config struct {
 		Instructions []string `json:"instructions"`
+		Skills       struct {
+			Paths []string `json:"paths"`
+		} `json:"skills"`
 	}
 	if err = json.Unmarshal(raw, &config); err != nil {
 		t.Fatalf("parse opencode.json: %v", err)
 	}
 	if slices.Contains(config.Instructions, ".opencode/AGENTS.md") {
 		t.Errorf("legacy instructions entry survived: %v", config.Instructions)
+	}
+	if slices.Contains(config.Instructions, ".opencode/skills/*/SKILL.md") {
+		t.Errorf("eager SKILL.md glob survived in instructions: %v", config.Instructions)
+	}
+	if !slices.Contains(config.Skills.Paths, opencodewire.SkillsSubdir) {
+		t.Errorf("skills.paths missing %q, got %v", opencodewire.SkillsSubdir, config.Skills.Paths)
 	}
 	count := 0
 	for _, entry := range config.Instructions {

@@ -25,6 +25,15 @@ func TestWireConfig_FreshFile(t *testing.T) {
 			t.Errorf("instructions missing %q, got %v", glob, config.Instructions)
 		}
 	}
+	if slices.Contains(config.Instructions, legacySkillsInstructionGlob) {
+		t.Errorf(
+			"instructions must never carry the eager glob %q, got %v",
+			legacySkillsInstructionGlob, config.Instructions,
+		)
+	}
+	if !slices.Contains(config.Skills.Paths, SkillsSubdir) {
+		t.Errorf("skills.paths missing %q, got %v", SkillsSubdir, config.Skills.Paths)
+	}
 	gopls, ok := config.MCP["gopls"]
 	if !ok {
 		t.Fatalf("missing gopls mcp server, got %v", config.MCP)
@@ -41,6 +50,7 @@ func TestWireConfig_PreservesExisting(t *testing.T) {
 	seed := `{
   "theme": "dark",
   "instructions": ["CONTRIBUTING.md"],
+  "skills": {"paths": ["/abs/path/to/skills"]},
   "mcp": {"other": {"type": "local", "command": ["other"], "enabled": true}}
 }`
 	path := filepath.Join(projectDir, "opencode.json")
@@ -71,6 +81,10 @@ func TestWireConfig_PreservesExisting(t *testing.T) {
 	want := append([]string{"CONTRIBUTING.md"}, instructionGlobs()...)
 	if len(config.Instructions) != len(want) {
 		t.Errorf("instructions = %v, want %v", config.Instructions, want)
+	}
+	wantPaths := []string{"/abs/path/to/skills", SkillsSubdir}
+	if len(config.Skills.Paths) != len(wantPaths) {
+		t.Errorf("skills.paths = %v, want %v", config.Skills.Paths, wantPaths)
 	}
 	for _, name := range []string{"other", "gopls"} {
 		if _, ok := config.MCP[name]; !ok {
@@ -111,6 +125,32 @@ func TestWireConfig_LegacyInstructionEntry(t *testing.T) {
 	}
 }
 
+func TestWireConfig_LegacySkillsGlob(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	seed := `{"instructions": ["AGENTS.md", "` + legacySkillsInstructionGlob + `"]}`
+	path := filepath.Join(projectDir, "opencode.json")
+	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	if err := WireConfig(projectDir, WithoutGopls); err != nil {
+		t.Fatalf("WireConfig: %v", err)
+	}
+
+	config := readConfig(t, projectDir)
+	if slices.Contains(config.Instructions, legacySkillsInstructionGlob) {
+		t.Errorf("eager glob %q survived: %v", legacySkillsInstructionGlob, config.Instructions)
+	}
+	if len(config.Instructions) != 1 || config.Instructions[0] != "AGENTS.md" {
+		t.Errorf("instructions = %v, want [AGENTS.md]", config.Instructions)
+	}
+	if !slices.Contains(config.Skills.Paths, SkillsSubdir) {
+		t.Errorf("skills.paths missing %q, got %v", SkillsSubdir, config.Skills.Paths)
+	}
+}
+
 func TestWireConfig_NoGopls(t *testing.T) {
 	t.Parallel()
 
@@ -128,12 +168,18 @@ type opencodeConfig struct {
 	Schema       string               `json:"$schema"`
 	Instructions []string             `json:"instructions"`
 	MCP          map[string]mcpServer `json:"mcp"`
+	Skills       skillsSection        `json:"skills"`
 }
 
 type mcpServer struct {
 	Type    string   `json:"type"`
 	Command []string `json:"command"`
 	Enabled bool     `json:"enabled"`
+}
+
+type skillsSection struct {
+	Paths []string `json:"paths"`
+	URLs  []string `json:"urls"`
 }
 
 func readConfig(tb testing.TB, projectDir string) opencodeConfig {

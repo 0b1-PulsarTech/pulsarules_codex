@@ -27,8 +27,23 @@ func UnwireConfig(projectDir string) (changed bool, err error) {
 		return false, fmt.Errorf("%w: %q: %w", fsx.ErrUnparseableJSON, path, err)
 	}
 
-	var instructionsChanged bool
-	instructionsChanged, err = fsx.StripSliceSection(
+	var anyChanged bool
+	anyChanged, err = stripOwned(config, path)
+	if err != nil {
+		return false, err
+	}
+	if !anyChanged {
+		return false, nil
+	}
+	removeOwnedSchema(config)
+	if _, err = fsx.SaveOrRemove(path, config); err != nil {
+		return false, fmt.Errorf("write opencode config: %w", err)
+	}
+	return true, nil
+}
+
+func stripOwned(config map[string]json.RawMessage, path string) (bool, error) {
+	instructionsChanged, err := fsx.StripSliceSection(
 		config, "instructions", fmt.Sprintf("%q instructions", path), stripInstructions,
 	)
 	if err != nil {
@@ -44,14 +59,12 @@ func UnwireConfig(projectDir string) (changed bool, err error) {
 	if err != nil {
 		return false, fmt.Errorf("strip mcp: %w", err)
 	}
-	if !instructionsChanged && !mcpChanged {
-		return false, nil
+	var skillsChanged bool
+	skillsChanged, err = stripSkills(config, path)
+	if err != nil {
+		return false, fmt.Errorf("strip skills: %w", err)
 	}
-	removeOwnedSchema(config)
-	if _, err = fsx.SaveOrRemove(path, config); err != nil {
-		return false, fmt.Errorf("write opencode config: %w", err)
-	}
-	return true, nil
+	return instructionsChanged || mcpChanged || skillsChanged, nil
 }
 
 func removeOwnedSchema(config map[string]json.RawMessage) {
@@ -74,8 +87,10 @@ func removeOwnedSchema(config map[string]json.RawMessage) {
 
 func stripInstructions(instructions *[]string) bool {
 	before := len(*instructions)
+	globs := instructionGlobs()
 	*instructions = slices.DeleteFunc(*instructions, func(entry string) bool {
-		return slices.Contains(instructionGlobs(), entry) || entry == legacyAgentsInstructionGlob
+		return slices.Contains(globs, entry) ||
+			entry == legacyAgentsInstructionGlob || entry == legacySkillsInstructionGlob
 	})
 	return len(*instructions) != before
 }
@@ -86,4 +101,41 @@ func stripGoplsMCP(servers map[string]json.RawMessage) bool {
 	}
 	delete(servers, "gopls")
 	return true
+}
+
+func stripSkills(config map[string]json.RawMessage, path string) (bool, error) {
+	raw, ok := config["skills"]
+	if !ok {
+		return false, nil
+	}
+	skills := map[string]json.RawMessage{}
+	if err := json.Unmarshal(raw, &skills); err != nil {
+		return false, fmt.Errorf("%w: %q skills: %w", fsx.ErrUnparseableJSON, path, err)
+	}
+
+	changed, err := fsx.StripSliceSection(
+		skills, "paths", fmt.Sprintf("%q skills.paths", path), stripSkillsPaths,
+	)
+	if err != nil {
+		return false, fmt.Errorf("strip skills paths: %w", err)
+	}
+	if !changed {
+		return false, nil
+	}
+	if len(skills) == 0 {
+		delete(config, "skills")
+		return true, nil
+	}
+	marshaled, err := json.Marshal(skills)
+	if err != nil {
+		return false, fmt.Errorf("marshal skills: %w", err)
+	}
+	config["skills"] = marshaled
+	return true, nil
+}
+
+func stripSkillsPaths(paths *[]string) bool {
+	before := len(*paths)
+	*paths = slices.DeleteFunc(*paths, func(entry string) bool { return entry == SkillsSubdir })
+	return len(*paths) != before
 }
