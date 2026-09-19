@@ -13,15 +13,16 @@ import (
 
 const configFile = "opencode.json"
 
-const SkillsSubdir = ".opencode/skills"
-
 const schemaURL = "https://opencode.ai/config.json"
 
 func instructionGlobs() []string {
-	return []string{"AGENTS.md", SkillsSubdir + "/*/SKILL.md"}
+	// Repo root: every host reading AGENTS.md finds opencode's file.
+	return []string{"AGENTS.md"}
 }
 
 const legacyAgentsInstructionGlob = ".opencode/AGENTS.md"
+
+const legacySkillsInstructionGlob = SkillsSubdir + "/*/SKILL.md"
 
 type GoplsWiring string
 
@@ -49,6 +50,9 @@ func WireConfig(projectDir string, gopls GoplsWiring) error {
 	if err = mergeInstructions(config); err != nil {
 		return fmt.Errorf("merge instructions: %w", err)
 	}
+	if err = mergeSkills(config); err != nil {
+		return fmt.Errorf("merge skills: %w", err)
+	}
 	if gopls == WithGopls {
 		if err = mergeMCP(config); err != nil {
 			return fmt.Errorf("merge gopls mcp: %w", err)
@@ -68,9 +72,9 @@ func mergeInstructions(config map[string]json.RawMessage) error {
 			return fmt.Errorf("parse existing instructions: %w", err)
 		}
 	}
-	// Retire the legacy glob a prior install left so a reinstall converges.
+	// Retire the legacy globs a prior install left so a reinstall converges.
 	instructions = slices.DeleteFunc(instructions, func(entry string) bool {
-		return entry == legacyAgentsInstructionGlob
+		return entry == legacyAgentsInstructionGlob || entry == legacySkillsInstructionGlob
 	})
 	for _, glob := range instructionGlobs() {
 		if !slices.Contains(instructions, glob) {

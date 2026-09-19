@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
@@ -120,6 +121,76 @@ func TestUnwireConfig_PreservesUnrelated(t *testing.T) {
 	}
 	if _, ok := config.MCP["gopls"]; ok {
 		t.Error("gopls server should have been removed")
+	}
+}
+
+func TestUnwireConfig_Skills(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		seed       string
+		wantPaths  []string
+		wantNoKey  bool
+		wantURLLen int
+	}{
+		{
+			name:      "only our path removes the whole key",
+			seed:      `{"skills": {"paths": ["` + SkillsSubdir + `"]}}`,
+			wantNoKey: true,
+		},
+		{
+			name:      "user path survives",
+			seed:      `{"skills": {"paths": ["/abs/path/to/skills", "` + SkillsSubdir + `"]}}`,
+			wantPaths: []string{"/abs/path/to/skills"},
+		},
+		{
+			name: "sibling urls key survives once paths empties",
+			seed: `{"skills": {"paths": ["` + SkillsSubdir +
+				`"], "urls": ["https://example.com/.well-known/skills/"]}}`,
+			wantURLLen: 1,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			projectDir := t.TempDir()
+			path := filepath.Join(projectDir, configFile)
+			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+
+			changed, err := UnwireConfig(projectDir)
+			if err != nil {
+				t.Fatalf("UnwireConfig: %v", err)
+			}
+			if !changed {
+				t.Fatalf("changed = false, want true")
+			}
+
+			if testCase.wantNoKey {
+				if _, statErr := os.Stat(path); !errors.Is(statErr, fs.ErrNotExist) {
+					t.Errorf("expected %q to be removed, stat err = %v", path, statErr)
+				}
+				return
+			}
+			config := readConfig(t, projectDir)
+			if slices.Contains(config.Skills.Paths, SkillsSubdir) {
+				t.Errorf("SkillsSubdir survived: %v", config.Skills.Paths)
+			}
+			for _, want := range testCase.wantPaths {
+				if !slices.Contains(config.Skills.Paths, want) {
+					t.Errorf(
+						"skills.paths missing user entry %q, got %v",
+						want,
+						config.Skills.Paths,
+					)
+				}
+			}
+			if len(config.Skills.URLs) != testCase.wantURLLen {
+				t.Errorf("skills.urls = %v, want len %d", config.Skills.URLs, testCase.wantURLLen)
+			}
+		})
 	}
 }
 
