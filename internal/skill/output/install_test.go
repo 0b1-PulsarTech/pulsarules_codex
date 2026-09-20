@@ -62,31 +62,16 @@ func TestInstall_RouterAndUnknown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Install: %v", err)
 	}
-	if len(backedUp) != 0 {
-		t.Errorf("backedUp = %v, want none (fresh dest)", backedUp)
-	}
-	if len(installed) != 1 || installed[0] != "project-router" {
-		t.Errorf("installed = %v, want [project-router]", installed)
-	}
-	if len(skipped) != 1 || skipped[0] != "ghost" {
-		t.Errorf("skipped = %v, want [ghost]", skipped)
-	}
-	if _, statErr := os.Stat(filepath.Join(dest, "project-router", "SKILL.md")); statErr != nil {
-		t.Errorf("router SKILL.md not written: %v", statErr)
-	}
-	if _, statErr := os.Stat(filepath.Join(dest, "project-router", ".gitignore")); statErr != nil {
-		t.Errorf("router .gitignore not written: %v", statErr)
-	}
-	giContent, err := os.ReadFile(filepath.Join(dest, "project-router", ".gitignore"))
-	if err != nil {
-		t.Fatalf("read .gitignore: %v", err)
-	}
-	if want := "# " + marker.Installed + "\nSKILL.md\n.gitignore\n"; string(giContent) != want {
-		t.Errorf(".gitignore content = %q, want %q", string(giContent), want)
-	}
-	if _, statErr := os.Stat(filepath.Join(dest, "ghost")); !errors.Is(statErr, fs.ErrNotExist) {
-		t.Errorf("ghost should not be written, stat err = %v", statErr)
-	}
+	assertIDs(t, "backedUp", backedUp)
+	assertIDs(t, "installed", installed, "project-router")
+	assertIDs(t, "skipped", skipped, "ghost")
+	assertPresent(t, filepath.Join(dest, "project-router", "SKILL.md"))
+	assertContent(
+		t,
+		filepath.Join(dest, "project-router", ".gitignore"),
+		"# "+marker.Installed+"\nSKILL.md\n.gitignore\n",
+	)
+	assertMissing(t, filepath.Join(dest, "ghost"))
 }
 
 func TestInstallDocs_RenderFailureLeavesPriorFiles(t *testing.T) {
@@ -145,10 +130,7 @@ func TestInstallDocs_WriteDocFailure(t *testing.T) {
 	}
 
 	installed, skipped, _, err := installDocs(
-		dest,
-		"SKILL.md",
-		[]string{"good", "blocked"},
-		render,
+		dest, "SKILL.md", []string{"good", "blocked"}, render,
 	)
 	if err == nil {
 		t.Fatal("installDocs: expected an error from the blocked destination")
