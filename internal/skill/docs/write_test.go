@@ -109,45 +109,22 @@ func TestWriteDoc_OwnDirOverwrittenWithoutBackup(t *testing.T) {
 func TestWriteDoc_NextNumberedSlot(t *testing.T) {
 	t.Parallel()
 
-	dest := t.TempDir()
-	dir := filepath.Join(dest, "security")
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
+	dir := filepath.Join(t.TempDir(), "security")
 	docPath := filepath.Join(dir, "SKILL.md")
 	current := "# current foreign notes\n"
-	if err := os.WriteFile(docPath, []byte(current), 0o600); err != nil {
-		t.Fatalf("seed foreign doc: %v", err)
-	}
+	seedFile(t, docPath, current)
 	priorBackup := docPath + ownedfile.BackupSuffix
 	priorContent := "# an even earlier version of the user's notes\n"
-	if err := os.WriteFile(priorBackup, []byte(priorContent), 0o600); err != nil {
-		t.Fatalf("seed prior backup: %v", err)
-	}
+	seedFile(t, priorBackup, priorContent)
 
 	backedUp, err := Write(dir, "SKILL.md", "# rendered body\n"+ownedfile.Marker+"\n")
 	if err != nil {
 		t.Fatalf("WriteDoc: %v", err)
 	}
 	newBackup := docPath + ownedfile.BackupSuffix + ".1"
-	wantMsg := ownedfile.BackupMessage(docPath, newBackup)
-	if len(backedUp) != 1 || backedUp[0] != wantMsg {
-		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
-	}
-	got, readErr := os.ReadFile(priorBackup) //nolint:gosec // test fixture.
-	if readErr != nil {
-		t.Fatalf("read prior backup: %v", readErr)
-	}
-	if string(got) != priorContent {
-		t.Errorf("prior backup content = %q, want %q (clobbered)", got, priorContent)
-	}
-	got, readErr = os.ReadFile(newBackup) //nolint:gosec // test fixture.
-	if readErr != nil {
-		t.Fatalf("read new backup: %v", readErr)
-	}
-	if string(got) != current {
-		t.Errorf("new backup content = %q, want %q", got, current)
-	}
+	assertIDs(t, "backedUp", backedUp, ownedfile.BackupMessage(docPath, newBackup))
+	assertContent(t, priorBackup, priorContent)
+	assertContent(t, newBackup, current)
 }
 
 func TestWriteDoc_PreMarkerDoc(t *testing.T) {
@@ -226,9 +203,7 @@ func TestWriteDoc_KeepsUserGitignoreLines(t *testing.T) {
 
 	dir := filepath.Join(t.TempDir(), "go-style")
 	body := "# go-style\n" + ownedfile.Marker + "\n"
-	if _, err := Write(dir, "SKILL.md", body); err != nil {
-		t.Fatalf("first WriteDoc: %v", err)
-	}
+	mustWriteDoc(t, dir, body)
 	ignorePath := filepath.Join(dir, ".gitignore")
 	rendered, err := os.ReadFile(ignorePath) //nolint:gosec // test fixture.
 	if err != nil {
@@ -246,11 +221,5 @@ func TestWriteDoc_KeepsUserGitignoreLines(t *testing.T) {
 	if len(backedUp) != 0 {
 		t.Errorf("backedUp = %v, want none", backedUp)
 	}
-	got, err := os.ReadFile(ignorePath) //nolint:gosec // test fixture.
-	if err != nil {
-		t.Fatalf("reread gitignore: %v", err)
-	}
-	if string(got) != userLines {
-		t.Errorf("gitignore = %q, want %q", got, userLines)
-	}
+	assertContent(t, ignorePath, userLines)
 }
