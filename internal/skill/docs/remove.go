@@ -12,14 +12,20 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/gitignore"
 )
 
-func Remove(dest, docName string) (removed, restored, orphaned []string, err error) {
-	var entries []os.DirEntry
-	entries, err = os.ReadDir(dest)
+type RemoveResult struct {
+	Removed  []string
+	Restored []string
+	Orphaned []string
+}
+
+func Remove(dest, docName string) (RemoveResult, error) {
+	var result RemoveResult
+	entries, err := os.ReadDir(dest)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, nil, nil, nil
+			return result, nil
 		}
-		return nil, nil, nil, fmt.Errorf("read dir %q: %w", dest, err)
+		return result, fmt.Errorf("read dir %q: %w", dest, err)
 	}
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -32,17 +38,17 @@ func Remove(dest, docName string) (removed, restored, orphaned []string, err err
 		}
 		dirRestored, dirOrphaned, rmErr := removeOwnedDoc(dir, docName)
 		if rmErr != nil {
-			return removed, restored, orphaned, rmErr
+			return result, rmErr
 		}
-		removed = append(removed, id)
-		restored = append(restored, dirRestored...)
-		orphaned = append(orphaned, dirOrphaned...)
+		result.Removed = append(result.Removed, id)
+		result.Restored = append(result.Restored, dirRestored...)
+		result.Orphaned = append(result.Orphaned, dirOrphaned...)
 	}
 
 	if err = disk.RemoveEmptyDir(dest); err != nil {
-		return removed, restored, orphaned, fmt.Errorf("remove empty dir: %w", err)
+		return result, fmt.Errorf("remove empty dir: %w", err)
 	}
-	return removed, restored, orphaned, nil
+	return result, nil
 }
 
 func removeOwnedDoc(dir, docName string) (restored, orphaned []string, err error) {

@@ -124,31 +124,29 @@ func TestRemoveDocs(t *testing.T) {
 			root := t.TempDir()
 			seedRemoveCase(t, root, testCase)
 			dest := filepath.Join(root, testCase.target)
-			var removed, restored, orphaned []string
+			var result RemoveResult
 			for range max(testCase.runs, 1) {
 				var err error
-				if removed, restored, orphaned, err = Remove(dest, "SKILL.md"); err != nil {
+				if result, err = Remove(dest, "SKILL.md"); err != nil {
 					t.Fatalf("RemoveDocs: %v", err)
 				}
 			}
-			assertIDs(t, "removed", removed, testCase.wantRemoved...)
-			assertRemoveOutcome(t, root, testCase, restored, orphaned)
+			assertIDs(t, "removed", result.Removed, testCase.wantRemoved...)
+			assertRemoveOutcome(t, root, testCase, result)
 		})
 	}
 }
 
-func assertRemoveOutcome(
-	t *testing.T, root string, testCase removeCase, restored, orphaned []string,
-) {
+func assertRemoveOutcome(t *testing.T, root string, testCase removeCase, result RemoveResult) {
 	t.Helper()
 	if testCase.wantRestored != "" {
 		doc := filepath.Join(root, filepath.FromSlash(testCase.wantRestored))
-		assertIDs(t, "restored", restored, ownedfile.RestoreMessage(doc))
+		assertIDs(t, "restored", result.Restored, ownedfile.RestoreMessage(doc))
 	}
 	if testCase.wantOrphaned != "" {
 		doc := filepath.Join(root, filepath.FromSlash(testCase.wantOrphaned))
-		if len(orphaned) != 1 || !strings.Contains(orphaned[0], doc) {
-			t.Errorf("orphaned = %v, want one note naming %q", orphaned, doc)
+		if len(result.Orphaned) != 1 || !strings.Contains(result.Orphaned[0], doc) {
+			t.Errorf("orphaned = %v, want one note naming %q", result.Orphaned, doc)
 		}
 	}
 	for _, rel := range testCase.present {
@@ -167,17 +165,11 @@ func TestRemoveDocs_LeavesUserGitignoreAndSkipsRestore(t *testing.T) {
 
 	root := t.TempDir()
 	dir := filepath.Join(root, "security")
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
 	ignorePath := filepath.Join(dir, ".gitignore")
-	if err := os.WriteFile(ignorePath, []byte("keep-me\n"), 0o600); err != nil {
-		t.Fatalf("seed gitignore: %v", err)
-	}
-	if _, err := Write(dir, "SKILL.md", "body\n"+ownedfile.Marker+"\n"); err != nil {
-		t.Fatalf("WriteDoc: %v", err)
-	}
+	seedFile(t, ignorePath, "keep-me\n")
+	mustWriteDoc(t, dir, "body\n"+ownedfile.Marker+"\n")
 	backupPath := ignorePath + ownedfile.BackupSuffix
+	assertContent(t, backupPath, "keep-me\n")
 	rendered, err := os.ReadFile(ignorePath) //nolint:gosec // test fixture.
 	if err != nil {
 		t.Fatalf("read gitignore: %v", err)
@@ -186,20 +178,13 @@ func TestRemoveDocs_LeavesUserGitignoreAndSkipsRestore(t *testing.T) {
 		t.Fatalf("add user line: %v", err)
 	}
 
-	_, restored, _, err := Remove(root, "SKILL.md")
+	result, err := Remove(root, "SKILL.md")
 	if err != nil {
 		t.Fatalf("RemoveDocs: %v", err)
 	}
-	if len(restored) != 0 {
-		t.Errorf("restored = %v, want none while a user gitignore stands", restored)
+	if len(result.Restored) != 0 {
+		t.Errorf("restored = %v, want none while a user gitignore stands", result.Restored)
 	}
-	for path, want := range map[string]string{ignorePath: "mine/\n", backupPath: "keep-me\n"} {
-		got, readErr := os.ReadFile(path) //nolint:gosec // test fixture.
-		if readErr != nil {
-			t.Fatalf("read %q: %v", path, readErr)
-		}
-		if string(got) != want {
-			t.Errorf("%q content = %q, want %q", path, got, want)
-		}
-	}
+	assertContent(t, ignorePath, "mine/\n")
+	assertContent(t, backupPath, "keep-me\n")
 }
