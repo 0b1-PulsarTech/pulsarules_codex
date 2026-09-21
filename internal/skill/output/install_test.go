@@ -16,7 +16,7 @@ func TestInstallWorkflows(t *testing.T) {
 	idx, rnd := loadFixture(t)
 	dest := t.TempDir()
 
-	installed, skipped, backedUp, err := InstallWorkflows(
+	result, err := InstallWorkflows(
 		idx,
 		rnd,
 		dest,
@@ -25,14 +25,14 @@ func TestInstallWorkflows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InstallWorkflows: %v", err)
 	}
-	if len(backedUp) != 0 {
-		t.Errorf("backedUp = %v, want none (fresh dest)", backedUp)
+	if len(result.BackedUp) != 0 {
+		t.Errorf("backedUp = %v, want none (fresh dest)", result.BackedUp)
 	}
-	if len(installed) != 1 || installed[0] != "refactoring" {
-		t.Errorf("installed = %v, want [refactoring]", installed)
+	if len(result.Installed) != 1 || result.Installed[0] != "refactoring" {
+		t.Errorf("installed = %v, want [refactoring]", result.Installed)
 	}
-	if len(skipped) != 1 || skipped[0] != "ghost-wf" {
-		t.Errorf("skipped = %v, want [ghost-wf]", skipped)
+	if len(result.Skipped) != 1 || result.Skipped[0] != "ghost-wf" {
+		t.Errorf("skipped = %v, want [ghost-wf]", result.Skipped)
 	}
 	if _, err = os.Stat(filepath.Join(dest, "refactoring", "WORKFLOW.md")); err != nil {
 		t.Errorf("WORKFLOW.md not written: %v", err)
@@ -52,19 +52,18 @@ func TestInstall_RouterAndUnknown(t *testing.T) {
 	idx, rnd := loadFixture(t)
 	dest := t.TempDir()
 
-	installed, skipped, backedUp, err := Install(
+	result, err := Install(
 		idx,
 		rnd,
 		dest,
-		[]string{"project-router", "ghost"},
-		nil,
+		InstallRequest{IDs: []string{"project-router", "ghost"}},
 	)
 	if err != nil {
 		t.Fatalf("Install: %v", err)
 	}
-	assertIDs(t, "backedUp", backedUp)
-	assertIDs(t, "installed", installed, "project-router")
-	assertIDs(t, "skipped", skipped, "ghost")
+	assertIDs(t, "backedUp", result.BackedUp)
+	assertIDs(t, "installed", result.Installed, "project-router")
+	assertIDs(t, "skipped", result.Skipped, "ghost")
 	assertPresent(t, filepath.Join(dest, "project-router", "SKILL.md"))
 	assertContent(
 		t,
@@ -86,7 +85,7 @@ func TestInstallDocs_RenderFailureLeavesPriorFiles(t *testing.T) {
 		return "body for " + id, true, nil
 	}
 
-	installed, skipped, _, err := installDocs(
+	result, err := installDocs(
 		dest,
 		"SKILL.md",
 		[]string{"good", "broken", "unreached"},
@@ -95,11 +94,11 @@ func TestInstallDocs_RenderFailureLeavesPriorFiles(t *testing.T) {
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("err = %v, want %v", err, wantErr)
 	}
-	if len(skipped) != 0 {
-		t.Errorf("skipped = %v, want none", skipped)
+	if len(result.Skipped) != 0 {
+		t.Errorf("skipped = %v, want none", result.Skipped)
 	}
-	if len(installed) != 1 || installed[0] != "good" {
-		t.Errorf("installed = %v, want [good]", installed)
+	if len(result.Installed) != 1 || result.Installed[0] != "good" {
+		t.Errorf("installed = %v, want [good]", result.Installed)
 	}
 	if _, statErr := os.Stat(filepath.Join(dest, "good", "SKILL.md")); statErr != nil {
 		t.Errorf("expected good/SKILL.md to remain after a later failure, stat err = %v", statErr)
@@ -129,17 +128,15 @@ func TestInstallDocs_WriteDocFailure(t *testing.T) {
 		return "body for " + id, true, nil
 	}
 
-	installed, skipped, _, err := installDocs(
-		dest, "SKILL.md", []string{"good", "blocked"}, render,
-	)
+	result, err := installDocs(dest, "SKILL.md", []string{"good", "blocked"}, render)
 	if err == nil {
 		t.Fatal("installDocs: expected an error from the blocked destination")
 	}
-	if len(skipped) != 0 {
-		t.Errorf("skipped = %v, want none (a write error is not an unknown id)", skipped)
+	if len(result.Skipped) != 0 {
+		t.Errorf("skipped = %v, want none (a write error is not an unknown id)", result.Skipped)
 	}
-	if len(installed) != 1 || installed[0] != "good" {
-		t.Errorf("installed = %v, want [good]", installed)
+	if len(result.Installed) != 1 || result.Installed[0] != "good" {
+		t.Errorf("installed = %v, want [good]", result.Installed)
 	}
 	if _, statErr := os.Stat(filepath.Join(dest, "good", "SKILL.md")); statErr != nil {
 		t.Errorf("expected good/SKILL.md to remain after a later failure, stat err = %v", statErr)
@@ -156,21 +153,20 @@ func TestInstall_WriteDocFailureLeavesPriorFiles(t *testing.T) {
 		t.Fatalf("seed blocker: %v", err)
 	}
 
-	installed, skipped, _, err := Install(
+	result, err := Install(
 		idx,
 		rnd,
 		dest,
-		[]string{"project-router", "code-minimalism"},
-		nil,
+		InstallRequest{IDs: []string{"project-router", "code-minimalism"}},
 	)
 	if err == nil {
 		t.Fatal("Install: expected an error from the blocked destination")
 	}
-	if len(skipped) != 0 {
-		t.Errorf("skipped = %v, want none", skipped)
+	if len(result.Skipped) != 0 {
+		t.Errorf("skipped = %v, want none", result.Skipped)
 	}
-	if len(installed) != 1 || installed[0] != "project-router" {
-		t.Errorf("installed = %v, want [project-router]", installed)
+	if len(result.Installed) != 1 || result.Installed[0] != "project-router" {
+		t.Errorf("installed = %v, want [project-router]", result.Installed)
 	}
 	if _, statErr := os.Stat(filepath.Join(dest, "project-router", "SKILL.md")); statErr != nil {
 		t.Errorf(
@@ -190,7 +186,7 @@ func TestInstallWorkflows_WriteDocFailure(t *testing.T) {
 		t.Fatalf("seed blocker: %v", err)
 	}
 
-	installed, skipped, _, err := InstallWorkflows(
+	result, err := InstallWorkflows(
 		idx,
 		rnd,
 		dest,
@@ -199,11 +195,11 @@ func TestInstallWorkflows_WriteDocFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("InstallWorkflows: expected an error from the blocked destination")
 	}
-	if len(skipped) != 0 {
-		t.Errorf("skipped = %v, want none", skipped)
+	if len(result.Skipped) != 0 {
+		t.Errorf("skipped = %v, want none", result.Skipped)
 	}
-	if len(installed) != 1 || installed[0] != "code-review" {
-		t.Errorf("installed = %v, want [code-review]", installed)
+	if len(result.Installed) != 1 || result.Installed[0] != "code-review" {
+		t.Errorf("installed = %v, want [code-review]", result.Installed)
 	}
 	if _, statErr := os.Stat(filepath.Join(dest, "code-review", "WORKFLOW.md")); statErr != nil {
 		t.Errorf(

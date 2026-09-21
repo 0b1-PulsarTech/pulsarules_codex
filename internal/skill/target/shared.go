@@ -14,21 +14,22 @@ const noGoplsWarning = "gopls not on PATH; skipping gopls MCP + gopls-navigation
 	"(install: go install golang.org/x/tools/gopls@latest)"
 
 func installSkills(ctx Context, dest string, report *Report) error {
-	installed, skipped, backedUp, err := output.Install(
-		ctx.Index, ctx.Renderer, dest, ctx.IDs, ctx.RouterFilter,
+	result, err := output.Install(
+		ctx.Index, ctx.Renderer, dest,
+		output.InstallRequest{IDs: ctx.IDs, RouterFilter: ctx.RouterFilter},
 	)
 	// Install returns the backups it already made alongside the error; report them
 	// even when a later id fails.
-	for _, msg := range backedUp {
+	for _, msg := range result.BackedUp {
 		report.Warn("%s", msg)
 	}
 	if err != nil {
 		return fmt.Errorf("render skills to %q: %w", dest, err)
 	}
-	for _, id := range installed {
+	for _, id := range result.Installed {
 		report.Note("installed: %s", filepath.Join(dest, id))
 	}
-	for _, id := range skipped {
+	for _, id := range result.Skipped {
 		report.Warn("skipped (unknown skill): %s", id)
 	}
 	return nil
@@ -51,56 +52,51 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 	if len(wfIDs) == 0 {
 		return nil
 	}
-	installed, skipped, backedUp, err := output.InstallWorkflows(
-		ctx.Index,
-		ctx.Renderer,
-		dest,
-		wfIDs,
-	)
-	for _, msg := range backedUp {
+	result, err := output.InstallWorkflows(ctx.Index, ctx.Renderer, dest, wfIDs)
+	for _, msg := range result.BackedUp {
 		report.Warn("%s", msg)
 	}
 	if err != nil {
 		return fmt.Errorf("render workflows to %q: %w", dest, err)
 	}
-	for _, id := range installed {
+	for _, id := range result.Installed {
 		report.Note("installed workflow: %s", filepath.Join(dest, id))
 	}
-	for _, id := range skipped {
+	for _, id := range result.Skipped {
 		report.Warn("skipped workflow (unknown): %s", id)
 	}
 	return nil
 }
 
 func removeSkills(dest string, report *Report) error {
-	removed, restored, orphaned, err := output.RemoveDocs(dest, "SKILL.md")
+	result, err := output.RemoveDocs(dest, "SKILL.md")
 	if err != nil {
 		return fmt.Errorf("remove skills from %q: %w", dest, err)
 	}
-	for _, id := range removed {
+	for _, id := range result.Removed {
 		report.Note("removed: %s", filepath.Join(dest, id))
 	}
-	for _, msg := range restored {
+	for _, msg := range result.Restored {
 		report.Note("%s", msg)
 	}
-	for _, msg := range orphaned {
+	for _, msg := range result.Orphaned {
 		report.Warn("%s", msg)
 	}
 	return nil
 }
 
 func removeWorkflows(dest string, report *Report) error {
-	removed, restored, orphaned, err := output.RemoveDocs(dest, "WORKFLOW.md")
+	result, err := output.RemoveDocs(dest, "WORKFLOW.md")
 	if err != nil {
 		return fmt.Errorf("remove workflows from %q: %w", dest, err)
 	}
-	for _, id := range removed {
+	for _, id := range result.Removed {
 		report.Note("removed workflow: %s", filepath.Join(dest, id))
 	}
-	for _, msg := range restored {
+	for _, msg := range result.Restored {
 		report.Note("%s", msg)
 	}
-	for _, msg := range orphaned {
+	for _, msg := range result.Orphaned {
 		report.Warn("%s", msg)
 	}
 	return nil
