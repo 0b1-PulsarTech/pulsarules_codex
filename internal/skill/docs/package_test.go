@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -57,5 +58,49 @@ func TestPackage_MidLoopFailureLeavesNoFile(t *testing.T) {
 
 	if _, statErr := os.Stat(out); !errors.Is(statErr, os.ErrNotExist) {
 		t.Fatalf("expected no file at %q after a failed Package, stat err = %v", out, statErr)
+	}
+}
+
+func TestPackage_FailsWhenOutputCannotBeCreated(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		outPath func(tb testing.TB, root string) string
+		wantErr string
+	}{
+		{
+			name: "parent is a regular file",
+			outPath: func(tb testing.TB, root string) string {
+				tb.Helper()
+				seedFile(tb, filepath.Join(root, "blocker"), "x")
+				return filepath.Join(root, "blocker", "skills.zip")
+			},
+			wantErr: "mkdir: ",
+		},
+		{
+			name: "output path is a directory",
+			outPath: func(tb testing.TB, root string) string {
+				tb.Helper()
+				if err := os.MkdirAll(filepath.Join(root, "skills.zip"), 0o750); err != nil {
+					tb.Fatalf("mkdir: %v", err)
+				}
+				return filepath.Join(root, "skills.zip")
+			},
+			wantErr: "create ",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			idx, rnd := loadFixture(t)
+			outPath := testCase.outPath(t, t.TempDir())
+
+			err := Package(idx, rnd, outPath)
+			if err == nil || !strings.HasPrefix(err.Error(), testCase.wantErr) {
+				t.Fatalf("err = %v, want prefix %q", err, testCase.wantErr)
+			}
+		})
 	}
 }

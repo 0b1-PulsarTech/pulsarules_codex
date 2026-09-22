@@ -23,18 +23,24 @@ func Package(idx *knowledge.Index, rnd *render.Renderer, outPath string) (err er
 	}
 
 	writer := zip.NewWriter(archive)
-	defer func() {
-		if closeErr := writer.Close(); err == nil && closeErr != nil {
-			err = fmt.Errorf("close zip: %w", closeErr)
-		}
-		if closeErr := archive.Close(); err == nil && closeErr != nil {
-			err = fmt.Errorf("close archive: %w", closeErr)
-		}
-		if err != nil {
-			_ = os.Remove(outPath)
-		}
-	}()
+	defer func() { err = finishArchive(writer, archive, outPath, err) }()
+	return writeSkillEntries(writer, idx, rnd)
+}
 
+func finishArchive(writer *zip.Writer, archive *os.File, outPath string, err error) error {
+	if closeErr := writer.Close(); err == nil && closeErr != nil {
+		err = fmt.Errorf("close zip: %w", closeErr)
+	}
+	if closeErr := archive.Close(); err == nil && closeErr != nil {
+		err = fmt.Errorf("close archive: %w", closeErr)
+	}
+	if err != nil {
+		_ = os.Remove(outPath)
+	}
+	return err
+}
+
+func writeSkillEntries(writer *zip.Writer, idx *knowledge.Index, rnd *render.Renderer) error {
 	for _, skill := range idx.SkillsOrdered() {
 		body, renderErr := rnd.RenderSkill(idx, skill, nil)
 		if renderErr != nil {
