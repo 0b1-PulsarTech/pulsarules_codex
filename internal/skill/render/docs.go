@@ -45,3 +45,27 @@ type workflowDoc struct {
 	Body                  string
 	Rules, Patterns       []ref
 }
+
+type sectionDoc struct {
+	Heading string
+	Body    string
+}
+
+type sourceDoc struct {
+	Name     string
+	Sections []sectionDoc
+}
+
+func sourceDocs(sources []source) []sourceDoc {
+	docs := make([]sourceDoc, 0, len(sources))
+	for _, src := range sources {
+		var sections []sectionDoc
+		for _, canonical := range canonicalSections() {
+			if body := src.sections[canonical.Key]; body != "" {
+				sections = append(sections, sectionDoc{Heading: canonical.Heading, Body: body})
+			}
+		}
+		docs = append(docs, sourceDoc{Name: src.name, Sections: sections})
+	}
+	return docs
+}
