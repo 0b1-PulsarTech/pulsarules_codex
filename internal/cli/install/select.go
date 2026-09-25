@@ -102,6 +102,20 @@ func parseSkillSelection(input string, total int) ([]int, error) {
 	return indices, nil
 }
 
+func splitCSV(value string) []string {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	ids := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if id := strings.TrimSpace(part); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
 func parseSelectionRange(token string) (start, end int, err error) {
 	before, after, isRange := strings.Cut(token, "-")
 	if !isRange {
