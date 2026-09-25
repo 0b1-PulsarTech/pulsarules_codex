@@ -129,17 +129,3 @@ func resolveInstallConfig(opts *version.Options) (installConfig, error) {
 	}
 	return installConfig{absBase: absBase, settingsFile: settingsFile, gitHooks: gitHooks}, nil
 }
-
-func splitCSV(value string) []string {
-	if strings.TrimSpace(value) == "" {
-		return nil
-	}
-	parts := strings.Split(value, ",")
-	ids := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if id := strings.TrimSpace(part); id != "" {
-			ids = append(ids, id)
-		}
-	}
-	return ids
-}
