@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/langdetect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -91,6 +92,64 @@ func TestSelectionResolve(t *testing.T) {
 			}
 			if !slices.Equal(gotPulled, testCase.wantPulled) {
 				t.Errorf("pulled = %v, want %v", gotPulled, testCase.wantPulled)
+			}
+		})
+	}
+}
+
+func languageFixtureIndex() *knowledge.Index {
+	return &knowledge.Index{Skills: []knowledge.Skill{
+		{ID: "project-router", Order: 0, AlwaysLoad: true},
+		{ID: "go-style", Order: 10, AlwaysLoad: true, Languages: []string{"go"}},
+		{ID: "dart-style", Order: 11, AlwaysLoad: true, Languages: []string{"dart"}},
+		{ID: "code-minimalism", Order: 40, AlwaysLoad: true},
+	}}
+}
+
+func TestSelectionResolve_LanguageAware(t *testing.T) {
+	t.Parallel()
+
+	idx := languageFixtureIndex()
+	testCases := []struct {
+		name      string
+		languages langdetect.Set
+		wantIDs   []string
+	}{
+		{
+			name:      "go-only project selects go-style, not dart-style",
+			languages: langdetect.NewSet(langdetect.Go),
+			wantIDs:   []string{"project-router", "go-style", "code-minimalism"},
+		},
+		{
+			name:      "dart-only project selects dart-style, not go-style",
+			languages: langdetect.NewSet(langdetect.Dart),
+			wantIDs:   []string{"project-router", "dart-style", "code-minimalism"},
+		},
+		{
+			name:      "a go+dart monorepo selects both baselines",
+			languages: langdetect.NewSet(langdetect.Go, langdetect.Dart),
+			wantIDs:   []string{"project-router", "go-style", "dart-style", "code-minimalism"},
+		},
+		{
+			name: "no detected language keeps every " +
+				"baseline skill instead of silently dropping them",
+			languages: langdetect.NewSet(),
+			wantIDs:   []string{"project-router", "go-style", "dart-style", "code-minimalism"},
+		},
+		{
+			name:      "a zero-value set is unknown too, not no-languages",
+			languages: langdetect.Set{},
+			wantIDs:   []string{"project-router", "go-style", "dart-style", "code-minimalism"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			sel := Selection{Languages: testCase.languages}
+			gotIDs, _ := sel.Resolve(idx)
+			if !slices.Equal(gotIDs, testCase.wantIDs) {
+				t.Errorf("ids = %v, want %v", gotIDs, testCase.wantIDs)
 			}
 		})
 	}

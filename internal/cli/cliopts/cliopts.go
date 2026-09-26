@@ -26,6 +26,7 @@ type Options struct {
 	GitHooks            string
 	NoGitHooks          bool
 	TypographicSeverity string
+	Languages           string
 	BranchExtraTypes    string
 
 	KeepSkills bool

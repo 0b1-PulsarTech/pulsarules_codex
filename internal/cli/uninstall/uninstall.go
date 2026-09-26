@@ -11,6 +11,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/langdetect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/target"
 )
 
@@ -42,6 +43,10 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 	printReport(gitReport)
 	if hookErr != nil {
 		errs = append(errs, hookErr)
+	}
+
+	if langErr := removeLanguageConfig(absBase); langErr != nil {
+		errs = append(errs, langErr)
 	}
 
 	if len(errs) > 0 {
@@ -85,6 +90,19 @@ func uninstallTargets(
 		}
 	}
 	return errs
+}
+
+func removeLanguageConfig(absBase string) error {
+	removed, err := langdetect.RemoveConfig(absBase)
+	if err != nil {
+		return err
+	}
+	// Project-wide, not per-target, so it is removed once here rather
+	// than per target; kept, it would let a reinstall trust a stale set.
+	if removed {
+		_, _ = fmt.Println("removed", langdetect.ConfigFileName)
+	}
+	return nil
 }
 
 func resolveTargets(opts *cliopts.Options, reg *target.Registry, base string) ([]string, error) {

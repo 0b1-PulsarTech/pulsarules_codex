@@ -3,12 +3,14 @@ package install
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/langdetect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/hookwire"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/target"
 )
@@ -77,10 +79,16 @@ func newTargetContext(
 	cfg installConfig,
 	deps installCollaborators,
 ) (target.Context, error) {
+	languages, err := resolveLanguages(cfg.absBase, opts.Languages)
+	if err != nil {
+		return target.Context{}, err
+	}
+
 	selection, err := resolveSelection(opts, deps.idx)
 	if err != nil {
 		return target.Context{}, err
 	}
+	selection.Languages = languages
 	ids, pulled := selection.Resolve(deps.idx)
 	printDependencyPulls(pulled)
 	var routerFilter []string
@@ -102,6 +110,20 @@ func newTargetContext(
 		NoHooks:        opts.NoHooks,
 		SettingsFile:   cfg.settingsFile,
 	}, nil
+}
+
+func resolveLanguages(absBase, override string) (langdetect.Set, error) {
+	languages, err := langdetect.Resolve(absBase, override)
+	if err != nil {
+		return langdetect.Set{}, fmt.Errorf("resolve project languages: %w", err)
+	}
+	if languages.Empty() {
+		// An empty set installs every skill, not none.
+		_, _ = fmt.Fprintf(os.Stderr,
+			"warning: no project language detected in %q; installing every skill "+
+				"regardless of language. Pass --languages to say which apply.\n", absBase)
+	}
+	return languages, nil
 }
 
 type installConfig struct {
