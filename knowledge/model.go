@@ -49,6 +49,7 @@ type Skill struct {
 	Triggers         []string `yaml:"triggers,omitempty"`
 	AlwaysLoad       bool     `yaml:"always_load"`
 	Order            int      `yaml:"order"`
+	Languages        []string `yaml:"languages,omitempty"`
 	ComposeRules     []string `yaml:"compose_rules,omitempty"`
 	ComposePatterns  []string `yaml:"compose_patterns,omitempty"`
 	ComposeWorkflows []string `yaml:"compose_workflows,omitempty"`

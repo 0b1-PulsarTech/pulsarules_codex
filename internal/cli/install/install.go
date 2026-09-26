@@ -3,6 +3,7 @@ package install
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/claude"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
 func Run(inj remy.Injector, opts *version.Options) error {
@@ -77,10 +79,16 @@ func newTargetContext(
 	cfg installConfig,
 	deps installCollaborators,
 ) (host.Context, error) {
+	languages, err := resolveLanguages(cfg.absBase, opts.Languages)
+	if err != nil {
+		return host.Context{}, err
+	}
+
 	selection, err := resolveSelection(opts, deps.idx)
 	if err != nil {
 		return host.Context{}, err
 	}
+	selection.Languages = languages
 	ids, pulled := selection.Resolve(deps.idx)
 	printDependencyPulls(pulled)
 	var routerFilter []string
@@ -102,6 +110,20 @@ func newTargetContext(
 		NoHooks:        opts.NoHooks,
 		SettingsFile:   cfg.settingsFile,
 	}, nil
+}
+
+func resolveLanguages(absBase, override string) (detect.Set, error) {
+	languages, err := detect.Resolve(absBase, override)
+	if err != nil {
+		return detect.Set{}, fmt.Errorf("resolve project languages: %w", err)
+	}
+	if languages.Empty() {
+		// An empty set installs every skill, not none.
+		_, _ = fmt.Fprintf(os.Stderr,
+			"warning: no project language detected in %q; installing every skill "+
+				"regardless of language. Pass --languages to say which apply.\n", absBase)
+	}
+	return languages, nil
 }
 
 type installConfig struct {

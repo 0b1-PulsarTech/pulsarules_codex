@@ -1,7 +1,9 @@
 package uninstall
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -13,6 +15,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
 func TestRun_RoundTrip(t *testing.T) {
@@ -92,6 +95,45 @@ func TestRun_KeepSkills(t *testing.T) {
 	settingsPath := filepath.Join(projectDir, ".claude", "settings.json")
 	if _, statErr := os.Stat(settingsPath); !errors.Is(statErr, fs.ErrNotExist) {
 		t.Errorf("expected hook wiring to be removed regardless, stat err = %v", statErr)
+	}
+}
+
+func TestRun_RemovesLanguageConfig(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	if err := os.WriteFile(
+		filepath.Join(projectDir, "go.mod"),
+		[]byte("module x\n"),
+		0o600,
+	); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+
+	installOpts := &version.Options{
+		Command: "install",
+		Project: projectDir,
+		Skills:  "go-style",
+		NoMCP:   true,
+	}
+	if err := install.Run(inj, installOpts); err != nil {
+		t.Fatalf("install.Run: %v", err)
+	}
+	configPath := filepath.Join(projectDir, detect.ConfigFileName)
+	if _, statErr := os.Stat(configPath); statErr != nil {
+		t.Fatalf("install did not write %q: %v", configPath, statErr)
+	}
+
+	uninstallOpts := &version.Options{Command: "uninstall", Project: projectDir}
+	if err := Run(inj, uninstallOpts); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if _, statErr := os.Stat(configPath); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("expected %q to be removed, stat err = %v", configPath, statErr)
 	}
 }
 
@@ -247,5 +289,77 @@ func TestRun_TargetErrorNotDoubled(t *testing.T) {
 	}
 	if strings.Count(err.Error(), `uninstall target "claude"`) > 1 {
 		t.Errorf("error = %q, wraps `uninstall target %q` more than once", err.Error(), "claude")
+	}
+}
+
+func captureStdout(tb testing.TB, fn func()) string {
+	tb.Helper()
+	original := os.Stdout
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		tb.Fatalf("os.Pipe: %v", err)
+	}
+	os.Stdout = writer
+	defer func() { os.Stdout = original }()
+
+	fn()
+
+	if closeErr := writer.Close(); closeErr != nil {
+		tb.Fatalf("close pipe writer: %v", closeErr)
+	}
+	var buf bytes.Buffer
+	if _, copyErr := io.Copy(&buf, reader); copyErr != nil {
+		tb.Fatalf("read pipe: %v", copyErr)
+	}
+	return buf.String()
+}
+
+//nolint:paralleltest // captureStdout swaps os.Stdout.
+func TestRemoveLanguageConfig(t *testing.T) {
+	testCases := []struct {
+		name       string
+		seed       func(tb testing.TB, configPath string)
+		wantStdout string
+		wantErr    bool
+	}{
+		{
+			name: "present file is removed and reported",
+			seed: func(tb testing.TB, configPath string) {
+				tb.Helper()
+				if err := os.WriteFile(configPath, []byte("{}"), 0o600); err != nil {
+					tb.Fatalf("seed config: %v", err)
+				}
+			},
+			wantStdout: "removed " + detect.ConfigFileName + "\n",
+		},
+		{
+			name: "absent file prints nothing",
+			seed: func(testing.TB, string) {},
+		},
+		{
+			name: "unremovable config is an error",
+			seed: func(tb testing.TB, configPath string) {
+				tb.Helper()
+				if err := os.MkdirAll(filepath.Join(configPath, "child"), 0o750); err != nil {
+					tb.Fatalf("seed directory: %v", err)
+				}
+			},
+			wantErr: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			dir := t.TempDir()
+			testCase.seed(t, filepath.Join(dir, detect.ConfigFileName))
+
+			var err error
+			stdout := captureStdout(t, func() { err = removeLanguageConfig(dir) })
+			if (err != nil) != testCase.wantErr {
+				t.Errorf("removeLanguageConfig err = %v, wantErr %v", err, testCase.wantErr)
+			}
+			if stdout != testCase.wantStdout {
+				t.Errorf("stdout = %q, want %q", stdout, testCase.wantStdout)
+			}
+		})
 	}
 }

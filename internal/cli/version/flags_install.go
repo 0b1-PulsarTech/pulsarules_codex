@@ -67,6 +67,13 @@ func bindInstallWiringFlags(fs *flag.FlagSet, opts *Options) {
 		false,
 		"prompt for unset customizations (e.g. the layout) before installing",
 	)
+	fs.StringVar(
+		&opts.Languages,
+		"languages",
+		"",
+		"comma-separated override of the project's language set (e.g. go,dart); "+
+			"persisted, taking precedence over both a prior config and autodetection",
+	)
 	// Git-hook flags are install-time policy baked into the scripts, not render choices.
 	bindGitHookFlags(fs, opts)
 }

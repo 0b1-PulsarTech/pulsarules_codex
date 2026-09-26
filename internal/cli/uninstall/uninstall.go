@@ -12,6 +12,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
 func Run(inj remy.Injector, opts *version.Options) error {
@@ -42,6 +43,10 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	printReport(gitReport)
 	if hookErr != nil {
 		errs = append(errs, hookErr)
+	}
+
+	if langErr := removeLanguageConfig(absBase); langErr != nil {
+		errs = append(errs, langErr)
 	}
 
 	if len(errs) > 0 {
@@ -85,6 +90,19 @@ func uninstallTargets(
 		}
 	}
 	return errs
+}
+
+func removeLanguageConfig(absBase string) error {
+	removed, err := detect.RemoveConfig(absBase)
+	if err != nil {
+		return err
+	}
+	// Project-wide, not per-target, so it is removed once here rather
+	// than per target; kept, it would let a reinstall trust a stale set.
+	if removed {
+		_, _ = fmt.Println("removed", detect.ConfigFileName)
+	}
+	return nil
 }
 
 func resolveTargets(opts *version.Options, reg *host.Registry, base string) ([]string, error) {

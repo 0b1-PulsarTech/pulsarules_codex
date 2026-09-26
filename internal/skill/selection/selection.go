@@ -1,11 +1,15 @@
 package selection
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
+)
 
 type Choice struct {
 	All        bool
 	RouterOnly bool
 	IDs        []string
+	Languages  detect.Set
 }
 
 type DependencyPull struct {
@@ -22,7 +26,7 @@ func (sel Choice) Resolve(idx *knowledge.Index) (ids []string, pulled []Dependen
 	want := make(map[string]bool, len(idx.Skills))
 	for _, skill := range idx.Skills {
 		byID[skill.ID] = skill
-		if skill.AlwaysLoad {
+		if skill.AlwaysLoad && sel.languageEligible(skill) {
 			want[skill.ID] = true
 		}
 	}
@@ -34,6 +38,20 @@ func (sel Choice) Resolve(idx *knowledge.Index) (ids []string, pulled []Dependen
 	}
 
 	return wantedInOrder(idx, want), pulled
+}
+
+func (sel Choice) languageEligible(skill knowledge.Skill) bool {
+	if len(skill.Languages) == 0 || sel.Languages.Empty() {
+		// An empty Languages set means unknown, so every skill stays eligible
+		// and a repo without markers yet never drops its language-tagged baseline.
+		return true
+	}
+	for _, lang := range skill.Languages {
+		if sel.Languages.Has(detect.Language(lang)) {
+			return true
+		}
+	}
+	return false
 }
 
 func markAll(idx *knowledge.Index, want map[string]bool) {

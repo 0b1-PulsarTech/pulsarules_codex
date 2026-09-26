@@ -30,7 +30,13 @@ func TestRun_MalformedMCPJSON_ErrorNotDoubled(t *testing.T) {
 	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
 		t.Fatalf("DoInjections: %v", err)
 	}
-	opts := &version.Options{Command: "install", Project: projectDir, Skills: "go-style"}
+	const forcedLanguage = "go"
+	opts := &version.Options{
+		Command:   "install",
+		Project:   projectDir,
+		Skills:    "go-style",
+		Languages: forcedLanguage,
+	}
 
 	err := Run(inj, opts)
 	if err == nil {
