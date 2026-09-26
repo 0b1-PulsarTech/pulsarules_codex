@@ -84,19 +84,50 @@ func TestRunCommitLint_NoRepository(t *testing.T) {
 	}
 }
 
-func TestRun_UninstallDispatch(t *testing.T) {
+func TestRun_PrefixesInstallAndUninstallErrors(t *testing.T) {
 	t.Parallel()
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
+	testCases := []struct {
+		name       string
+		opts       cliopts.Options
+		wantPrefix string
+	}{
+		{
+			name:       "uninstall without a scope",
+			opts:       cliopts.Options{Command: "uninstall"},
+			wantPrefix: "uninstall: ",
+		},
+		{
+			name: "install with an unknown target",
+			opts: cliopts.Options{
+				Command:   "install",
+				Skills:    "go-style",
+				Languages: "go",
+				Target:    []string{"bogus"},
+			},
+			wantPrefix: "install: invalid --target",
+		},
 	}
-	err := Run(inj, &cliopts.Options{Command: "uninstall"})
-	if err == nil {
-		t.Fatal("expected an error: uninstall requires --global or --project")
-	}
-	if !strings.HasPrefix(err.Error(), "uninstall:") {
-		t.Errorf("error should carry the uninstall: prefix, got %v", err)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+			if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+				t.Fatalf("DoInjections: %v", err)
+			}
+			opts := testCase.opts
+			if opts.Command == "install" {
+				opts.Project = t.TempDir()
+			}
+			err := Run(inj, &opts)
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+			if !strings.HasPrefix(err.Error(), testCase.wantPrefix) {
+				t.Errorf("error = %q, want prefix %q", err.Error(), testCase.wantPrefix)
+			}
+		})
 	}
 }
 
