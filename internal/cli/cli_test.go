@@ -2,9 +2,12 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -317,5 +320,68 @@ func TestDispatchCommands_ParityWithParseArgs(t *testing.T) {
 			"Run dispatches %v, bindCommandFlags binds %v - the two switches diverged",
 			runCommands, parseCommands,
 		)
+	}
+}
+
+func seedGovernanceRepo(t *testing.T, dir, source string) {
+	t.Helper()
+
+	if err := os.WriteFile(filepath.Join(dir, "alpha.go"), []byte(source), 0o600); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	for _, args := range [][]string{{"init", "-q"}, {"add", "alpha.go"}} {
+		cmd := exec.CommandContext(t.Context(), "git", append([]string{"-C", dir}, args...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+}
+
+func outcome(err error) string {
+	if err == nil {
+		return "ok"
+	}
+	if exitErr, isExit := errors.AsType[*ExitError](err); isExit {
+		return fmt.Sprintf("exit %d", exitErr.Code)
+	}
+	return err.Error()
+}
+
+func TestRun_GovernanceReportsFindings(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		scope  string
+		source string
+		want   string
+	}{
+		{name: "clean tree", source: "package alpha\n", want: "ok"},
+		{
+			name: "warnings do not fail the run",
+			source: "package alpha\n\nfunc f() {\n\t// one\n\t// two\n\t// three\n\t// four\n" +
+				"\t_ = 1\n}\n",
+			want: "ok",
+		},
+		{name: "errors exit 1", source: "package alpha\n\nvar _ = \"\u2014\"\n", want: "exit 1"},
+		{name: "invalid scope", scope: "fulll", want: "invalid --scope"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			seedGovernanceRepo(t, dir, testCase.source)
+			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+			if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: dir}); err != nil {
+				t.Fatalf("DoInjections: %v", err)
+			}
+			opts := &cliopts.Options{
+				Command: "governance", ProjectDir: dir, Scope: testCase.scope, AllFiles: true,
+			}
+			if got := outcome(Run(inj, opts)); !strings.HasPrefix(got, testCase.want) {
+				t.Errorf("Run outcome = %q, want prefix %q", got, testCase.want)
+			}
+		})
 	}
 }
