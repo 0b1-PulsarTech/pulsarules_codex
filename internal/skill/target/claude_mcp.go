@@ -6,27 +6,35 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/langdetect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpwire"
 )
 
-func wireClaudeMCP(templates fs.FS, repoDir, skillsDir string, report *Report) error {
-	if !mcpwire.GoplsOnPath() {
-		report.Warn(noGoplsWarning)
-		return nil
-	}
-	if err := mcpwire.WriteMCP(templates, repoDir); err != nil {
+func wireClaudeMCP(ctx Context, skillsDir string, report *Report) error {
+	wired, skipped, err := mcpwire.WriteMCP(ctx.Templates, ctx.Base, ctx.Languages)
+	if err != nil {
 		return fmt.Errorf("write mcp: %w", err)
 	}
-	if err := generateGoplsSkill(templates, skillsDir, report); err != nil {
+	for _, name := range skipped {
+		if name == "gopls" {
+			// The gopls warning in goplsSkill carries richer install guidance.
+			continue
+		}
+		report.Warn("%s not on PATH; skipping its MCP server", name)
+	}
+	if _, err = goplsSkill(ctx, skillsDir, report); err != nil {
 		return fmt.Errorf("generate gopls skill: %w", err)
 	}
-	report.Note(
-		"wired gopls MCP into %s; generated gopls-navigation skill",
-		filepath.Join(repoDir, ".mcp.json"),
-	)
+	if len(wired) > 0 {
+		report.Note(
+			"wired MCP servers (%s) into %s",
+			strings.Join(wired, ", "), filepath.Join(ctx.Base, ".mcp.json"),
+		)
+	}
 	return nil
 }
 
@@ -40,7 +48,7 @@ func unwireClaudeMCP(repoDir string, report *Report) error {
 		return fmt.Errorf("remove mcp: %w", err)
 	}
 	if changed {
-		report.Note("unwired gopls from %s", filepath.Join(repoDir, ".mcp.json"))
+		report.Note("unwired MCP servers from %s", filepath.Join(repoDir, ".mcp.json"))
 	}
 	return nil
 }
@@ -62,4 +70,21 @@ func generateGoplsSkill(templates fs.FS, skillsDir string, report *Report) error
 		return fmt.Errorf("generate gopls skill: %w", genErr)
 	}
 	return nil
+}
+
+func goplsSkill(ctx Context, dest string, report *Report) (generated bool, err error) {
+	switch {
+	case !ctx.Languages.Has(langdetect.Go):
+		// No Go detected: neither the server nor its navigation skill applies.
+		return false, nil
+	case mcpwire.GoplsOnPath():
+		if err = generateGoplsSkill(ctx.Templates, dest, report); err != nil {
+			return false, err
+		}
+		return true, nil
+	default:
+		// A missing tool is a warning, never an install failure.
+		report.Warn(noGoplsWarning)
+		return false, nil
+	}
 }

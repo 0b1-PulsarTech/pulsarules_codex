@@ -55,8 +55,8 @@ func TestUnwireClaudeMCP_NotesWhenGoplsRemoved(t *testing.T) {
 	if err := unwireClaudeMCP(repoDir, &report); err != nil {
 		t.Fatalf("unwireClaudeMCP: %v", err)
 	}
-	if !strings.Contains(strings.Join(report.Notes, "\n"), "unwired gopls") {
-		t.Errorf("Notes = %v, want an 'unwired gopls' entry", report.Notes)
+	if !strings.Contains(strings.Join(report.Notes, "\n"), "unwired MCP servers") {
+		t.Errorf("Notes = %v, want an 'unwired MCP servers' entry", report.Notes)
 	}
 }
 

@@ -48,10 +48,13 @@ func RemoveMCP(repoDir string) (changed bool, err error) {
 
 func removeManagedServers(servers map[string]json.RawMessage) bool {
 	changed := false
-	for _, srv := range managedServers() {
-		if _, present := servers[srv.Name]; present {
-			delete(servers, srv.Name)
-			changed = true
+	// Uninstall cannot know the detected languages, so every managed server is removed.
+	for _, srvs := range managedServersByLanguage() {
+		for _, srv := range srvs {
+			if _, present := servers[srv.Name]; present {
+				delete(servers, srv.Name)
+				changed = true
+			}
 		}
 	}
 	return changed

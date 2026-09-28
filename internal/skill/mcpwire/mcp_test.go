@@ -4,16 +4,27 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/langdetect"
 )
 
+//nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
 func TestWriteMCP_FreshFile(t *testing.T) {
-	t.Parallel()
-
+	fakeOnPath(t, "gopls")
 	repoDir := t.TempDir()
-	if err := WriteMCP(fakeTemplates(), repoDir); err != nil {
+
+	wired, skipped, err := WriteMCP(fakeTemplates(), repoDir, langdetect.NewSet(langdetect.Go))
+	if err != nil {
 		t.Fatalf("WriteMCP: %v", err)
+	}
+	if want := []string{"gopls"}; !slices.Equal(wired, want) {
+		t.Errorf("wired = %v, want %v", wired, want)
+	}
+	if len(skipped) != 0 {
+		t.Errorf("skipped = %v, want none", skipped)
 	}
 	gopls := readServer(t, repoDir, "gopls")
 	if gopls.Command != "gopls" {
@@ -24,9 +35,9 @@ func TestWriteMCP_FreshFile(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
 func TestWriteMCP_PreservesExisting(t *testing.T) {
-	t.Parallel()
-
+	fakeOnPath(t, "gopls")
 	repoDir := t.TempDir()
 	seed := `{
   "someTopLevel": {"keep": true},
@@ -39,10 +50,11 @@ func TestWriteMCP_PreservesExisting(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := WriteMCP(fakeTemplates(), repoDir); err != nil {
+	languages := langdetect.NewSet(langdetect.Go)
+	if _, _, err := WriteMCP(fakeTemplates(), repoDir, languages); err != nil {
 		t.Fatalf("WriteMCP #1: %v", err)
 	}
-	if err := WriteMCP(fakeTemplates(), repoDir); err != nil {
+	if _, _, err := WriteMCP(fakeTemplates(), repoDir, languages); err != nil {
 		t.Fatalf("WriteMCP #2: %v", err)
 	}
 
@@ -70,11 +82,16 @@ func TestWriteMCP_PreservesExisting(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
 func TestWriteMCP_GitignoresMCPJSON(t *testing.T) {
-	t.Parallel()
-
+	fakeOnPath(t, "gopls")
 	repoDir := t.TempDir()
-	if err := WriteMCP(fakeTemplates(), repoDir); err != nil {
+
+	if _, _, err := WriteMCP(
+		fakeTemplates(),
+		repoDir,
+		langdetect.NewSet(langdetect.Go),
+	); err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
 	giContent, err := os.ReadFile(filepath.Join(repoDir, ".gitignore")) //nolint:gosec // temp dir.
@@ -83,6 +100,71 @@ func TestWriteMCP_GitignoresMCPJSON(t *testing.T) {
 	}
 	if !strings.Contains(string(giContent), ".mcp.json") {
 		t.Errorf(".gitignore missing .mcp.json entry, got %q", giContent)
+	}
+}
+
+//nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
+func TestWriteMCP_LanguageAware(t *testing.T) {
+	fakeOnPath(t, "gopls", "dart")
+
+	testCases := []struct {
+		name      string
+		languages langdetect.Set
+		want      []string
+	}{
+		{
+			name:      "dart only wires dart, not gopls",
+			languages: langdetect.NewSet(langdetect.Dart),
+			want:      []string{"dart"},
+		},
+		{
+			name:      "a language with no managed server wires nothing",
+			languages: langdetect.NewSet(langdetect.Rust),
+		},
+		{
+			name:      "go+dart wires both",
+			languages: langdetect.NewSet(langdetect.Go, langdetect.Dart),
+			want:      []string{"dart", "gopls"},
+		},
+	}
+	//nolint:paralleltest // shares the outer fakeOnPath PATH stub; not parallel-safe.
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			repoDir := t.TempDir()
+			wired, _, err := WriteMCP(fakeTemplates(), repoDir, testCase.languages)
+			if err != nil {
+				t.Fatalf("WriteMCP: %v", err)
+			}
+			got := slices.Clone(wired)
+			slices.Sort(got)
+			if !slices.Equal(got, testCase.want) {
+				t.Errorf("wired = %v, want %v", got, testCase.want)
+			}
+			if len(testCase.want) == 0 {
+				if _, statErr := os.Stat(filepath.Join(repoDir, ".mcp.json")); statErr == nil {
+					t.Error("expected no .mcp.json to be written when nothing was wired")
+				}
+			}
+		})
+	}
+}
+
+func TestWriteMCP_SkipsMissingCommand(t *testing.T) {
+	t.Setenv("PATH", "")
+	repoDir := t.TempDir()
+
+	wired, skipped, err := WriteMCP(fakeTemplates(), repoDir, langdetect.NewSet(langdetect.Go))
+	if err != nil {
+		t.Fatalf("WriteMCP: %v", err)
+	}
+	if len(wired) != 0 {
+		t.Errorf("wired = %v, want none", wired)
+	}
+	if want := []string{"gopls"}; !slices.Equal(skipped, want) {
+		t.Errorf("skipped = %v, want %v", skipped, want)
+	}
+	if _, statErr := os.Stat(filepath.Join(repoDir, ".mcp.json")); statErr == nil {
+		t.Error("expected no .mcp.json to be written when everything was skipped")
 	}
 }
 

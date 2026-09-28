@@ -8,7 +8,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/install"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpwire"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/opencodewire"
 )
 
@@ -34,13 +33,12 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 	}
 	gopls := opencodewire.WithoutGopls
 	if !ctx.NoMCP {
-		if mcpwire.GoplsOnPath() {
-			if err := generateGoplsSkill(ctx.Templates, dest, &report); err != nil {
-				return report, err
-			}
+		generated, err := goplsSkill(ctx, dest, &report)
+		if err != nil {
+			return report, err
+		}
+		if generated {
 			gopls = opencodewire.WithGopls
-		} else {
-			report.Warn(noGoplsWarning)
 		}
 	}
 	if err := writeAgents(ctx, &report); err != nil {

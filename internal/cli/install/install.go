@@ -109,6 +109,7 @@ func newTargetContext(
 		NoMCP:          opts.NoMCP,
 		NoHooks:        opts.NoHooks,
 		SettingsFile:   cfg.settingsFile,
+		Languages:      languages,
 	}, nil
 }
 
