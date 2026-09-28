@@ -35,7 +35,7 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 		return report, err
 	}
 	if !ctx.NoMCP {
-		if err := wireClaudeMCP(ctx.Templates, ctx.Base, dest, &report); err != nil {
+		if err := wireClaudeMCP(ctx, dest, &report); err != nil {
 			return report, err
 		}
 	}

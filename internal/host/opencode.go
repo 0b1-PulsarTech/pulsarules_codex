@@ -8,7 +8,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
@@ -35,13 +34,12 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 	}
 	gopls := opencode.WithoutGopls
 	if !ctx.NoMCP {
-		if mcp.GoplsOnPath() {
-			if err := generateGoplsSkill(ctx.Templates, dest, &report); err != nil {
-				return report, err
-			}
+		generated, err := goplsSkill(ctx, dest, &report)
+		if err != nil {
+			return report, err
+		}
+		if generated {
 			gopls = opencode.WithGopls
-		} else {
-			report.Warn(noGoplsWarning)
 		}
 	}
 	if err := writeAgents(ctx, &report); err != nil {

@@ -10,13 +10,19 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
+//nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
 func TestRemoveMCP_DeletesOurFile(t *testing.T) {
-	t.Parallel()
+	fakeOnPath(t, "gopls")
 
 	repoDir := t.TempDir()
-	if err := Write(fakeTemplates(), repoDir); err != nil {
+	if _, _, err := Write(
+		fakeTemplates(),
+		repoDir,
+		detect.NewSet(detect.Go),
+	); err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
 
@@ -74,8 +80,9 @@ func TestRemoveMCP_PreservesUnrelated(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
 func TestRemoveMCP_StripsGitignore(t *testing.T) {
-	t.Parallel()
+	fakeOnPath(t, "gopls")
 
 	repoDir := t.TempDir()
 	seed := `{"mcpServers": {"myserver": {"command": "myserver"}}}`
@@ -84,7 +91,11 @@ func TestRemoveMCP_StripsGitignore(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := Write(fakeTemplates(), repoDir); err != nil {
+	if _, _, err := Write(
+		fakeTemplates(),
+		repoDir,
+		detect.NewSet(detect.Go),
+	); err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
 	giPath := filepath.Join(repoDir, ".gitignore")
@@ -187,11 +198,16 @@ func TestRemoveMCP_ChangedSignal(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
 func TestRemoveMCP_Idempotent(t *testing.T) {
-	t.Parallel()
+	fakeOnPath(t, "gopls")
 
 	repoDir := t.TempDir()
-	if err := Write(fakeTemplates(), repoDir); err != nil {
+	if _, _, err := Write(
+		fakeTemplates(),
+		repoDir,
+		detect.NewSet(detect.Go),
+	); err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
 	if _, err := Remove(repoDir); err != nil {

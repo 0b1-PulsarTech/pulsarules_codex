@@ -4,6 +4,7 @@ import (
 	"io/fs"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/report"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -20,6 +21,7 @@ type Context struct {
 	NoMCP          bool
 	NoHooks        bool
 	SettingsFile   string
+	Languages      detect.Set
 }
 
 type UninstallContext struct {

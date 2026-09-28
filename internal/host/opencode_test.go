@@ -11,7 +11,9 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
 func TestUnwireOpencodeConfig_NoNote(t *testing.T) {
@@ -374,5 +376,43 @@ func TestOpencodeUninstall_UserAuthored(t *testing.T) {
 	}
 	if string(got) != foreign {
 		t.Errorf("AGENTS.md content changed, got %q want %q", got, foreign)
+	}
+}
+
+func TestOpencodeInstall_GoplsLanguages(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name      string
+		languages detect.Set
+		wantGopls bool
+	}{
+		{name: "dart project gets no gopls", languages: detect.NewSet(detect.Dart)},
+		{name: "unknown languages get no gopls", languages: detect.Set{}},
+		{
+			name:      "go project gets gopls when it is on PATH",
+			languages: detect.NewSet(detect.Go),
+			wantGopls: mcp.GoplsOnPath(),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			base := t.TempDir()
+			ctx := newTestContext(t, base, []string{"go-style"})
+			ctx.Languages = testCase.languages
+			ctx.NoMCP = false
+			if _, err := (opencodeTarget{}).Install(ctx); err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+			config, err := os.ReadFile(filepath.Join(base, "opencode.json"))
+			if err != nil {
+				t.Fatalf("read opencode.json: %v", err)
+			}
+			if got := strings.Contains(string(config), `"gopls"`); got != testCase.wantGopls {
+				t.Fatalf("gopls wired = %v, want %v; config = %s", got, testCase.wantGopls, config)
+			}
+		})
 	}
 }
