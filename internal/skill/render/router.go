@@ -33,14 +33,6 @@ func (renderer *Renderer) renderRouter(
 		Order:           filterOrder(idx.Router.Order, keep),
 		ShowTestCallout: keep("integration-tests"),
 	}
-	for _, skill := range idx.SkillsOrdered() {
-		if skill.ID == "project-router" || !keep(skill.ID) {
-			continue
-		}
-		doc.AvailableSkills = append(doc.AvailableSkills, skillSummary{
-			ID: skill.ID, Description: knowledge.FirstSentence(skill.Description),
-		})
-	}
 	var buf bytes.Buffer
 	if err := renderer.base.ExecuteTemplate(&buf, tmplName, doc); err != nil {
 		return "", fmt.Errorf("render router: %w", err)

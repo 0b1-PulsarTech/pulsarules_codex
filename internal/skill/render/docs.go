@@ -26,16 +26,11 @@ type skillDoc struct {
 	ComposeSkills, Linters []string
 }
 
-type skillSummary struct {
-	ID, Description string
-}
-
 type routerDoc struct {
 	ID, Name, Description string
 	Baseline              knowledge.RouterBaseline
 	Dispatch              []knowledge.RouterDispatchRow
 	Order                 []knowledge.RouterOrderStep
-	AvailableSkills       []skillSummary
 	ShowTestCallout       bool
 }
 
