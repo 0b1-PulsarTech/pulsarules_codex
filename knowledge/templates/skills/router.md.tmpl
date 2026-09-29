@@ -77,8 +77,3 @@ non-negotiable floor.
 ## How to load a skill
 Invoke the skill by name. Load all matched skills up front in composition order so their rules are
 in context before you write code; re-open any whose checklist you are verifying at the end.
-
-## Available skills
-{{- range .AvailableSkills}}
-- `{{.ID}}` - {{.Description}}
-{{- end}}
