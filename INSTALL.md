@@ -8,10 +8,12 @@ The installer is a single Go binary, `cmd/pulsarules_cli`. It embeds the knowled
 
 - Go 1.27+ (the module pins `go 1.27`).
 - Optional: [Taskfile](https://taskfile.dev/) for the convenience targets.
-- Optional but recommended: `gopls` on PATH (`go install golang.org/x/tools/gopls@latest`). When
-  present, `install` wires the gopls MCP into the target's `.mcp.json` and (re)generates the
-  `gopls-navigation` skill from `gopls mcp -instructions`. If absent, install prints a warning and
-  skips only that step.
+- Optional but recommended: `gopls` on PATH (`go install golang.org/x/tools/gopls@latest`) for a Go
+  project, and/or `dart` on PATH for a Dart project. `install` detects the project's language(s) (see
+  `--languages` below) and wires only the matching MCP server(s) into the target's `.mcp.json` -
+  `gopls` for Go, the Dart SDK's `dart mcp-server` for Dart - and, when Go is detected, (re)generates
+  the `gopls-navigation` skill from `gopls mcp -instructions`. A missing command for a detected
+  language prints a warning and skips only that server.
 
 ## Build
 
@@ -145,6 +147,10 @@ Additional install flags:
 - `--hooks-scope project|local` (default `project`): wire the hook into `settings.json` (shared) or
   `settings.local.json` (per-machine).
 - `--no-mcp`: skip the `.mcp.json` + gopls-navigation generation.
+- `--languages go,dart`: override the project's detected language set (comma-separated). Persisted
+  to `.pulsarules-languages.json` at the project root, this takes precedence over both a prior
+  config and autodetection on every later run until overridden again; it decides which language-
+  tagged skills join the default baseline and which MCP servers get wired.
 - `--layout PROFILE`: apply a customization profile from `profiles.yaml` (`monorepo` |
   `inner-modules`) that overrides which rules a skill composes (e.g. the `code-placement` layout
   variant). `--interactive` prompts for the layout when it is unset.
@@ -171,15 +177,16 @@ it probes the project for every layout it can detect on disk (a `.claude` dir, a
 `opencode.json`, a root `AGENTS.md`, or a `.cursor/rules` dir) and reverses all of them; pass
 `--target` to narrow it to one layout. It unwires the hook from both `settings.json` and
 `settings.local.json` by default (it cannot recover which `--hooks-scope` install used); pass
-`--hooks-scope` to narrow to one file. It also removes the gopls entry from `.mcp.json`, the
+`--hooks-scope` to narrow to one file. It also removes every managed MCP server entry (`gopls`,
+`dart`, ...) from `.mcp.json`, the
 opencode plugin plus its `opencode.json` wiring, and the git hooks `install` wrote into the
 repository's shared hooks dir. A hook that install backed up is restored from its base backup slot;
 an earlier numbered slot (`.pulsarules-backup.N`) is left in place and named in the output for the
-operator to reconcile by hand. A root `AGENTS.md` is removed only when its content still carries the
-marker `install` wrote it with, so a hand-authored one is never touched. Unless `--keep-skills` is
-given, it also removes every rendered skill and workflow doc `install` wrote (a user's own files
-placed inside a rendered skill's directory are never touched). Every step is idempotent, so running
-it against an install that was never made, or running it twice, is not an error.
+operator to reconcile by hand. A root `AGENTS.md` is removed only when its content still carries the marker
+`install` wrote it with, so a hand-authored one is never touched. Unless `--keep-skills` is given,
+it also removes every rendered skill and workflow doc `install` wrote (a user's own files placed
+inside a rendered skill's directory are never touched). Every step is idempotent, so running it
+against an install that was never made, or running it twice, is not an error.
 
 ```sh
 pulsarules_cli uninstall --project /path/to/project --target claude
