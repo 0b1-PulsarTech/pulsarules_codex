@@ -116,10 +116,12 @@ reads - so it survives moving the repo without hardcoding a host's own variable 
 or log location. An install predating this rename has a hook script with no such exports, so the
 binary silently resolves an empty project dir and the `stop`/`pre-search`/`post-edit` checks go
 quiet; it now warns once on stderr naming the fix (`pulsarules_cli install`) - re-run `install` to
-pick up the new script. When `gopls` is on PATH, install also wires the gopls MCP into `.mcp.json`
-and regenerates the `gopls-navigation` skill (`--no-mcp` to skip). `--target` is repeatable
-(`claude`/`opencode`/`agents`/`cursor`): the opencode target writes `.opencode/skills` and
-`opencode.json`; both opencode and the thin `agents` target write a single `AGENTS.md` at the
+pick up the new script. Install also detects the project's languages (`internal/language/detect`,
+recorded in `.pulsarules-languages.json`; override with `--languages`) and, per detected language
+whose command is on PATH, wires its MCP server into `.mcp.json`: `gopls` for Go (also regenerating
+the `gopls-navigation` skill) and `dart mcp-server` for Dart (`--no-mcp` to skip both). `--target`
+is repeatable (`claude`/`opencode`/`agents`/`cursor`): the opencode target writes `.opencode/skills`
+and `opencode.json`; both opencode and the thin `agents` target write a single `AGENTS.md` at the
 project root (carrying the routing contract) from the same builder, so the file can never diverge
 between them - `agents` writes nothing else, covering the AI coding agents that read only a
 repo-root `AGENTS.md`. The `cursor` target writes `.cursor/rules/<id>.mdc`, one file per skill, each
