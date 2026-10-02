@@ -116,24 +116,23 @@ into a settings file with an idempotent merge (preserves existing permissions /
 wired command locates the installed hook script via `$CLAUDE_PROJECT_DIR` (a Claude Code variable,
 legitimately named there); the script then exports `PULSARULES_PROJECT_DIR`,
 `PULSARULES_SKILLS_DIR`, and `PULSARULES_LOG_PATH` - the only three variables the binary itself
-reads - so it survives moving the repo without hardcoding a host's own variable name, skills layout,
-or log location. An install predating this rename has a hook script with no such exports, so the
-binary silently resolves an empty project dir and the `stop`/`pre-search`/`post-edit` checks go
-quiet; it now warns once on stderr naming the fix (`pulsarules_cli install`) - re-run `install` to
-pick up the new script. Install also detects the project's languages (`internal/langdetect`,
-recorded in `.pulsarules-languages.json`; override with `--languages`) and, per detected language
-whose command is on PATH, wires its MCP server into `.mcp.json`: `gopls` for Go (also regenerating
-the `gopls-navigation` skill) and `dart mcp-server` for Dart (`--no-mcp` to skip both). `--target`
-is repeatable (`claude`/`opencode`/`agents`/`cursor`): the opencode target writes `.opencode/skills`
-and `opencode.json`; both opencode and the thin `agents` target write a single `AGENTS.md` at the
-project root (carrying the routing contract) from the same builder, so the file can never diverge
-between them - `agents` writes nothing else, covering the AI coding agents that read only a
-repo-root `AGENTS.md`. The `cursor` target writes `.cursor/rules/<id>.mdc`, one file per skill, each
-`alwaysApply: false` so Cursor pulls it in on demand from its `description`; only a small pointer
-rule carrying the routing contract is `alwaysApply: true`, since Cursor injects every
-`alwaysApply: true` rule into every request rather than firing once per session like the Claude
-hook. Use `--no-hooks` to skip the Claude hook script and settings wiring (git hooks:
-`--no-git-hooks`), or `--print-hooks` to print the resolved hooks block.
+reads - so it survives moving the repo without hardcoding a host's own variable name, skills
+layout, or log location. A hook script without these exports leaves the project dir empty and the
+`stop`/`pre-search`/`post-edit` checks quiet; the binary warns once on stderr, and re-running
+`pulsarules_cli install` fixes it. Install also detects the project's languages
+(`internal/langdetect`, recorded in `.pulsarules-languages.json`; override with `--languages`) and,
+per detected language whose command is on PATH, wires its MCP server into `.mcp.json`: `gopls` for
+Go (also regenerating the `gopls-navigation` skill) and `dart mcp-server` for Dart (`--no-mcp` to
+skip both). `--target` is repeatable (`claude`/`opencode`/`agents`/`cursor`): the opencode target
+writes `.opencode/skills` and `opencode.json`; both opencode and the thin `agents` target write a
+single `AGENTS.md` at the project root (carrying the routing contract) from the same builder, so
+the file can never diverge between them - `agents` writes nothing else, covering the AI coding
+agents that read only a repo-root `AGENTS.md`. The `cursor` target writes `.cursor/rules/<id>.mdc`,
+one file per skill, each `alwaysApply: false` so Cursor pulls it in on demand from its
+`description`; only a small pointer rule carrying the routing contract is `alwaysApply: true`,
+since Cursor injects every `alwaysApply: true` rule into every request rather than firing once per
+session like the Claude hook. Use `--no-hooks` to skip the Claude hook script and settings wiring
+(git hooks: `--no-git-hooks`), or `--print-hooks` to print the resolved hooks block.
 
 ## Origin
 
