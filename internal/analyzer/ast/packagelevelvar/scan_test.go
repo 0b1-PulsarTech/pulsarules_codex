@@ -119,6 +119,11 @@ func TestBlankSuggestion(t *testing.T) {
 		want string
 	}{
 		{
+			name: "package conversion names the typed spelling",
+			src:  "package p\n\nimport \"x/pkg\"\n\ntype T struct{}\n\nvar _ = pkg.Iface(T{})\n",
+			want: "var _ pkg.Iface = T{}",
+		},
+		{
 			name: "plain call says call it from a constructor",
 			src:  "package p\n\nfunc register() int { return 0 }\n\nvar _ = register()\n",
 			want: "call it from a constructor or main",

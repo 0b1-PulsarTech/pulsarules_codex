@@ -27,17 +27,22 @@ func (analyzer *Analyzer) Stage() core.StageID { return core.StageAST }
 func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	reporter := analyzer.reporter.Resolved(ctx)
 	reported := alreadyReported(ctx)
+	dirScans := scanDirs(ctx)
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, file *ast.File) []core.Finding {
 		dir := dirOf(fc.Path)
 		if fc.Generated || isNonPackageDir(dir) {
 			return nil
 		}
+		siblings := dirScans.dirs[pkgKey{dir: dir, pkg: file.Name.Name}]
 		scan := fileScan{
 			fset:     ctx.ASTCache.FileSet(),
 			path:     fc.Path,
 			file:     file,
 			reporter: reporter,
 			reported: reported,
+			imports:  importNames(file),
+			types:    siblings.types,
+			embeds:   embedGroups(file),
 		}
 		return scan.run()
 	})

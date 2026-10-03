@@ -3,6 +3,7 @@ package packagelevelvar
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
@@ -13,24 +14,41 @@ type fileScan struct {
 	file     *ast.File
 	reporter core.Reporter
 	reported map[site]bool
+	imports  map[string]bool
+	types    map[string]bool
+	embeds   []*ast.CommentGroup
 }
 
 func (scan fileScan) run() []core.Finding {
 	var findings []core.Finding
+	prevEnd := token.NoPos
 	for _, decl := range scan.file.Decls {
 		if gen, ok := decl.(*ast.GenDecl); ok && gen.Tok == token.VAR {
-			findings = append(findings, scan.genFindings(gen)...)
+			findings = append(findings, scan.genFindings(gen, prevEnd)...)
 		}
+		prevEnd = decl.End()
 	}
 	return findings
 }
 
-func (scan fileScan) genFindings(gen *ast.GenDecl) []core.Finding {
+func (scan fileScan) genFindings(gen *ast.GenDecl, declPrevEnd token.Pos) []core.Finding {
 	var findings []core.Finding
+	prevEnd, specPos := declPrevEnd, gen.Pos()
+	if gen.Lparen.IsValid() {
+		prevEnd = gen.Lparen
+	}
 	for _, spec := range gen.Specs {
-		if vs, ok := spec.(*ast.ValueSpec); ok {
+		vs, ok := spec.(*ast.ValueSpec)
+		if !ok {
+			continue
+		}
+		if gen.Lparen.IsValid() {
+			specPos = vs.Pos()
+		}
+		if !scan.hasEmbed(prevEnd, specPos) {
 			findings = append(findings, scan.nameFindings(vs)...)
 		}
+		prevEnd = vs.End()
 	}
 	return findings
 }
@@ -53,7 +71,7 @@ func (scan fileScan) nameFindings(vs *ast.ValueSpec) []core.Finding {
 		}
 		suggestion := "move it into the function or struct that owns it, or make it a const"
 		if isBlank {
-			suggestion = "call it from a constructor or main instead of an init side effect"
+			suggestion = blankSuggestion(vs)
 		}
 		finding := scan.reporter.At(scan.path, line, "package-level var "+name.Name, suggestion)
 		finding.Symbol = name.Name
@@ -62,11 +80,31 @@ func (scan fileScan) nameFindings(vs *ast.ValueSpec) []core.Finding {
 	return findings
 }
 
-func (scan fileScan) isNameExempt(vs *ast.ValueSpec, idx int) bool {
-	if vs.Names[idx].Name != "_" || len(vs.Values) == len(vs.Names) {
-		return false
+func blankSuggestion(vs *ast.ValueSpec) string {
+	const generic = "call it from a constructor or main instead of an init side effect"
+	if len(vs.Values) != 1 {
+		return generic
 	}
-	return hasNamedSibling(vs)
+	call, ok := unparen(vs.Values[0]).(*ast.CallExpr)
+	if !ok || len(call.Args) != 1 {
+		return generic
+	}
+	if _, isSel := unparen(call.Fun).(*ast.SelectorExpr); !isSel {
+		return generic
+	}
+	return generic + "; to assert an interface write `var _ " +
+		types.ExprString(call.Fun) + " = " + types.ExprString(call.Args[0]) + "`"
+}
+
+func (scan fileScan) isNameExempt(vs *ast.ValueSpec, idx int) bool {
+	name := vs.Names[idx].Name
+	switch {
+	case name != "_":
+		return false
+	case len(vs.Values) == len(vs.Names):
+		return scan.isConversionOrComposite(vs.Values[idx])
+	}
+	return scan.isAssertion(vs) || hasNamedSibling(vs)
 }
 
 func hasNamedSibling(vs *ast.ValueSpec) bool {

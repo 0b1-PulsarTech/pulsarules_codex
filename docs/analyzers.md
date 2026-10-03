@@ -44,7 +44,8 @@ each analyzer's own id.
 - Rule: `code-smells` (global state).
 - Flags: every package-level `var` that is not exempt, mutable or not.
 - Params: none.
-- Exemptions: a name already reported by `single-use-declaration` is not reported twice.
+- Exemptions: `//go:embed` variables and `var _ I = T{}` assertions. A name already reported by
+  `single-use-declaration` is not reported twice.
 - Skipped: directories Go ignores (leading `.` or `_`, `testdata`).
 
 ## package-file-count
