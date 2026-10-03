@@ -179,6 +179,7 @@ func TestLookupRule(t *testing.T) {
 	}{
 		{"top-of-file", "effective-go"},
 		{"big-comment", "effective-go"},
+		{"history-narration", "effective-go"},
 		{"doc-comment", "effective-go"},
 		{"body-header-comment", "effective-go"},
 		{"vacuous-doc", "effective-go"},
