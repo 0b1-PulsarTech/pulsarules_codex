@@ -227,7 +227,7 @@ files) instead of a hardcoded per-extension map, so a new skill trigger routes w
 `SessionTracker` (`session.go`) writes per-session marker files under the OS temp dir, keyed by
 event and session ID (an ID that is not a plain token is hashed first), so `OncePerSession` and
 content-hashed `FirstEmission` deduplicate repeat emissions within one session; `Cleanup` scans and
-removes them at `session-end`. `checklist.go`'s `TypedChecklist` and `checks.go`'s
+removes them at `session-end`. The `checklist` subpackage's `TypedChecklist` and `checks.go`'s
 `RunGovernanceCheck` are what the `stop` handler calls into the governance pipeline through: the
 latter opens a `Session` at `analysis.ScopeChanged` and formats findings with `analysis.StyleHook`.
 `drift.go` runs once per session at `session-start`: it compares `knowledge.Fingerprint()` (the
@@ -313,7 +313,7 @@ The governance pipeline (see above) adds its own package set:
 | `internal/execx`                  | `Run` - the one external-process seam (timeout, env, captured stderr, typed `*execx.Error`)          |
 | `internal/report`                 | `Report{Notes,Warnings}` with `Note`/`Warn`/`Merge` - the one install/uninstall report value         |
 | `internal/jsonconfig`             | `Read` - read a JSON config file, tolerating an absent one, shared by every merge/unmerge site       |
-| `internal/hook`                   | `hook.go`/`dispatcher_deps.go` (`Dispatcher`), `router.go` (`Router`), `session.go` (`SessionTracker`), `checklist.go`, `checks.go` (`RunGovernanceCheck`), `install/*` (per-target hook installers) |
+| `internal/hook`                   | `hook.go`/`dispatcher_deps.go` (`Dispatcher`), `router.go` (`Router`), `session.go` (`SessionTracker`), `checks.go` (`RunGovernanceCheck`), `checklist/`, `install/*` (per-target hook installers) |
 | `internal/config`                 | `GovernanceConfig` and its sub-configs, `presets.go`                                                 |
 | `internal/obs`                    | `New` (off-by-default `slog.Logger`), tail-truncating log rotation                                   |
 | `internal/emoji`                  | `Catalog`, `Anchors`/`themes.go`, `data/{catalog,types,themes}.txt`                                  |

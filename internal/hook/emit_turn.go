@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/checklist"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -86,8 +87,8 @@ func (d *Dispatcher) emitStop(event string, session *SessionTracker) (int, error
 		return count, fmt.Errorf("read stop.txt: %w", err)
 	}
 	context := strings.TrimSpace(string(text)) + block
-	if checklist := TypedChecklist(status); checklist != "" {
-		context += "\n" + checklist
+	if bullets := checklist.TypedChecklist(status); bullets != "" {
+		context += "\n" + bullets
 	}
 	context += "\n\nUncommitted changes:\n" + status.String()
 	if !session.FirstEmission(event, context) {
