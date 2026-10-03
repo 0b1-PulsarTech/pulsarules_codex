@@ -1,11 +1,13 @@
 package vcs
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestWorktreeStatus_CleanRepo(t *testing.T) {
@@ -197,5 +199,137 @@ func writeFile(t *testing.T, dir, path, content string) {
 	}
 	if err := os.WriteFile(full, []byte(content), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
+	}
+}
+
+func TestWorktreeStatus_RealPaths(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeAndCommit(t, dir, "initial", map[string]string{
+		"old name.go": "package a\n// one two three four five six seven\n",
+		"src.go":      "package a\n// alpha beta gamma delta epsilon zeta eta\n",
+	})
+	runGitOrFatal(t, dir, "mv", "old name.go", "new name.go")
+	for _, path := range []string{
+		"sp ace.go", "tab\tname.go", "caf\u00e9.go", "quo\"te.go", "a -> b.go",
+		"newpkg/sub/deep.go",
+	} {
+		writeFile(t, dir, path, "package a\n")
+	}
+
+	repo, err := Open(dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	status, err := repo.WorktreeStatus()
+	if err != nil {
+		t.Fatalf("WorktreeStatus: %v", err)
+	}
+	byPath := make(map[string]Change, len(status.Changes))
+	for _, change := range status.Changes {
+		byPath[change.Path] = change
+	}
+
+	testCases := []struct {
+		name        string
+		path        string
+		wantOldPath string
+	}{
+		{"space", "sp ace.go", ""},
+		{"tab", "tab\tname.go", ""},
+		{"non-ascii", "caf\u00e9.go", ""},
+		{"quote", "quo\"te.go", ""},
+		{"arrow", "a -> b.go", ""},
+		{"nested untracked file", "newpkg/sub/deep.go", ""},
+		{"rename with space", "new name.go", "old name.go"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			change, ok := byPath[testCase.path]
+			if !ok {
+				t.Fatalf("path %q missing; got %+v", testCase.path, status.Changes)
+			}
+			if change.OldPath != testCase.wantOldPath {
+				t.Fatalf("OldPath = %q, want %q", change.OldPath, testCase.wantOldPath)
+			}
+		})
+	}
+	if _, ok := byPath["newpkg/"]; ok {
+		t.Fatal("untracked directory listed as one entry")
+	}
+}
+
+func TestWorktreeStatus_StagedCopy(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+	body := "package a\n// alpha beta gamma delta epsilon zeta eta theta iota\n"
+	writeAndCommit(t, dir, "initial", map[string]string{"src.go": body})
+	writeFile(t, dir, "src.go", body+"// edit\n")
+	writeFile(t, dir, "dup.go", body)
+	runGitOrFatal(t, dir, "add", "-A")
+	runGitOrFatal(t, dir, "config", "status.renames", "copies")
+
+	repo, err := Open(dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	status, err := repo.WorktreeStatus()
+	if err != nil {
+		t.Fatalf("WorktreeStatus: %v", err)
+	}
+	found := slices.ContainsFunc(status.Changes, func(change Change) bool {
+		return change.Path == "dup.go" && change.OldPath == "src.go" && change.Staging == 'C'
+	})
+	if !found {
+		t.Fatalf("copy dup.go <- src.go missing; parsed %+v", status.Changes)
+	}
+}
+
+func TestWorktreeStatus_LeavesIndexUntouched(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeAndCommit(t, dir, "initial", map[string]string{"a.go": "package a\n"})
+	later := time.Now().Add(time.Hour)
+	if err := os.Chtimes(filepath.Join(dir, "a.go"), later, later); err != nil {
+		t.Fatalf("chtimes: %v", err)
+	}
+	indexPath := filepath.Join(dir, ".git", "index")
+	before, err := os.Stat(indexPath)
+	if err != nil {
+		t.Fatalf("stat index: %v", err)
+	}
+	beforeBytes, err := os.ReadFile(indexPath)
+	if err != nil {
+		t.Fatalf("read index: %v", err)
+	}
+
+	repo, err := Open(dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	if _, err = repo.WorktreeStatus(); err != nil {
+		t.Fatalf("WorktreeStatus: %v", err)
+	}
+	after, err := os.Stat(indexPath)
+	if err != nil {
+		t.Fatalf("stat index: %v", err)
+	}
+	if !after.ModTime().Equal(before.ModTime()) {
+		t.Fatalf("index mtime %v -> %v, want unchanged", before.ModTime(), after.ModTime())
+	}
+	afterBytes, err := os.ReadFile(indexPath)
+	if err != nil {
+		t.Fatalf("read index: %v", err)
+	}
+	if !bytes.Equal(beforeBytes, afterBytes) {
+		t.Fatalf("index bytes changed (%d -> %d)", len(beforeBytes), len(afterBytes))
 	}
 }
