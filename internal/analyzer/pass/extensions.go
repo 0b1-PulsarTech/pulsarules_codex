@@ -8,6 +8,7 @@ import (
 const ParamExtensions = "extensions"
 
 func DefaultSourceExtensions() []string {
+	// YAML, TOML and XML stay out: flagging config prose trains people to ignore the gate.
 	return []string{
 		".go",
 		".dart",
@@ -15,7 +16,7 @@ func DefaultSourceExtensions() []string {
 		".java", ".kt", ".kts", ".scala", ".swift",
 		".rs", ".c", ".h", ".cpp", ".hpp", ".cs",
 		".py", ".rb", ".php", ".sh", ".bash", ".zsh",
-		".sql", ".proto", ".lua", ".html",
+		".sql", ".proto", ".lua", ".html", ".nix",
 	}
 }
 

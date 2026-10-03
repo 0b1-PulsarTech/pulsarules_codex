@@ -1,6 +1,9 @@
 package pass
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func configuredCtx(analyzerID string, extensions any) *Context {
 	return &Context{Config: &AnalysisConfig{Analyzers: map[string]AnalyzerConfig{
@@ -107,5 +110,13 @@ func TestDefaultSourceExtensions_ClonedEachCall(t *testing.T) {
 	second := DefaultSourceExtensions()
 	if second[0] == "mutated" {
 		t.Fatal("DefaultSourceExtensions must clone, not share, its backing slice")
+	}
+}
+
+func TestDefaultSourceExtensions_IncludesNix(t *testing.T) {
+	t.Parallel()
+
+	if !slices.Contains(DefaultSourceExtensions(), ".nix") {
+		t.Fatal("DefaultSourceExtensions must include .nix, which langspec registers")
 	}
 }

@@ -28,6 +28,7 @@ func TestLookup_Grammar(t *testing.T) {
 		{"clike", "clike", []string{".dart", ".ts", ".java", ".rs"}, "//"},
 		{"hash", "hash", []string{".py", ".rb", ".sh", ".yaml", ".toml"}, "#"},
 		{"sql", "sql", []string{".sql"}, "--"},
+		{"nix", "nix", []string{".nix"}, "#"},
 		{"lua", "lua", []string{".lua"}, "--"},
 		{"markup", "markup", []string{".html"}, "<!--"},
 		{"sfc", "sfc", []string{".svelte", ".vue"}, "//"},
@@ -86,6 +87,22 @@ func TestRegisterAll_RegistersEveryExtension(t *testing.T) {
 	for _, testCase := range testCases {
 		if lang := reg.Lookup(testCase); lang == nil {
 			t.Errorf("registry lookup for %q returned nil after RegisterAll", testCase)
+		}
+	}
+}
+
+func TestRegisterAll_SourceExtensions(t *testing.T) {
+	t.Parallel()
+
+	registry := pass.NewLanguageRegistry()
+	RegisterAll(registry)
+	testCases := []string{".nix", ".sql", ".proto", ".svelte", ".ts", ".dart"}
+	for _, testCase := range testCases {
+		if registry.Lookup(testCase) == nil {
+			t.Errorf("RegisterAll left %q without a language", testCase)
+		}
+		if !slices.Contains(pass.DefaultSourceExtensions(), testCase) {
+			t.Errorf("%q is registered but missing from core.DefaultSourceExtensions", testCase)
 		}
 	}
 }
