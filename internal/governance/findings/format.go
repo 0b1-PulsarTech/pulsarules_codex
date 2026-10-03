@@ -71,7 +71,8 @@ func writeFinding(out *strings.Builder, finding pass.Finding, form layout) {
 	if form.withRule {
 		// The full summary is a ~400 char paragraph that drowns the finding.
 		if summary := strings.TrimSpace(finding.RuleSummary); summary != "" {
-			out.WriteString(form.arrow + "rule: " + knowledge.FirstSentence(summary) + "\n")
+			rule := printable.Line(knowledge.FirstSentence(summary))
+			out.WriteString(form.arrow + "rule: " + rule + "\n")
 		}
 	}
 }

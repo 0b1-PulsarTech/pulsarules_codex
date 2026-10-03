@@ -171,6 +171,16 @@ func TestFormatFindings_Escapes(t *testing.T) {
 			want: "  [error] move: rename a\\n  [error] forged: x\n" +
 				"    \u2192 do\\r\\nthis\n",
 		},
+		{
+			name: "a line break in the rule summary is escaped",
+			findings: []pass.Finding{{
+				AnalyzerID: "move", Severity: pass.SeverityWarning, Message: "m",
+				RuleSummary: "Keep it\r[ERROR] forged\u2028[ERROR] again",
+			}},
+			style: StyleCLI,
+			want: "[WARNING] move: m\n" +
+				"  rule: Keep it\\r[ERROR] forged\\u2028[ERROR] again\n",
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
