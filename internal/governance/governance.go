@@ -1,7 +1,10 @@
 package governance
 
 import (
+	"errors"
+	"fmt"
 	"log/slog"
+	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
@@ -23,7 +26,12 @@ type Session struct {
 	index       *knowledge.Index
 	cfgAnalysis *pass.AnalysisConfig
 	skips       source.SkipSet
+	gitSkips    source.SkipSet
 	logger      *slog.Logger
+}
+
+type fileLister interface {
+	ListFiles() ([]string, error)
 }
 
 func NewSession(
@@ -42,6 +50,7 @@ func NewSession(
 		index:       index,
 		cfgAnalysis: toAnalysisConfig(cfg),
 		skips:       source.NewSkipSet(source.DefaultSkipDirs()),
+		gitSkips:    source.NewSkipSet(source.GitSkipDirs()),
 		logger:      slog.Default(),
 	}
 }
@@ -51,6 +60,7 @@ type Request struct {
 	ChangedFiles  []pass.FileChange
 	GitHistory    []pass.GitCommitEntry
 	StagedRenames []pass.Rename
+	Skips         source.SkipSet
 }
 
 func (s *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Result {
@@ -68,30 +78,39 @@ func (s *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Result
 }
 
 func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Request {
-	d := &Request{GitHistory: s.gitHistory()}
+	d := &Request{GitHistory: s.gitHistory(), Skips: s.skips}
 	if s.repo == nil {
 		return d
 	}
 
 	d.StagedRenames = s.stagedRenames()
 
-	d.Sources = source.NewSourceProvider(s.repo.Root(), s.skips)
-
+	s.attachSources(d)
 	if files == FileSetAll {
 		d.ChangedFiles = walkAllFiles(d.Sources)
 		return d
 	}
 
+	d.ChangedFiles = s.changedFiles(scope, status)
+	return d
+}
+
+func (s *Session) changedFiles(scope Scope, status *vcs.Status) []pass.FileChange {
 	if status == nil {
 		fetched, err := s.repo.WorktreeStatus()
 		if err != nil {
 			s.logger.Warn("worktree status unavailable", slog.Any("error", err))
-			return d
+			return nil
 		}
 		status = &fetched
 	}
-	d.ChangedFiles = changesToFileChanges(status.Changes)
-	return d
+	changes := status.Changes
+	if scope == ScopeCommit {
+		changes = slices.DeleteFunc(slices.Clone(changes), func(change vcs.Change) bool {
+			return !change.Staged
+		})
+	}
+	return changesToFileChanges(changes)
 }
 
 func (s *Session) Load(d *Request) *pass.Context {
@@ -108,7 +127,7 @@ func (s *Session) Load(d *Request) *pass.Context {
 		ChangedFiles:  d.ChangedFiles,
 		GitHistory:    d.GitHistory,
 		StagedRenames: d.StagedRenames,
-		Skips:         s.skips,
+		Skips:         d.Skips,
 	}
 
 	if len(d.ChangedFiles) > 0 && d.Sources != nil {
@@ -116,4 +135,29 @@ func (s *Session) Load(d *Request) *pass.Context {
 		ctx.ASTCache = populateASTCache(d.ChangedFiles, d.Sources)
 	}
 	return ctx
+}
+
+func (s *Session) attachSources(d *Request) {
+	root := s.repo.Root()
+	paths, err := s.listFiles()
+	if err != nil {
+		s.logger.Warn("walking the filesystem instead of git's file list", slog.Any("error", err))
+		d.Sources, d.Skips = source.NewSourceProvider(root, s.skips), s.skips
+		return
+	}
+	base := source.NewSourceProvider(root, s.gitSkips)
+	d.Sources = source.NewListedSourceProvider(base, paths, s.gitSkips)
+	d.Skips = s.gitSkips
+}
+
+func (s *Session) listFiles() ([]string, error) {
+	lister, ok := s.repo.(fileLister)
+	if !ok {
+		return nil, fmt.Errorf("repository cannot list files: %w", errors.ErrUnsupported)
+	}
+	paths, err := lister.ListFiles()
+	if err != nil {
+		return nil, fmt.Errorf("list repository files: %w", err)
+	}
+	return paths, nil
 }
