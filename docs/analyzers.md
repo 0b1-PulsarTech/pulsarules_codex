@@ -35,5 +35,6 @@ each analyzer's own id.
 - Exemptions: text inside string literals is not scanned; the passive "is used to" ("the helper is
   used to build x") is not history and is not flagged.
 - Known limits: multi-line strings, Lua `[[ ]]`, Postgres `E''`, Dart nested interpolation quotes,
-  nested template-literal quotes, Swift `#""`, and C++ `R"()"` can be misread. "the only tool ever
-  used to call x" is flagged; it cannot be told apart from "nobody ever used to call this".
+  nested template-literal quotes, scss `//` inside `<style>`, Swift `#""`, and C++ `R"()"` can be
+  misread. "the only tool ever used to call x" is flagged; it cannot be told apart from
+  "nobody ever used to call this".

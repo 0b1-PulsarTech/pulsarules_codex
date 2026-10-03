@@ -20,6 +20,7 @@ type rules struct {
 	backslash bool
 	rawSingle bool
 	backtick  bool
+	sfc       bool
 	verbatim  bool
 }
 
@@ -42,7 +43,8 @@ func rulesFor(syntax core.CommentSyntax, ext string) rules {
 		return rules{open: openAlways, backslash: true}
 	case slices.Contains(syntax.Line, "//"):
 		return rules{
-			open: openCLike, backslash: true, backtick: true, verbatim: ext == ".cs",
+			open: openCLike, backslash: true, backtick: true, sfc: hasBlock("<!--"),
+			verbatim: ext == ".cs",
 		}
 	}
 	return rules{open: openNone}
