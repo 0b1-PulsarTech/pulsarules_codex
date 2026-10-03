@@ -168,3 +168,23 @@ func TestArchAnalyzers_ReportTheirRegisteredID(t *testing.T) {
 		t.Errorf("ID() = %q, want import-cycle", id)
 	}
 }
+
+func TestImportCycle_LaterFile(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "go.mod", "module example.com/target\n\ngo 1.24\n")
+	writeFile(t, projectDir, "a/a1.go", "package a\n")
+	writeFile(t, projectDir, "a/a2.go", "package a\n\nimport _ \"example.com/target/b\"\n")
+	writeFile(t, projectDir, "b/b.go", "package b\n\nimport _ \"example.com/target/a\"\n")
+	ctx := &pass.Context{ProjectDir: projectDir}
+
+	findings := NewImportCycleAnalyzer().Analyze(ctx)
+
+	if len(findings) != 1 {
+		t.Fatalf(
+			"expected 1 import-cycle finding from the second file of package a, got %v",
+			findings,
+		)
+	}
+}
