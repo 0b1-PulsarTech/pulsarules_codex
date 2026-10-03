@@ -90,10 +90,19 @@ func (d *Dispatcher) emitStop(event string, session *SessionTracker) (int, error
 	if bullets := checklist.Typed(status); bullets != "" {
 		context += "\n" + bullets
 	}
-	context += "\n\nUncommitted changes:\n" + status.String()
+	context += "\n\nUncommitted changes:\n" + cappedStatus(status)
 	if !session.FirstEmission(event, context) {
 		return count, nil
 	}
 	d.emitOutput(event, context)
 	return count, nil
+}
+
+func cappedStatus(status vcs.Status) string {
+	const maxListedChanges = 50
+	if len(status.Changes) <= maxListedChanges {
+		return status.String()
+	}
+	shown := vcs.Status{Changes: status.Changes[:maxListedChanges]}
+	return fmt.Sprintf("%s\n... and %d more", shown.String(), len(status.Changes)-maxListedChanges)
 }
