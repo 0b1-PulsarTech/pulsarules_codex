@@ -343,42 +343,45 @@ func TestDispatchStop(t *testing.T) {
 		}
 	})
 
-	t.Run("dirty tree with a finding emits the block then dedups", func(t *testing.T) {
-		t.Parallel()
-		dir := t.TempDir()
-		gitInit(t, dir)
-		emDash := "\u2014"
-		content := "package x\n\n// bad note " + emDash + " trips typographic-markers\n"
-		if err := os.WriteFile(
-			filepath.Join(dir, "violation.go"),
-			[]byte(content),
-			0o600,
-		); err != nil {
-			t.Fatalf("write: %v", err)
-		}
-		disp, out := dispatchCapture(Deps{ProjectDir: dir})
-		payload := newSessionPayload(t)
-
-		_ = disp.Dispatch("stop", payload)
-		ctx := extractContext(t, out.String())
-		for _, want := range []string{
-			"Governance checks:", "typographic-markers", "go vet", "violation.go",
-		} {
-			if !strings.Contains(ctx, want) {
-				t.Errorf("stop output missing %q:\n%s", want, ctx)
+	t.Run(
+		"real pipeline finding emits then dedups",
+		func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			gitInit(t, dir)
+			emDash := "\u2014"
+			content := "package x\n\n// bad note " + emDash + " trips typographic-markers\n"
+			if err := os.WriteFile(
+				filepath.Join(dir, "violation.go"),
+				[]byte(content),
+				0o600,
+			); err != nil {
+				t.Fatalf("write: %v", err)
 			}
-		}
-		withoutHeading := strings.ReplaceAll(strings.ToLower(ctx), "uncommitted", "")
-		if strings.Contains(withoutHeading, "commit") {
-			t.Errorf("stop output must not instruct a commit:\n%s", ctx)
-		}
+			disp, out := dispatchCapture(Deps{ProjectDir: dir})
+			payload := newSessionPayload(t)
 
-		out.Reset()
-		_ = disp.Dispatch("stop", payload)
-		if strings.TrimSpace(out.String()) != "" {
-			t.Errorf("identical change set should dedup to empty, got %q", out.String())
-		}
-	})
+			_ = disp.Dispatch("stop", payload)
+			ctx := extractContext(t, out.String())
+			for _, want := range []string{
+				"Governance checks:", "typographic-markers", "go vet", "violation.go",
+			} {
+				if !strings.Contains(ctx, want) {
+					t.Errorf("stop output missing %q:\n%s", want, ctx)
+				}
+			}
+			withoutHeading := strings.ReplaceAll(strings.ToLower(ctx), "uncommitted", "")
+			if strings.Contains(withoutHeading, "commit") {
+				t.Errorf("stop output must not instruct a commit:\n%s", ctx)
+			}
+
+			out.Reset()
+			_ = disp.Dispatch("stop", payload)
+			if strings.TrimSpace(out.String()) != "" {
+				t.Errorf("identical change set should dedup to empty, got %q", out.String())
+			}
+		},
+	)
 }
 
 func TestDispatchStop_CorruptIndex(t *testing.T) {
