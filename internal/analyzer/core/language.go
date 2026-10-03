@@ -1,9 +1,11 @@
 package core
 
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
+
 type Language interface {
 	Extensions() []string
 	CommentPrefix() string
-	CommentSyntax() CommentSyntax
+	CommentSyntax() lexical.CommentSyntax
 	IsPackageDeclaration(line string) bool
 }
 

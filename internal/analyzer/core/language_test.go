@@ -1,6 +1,10 @@
 package core
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
+)
 
 func TestLanguageRegistry(t *testing.T) {
 	t.Parallel()
@@ -35,7 +39,7 @@ type mockLang struct {
 func (lang mockLang) Extensions() []string  { return lang.exts }
 func (lang mockLang) CommentPrefix() string { return lang.prefix }
 
-func (lang mockLang) CommentSyntax() CommentSyntax {
-	return CommentSyntax{Line: []string{lang.prefix}}
+func (lang mockLang) CommentSyntax() lexical.CommentSyntax {
+	return lexical.CommentSyntax{Line: []string{lang.prefix}}
 }
 func (lang mockLang) IsPackageDeclaration(string) bool { return false }

@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
 )
 
 type Result struct {
@@ -36,7 +37,7 @@ func isGeneratedFile(path string, known map[string]bool, sources core.SourceProv
 	generated := false
 	if sources != nil {
 		if src, found := sources.Read(path); found {
-			generated = core.IsGeneratedSource(src)
+			generated = lexical.IsGeneratedSource(src)
 		}
 	}
 	known[path] = generated

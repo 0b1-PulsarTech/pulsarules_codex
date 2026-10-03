@@ -5,17 +5,18 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
 )
 
 func scanFile(
 	src []byte,
 	fc core.FileChange,
-	syntax core.CommentSyntax,
+	syntax lexical.CommentSyntax,
 	maxLines int,
 	reporter core.Reporter,
 ) []core.Finding {
 	var findings []core.Finding
-	scanner := core.NewCommentScanner(syntax)
+	scanner := lexical.NewCommentScanner(syntax)
 	blockStart := 0
 	blockLines := 0
 	exempt := false
@@ -42,14 +43,14 @@ func scanFile(
 			flush()
 			continue
 		}
-		if core.IsMachineReadCommentLine(line) && !opensHandBlock(scanner, lines[idx:]) {
+		if lexical.IsMachineReadCommentLine(line) && !opensHandBlock(scanner, lines[idx:]) {
 			continue
 		}
 		if blockLines == 0 {
 			blockStart = idx + 1
 			// A simplification block states the ceiling and an upgrade path, which no
 			// 3-line cap holds.
-			exempt = core.IsGeneratedMarkerLine(line) || core.IsSimplificationMarker(line)
+			exempt = lexical.IsGeneratedMarkerLine(line) || lexical.IsSimplificationMarker(line)
 		}
 		blockLines++
 	}
@@ -58,18 +59,18 @@ func scanFile(
 }
 
 func directiveSpan(
-	scanner *core.CommentScanner,
+	scanner *lexical.CommentScanner,
 	lines []string,
-	syntax core.CommentSyntax,
+	syntax lexical.CommentSyntax,
 ) int {
 	if scanner.InBlock() {
 		return 0
 	}
-	span := core.ExemptHeaderSpan(lines)
+	span := lexical.ExemptHeaderSpan(lines)
 	if span <= 1 {
 		return span
 	}
-	probe := core.NewCommentScanner(syntax)
+	probe := lexical.NewCommentScanner(syntax)
 	// The opener must open a real block in this language, or its text is a string or heredoc.
 	probe.IsCommentLine(lines[0])
 	if !probe.InBlock() {
@@ -84,7 +85,7 @@ func directiveSpan(
 	return span
 }
 
-func opensHandBlock(scanner *core.CommentScanner, lines []string) bool {
+func opensHandBlock(scanner *lexical.CommentScanner, lines []string) bool {
 	if !scanner.InBlock() {
 		return false
 	}
@@ -93,7 +94,7 @@ func opensHandBlock(scanner *core.CommentScanner, lines []string) bool {
 		if rest, ok := strings.CutPrefix(trimmed, delims[0]); ok {
 			_, after, closed := strings.Cut(rest, delims[1])
 			remainder := append([]string{strings.TrimSpace(after)}, lines[1:]...)
-			return closed && core.ExemptHeaderSpan(remainder) == 0
+			return closed && lexical.ExemptHeaderSpan(remainder) == 0
 		}
 	}
 	return false

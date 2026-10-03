@@ -5,6 +5,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -53,7 +54,7 @@ func markGenerated(files []core.FileChange, sources core.SourceProvider) {
 		if !ok {
 			continue
 		}
-		files[i].Generated = core.IsGeneratedSource(src)
+		files[i].Generated = lexical.IsGeneratedSource(src)
 	}
 }
 

@@ -3,7 +3,7 @@ package historynarration
 import (
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
 )
 
 const (
@@ -13,7 +13,7 @@ const (
 )
 
 type scanner struct {
-	syntax   core.CommentSyntax
+	syntax   lexical.CommentSyntax
 	rules    rules
 	closer   string
 	rawOpen  bool
@@ -21,7 +21,7 @@ type scanner struct {
 	segments []segment
 }
 
-func scanSegments(src []byte, syntax core.CommentSyntax, ext string) []segment {
+func scanSegments(src []byte, syntax lexical.CommentSyntax, ext string) []segment {
 	sc := &scanner{syntax: syntax, rules: rulesFor(syntax, ext)}
 	sc.region = regionScript
 	if sc.rules.sfc {

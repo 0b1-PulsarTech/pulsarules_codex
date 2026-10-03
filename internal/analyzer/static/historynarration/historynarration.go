@@ -5,6 +5,7 @@ import (
 	"go/token"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
 )
 
 type Analyzer struct {
@@ -54,7 +55,7 @@ func (analyzer *Analyzer) cachedGo(ctx *core.AnalysisContext, fc core.FileChange
 }
 
 func commentBlocks(
-	src []byte, fc core.FileChange, syntax core.CommentSyntax, parsed parsedGo,
+	src []byte, fc core.FileChange, syntax lexical.CommentSyntax, parsed parsedGo,
 ) [][]segment {
 	if parsed.file != nil {
 		return blocks(fileSegments(parsed.file, parsed.fset))
@@ -68,7 +69,7 @@ func commentBlocks(
 }
 
 func scanFile(
-	src []byte, fc core.FileChange, syntax core.CommentSyntax, reporter core.Reporter,
+	src []byte, fc core.FileChange, syntax lexical.CommentSyntax, reporter core.Reporter,
 	parsed parsedGo,
 ) []core.Finding {
 	var findings []core.Finding

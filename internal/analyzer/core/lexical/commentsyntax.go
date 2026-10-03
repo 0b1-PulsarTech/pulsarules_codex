@@ -1,4 +1,4 @@
-package core
+package lexical
 
 type BlockDelim struct {
 	Open  string

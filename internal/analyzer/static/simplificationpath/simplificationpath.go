@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
 )
 
 type Analyzer struct {
@@ -68,8 +69,8 @@ func scanFile(src []byte, path string, lang core.Language, reporter core.Reporte
 	return findings
 }
 
-func scanComments(lines []string, syntax core.CommentSyntax) []bool {
-	scanner := core.NewCommentScanner(syntax)
+func scanComments(lines []string, syntax lexical.CommentSyntax) []bool {
+	scanner := lexical.NewCommentScanner(syntax)
 	isComment := make([]bool, len(lines))
 	for lineIdx, line := range lines {
 		isComment[lineIdx] = scanner.IsCommentLine(line)
@@ -82,7 +83,7 @@ func isMarkerLine(lang core.Language, line string) bool {
 	if !ok {
 		return false
 	}
-	return strings.HasPrefix(strings.TrimSpace(comment), core.SimplificationMarker)
+	return strings.HasPrefix(strings.TrimSpace(comment), lexical.SimplificationMarker)
 }
 
 func blockNamesUpgradePath(lang core.Language, lines []string) bool {

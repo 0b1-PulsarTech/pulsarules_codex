@@ -3,7 +3,7 @@ package topoffile
 import (
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
 )
 
 func firstContentLine(lines []string) (int, bool) {
@@ -13,10 +13,10 @@ func firstContentLine(lines []string) (int, bool) {
 			pos++
 			continue
 		}
-		if core.IsContentStartLine(line) {
+		if lexical.IsContentStartLine(line) {
 			return 0, false
 		}
-		span := core.ExemptHeaderSpan(lines[pos:])
+		span := lexical.ExemptHeaderSpan(lines[pos:])
 		if span == 0 {
 			return pos, true
 		}

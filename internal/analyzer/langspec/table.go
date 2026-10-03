@@ -1,9 +1,12 @@
 package langspec
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
+)
 
-func cBlockComment() []core.BlockDelim {
-	return []core.BlockDelim{{Open: "/*", Close: "*/"}}
+func cBlockComment() []lexical.BlockDelim {
+	return []lexical.BlockDelim{{Open: "/*", Close: "*/"}}
 }
 
 func specs() []Spec {
@@ -18,7 +21,7 @@ func goSpec() Spec {
 		Name:               "go",
 		Extensions:         []string{".go"},
 		CommentPrefixValue: "//",
-		Syntax:             core.CommentSyntax{Line: []string{"//"}, Blocks: cBlockComment()},
+		Syntax:             lexical.CommentSyntax{Line: []string{"//"}, Blocks: cBlockComment()},
 		PackageDeclaration: isGoPackageDeclaration,
 	}
 }
@@ -33,7 +36,7 @@ func clikeSpec() Spec {
 			".rs", ".c", ".h", ".cpp", ".hpp", ".cs", ".php", ".proto",
 		},
 		CommentPrefixValue: "//",
-		Syntax:             core.CommentSyntax{Line: []string{"//"}, Blocks: cBlockComment()},
+		Syntax:             lexical.CommentSyntax{Line: []string{"//"}, Blocks: cBlockComment()},
 	}
 }
 
@@ -44,7 +47,7 @@ func hashSpec() Spec {
 			".py", ".rb", ".sh", ".bash", ".zsh", ".yaml", ".yml", ".toml",
 		},
 		CommentPrefixValue: "#",
-		Syntax:             core.CommentSyntax{Line: []string{"#"}},
+		Syntax:             lexical.CommentSyntax{Line: []string{"#"}},
 	}
 }
 
@@ -53,7 +56,7 @@ func sqlSpec() Spec {
 		Name:               "sql",
 		Extensions:         []string{".sql"},
 		CommentPrefixValue: "--",
-		Syntax:             core.CommentSyntax{Line: []string{"--"}, Blocks: cBlockComment()},
+		Syntax:             lexical.CommentSyntax{Line: []string{"--"}, Blocks: cBlockComment()},
 		PackageDeclaration: isSQLPackageDeclaration,
 	}
 }
@@ -63,7 +66,7 @@ func nixSpec() Spec {
 		Name:               "nix",
 		Extensions:         []string{".nix"},
 		CommentPrefixValue: "#",
-		Syntax:             core.CommentSyntax{Line: []string{"#"}, Blocks: cBlockComment()},
+		Syntax:             lexical.CommentSyntax{Line: []string{"#"}, Blocks: cBlockComment()},
 	}
 }
 
@@ -72,9 +75,9 @@ func luaSpec() Spec {
 		Name:               "lua",
 		Extensions:         []string{".lua"},
 		CommentPrefixValue: "--",
-		Syntax: core.CommentSyntax{
+		Syntax: lexical.CommentSyntax{
 			Line:   []string{"--"},
-			Blocks: []core.BlockDelim{{Open: "--[[", Close: "]]"}},
+			Blocks: []lexical.BlockDelim{{Open: "--[[", Close: "]]"}},
 		},
 	}
 }
@@ -84,8 +87,8 @@ func markupSpec() Spec {
 		Name:               "markup",
 		Extensions:         []string{".html"},
 		CommentPrefixValue: "<!--",
-		Syntax: core.CommentSyntax{
-			Blocks: []core.BlockDelim{{Open: "<!--", Close: "-->"}},
+		Syntax: lexical.CommentSyntax{
+			Blocks: []lexical.BlockDelim{{Open: "<!--", Close: "-->"}},
 		},
 	}
 }
@@ -95,9 +98,9 @@ func sfcSpec() Spec {
 		Name:               "sfc",
 		Extensions:         []string{".svelte", ".vue"},
 		CommentPrefixValue: "//",
-		Syntax: core.CommentSyntax{
+		Syntax: lexical.CommentSyntax{
 			Line: []string{"//"},
-			Blocks: []core.BlockDelim{
+			Blocks: []lexical.BlockDelim{
 				{Open: "/*", Close: "*/"},
 				{Open: "<!--", Close: "-->"},
 			},
