@@ -16,7 +16,9 @@ func (d *Dispatcher) autoCleanEdited(filePath string) string {
 	}
 	report, err := cleaner.New(root).CleanFile(filePath)
 	if err != nil {
-		d.logger.Debug("auto-clean skipped", "path", filePath, "error", err.Error())
+		if d.logger != nil {
+			d.logger.Debug("auto-clean skipped", "path", filePath, "error", err.Error())
+		}
 		return ""
 	}
 	if !report.Changed {
