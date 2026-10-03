@@ -29,6 +29,7 @@ analyzers:
     - top-of-file
     - big-comment
     - vacuous-doc
+    - doc-comment
     - shadowing
 ---
 
@@ -56,12 +57,12 @@ newest stable the module pins (source repos use `go 1.27`).
    format, a reason the simpler-looking implementation is wrong. Restating a signature, narrating
    control flow, or naming what a well-named function already names does not clear it: delete
    `// ID returns the analyzer's unique identifier` above `func (a *A) ID() string`, it costs a
-   reader a pause and repays nothing. A comment kept on an exported symbol still starts with its
-   name (staticcheck ST1020-ST1022 enforce that, and only that). No `// Package foo` docstrings, and
-   no doc comments on unexported symbols beyond a `// why` that clears the bar. Cap any block at 3
-   lines (`big-comment`) - one sentence of why, not a paragraph; `vacuous-doc` flags a doc comment
-   on a function whose whole body is one return of a literal or field, unless it carries a `why:`
-   marker or a second sentence.
+   reader a pause and repays nothing. No `// Package foo` docstrings, and no doc comment on a func,
+   method, or type, exported or not (`doc-comment`); a `Deprecated:` note (3 lines at most), a
+   directive-only group and a simplification-path marker group are exempt. Cap any block at 3 lines
+   (`big-comment`) - one sentence of why, not a paragraph; `vacuous-doc` flags a doc comment on a
+   function whose whole body is one return of a literal or field, unless it carries a `why:` marker
+   or a second sentence.
 4. A comment that survives explains why, never what; the code already shows what.
 5. Place the surviving why at the line it explains, not in a header above the function. A header
    comment is the last resort, earned only when the reason spans the whole function and no single
@@ -128,8 +129,8 @@ newest stable the module pins (source repos use `go 1.27`).
 - `interface{}` instead of `any`; mixed value/pointer receivers on the same type.
 - `fmt.Println`/`log.Println` in non-test code.
 - A comment written by default. One that restates a signature, narrates control flow, or names what
-  a well-named function already names; a comment block over 3 lines; package docstrings; doc
-  comments on unexported symbols beyond a `// why` that clears the bar.
+  a well-named function already names; a comment block over 3 lines; package docstrings; a doc
+  comment on a func, method, or type.
 - A why parked in a function header when one line inside owns the reason - put it on that line.
 - Re-implementing what the stdlib already does (`slices.Equal`, `min`/`max`, `iter.Seq`).
 - Shadowing an outer `err`/`ctx` with `:=` in an inner scope (govet `shadow`).
@@ -145,9 +146,8 @@ newest stable the module pins (source repos use `go 1.27`).
 - [ ] Formatter run; no manual formatting remains.
 - [ ] Functions under ~80 lines, complexity under ~15; early returns used.
 - [ ] No comment by default; every kept one clears the bar (says what the code cannot). None
-  restates a signature, narrates control flow, or names what the code already names; every kept doc
-  comment begins with its symbol's name and fits in 3 lines; no package docstrings; no doc comments
-  on unexported symbols beyond a `// why` that clears the bar.
+  restates a signature, narrates control flow, or names what the code already names; no doc comment
+  on a func, method, or type; no package docstrings.
 - [ ] Every surviving why sits at the line it explains; a header comment carries only a reason that
   spans the whole function.
 - [ ] Newest fitting stdlib used; no hand-rolled equivalents.

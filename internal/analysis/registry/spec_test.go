@@ -29,3 +29,15 @@ func TestLangSpec_InjectedRegistry(t *testing.T) {
 		t.Fatalf("constructor got %p, want the injected %p", built.langs, langs)
 	}
 }
+
+func TestIDs_NoDuplicates(t *testing.T) {
+	t.Parallel()
+
+	seen := make(map[string]bool)
+	for _, id := range IDs() {
+		if seen[id] {
+			t.Errorf("duplicate analyzer id %q", id)
+		}
+		seen[id] = true
+	}
+}

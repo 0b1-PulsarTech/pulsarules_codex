@@ -58,7 +58,7 @@ func IDs() []string {
 }
 
 func specs() []analyzerSpec {
-	return slices.Concat(coreSpecs(), commitSpecs(), astSpecs(), pipelineSpecs())
+	return slices.Concat(coreSpecs(), commitSpecs(), astSpecs(), styleSpecs(), pipelineSpecs())
 }
 
 func gatedSpec[Built core.Analyzer](id string, gate Gate, ctor func() Built) analyzerSpec {

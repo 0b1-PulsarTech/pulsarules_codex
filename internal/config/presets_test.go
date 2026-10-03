@@ -119,3 +119,25 @@ func TestPresets(t *testing.T) {
 		t.Errorf("first preset should be recommended, got %q", list[0])
 	}
 }
+
+func TestApplyPreset_MinimalDisablesNewAnalyzers(t *testing.T) {
+	t.Parallel()
+
+	testCases := []string{
+		"doc-comment",
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := Defaults()
+			cfg.Preset = PresetMinimal
+			cfg.ApplyPreset()
+
+			if isEnabled(cfg, testCase) {
+				t.Errorf("%s should be disabled in minimal preset", testCase)
+			}
+		})
+	}
+}

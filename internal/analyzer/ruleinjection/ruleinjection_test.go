@@ -163,3 +163,41 @@ func TestAnalyzer_Summaries(t *testing.T) {
 		t.Fatalf("expected RuleID=naming, got %q", ctx.Findings[0].RuleID)
 	}
 }
+
+func TestLookupRule(t *testing.T) {
+	t.Parallel()
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+
+	rules := defaultRuleMap()
+	testCases := []struct {
+		analyzerID string
+		wantRuleID string
+	}{
+		{"top-of-file", "effective-go"},
+		{"big-comment", "effective-go"},
+		{"doc-comment", "effective-go"},
+		{"vacuous-doc", "effective-go"},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.analyzerID, func(t *testing.T) {
+			t.Parallel()
+
+			if got := lookupRule(rules, testCase.analyzerID); got != testCase.wantRuleID {
+				t.Fatalf(
+					"lookupRule(%q) = %q, want %q",
+					testCase.analyzerID,
+					got,
+					testCase.wantRuleID,
+				)
+			}
+			if testCase.wantRuleID != "" && idx.Summary("rules", testCase.wantRuleID) == "" {
+				t.Fatalf("rule %q has no summary in the knowledge base", testCase.wantRuleID)
+			}
+		})
+	}
+}

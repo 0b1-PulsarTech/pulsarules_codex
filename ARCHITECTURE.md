@@ -152,15 +152,15 @@ exactly that), even though it skips the wider `SourceProvider`/AST-cache work th
 `StageRunner` (`pipeline.go`) holds analyzers grouped by `core.StageID` and runs them in stage order
 (`StageContext` through `StageOutput`), skipping an analyzer that is disabled in `AnalysisConfig`.
 `internal/analysis/registry` owns the single ordered table of every analyzer the binary registers
-(`specs()`, concatenated from `coreSpecs`, `commitSpecs`, `astSpecs`, `pipelineSpecs` in run order).
-Each entry declares its id, a builder, and a `registry.Gate`: `GateStatic` (every scope;
-static/AST/commit/rule-injection/output work that stays useful with only a commit message or only
-changed files), `GateArch` (architecture analyzers, which need a source set) or `GateFullOnly`
-(golangci-lint and branch-name, which only a full run pays for). `analysis/boot.go`'s
-`gatesFor(scope)` maps a scope to its gates (`ScopeCommit` = static; `ScopeChanged` = static + arch;
-`ScopeFull` = all three), and `registerForScope` builds the `core.LanguageRegistry` (via
-`langspec.RegisterAll`, the one data-driven registration for every language) once and registers
-`registry.Analyzers(..., gates)`. Adding an analyzer is one entry in the table.
+(`specs()`, concatenated from `coreSpecs`, `commitSpecs`, `astSpecs`, `styleSpecs`, `pipelineSpecs`
+in run order). Each entry declares its id, a builder, and a `registry.Gate`: `GateStatic` (every scope;
+static/AST/commit/rule-injection/output work that stays useful with only a commit message or only changed
+files), `GateArch` (architecture analyzers, which need a source set) or `GateFullOnly` (golangci-lint and
+branch-name, which only a full run pays for). `analysis/boot.go`'s `gatesFor(scope)` maps a scope to its
+gates (`ScopeCommit` = static; `ScopeChanged` = static + arch; `ScopeFull` = all three), and
+`registerForScope` builds the `core.LanguageRegistry` (via `langspec.RegisterAll`, the one data-driven
+registration for every language) once and registers `registry.Analyzers(..., gates)`. Adding an analyzer
+is one entry in the table.
 
 ### internal/analyzer/** families
 
