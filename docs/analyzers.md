@@ -2,7 +2,13 @@
 
 Each analyzer below enforces a rule from `knowledge/standards/rules/`. Params are defaults in code;
 there is no project-config surface for them yet. `extensions` is a common param name, read under
-each analyzer's own id.
+each analyzer's own id. Findings in generated files are dropped unless `--include-generated` is
+passed; the Go AST analyzers documented here (`test-comment`, `doc-comment`, `body-header-comment`,
+`loop-var-i`, `variadic-index`, `too-many-results`, `ungrouped-interfaces`, `package-level-var` and
+`package-file-count`) also skip generated files, even under `--include-generated`.
+`--preset minimal` disables `test-comment`, `single-use-declaration`, `doc-comment`,
+`body-header-comment`, `history-narration`, `loop-var-i`, `variadic-index`, `too-many-results`,
+`ungrouped-interfaces`, `package-level-var` and `package-file-count`.
 
 ## doc-comment
 
@@ -69,6 +75,14 @@ each analyzer's own id.
 - Params: `max_results` (default 3).
 - Remedy: return a named result of an anonymous struct, or a named struct type when reused.
 
+## test-comment
+
+- Rule: `comments`.
+- Flags: a doc comment on a test function or helper in a `_test.go` file, and a comment inside its
+  body, except directive-only groups and an Example's `// Output:`.
+- Params: none.
+- Exemptions: directive-only groups (lint directives); an Example function's `// Output:` comment.
+
 ## ungrouped-interfaces
 
 - Rule: `effective-go`.
@@ -101,3 +115,35 @@ each analyzer's own id.
   ignores.
 - Known limits: `/* */` and `//go:build` on one line; `+build` followed by `/* */`; the OR
   form (space-separated terms) of ignore expressions; two `//go:build` lines.
+
+## top-of-file
+
+- Rule: `comments`.
+- Flags: a file whose first content is a comment. Severity is error for `.go`, warning elsewhere.
+- Params: `extensions` (default `.go`, `.proto`, `.sql`, `.nix`, `.svelte`, `.ts`, `.dart`).
+- Exemptions: required header lines (generated markers, tool directives) are skipped, and a file
+  recognised as generated is exempt in full.
+- Known limits: `/* a */ /* global b */ /* hand` is not counted; a directive line followed by code is
+  skipped without a flush; nolint and global edge forms; a bare `/* eslint` prefix.
+
+## file-size
+
+- Rule: `effective-go`.
+- Flags: a changed source file with more lines than the limit, 180 by default; a test file gets 2.6
+  times that.
+- Params: `max_lines` (default 180), plus `extensions`.
+- Known limits: a `max_lines` at or below 0 (only a Go caller building its own `GovernanceConfig`
+  can set it; no flag or config file does) falls back to the default 180 rather than disabling the
+  check.
+
+## big-comment
+
+- Rule: `comments`.
+- Flags: a hand-written comment block longer than `max_lines`.
+- Params: `max_lines` (default 3), plus `extensions`.
+- Exemptions: machine-read lines (directives, goverter, pulsarules markers) are not counted; a block
+  led by a generated or simplification marker is exempt. Directive spans are gated on the language's
+  own block syntax, and a second directive block is kept out of the hand count.
+- Known limits: the directive edge forms listed under `top-of-file` apply here too. A `max_lines` at
+  or below 0 (only a Go caller building its own `GovernanceConfig` can set it; no flag or config
+  file does) falls back to the default 3 rather than disabling the check.
