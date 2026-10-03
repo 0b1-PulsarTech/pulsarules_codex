@@ -1,17 +1,17 @@
 package banner
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+import (
+	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+)
 
 type Analyzer struct {
-	langs    *pass.LanguageRegistry
-	reporter pass.Reporter
+	langs *pass.LanguageRegistry
 }
 
 func NewAnalyzer(langs *pass.LanguageRegistry) *Analyzer {
-	return &Analyzer{
-		langs:    langs,
-		reporter: pass.NewReporter("top-of-file", pass.SeverityError, pass.CatSyntax),
-	}
+	return &Analyzer{langs: langs}
 }
 
 func (a *Analyzer) ID() string          { return "top-of-file" }
@@ -21,7 +21,6 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if a.langs == nil {
 		return nil
 	}
-	reporter := pass.ResolveReporter(a.reporter, ctx)
 	// Required header lines (core.ExemptHeaderSpan) are skipped so a hand comment after
 	// them is still flagged; a core.IsContentStartLine line ends the scan, and a
 	// core.IsGeneratedMarkerLine line before it exempts the file in full.
@@ -36,15 +35,23 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 		if !ok {
 			return nil
 		}
-		return []pass.Finding{reporter.At(
+		return []pass.Finding{reporterFor(ctx, a.ID(), fc.Extension).At(
 			fc.Path,
 			lineNum,
-			"file starts with a comment before the package declaration",
-			"remove the comment; no package docstrings",
+			"file starts with a comment",
+			"remove the leading comment; no file or package docstrings",
 		)}
 	})
 }
 
 func defaultExtensions() []string {
 	return []string{".go", ".proto", ".sql", ".nix", ".svelte", ".ts", ".dart"}
+}
+
+func reporterFor(ctx *pass.Context, id, extension string) pass.Reporter {
+	severity := pass.SeverityWarning
+	if strings.EqualFold(extension, ".go") {
+		severity = pass.SeverityError
+	}
+	return pass.ResolveReporter(pass.NewReporter(id, severity, pass.CatSyntax), ctx)
 }
