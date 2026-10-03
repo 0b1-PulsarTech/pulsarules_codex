@@ -70,11 +70,15 @@ func (d *Dispatcher) emitSubagentStart() error {
 }
 
 func (d *Dispatcher) emitContext(asset, event string) error {
+	return d.emitContextWithNotice(asset, event, "")
+}
+
+func (d *Dispatcher) emitContextWithNotice(asset, event, notice string) error {
 	text, err := fs.ReadFile(d.templates, asset)
 	if err != nil {
 		return fmt.Errorf("read %s: %w", asset, err)
 	}
-	d.emitOutput(event, strings.TrimSpace(string(text)))
+	d.emitOutput(event, joinNotice(notice, strings.TrimSpace(string(text))))
 	return nil
 }
 

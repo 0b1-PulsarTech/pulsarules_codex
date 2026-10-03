@@ -58,7 +58,7 @@ func (d *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload) error
 		relevant = nil
 	}
 	if len(relevant) == 0 {
-		return d.emitContext("hooks/post-edit.txt", "PostToolUse")
+		return d.emitContextWithNotice("hooks/post-edit.txt", "PostToolUse", notice)
 	}
 
 	text, err := renderPostEditChecklist(d.templates, postEditChecklist{
