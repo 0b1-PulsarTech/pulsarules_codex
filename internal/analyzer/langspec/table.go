@@ -28,6 +28,8 @@ func goSpec() Spec {
 
 func clikeSpec() Spec {
 	return Spec{
+		// Unions Dart/TS/JS/Java/Kt/Scala/Swift/Rust/C/C++/C#/PHP/Proto; excludes
+		// .svelte/.vue, whose embedded markup needs "sfc".
 		Name: "clike",
 		Extensions: []string{
 			".dart",
@@ -42,6 +44,8 @@ func clikeSpec() Spec {
 
 func hashSpec() Spec {
 	return Spec{
+		// Covers Python/Ruby/shell/YAML/TOML. Python's triple-quoted """ is a string
+		// literal, not a comment, so there is no block delimiter.
 		Name: "hash",
 		Extensions: []string{
 			".py", ".rb", ".sh", ".bash", ".zsh", ".yaml", ".yml", ".toml",
@@ -84,6 +88,8 @@ func luaSpec() Spec {
 
 func markupSpec() Spec {
 	return Spec{
+		// HTML only: core.DefaultSourceExtensions excludes .xml (config/data, not source),
+		// so a .xml registration here would be unreachable.
 		Name:               "markup",
 		Extensions:         []string{".html"},
 		CommentPrefixValue: "<!--",
@@ -95,6 +101,8 @@ func markupSpec() Spec {
 
 func sfcSpec() Spec {
 	return Spec{
+		// Svelte/Vue unions clike's script grammar with markup's block: one file mixes
+		// a "//"/"/* */" script with "<!-- -->" markup and CSS.
 		Name:               "sfc",
 		Extensions:         []string{".svelte", ".vue"},
 		CommentPrefixValue: "//",
