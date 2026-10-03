@@ -159,11 +159,11 @@ passed; the Go AST analyzers documented here (`test-comment`, `doc-comment`, `bo
   that strands or picks up a compiled non-Go file.
 - Params: `min_similarity` (default 90).
 - Exemptions: a pure package split (moved files with only package clause and import fixups) passes;
-  any file may change a comment's `old.X` to `new.X` for an exported name the move carried, when the
-  comment follows the import declarations; excepted are directives, comments inside `Example`
-  functions, and `// want` or `ERROR` assertion comments, as test tools check them; a file staying
-  in the old directory may qualify `X` as `new.X` in code; `errors.New` initialisers are inert;
-  `_test.go` files may carry load-time work when their whole directory moves in one commit.
+  any file may change a comment's `core.X` to `sources.X` for an exported name the move carried,
+  when the comment follows the import declarations; excepted are directives, comments inside
+  `Example` functions, and `// want` or `ERROR` assertion comments, as test tools check them; a file
+  staying in the old directory may qualify `X` as `sources.X` in code; `errors.New` initialisers are
+  inert; `_test.go` files may carry load-time work when their whole directory moves in one commit.
 - Known limits: the analyzer reads syntax only, with no type checking.
   - Accepted as pure: renaming a `//go:embed`-matched asset; a same-directory rename that changes
     `init` order; renaming `go.mod`; moving a referenced exported var whose initialiser calls a
