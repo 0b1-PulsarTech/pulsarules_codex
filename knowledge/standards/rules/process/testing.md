@@ -122,11 +122,10 @@ blocked; no real sleep, no `now func()` field):
 
 ```go
 synctest.Test(t, func(t *testing.T) {
-    d := NewDebouncer(clock, quiet) // clock is the bubble's fake
-    d.Push(ctx, "a")
-    d.Push(ctx, "b")
-    synctest.Wait() // let the quiet window elapse in fake time
-    // assert exactly one coalesced fire
+    debouncer := NewDebouncer(clock, quiet)
+    debouncer.Push(ctx, "a")
+    debouncer.Push(ctx, "b")
+    synctest.Wait()
 })
 ```
 {{end}}
