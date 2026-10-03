@@ -161,12 +161,14 @@ $PULSARULES_LOG_LEVEL when unset. Logging is off by default and costs nothing (n
 file is created); it also stays off when $PULSARULES_LOG_PATH is unset (an older
 installed wrapper, or the binary run by hand), rather than guessing a location.
 
-clean sweeps the same file set the governance gate walks and reports every AI
-watermark marker it finds in .go and .md. It reports only, unless --write is
-passed: then it removes the carriers no context can justify (zero-width
-characters, bidi controls, soft hyphens) and folds exotic spaces to a plain
-space. It never rewrites an em dash, an ellipsis, a curly quote, or an invisible
-that may be load-bearing - inside a string literal or a fenced block those are
-data, so they are reported for a human to judge. Files under testdata/ and any
-extension other than .go and .md are left alone.
+clean sweeps the files the governance gate walks that lie inside --project (or
+the working directory) and reports every AI watermark marker it finds in .go
+and .md; outside a git repository it walks the directory without git's file
+list. It reports only, unless --write is passed: then it removes the carriers
+no context can justify (zero-width characters, bidi controls, soft hyphens)
+and folds exotic spaces to a plain space. It never rewrites an em dash, an
+ellipsis, a curly quote, or an invisible that may be load-bearing - inside a
+string literal or a fenced block those are data, so they are reported for a
+human to judge. Files in a testdata/ directory inside the cleaned directory,
+and any extension other than .go and .md, are left alone.
 

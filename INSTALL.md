@@ -242,14 +242,16 @@ pulsarules_cli governance --project . --scope full --all-files
 
 ### Clean
 
-Sweep the same file set the governance gate walks and report every AI watermark marker in `.go` and
-`.md`. Reports only, unless `--write` is passed: then it removes the carriers no context can justify
-(zero-width characters, bidi controls, soft hyphens) and folds exotic spaces to a plain space.
+Sweep the files the governance gate walks that lie inside `--project` (or the working directory) and
+report every AI watermark marker in `.go` and `.md`; outside a git repository it walks the directory
+without git's file list. Reports only, unless `--write` is passed: then it removes the carriers no
+context can justify (zero-width characters, bidi controls, soft hyphens) and folds exotic spaces to
+a plain space.
 
 It never rewrites an em dash, an ellipsis, a curly quote, or an invisible that may be load-bearing -
 inside a string literal or a fenced block those are data, so they are reported for a human to judge.
-Files under `testdata/` and every extension other than `.go` and `.md` are left alone. There is no
-backup: the change shows up in `git diff`.
+Files in a `testdata/` directory inside the cleaned directory, and every extension other than `.go`
+and `.md`, are left alone. There is no backup: the change shows up in `git diff`.
 
 ```sh
 pulsarules_cli clean --project .            # report
