@@ -64,7 +64,7 @@ func TestAnalyzers(t *testing.T) {
 			}
 			ctx := &pass.Context{
 				ProjectDir: dir,
-				Sources: source.NewSourceProvider(
+				Sources: source.NewProvider(
 					dir, source.NewSkipSet(source.DefaultSkipDirs()),
 				),
 				ChangedFiles: []pass.FileChange{
@@ -186,11 +186,8 @@ func markdownContext(t *testing.T, body string) *pass.Context {
 		t.Fatalf("seed: %v", err)
 	}
 	return &pass.Context{
-		ProjectDir: dir,
-		Sources: source.NewSourceProvider(
-			dir,
-			source.NewSkipSet(source.DefaultSkipDirs()),
-		),
+		ProjectDir:   dir,
+		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{{Path: "a.md", Extension: ".md"}},
 	}
 }
@@ -232,7 +229,7 @@ func TestTypographic_MarkdownCodeSkipped(t *testing.T) {
 			}
 			ctx := &pass.Context{
 				ProjectDir: dir,
-				Sources: source.NewSourceProvider(
+				Sources: source.NewProvider(
 					dir,
 					source.NewSkipSet(source.DefaultSkipDirs()),
 				),

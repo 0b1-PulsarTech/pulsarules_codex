@@ -108,7 +108,7 @@ func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
 	write("huge_test.go", 500)
 
 	a := NewAnalyzer()
-	srcs := source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs()))
+	srcs := source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs()))
 
 	testCases := []struct {
 		name   string
@@ -163,7 +163,7 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 	a := NewAnalyzer()
 	got := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "testdata/big.go", Extension: ".go"},
 		},
@@ -185,7 +185,7 @@ func TestAnalyze_ReportsOnADartFileJustLikeGo(t *testing.T) {
 	a := NewAnalyzer()
 	got := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "big.dart", Extension: ".dart"},
 		},

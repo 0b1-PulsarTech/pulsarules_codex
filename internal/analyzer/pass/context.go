@@ -34,7 +34,7 @@ type Context struct {
 	GitHistory    []GitCommitEntry
 	Config        *AnalysisConfig
 	ASTCache      *astcache.Cache
-	Sources       source.SourceProvider
+	Sources       source.Provider
 	Skips         source.SkipSet
 	Findings      []Finding
 }

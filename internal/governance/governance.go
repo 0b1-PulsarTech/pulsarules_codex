@@ -56,7 +56,7 @@ func NewSession(
 }
 
 type Request struct {
-	Sources       source.SourceProvider
+	Sources       source.Provider
 	ChangedFiles  []pass.FileChange
 	GitHistory    []pass.GitCommitEntry
 	StagedRenames []pass.Rename
@@ -146,11 +146,11 @@ func (s *Session) attachSources(d *Request) {
 	paths, err := s.listFiles()
 	if err != nil {
 		s.logger.Warn("walking the filesystem instead of git's file list", slog.Any("error", err))
-		d.Sources, d.Skips = source.NewSourceProvider(root, s.skips), s.skips
+		d.Sources, d.Skips = source.NewProvider(root, s.skips), s.skips
 		return
 	}
-	base := source.NewSourceProvider(root, s.gitSkips)
-	d.Sources = source.NewListedSourceProvider(base, paths, s.gitSkips)
+	base := source.NewProvider(root, s.gitSkips)
+	d.Sources = source.NewListedProvider(base, paths, s.gitSkips)
 	d.Skips = s.gitSkips
 }
 

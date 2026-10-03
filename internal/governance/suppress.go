@@ -34,7 +34,7 @@ func splitGenerated(ctx *pass.Context, findings []pass.Finding) Result {
 	return Result{Findings: kept, SuppressedGenerated: suppressed}
 }
 
-func isGeneratedFile(path string, known map[string]bool, provider source.SourceProvider) bool {
+func isGeneratedFile(path string, known map[string]bool, provider source.Provider) bool {
 	if generated, ok := known[path]; ok {
 		return generated
 	}
@@ -48,7 +48,7 @@ func isGeneratedFile(path string, known map[string]bool, provider source.SourceP
 	return generated
 }
 
-func memoAtlas(path string, atlasDirs map[string]bool, provider source.SourceProvider) bool {
+func memoAtlas(path string, atlasDirs map[string]bool, provider source.Provider) bool {
 	if !strings.EqualFold(filepath.Ext(path), ".sql") {
 		return false
 	}
@@ -61,7 +61,7 @@ func memoAtlas(path string, atlasDirs map[string]bool, provider source.SourcePro
 	return generated
 }
 
-func hasAtlasSum(path string, provider source.SourceProvider) bool {
+func hasAtlasSum(path string, provider source.Provider) bool {
 	if provider == nil || !strings.EqualFold(filepath.Ext(path), ".sql") {
 		return false
 	}

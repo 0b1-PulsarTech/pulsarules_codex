@@ -6,18 +6,18 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
-type fakeSourceProvider struct {
+type fakeProvider struct {
 	contents map[string][]byte
 }
 
-func (p fakeSourceProvider) Read(path string) ([]byte, bool) {
+func (p fakeProvider) Read(path string) ([]byte, bool) {
 	src, ok := p.contents[path]
 	return src, ok
 }
 
-func (p fakeSourceProvider) Walk(func(path string, ext string) bool) {}
+func (p fakeProvider) Walk(func(path string, ext string) bool) {}
 
-var _ source.SourceProvider = fakeSourceProvider{}
+var _ source.Provider = fakeProvider{}
 
 type eachChangedFileTestCase struct {
 	name        string
@@ -40,7 +40,7 @@ func eachChangedFileTestCases() []eachChangedFileTestCase {
 		{
 			name: "testdata fixture is skipped even when eligible",
 			ctx: &Context{
-				Sources: fakeSourceProvider{contents: map[string][]byte{
+				Sources: fakeProvider{contents: map[string][]byte{
 					"pkg/testdata/fixture.go": []byte("package fixture"),
 					"pkg/real.go":             []byte("package pkg"),
 				}},
@@ -54,7 +54,7 @@ func eachChangedFileTestCases() []eachChangedFileTestCase {
 		{
 			name: "ineligible extension is skipped",
 			ctx: &Context{
-				Sources: fakeSourceProvider{contents: map[string][]byte{
+				Sources: fakeProvider{contents: map[string][]byte{
 					"a.go": []byte("package a"),
 					"b.md": []byte("# b"),
 				}},
@@ -68,7 +68,7 @@ func eachChangedFileTestCases() []eachChangedFileTestCase {
 		{
 			name: "a changed file the provider cannot read is skipped",
 			ctx: &Context{
-				Sources: fakeSourceProvider{contents: map[string][]byte{}},
+				Sources: fakeProvider{contents: map[string][]byte{}},
 				ChangedFiles: []FileChange{
 					{Path: "missing.go", Extension: ".go"},
 				},

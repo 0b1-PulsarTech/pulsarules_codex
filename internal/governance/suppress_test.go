@@ -120,10 +120,7 @@ func TestSplitGenerated_UnlistedFiles(t *testing.T) {
 
 	ctx := &pass.Context{
 		ChangedFiles: nil,
-		Sources: source.NewSourceProvider(
-			dir,
-			source.NewSkipSet(source.DefaultSkipDirs()),
-		),
+		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 	}
 	findings := []pass.Finding{
 		{AnalyzerID: "golangci-lint", File: "gen.go"},
@@ -242,7 +239,7 @@ func TestSplitGenerated_AtlasMigrationDir(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			ctx := &pass.Context{Sources: newTestSourceProvider(atlasFixture(t))}
+			ctx := &pass.Context{Sources: newTestProvider(atlasFixture(t))}
 			findings := []pass.Finding{{AnalyzerID: "top-of-file", File: testCase.file}}
 
 			got := splitGenerated(ctx, findings)
@@ -258,7 +255,7 @@ func TestIsGeneratedFile_DirectoryEntryNoPoison(t *testing.T) {
 	t.Parallel()
 
 	known := map[string]bool{}
-	provider := newTestSourceProvider(atlasFixture(t))
+	provider := newTestProvider(atlasFixture(t))
 	if isGeneratedFile("db/migrations/", known, provider) {
 		t.Fatal("a directory entry has no content and is not generated")
 	}

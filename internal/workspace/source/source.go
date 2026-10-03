@@ -8,12 +8,12 @@ import (
 	"sync"
 )
 
-type SourceProvider interface {
+type Provider interface {
 	Read(path string) ([]byte, bool)
 	Walk(fn func(path string, ext string) bool)
 }
 
-type fsSourceProvider struct {
+type fsProvider struct {
 	fsys       fs.FS
 	projectDir string
 	skips      SkipSet
@@ -22,13 +22,13 @@ type fsSourceProvider struct {
 }
 
 //nolint:ireturn // factory constructor returns interface
-func NewSourceProvider(projectDir string, skips SkipSet) SourceProvider {
-	return NewFSSourceProvider(os.DirFS(projectDir), projectDir, skips)
+func NewProvider(projectDir string, skips SkipSet) Provider {
+	return NewFSProvider(os.DirFS(projectDir), projectDir, skips)
 }
 
 //nolint:ireturn // factory constructor returns interface
-func NewFSSourceProvider(fsys fs.FS, projectDir string, skips SkipSet) SourceProvider {
-	return &fsSourceProvider{
+func NewFSProvider(fsys fs.FS, projectDir string, skips SkipSet) Provider {
+	return &fsProvider{
 		fsys:       fsys,
 		projectDir: projectDir,
 		skips:      skips,
@@ -36,7 +36,7 @@ func NewFSSourceProvider(fsys fs.FS, projectDir string, skips SkipSet) SourcePro
 	}
 }
 
-func (p *fsSourceProvider) Read(path string) ([]byte, bool) {
+func (p *fsProvider) Read(path string) ([]byte, bool) {
 	p.mu.RLock()
 	content, ok := p.cache[path]
 	p.mu.RUnlock()
@@ -63,7 +63,7 @@ func (p *fsSourceProvider) Read(path string) ([]byte, bool) {
 	return content, true
 }
 
-func (p *fsSourceProvider) Walk(fn func(path string, ext string) bool) {
+func (p *fsProvider) Walk(fn func(path string, ext string) bool) {
 	_ = fs.WalkDir(p.fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil //nolint:nilerr // WalkDir callback: skip the bad entry, keep walking.

@@ -11,7 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
-func walkAllFiles(provider source.SourceProvider) []pass.FileChange {
+func walkAllFiles(provider source.Provider) []pass.FileChange {
 	var files []pass.FileChange
 	provider.Walk(func(path, ext string) bool {
 		files = append(files, pass.FileChange{
@@ -47,7 +47,7 @@ func toCoreRenames(renames []vcs.Rename) []pass.Rename {
 	return out
 }
 
-func markGenerated(files []pass.FileChange, provider source.SourceProvider) {
+func markGenerated(files []pass.FileChange, provider source.Provider) {
 	if provider == nil {
 		return
 	}
@@ -62,10 +62,7 @@ func markGenerated(files []pass.FileChange, provider source.SourceProvider) {
 	}
 }
 
-func populateASTCache(
-	changedFiles []pass.FileChange,
-	provider source.SourceProvider,
-) *astcache.Cache {
+func populateASTCache(changedFiles []pass.FileChange, provider source.Provider) *astcache.Cache {
 	if len(changedFiles) == 0 {
 		return nil
 	}

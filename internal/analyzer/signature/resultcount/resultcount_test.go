@@ -180,7 +180,7 @@ func buildCtx(t *testing.T, sourceItem string, params pass.ParamSet) *pass.Conte
 	}
 	ctx := &pass.Context{
 		ASTCache: cache,
-		Sources: source.NewFSSourceProvider(fstest.MapFS{
+		Sources: source.NewFSProvider(fstest.MapFS{
 			"foo.go": &fstest.MapFile{Data: []byte(sourceItem)},
 		}, "", source.SkipSet{}),
 		ChangedFiles: []pass.FileChange{{Path: "foo.go", Extension: ".go"}},

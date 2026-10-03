@@ -29,7 +29,7 @@ func TestBigComment_SmallComment(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "small.go", Extension: ".go"},
 		},
@@ -62,7 +62,7 @@ func TestBigComment_LargeBlock(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "big.go", Extension: ".go"},
 		},
@@ -109,7 +109,7 @@ func TestBigComment_Boundary(t *testing.T) {
 			a := NewAnalyzer(langs)
 			findings := a.Analyze(&pass.Context{
 				ProjectDir: dir,
-				Sources: source.NewSourceProvider(
+				Sources: source.NewProvider(
 					dir, source.NewSkipSet(source.DefaultSkipDirs()),
 				),
 				ChangedFiles: []pass.FileChange{
@@ -139,7 +139,7 @@ func TestBigComment_NoLanguage(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "file.txt", Extension: ".txt"},
 		},
@@ -169,7 +169,7 @@ func TestBigComment_GeneratedFileExempt(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "gen.go", Extension: ".go"},
 		},
@@ -204,7 +204,7 @@ func TestBigComment_SkipsTestdata(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "testdata/big.go", Extension: ".go"},
 		},
@@ -236,7 +236,7 @@ func TestBigComment_ReportsOnADartFileJustLikeGo(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "big.dart", Extension: ".dart"},
 		},
@@ -267,7 +267,7 @@ func TestBigComment_SvelteCSSSelector(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "widget.svelte", Extension: ".svelte"},
 		},
@@ -302,7 +302,7 @@ func TestBigComment_MultilineBlock(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "block.go", Extension: ".go"},
 		},
@@ -333,7 +333,7 @@ func TestBigComment_ReportsOnAMultilineHTMLComment(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "block.html", Extension: ".html"},
 		},
@@ -364,7 +364,7 @@ func TestBigComment_ReportsOnAMultilineLuaComment(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&pass.Context{
 		ProjectDir: dir,
-		Sources:    source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{
 			{Path: "block.lua", Extension: ".lua"},
 		},

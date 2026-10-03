@@ -107,7 +107,7 @@ func TestDiscoverPackages(t *testing.T) {
 				writeFile(t, projectDir, name, content)
 			}
 
-			provider := source.NewSourceProvider(projectDir, source.NewSkipSet(nil))
+			provider := source.NewProvider(projectDir, source.NewSkipSet(nil))
 			pkgs := discoverPackages(provider, module)
 
 			got := make(map[string][]string, len(pkgs))
@@ -359,6 +359,6 @@ func writeFile(t *testing.T, dir, path, content string) {
 }
 
 //nolint:ireturn // test helper mirrors the provider factory
-func newSources(dir string) source.SourceProvider {
-	return source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs()))
+func newSources(dir string) source.Provider {
+	return source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs()))
 }

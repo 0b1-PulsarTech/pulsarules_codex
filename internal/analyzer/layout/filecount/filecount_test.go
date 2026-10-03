@@ -47,7 +47,7 @@ func buildCtx(
 		)
 	}
 	ctx := &pass.Context{
-		Sources:      source.NewFSSourceProvider(mapFS, "", source.SkipSet{}),
+		Sources:      source.NewFSProvider(mapFS, "", source.SkipSet{}),
 		ChangedFiles: changedFiles,
 	}
 	if params != nil {

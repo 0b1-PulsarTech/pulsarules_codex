@@ -16,7 +16,7 @@ type pkgImports struct {
 	Imports []string
 }
 
-func discoverPackages(provider source.SourceProvider, modulePath string) map[string]*pkgImports {
+func discoverPackages(provider source.Provider, modulePath string) map[string]*pkgImports {
 	pkgMap := make(map[string]*pkgImports)
 
 	provider.Walk(func(file string, ext string) bool {
