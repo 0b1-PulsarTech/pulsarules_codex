@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 func (d *Dispatcher) emitPreEdit(session *sessionTracker, in hookPayload) error {
@@ -60,7 +62,7 @@ func (d *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload) error
 	}
 
 	text, err := renderPostEditChecklist(d.templates, postEditChecklist{
-		BaseName: filepath.Base(filePath),
+		BaseName: printable.Path(filepath.Base(filePath)),
 		SkillIDs: relevant,
 		IsGo:     strings.ToLower(filepath.Ext(filePath)) == ".go",
 	})

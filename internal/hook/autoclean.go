@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible/cleaner"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 func (d *Dispatcher) autoCleanEdited(filePath string) string {
@@ -27,7 +28,7 @@ func (d *Dispatcher) autoCleanEdited(filePath string) string {
 func cleanNotice(report cleaner.Report) string {
 	var out strings.Builder
 	fmt.Fprintf(&out, "pulsarules removed %d invisible marker(s) from %s:\n",
-		len(report.Acted), report.Path)
+		len(report.Acted), printable.Path(report.Path))
 	for _, acted := range report.Acted {
 		verb := "removed"
 		if acted.Class == invisible.ClassSpace {
