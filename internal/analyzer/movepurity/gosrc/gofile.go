@@ -21,13 +21,18 @@ type (
 		Path string
 	}
 	File struct {
-		Pkg       string
-		preamble  []goToken
-		docStart  int
-		docEnd    int
-		Header    []string
-		Imports   []ImportSpec
-		IsIgnored bool
+		Pkg        string
+		preamble   []goToken
+		docStart   int
+		docEnd     int
+		Header     []string
+		body       []goToken
+		Imports    []ImportSpec
+		unresolved map[int]bool
+		keys       map[int]bool
+		examples   [][2]int
+		TopLevel   map[string]bool
+		IsIgnored  bool
 	}
 )
 
@@ -39,12 +44,18 @@ func Parse(src string) (File, error) {
 	}
 	tokFile := fset.File(file.Package)
 	out := File{
-		Pkg:       file.Name.Name,
-		docStart:  -1,
-		docEnd:    -1,
-		IsIgnored: hasIgnoreConstraint(file),
-		Imports:   importSpecs(file),
+		Pkg:        file.Name.Name,
+		unresolved: map[int]bool{},
+		keys:       map[int]bool{},
+		docStart:   -1,
+		docEnd:     -1,
+		IsIgnored:  hasIgnoreConstraint(file),
+		TopLevel:   map[string]bool{},
+		Imports:    importSpecs(file),
 	}
+	topLevelNames(file, out.TopLevel)
+	out.examples = exampleBodies(file, tokFile)
+	out.indexNames(file, tokFile)
 	if file.Doc != nil {
 		out.docStart, out.docEnd = tokFile.Offset(file.Doc.Pos()), tokFile.Offset(file.Doc.End())
 	}
@@ -55,6 +66,23 @@ func Parse(src string) (File, error) {
 		headerEnd(file, tokFile),
 	)
 	return out, nil
+}
+
+func (goFile *File) indexNames(file *ast.File, tokFile *token.File) {
+	//nolint:staticcheck // Only the parser's name resolution separates local from package-level.
+	for _, ident := range file.Unresolved {
+		goFile.unresolved[tokFile.Offset(ident.Pos())] = true
+	}
+	// Per go.dev/issue/45160, the parser never lists a composite-literal key ident as unresolved.
+	ast.Inspect(file, func(node ast.Node) bool {
+		if pair, ok := node.(*ast.KeyValueExpr); ok {
+			if key, isIdent := pair.Key.(*ast.Ident); isIdent &&
+				key.Obj == nil { //nolint:staticcheck // see above
+				goFile.keys[tokFile.Offset(key.Pos())] = true
+			}
+		}
+		return true
+	})
 }
 
 func importSpecs(file *ast.File) []ImportSpec {
@@ -87,6 +115,7 @@ func (goFile *File) split(src string, pkgOff, nameEnd, bodyOff int) {
 	for {
 		pos, kind, lit := sc.Scan()
 		if kind == token.EOF {
+			goFile.body = dropOptionalSemicolons(goFile.body)
 			return
 		}
 		off := scanFile.Offset(pos)
@@ -106,6 +135,11 @@ func (goFile *File) place(tok goToken, pkgOff, nameEnd, bodyOff int) {
 		if tok.kind == token.COMMENT {
 			goFile.Header = append(goFile.Header, tok.lit)
 		}
+	default:
+		if tok.kind == token.SEMICOLON {
+			tok.lit = ""
+		}
+		goFile.body = append(goFile.body, tok)
 	}
 }
 
@@ -114,4 +148,17 @@ func isImportComment(src string, nameEnd, off int, lit string) bool {
 		return false
 	}
 	return strings.HasPrefix(lit, "// import ") || strings.HasPrefix(lit, "/* import ")
+}
+
+func dropOptionalSemicolons(body []goToken) []goToken {
+	kept := body[:0:0]
+	for idx, tok := range body {
+		// A semicolon before a closer is optional; a reflow moving the closer is no edit.
+		if tok.kind == token.SEMICOLON && idx+1 < len(body) &&
+			(body[idx+1].kind == token.RBRACE || body[idx+1].kind == token.RPAREN) {
+			continue
+		}
+		kept = append(kept, tok)
+	}
+	return kept
 }

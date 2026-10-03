@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 func CollectDecls(src, pkg string, set map[string]bool) {
@@ -78,4 +79,31 @@ func hasIgnoreConstraint(file *ast.File) bool {
 		}
 	}
 	return false
+}
+
+func exampleBodies(file *ast.File, tokFile *token.File) [][2]int {
+	var spans [][2]int
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Recv != nil || fn.Body == nil || !isExampleName(fn.Name.Name) {
+			continue
+		}
+		spans = append(spans, [2]int{tokFile.Offset(fn.Body.Pos()), tokFile.Offset(fn.Body.End())})
+	}
+	return spans
+}
+
+func isExampleName(name string) bool {
+	rest, ok := strings.CutPrefix(name, "Example")
+	if !ok || rest == "" {
+		return ok
+	}
+	first, _ := utf8.DecodeRuneInString(rest)
+	return !unicode.IsLower(first)
+}
+
+func (goFile File) inExample(off int) bool {
+	return slices.ContainsFunc(goFile.examples, func(span [2]int) bool {
+		return off >= span[0] && off < span[1]
+	})
 }
