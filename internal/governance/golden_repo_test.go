@@ -22,10 +22,6 @@ func (g *goldenRepo) WorktreeStatus() (vcs.Status, error) { return vcs.Status{},
 
 func (g *goldenRepo) StagedRenames(int) ([]vcs.Rename, error) { return nil, nil }
 
-func (g *goldenRepo) StagedDiff(string) (string, error) { return "", nil }
-
-func (g *goldenRepo) StagedRenameDiff(string, string, int) (string, error) { return "", nil }
-
 func (g *goldenRepo) HeadBlob(string) (string, error) { return "", nil }
 
 func (g *goldenRepo) StagedBlob(string) (string, error) { return "", nil }

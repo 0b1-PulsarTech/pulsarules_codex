@@ -25,25 +25,6 @@ func (repo *repository) StagedRenames(minScore int) ([]Rename, error) {
 	return parseNameStatus(strings.Split(out, "\x00")), nil
 }
 
-func (repo *repository) StagedDiff(path string) (string, error) {
-	out, err := runGit(repo.root, "diff", "--cached", "--", path)
-	if err != nil {
-		return "", fmt.Errorf("read staged diff for %s: %w", path, err)
-	}
-	return out, nil
-}
-
-func (repo *repository) StagedRenameDiff(oldPath, newPath string, minScore int) (string, error) {
-	out, err := runGit(
-		repo.root, "diff", "--cached", fmt.Sprintf("--find-renames=%d%%", minScore),
-		"--", oldPath, newPath,
-	)
-	if err != nil {
-		return "", fmt.Errorf("read staged rename diff for %s -> %s: %w", oldPath, newPath, err)
-	}
-	return out, nil
-}
-
 func parseNameStatus(fields []string) []Rename {
 	const (
 		nameStatusSingleWidth = 2
