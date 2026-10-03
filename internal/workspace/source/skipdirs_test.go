@@ -84,3 +84,42 @@ func TestDefaultSkipDirs_ClonedEachCall(t *testing.T) {
 		t.Fatal("DefaultSkipDirs must clone, not share, its backing slice")
 	}
 }
+
+func TestGitSkipDirs(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		dir  string
+		want bool
+	}{
+		{"target is real source under git", "target", false},
+		{"build is real source under git", "build", false},
+		{"generated is real source under git", "generated", false},
+		{"dist is real source under git", "dist", false},
+		{"out is real source under git", "out", false},
+		{"coverage is real source under git", "coverage", false},
+		{"vendor stays skipped", "vendor", true},
+		{"node_modules stays skipped", "node_modules", true},
+		{"dot git stays skipped", ".git", true},
+	}
+	set := NewSkipSet(GitSkipDirs())
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := set.SkipsDir(testCase.dir); got != testCase.want {
+				t.Errorf("SkipsDir(%q) = %v, want %v", testCase.dir, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestGitSkipDirs_ClonedEachCall(t *testing.T) {
+	t.Parallel()
+
+	first := GitSkipDirs()
+	first[0] = "mutated"
+	if GitSkipDirs()[0] == "mutated" {
+		t.Fatal("GitSkipDirs must not share a backing slice")
+	}
+}

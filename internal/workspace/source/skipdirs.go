@@ -2,6 +2,7 @@ package source
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -16,6 +17,14 @@ func DefaultSkipDirs() []string {
 		"target", ".gradle",
 		"Pods",
 	}
+}
+
+func GitSkipDirs() []string {
+	// Git ignore already excludes build output; these names only hide real source.
+	generic := []string{"build", "generated", "dist", "out", "coverage", "target"}
+	return slices.DeleteFunc(DefaultSkipDirs(), func(name string) bool {
+		return slices.Contains(generic, name)
+	})
 }
 
 type SkipSet struct {
