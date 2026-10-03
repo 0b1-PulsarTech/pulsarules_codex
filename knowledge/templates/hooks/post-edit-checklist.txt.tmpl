@@ -1,6 +1,6 @@
 Post-edit checklist for {{.BaseName}}:
 {{range .SkillIDs}}  - load skill `{{.}}` and run its Validation checklist
 {{end -}}
-{{if .IsGo}}  - no package docstrings; no doc comments on unexported symbols
+{{if .IsGo}}  - no doc comments; why-only comments of at most three lines
 {{end -}}
 Then verify: go build ./... && go test -race ./...

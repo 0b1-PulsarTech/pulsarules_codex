@@ -101,3 +101,26 @@ func TestDispatchPostEdit_SkillsDirUnset(t *testing.T) {
 		t.Errorf("expected the generic reminder, got %q", ctx)
 	}
 }
+
+func TestRenderPostEditChecklist_GoBullet(t *testing.T) {
+	t.Parallel()
+
+	_, templates, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	got, err := renderPostEditChecklist(templates, postEditChecklist{
+		BaseName: "a.go",
+		SkillIDs: []string{"go-style"},
+		IsGo:     true,
+	})
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if !strings.Contains(got, "no doc comments") {
+		t.Errorf("checklist %q lacks the no-doc-comments bullet", got)
+	}
+	if strings.Contains(got, "docstrings") {
+		t.Errorf("checklist %q still mentions docstrings", got)
+	}
+}
