@@ -22,7 +22,7 @@ func TestTyped(t *testing.T) {
 				{Path: "main.go", Extension: ".go"},
 			},
 			expect: "  - gofmt -l clean; go vet ./... and go test -race ./... green\n" +
-				"  - no package docstrings; no doc comments on unexported symbols\n" +
+				"  - no doc comments; why-only comments of at most three lines\n" +
 				"  - migrations reversible and reviewed; no raw SQL in handlers",
 		},
 		{

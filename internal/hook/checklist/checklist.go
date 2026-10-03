@@ -26,7 +26,7 @@ func bulletsFor(ext string) []string {
 	case ".go":
 		return []string{
 			"gofmt -l clean; go vet ./... and go test -race ./... green",
-			"no package docstrings; no doc comments on unexported symbols",
+			"no doc comments; why-only comments of at most three lines",
 		}
 	case ".md":
 		return []string{"every Markdown file ends with a trailing newline"}
