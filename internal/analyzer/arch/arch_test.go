@@ -70,6 +70,21 @@ func TestImportCycle_DetectsCycle(t *testing.T) {
 	}
 }
 
+func TestImportCycle_MessageOrder(t *testing.T) {
+	t.Parallel()
+
+	projectDir := newBoundaryAndCycleFixture(t)
+	ctx := &pass.Context{ProjectDir: projectDir, Sources: newSources(projectDir)}
+	want := "import cycle: domain \u2192 infra"
+
+	for range 50 {
+		findings := NewImportCycleAnalyzer().Analyze(ctx)
+		if len(findings) != 1 || findings[0].Message != want {
+			t.Fatalf("findings = %v, want one with message %q", findings, want)
+		}
+	}
+}
+
 func TestPackageBoundaryAnalyzer_Analyze_NoGoMod(t *testing.T) {
 	t.Parallel()
 
