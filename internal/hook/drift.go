@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"path/filepath"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -41,6 +42,7 @@ func knowledgeDriftNotice(projectDir string) (string, bool) {
 
 func unverifiableNotice(err error) string {
 	return fmt.Sprintf(
-		"Could not verify whether the installed binary matches the knowledge tree: %v.", err,
+		"Could not verify whether the installed binary matches the knowledge tree: %s.",
+		escape.Line(err.Error()),
 	)
 }
