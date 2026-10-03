@@ -7,7 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 )
 
-func lastFunc(t *testing.T, source string) *ast.FuncDecl {
+func lastFunc(t *testing.T, source string) (*ast.File, *ast.FuncDecl) {
 	t.Helper()
 	cache := astcache.New()
 	file, err := cache.Parse("p_test.go", []byte(source))
@@ -18,7 +18,7 @@ func lastFunc(t *testing.T, source string) *ast.FuncDecl {
 	if !ok {
 		t.Fatalf("last decl is not a func")
 	}
-	return fn
+	return file, fn
 }
 
 func TestTestKind(t *testing.T) {
@@ -30,6 +30,7 @@ func TestTestKind(t *testing.T) {
 		want   string
 	}{
 		{"test", "package p\nimport \"testing\"\nfunc TestA(t *testing.T) {}\n", "Test"},
+		{"TestMain", "package p\nimport \"testing\"\nfunc TestMain(m *testing.M) {}\n", "Test"},
 		{"example", "package p\nfunc ExampleA() {}\n", KindExample},
 		{
 			"method is never runnable",
@@ -42,8 +43,8 @@ func TestTestKind(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			fn := lastFunc(t, testCase.source)
-			if got, _ := Kind(fn); got != testCase.want {
+			file, fn := lastFunc(t, testCase.source)
+			if got, _ := Kind(file, fn); got != testCase.want {
 				t.Fatalf("TestKind = %q, want %q", got, testCase.want)
 			}
 		})

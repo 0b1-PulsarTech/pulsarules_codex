@@ -43,7 +43,7 @@ func checkFile(
 		if !ok {
 			continue
 		}
-		kind, ok := testfunc.Kind(fn)
+		kind, ok := testfunc.Kind(f, fn)
 		if !ok {
 			continue
 		}
