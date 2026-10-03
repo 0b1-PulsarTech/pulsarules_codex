@@ -225,8 +225,9 @@ is rejected by name rather than silently running the full set. `--preset recomme
 selects analyzer thresholds. `--typographic-severity` overrides how hard a `typographic-markers`
 finding lands for this run; `--branch-extra-types` widens the branch-type prefixes `branch-name`
 accepts (see the install flags of the same name for the baked-in variants). Findings in generated
-files (detected by a generator banner such as `// Code generated ... DO NOT EDIT.`) are suppressed
-by default; `--include-generated` turns that off.
+files (detected by a generator banner such as `// Code generated ... DO NOT EDIT.`, or a `.sql` file
+in a directory with an Atlas `atlas.sum`) are suppressed by default; `--include-generated` turns
+that off.
 
 ```sh
 # the exact governance gate task tools:governance / CI run:

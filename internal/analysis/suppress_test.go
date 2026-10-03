@@ -211,3 +211,58 @@ func TestAnalyzeIncludeGeneratedKeepsEverything(t *testing.T) {
 		})
 	}
 }
+
+func atlasFixture(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	writeFileAtDir(t, dir, "db/migrations/atlas.sum", "h1:abc=\n")
+	writeFileAtDir(t, dir, "db/migrations/20260101_init.sql", "CREATE TABLE a (id int);\n")
+	writeFileAtDir(t, dir, "db/migrations/README.md", "notes\n")
+	writeFileAtDir(t, dir, "db/queries/lead.sql", "SELECT 1;\n")
+	writeFileAtDir(t, dir, "db/migrations/sub/x.sql", "SELECT 1;\n")
+	writeFileAtDir(t, dir, "top.sql", "SELECT 1;\n")
+	return dir
+}
+
+func TestSplitGenerated_AtlasMigrationDir(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name           string
+		file           string
+		wantSuppressed int
+	}{
+		{"sql beside atlas.sum is generated", "db/migrations/20260101_init.sql", 1},
+		{"upper-case extension is still sql", "db/migrations/UP.SQL", 1},
+		{"sibling dir without atlas.sum is hand-written", "db/queries/lead.sql", 0},
+		{"root sql without atlas.sum is hand-written", "top.sql", 0},
+		{"nested dir below atlas.sum is hand-written", "db/migrations/sub/x.sql", 0},
+		{"non-sql file in the atlas dir is hand-written", "db/migrations/README.md", 0},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := &core.AnalysisContext{Sources: newTestSourceProvider(atlasFixture(t))}
+			findings := []core.Finding{{AnalyzerID: "top-of-file", File: testCase.file}}
+
+			got := splitGenerated(ctx, findings)
+			if got.SuppressedGenerated != testCase.wantSuppressed {
+				t.Fatalf("SuppressedGenerated = %d, want %d",
+					got.SuppressedGenerated, testCase.wantSuppressed)
+			}
+		})
+	}
+}
+
+func TestIsGeneratedFile_DirectoryEntryNoPoison(t *testing.T) {
+	t.Parallel()
+
+	known := map[string]bool{}
+	provider := newTestSourceProvider(atlasFixture(t))
+	if isGeneratedFile("db/migrations/", known, provider) {
+		t.Fatal("a directory entry has no content and is not generated")
+	}
+	if !isGeneratedFile("db/migrations/20260101_init.sql", known, provider) {
+		t.Fatal("sql beside atlas.sum must stay generated after a directory entry was judged")
+	}
+}

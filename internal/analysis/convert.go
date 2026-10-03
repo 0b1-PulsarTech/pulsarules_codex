@@ -50,12 +50,14 @@ func markGenerated(files []core.FileChange, provider sources.SourceProvider) {
 	if provider == nil {
 		return
 	}
+	atlasDirs := map[string]bool{}
 	for i := range files {
 		src, ok := provider.Read(files[i].Path)
 		if !ok {
 			continue
 		}
-		files[i].Generated = lexical.IsGeneratedSource(src)
+		files[i].Generated = memoAtlas(files[i].Path, atlasDirs, provider) ||
+			lexical.IsGeneratedSource(src)
 	}
 }
 

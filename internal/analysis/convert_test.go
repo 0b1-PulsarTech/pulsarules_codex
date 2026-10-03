@@ -92,3 +92,28 @@ func writeMarkGeneratedFile(t *testing.T, dir, relPath, content string) {
 		t.Fatalf("write %q: %v", full, err)
 	}
 }
+
+func TestMarkGenerated_AtlasMigrationDir(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		path string
+		want bool
+	}{
+		{"sql beside atlas.sum is generated", "db/migrations/20260101_init.sql", true},
+		{"sibling dir without atlas.sum is not", "db/queries/lead.sql", false},
+		{"nested dir below atlas.sum is not", "db/migrations/sub/x.sql", false},
+		{"non-sql file in the atlas dir is not", "db/migrations/README.md", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			files := []core.FileChange{{Path: testCase.path}}
+			markGenerated(files, newTestSourceProvider(atlasFixture(t)))
+			if files[0].Generated != testCase.want {
+				t.Errorf("Generated = %v, want %v", files[0].Generated, testCase.want)
+			}
+		})
+	}
+}

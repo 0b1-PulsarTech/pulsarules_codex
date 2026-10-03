@@ -1,6 +1,9 @@
 package analysis
 
 import (
+	"path/filepath"
+	"strings"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
@@ -35,12 +38,33 @@ func isGeneratedFile(path string, known map[string]bool, provider sources.Source
 	if generated, ok := known[path]; ok {
 		return generated
 	}
-	generated := false
-	if provider != nil {
+	generated := hasAtlasSum(path, provider)
+	if provider != nil && !generated {
 		if src, found := provider.Read(path); found {
 			generated = lexical.IsGeneratedSource(src)
 		}
 	}
 	known[path] = generated
 	return generated
+}
+
+func memoAtlas(path string, atlasDirs map[string]bool, provider sources.SourceProvider) bool {
+	if !strings.EqualFold(filepath.Ext(path), ".sql") {
+		return false
+	}
+	dir := filepath.ToSlash(filepath.Dir(path))
+	generated, ok := atlasDirs[dir]
+	if !ok {
+		generated = hasAtlasSum(path, provider)
+		atlasDirs[dir] = generated
+	}
+	return generated
+}
+
+func hasAtlasSum(path string, provider sources.SourceProvider) bool {
+	if provider == nil || !strings.EqualFold(filepath.Ext(path), ".sql") {
+		return false
+	}
+	_, found := provider.Read(filepath.ToSlash(filepath.Join(filepath.Dir(path), "atlas.sum")))
+	return found
 }
