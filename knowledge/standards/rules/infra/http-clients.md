@@ -47,7 +47,8 @@ Applies to: any outbound HTTP call.
 
 {{define "forbidden"}}
 - `http.DefaultClient`; `http.Get`.
-- A package-level `var client = &http.Client{...}` outside the HTTP gateway.
+- A package-level `var client = &http.Client{...}`; the gateway holds its client as a
+  constructor-built field.
 - HTTP calls outside the fetcher/provider/discord-facade layer (the gateway's own users).
 - TLS skip-verify. Ever. If a cert chain fails, fix the chain.
 - Hiding retries inside the gateway (policy stays visible at the caller).

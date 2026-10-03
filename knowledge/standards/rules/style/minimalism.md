@@ -6,6 +6,7 @@ tags:
     - minimalism
 analyzers:
     - simplification-path
+    - single-use-declaration
 ---
 
 # Code minimalism (function scope)
@@ -60,6 +61,8 @@ See `minimalism-go` for the Go-concrete tooling (gopls, golangci-lint) that inst
 11. Delete dead code rather than keeping it: no unused functions, variables, or parameters, and no
     commented-out code blocks - version control remembers the old version, so a commented-out block
     is just noise. Never silence a linter/analyzer finding just to keep a symbol nothing calls.
+12. A package-level const or var referenced from only one function is declared inside that function
+    (`single-use-declaration`).
 {{end}}
 
 {{define "forbidden"}}
@@ -88,4 +91,5 @@ See `minimalism-go` for the Go-concrete tooling (gopls, golangci-lint) that inst
 - [ ] No mandated pattern (facade/outbox/transaction/DI) skipped to "simplify"; no packages collapsed.
 - [ ] Non-trivial logic has one runnable check.
 - [ ] No dead code: no unused symbols/parameters, no commented-out blocks.
+- [ ] No package-level const or var used by only one function (`single-use-declaration`).
 {{end}}

@@ -48,6 +48,8 @@ a crossed boundary. The concrete directory map is language- and layout-specific:
 4. A deployable's entry point (the composition root that wires dependencies and starts the process)
    stays separate from its library code; a library never starts a server, opens a listening socket,
    or runs a migration on its own - only the deployable's entry point does.
+5. Keep a source directory small - a Go package, a Dart `lib/src/<capability>/` directory: past 10
+   non-test source files, split it by responsibility into subdirectories.
 {{end}}
 
 {{define "forbidden"}}

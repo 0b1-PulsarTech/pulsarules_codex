@@ -9,6 +9,7 @@ linters:
     - revive
 analyzers:
     - complexity
+    - variadic-index
 ---
 
 # Function arguments - no flags, no output args, small arity
@@ -35,7 +36,10 @@ boundaries) and [[module-boundaries]] (a parameter struct removes positional con
    a pointer purely to write a result back through it. Constructing-and-returning beats filling-in.
 3. Keep arity small (revive `argument-limit`, target ~3). Beyond that, collapse related parameters
    into a named parameter struct so call sites read by field name, not position (see [[types]]).
-4. A command function returns only `error`; do not add a parameter to also smuggle a status out (see
+4. Never index a variadic parameter positionally (`opts[0]`, `names[1]`; `variadic-index`): a position
+   inside `...T` is an unnamed flag in disguise. Either take a named options struct, or range over
+   the values and treat each alike.
+5. A command function returns only `error`; do not add a parameter to also smuggle a status out (see
    [[command-query-separation]]).
 {{end}}
 
@@ -43,6 +47,7 @@ boundaries) and [[module-boundaries]] (a parameter struct removes positional con
 - A boolean/flag parameter that selects behavior (split the function or take a typed enum).
 - An output/mutating-pointer argument used to return a result.
 - A long positional parameter list where a named struct belongs.
+- Positional indexing of a variadic parameter (`opts[0]`).
 - Bare `true`/`false` literals at a call site standing in for a mode.
 {{end}}
 
@@ -50,5 +55,6 @@ boundaries) and [[module-boundaries]] (a parameter struct removes positional con
 - [ ] No behavior-selecting boolean/flag parameters; variants are split functions or a typed enum.
 - [ ] No output arguments; functions mutate the receiver or return the value.
 - [ ] Argument count small (revive `argument-limit`); larger sets use a named parameter struct.
+- [ ] No variadic parameter is indexed positionally; it is ranged over or replaced by an options struct.
 - [ ] No bare `true`/`false` mode literals at call sites.
 {{end}}

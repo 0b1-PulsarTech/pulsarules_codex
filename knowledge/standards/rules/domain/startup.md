@@ -7,8 +7,6 @@ tags:
     - startup
 dependencies:
     - dependency-injection
-linters:
-    - gochecknoglobals
 ---
 
 # Startup
@@ -33,16 +31,16 @@ Applies to: process startup and package initialization.
 3. Connections, goroutines, file reads, and env access happen inside `main()` -> the bootstrap
    composition root, never at package load.
 4. `slog.SetDefault` is set in `main()` before any other call.
-5. No package-level mutable state used as caches, clients, or config (`gochecknoglobals`).
-   Singletons live in the injector (see [[dependency-injection]]). Where state is unavoidable,
-   encapsulate it behind a constructor/accessor so every write site is discoverable, and prefer
-   returning a new value over mutating shared data in place (see [[concurrency]]).
+5. No caches, clients, config, or mutexes at package level; the package-var policy and its
+   exemptions live in [[code-smells]] (`package-level-var`). Singletons live in the injector (see
+   [[dependency-injection]]); shared state is a field of a constructor-built value, passed
+   explicitly (see [[concurrency]]).
 {{end}}
 
 {{define "forbidden"}}
 - Side effects in `init()` or at package load.
 - `panic` outside `main()` (libraries return errors).
-- Package-level mutable state / globals.
+- A package-level var outside the [[code-smells]] exempt set (`package-level-var`), mutable or not.
 - Connections, goroutines, or env reads at package load.
 - `slog.SetDefault` in a library.
 {{end}}
@@ -50,6 +48,6 @@ Applies to: process startup and package initialization.
 {{define "validation"}}
 - [ ] No side effects at import/`init()`; only driver registration / interface assertions.
 - [ ] `main()` is thin and follows the config -> DB -> migrations -> injector -> server sequence.
-- [ ] No package-level mutable state; singletons in the injector.
+- [ ] No package-level var outside the [[code-smells]] exempt set; singletons in the injector.
 - [ ] `slog.SetDefault` set in `main()` first.
 {{end}}

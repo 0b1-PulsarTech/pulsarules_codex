@@ -1,7 +1,7 @@
 ---
 id: code-smells
 name: Code smells and their remedies
-description: A catalog of code smells that must trigger a refactor before new behavior is layered on, each tied to its Go remedy and the linter that catches it - long function, deep nesting, high complexity, duplication, repeated switch, long parameter list, primitive obsession, global mutable state, dead code.
+description: A catalog of code smells that must trigger a refactor before new behavior is layered on, each tied to its Go remedy and the linter that catches it - long function, deep nesting, high complexity, duplication, repeated switch, long parameter list, primitive obsession, global state, dead code.
 tags:
     - go
     - refactoring
@@ -16,6 +16,7 @@ analyzers:
     - control-flow
     - complexity
     - golangci-lint
+    - package-level-var
 ---
 
 # Code smells and their remedies
@@ -47,7 +48,7 @@ Applies to: spotting and clearing structural debt. This rule is the trigger list
 | Long parameter list  | many positional args                   | a named parameter struct (see [[flag-arguments]], [[types]]) | review              |
 | Dead code            | unused symbol / commented-out block    | delete it; VCS remembers (see [[minimalism]])                | `unused`, `unparam` |
 | Primitive obsession  | bare `string`/`int` for a domain value | a domain type with a validating constructor (see [[types]])  | review              |
-| Global mutable state | a mutable package-level `var`          | encapsulate behind a constructor/accessor (see [[startup]])  | `gochecknoglobals`  |
+| Global state         | a package-level `var`                  | make it a field of a constructor-built value or a parameter (see [[startup]]) | `package-level-var` |
 {{end}}
 
 {{define "must"}}
@@ -57,9 +58,15 @@ Applies to: spotting and clearing structural debt. This rule is the trigger list
    clump becomes a named struct; primitive obsession becomes a domain type.
 3. Clear the smell as a behavior-preserving step before the feature change that exposed it, in its own
    commit (see [[refactoring]]).
-4. Review-only smells (feature envy, repeated switch, primitive obsession) still count - name them
-   in review even though no linter fires.
-5. After the local fixes land, zoom out one level: sweep every file and function the change touched
+4. No package-level `var`, mutable or not (`package-level-var`). Exempt: sentinel errors
+   (`errors.New` and `fmt.Errorf` values, typed `Err*` sentinels (a composite literal of an
+   `*Err`/`*Error` type, or an `Err`-named constructor call), re-exported `pkg.Err*` sentinels
+   `var ErrX = pkg.ErrY`), `//go:embed` variables, compile-time assertions `var _ I = T{}`, and test
+   variables assigned in `TestMain`. Everything else becomes a constructor-built value, a field, or
+   a parameter.
+5. Review-only smells (feature envy, repeated switch, primitive obsession) still count - name them in
+   review even though no linter fires.
+6. After the local fixes land, zoom out one level: sweep every file and function the change touched
    for the same shape - naming, error wrapping, guard-clause style - so the diff reads as one hand.
 {{end}}
 
@@ -67,6 +74,8 @@ Applies to: spotting and clearing structural debt. This rule is the trigger list
 - Suppressing a smell's linter with `//nolint` instead of refactoring.
 - Layering new behavior on top of a known smell instead of clearing it first.
 - "Fixing" a duplicated/repeated-switch smell by copying the patch into every site.
+- A package-level `var`, mutable or not, that is not a sentinel error (or re-export), an embed, an
+  assertion, or a `TestMain` test var.
 - Mixing a behavior change into a refactor commit.
 - A "refactor" with no tests green between steps.
 - Stopping at the first fixed spot while sibling files/functions the change touched keep the old
@@ -75,6 +84,8 @@ Applies to: spotting and clearing structural debt. This rule is the trigger list
 
 {{define "validation"}}
 - [ ] Smell-linter failures (`funlen`/`cyclop`/`nestif`/`dupl`/`goconst`) cleared, not suppressed.
+- [ ] No package-level `var` outside the exempt set (sentinel error, `//go:embed`, `var _ I = T{}`,
+  `TestMain` test var).
 - [ ] The catalog's remedy applied (Strategy/Registry, named struct, domain type, extraction).
 - [ ] The refactor landed before the feature, in its own commit.
 - [ ] One hat per edit; no refactor mixed with a behavior change.

@@ -29,6 +29,9 @@ analyzers:
     - vacuous-doc
     - doc-comment
     - body-header-comment
+    - too-many-results
+    - ungrouped-interfaces
+    - package-level-var
     - shadowing
 ---
 
@@ -42,7 +45,7 @@ newest stable the module pins (source repos use `go 1.27`).
 
 {{define "when"}}
 - Writing or editing any `.go` file.
-- Choosing control-flow shape or stdlib idioms.
+- Choosing control-flow shape, result and interface shape, or stdlib idioms.
 - Deciding whether to hand-roll something the stdlib already provides.
 {{end}}
 
@@ -108,6 +111,15 @@ newest stable the module pins (source repos use `go 1.27`).
     `Outer{Base: Base{ID: 7}}` (Go 1.27). A literal may not name both a promoted field and the
     embedded field that promotes it, and the form does not reach through a pointer-embedded type,
     which still needs the embedded value spelled out.
+18. A function returns at most 3 results (`too-many-results`; it also flags func types, interface
+    methods and func literals). Past that, return a named result of an anonymous struct, or a named
+    struct type when reused, so call sites read by field name and a new value is not a signature
+    break.
+19. Two or more interfaces declared in one file go in a single `type ( ... )` block
+    (`ungrouped-interfaces`), so the file's contracts read as one list.
+20. No package-level var outside the exempt set: sentinel errors and re-exported `pkg.Err*`
+    sentinels (`var ErrX = pkg.ErrY`), `//go:embed`, `var _ I = (*T)(nil)` / `T{}` assertions,
+    TestMain-assigned test vars (`package-level-var`; policy: [[code-smells]]).
 {{end}}
 
 {{define "forbidden"}}
@@ -115,6 +127,9 @@ newest stable the module pins (source repos use `go 1.27`).
 - Deep nesting where an early return flattens it; functions past ~80 lines without justification.
 - `interface{}` instead of `any`; mixed value/pointer receivers on the same type.
 - `fmt.Println`/`log.Println` in non-test code.
+- A function with 4 or more results; return a named result of an anonymous struct, or a named struct
+  type when reused.
+- Two or more interface declarations in one file outside a single `type ( ... )` block.
 - Re-implementing what the stdlib already does (`slices.Equal`, `min`/`max`, `iter.Seq`).
 - Shadowing an outer `err`/`ctx` with `:=` in an inner scope (govet `shadow`).
 - Spelling out generic type parameters the compiler can infer from an argument.
@@ -128,6 +143,7 @@ newest stable the module pins (source repos use `go 1.27`).
 {{define "validation"}}
 - [ ] Formatter run; no manual formatting remains.
 - [ ] Functions under ~80 lines, complexity under ~15; early returns used.
+- [ ] No function returns more than 3 results; no file declares 2+ interfaces outside one `type ( )` block.
 - [ ] Newest fitting stdlib used; no hand-rolled equivalents.
 - [ ] Receivers consistent; `any` used; zero values safe.
 - [ ] Interface-implementing types carry `var _ Iface = (*impl)(nil)`.
