@@ -22,13 +22,13 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return "pprof-labels" }
-func (a *Analyzer) Stage() core.StageID { return core.StageAST }
+func (analyzer *Analyzer) ID() string          { return "pprof-labels" }
+func (analyzer *Analyzer) Stage() core.StageID { return core.StageAST }
 
-func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	reporter := a.reporter.Resolved(ctx)
-	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
+func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	reporter := analyzer.reporter.Resolved(ctx)
+	return core.RunPerGoFile(ctx, func(fc core.FileChange, file *ast.File) []core.Finding {
+		return checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
 	})
 }
 

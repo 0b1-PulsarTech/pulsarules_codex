@@ -17,21 +17,21 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (a *Analyzer) ID() string { return "test-comment" }
+func (analyzer *Analyzer) ID() string { return "test-comment" }
 
-func (a *Analyzer) Stage() core.StageID { return core.StageAST }
+func (analyzer *Analyzer) Stage() core.StageID { return core.StageAST }
 
-func (a *Analyzer) reporter() core.Reporter {
-	return core.NewReporter(a.ID(), core.SeverityWarning, core.CatAST)
+func (analyzer *Analyzer) reporter() core.Reporter {
+	return core.NewReporter(analyzer.ID(), core.SeverityWarning, core.CatAST)
 }
 
-func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	reporter := a.reporter().Resolved(ctx)
-	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
+func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	reporter := analyzer.reporter().Resolved(ctx)
+	return core.RunPerGoFile(ctx, func(fc core.FileChange, file *ast.File) []core.Finding {
 		if !fc.IsTest || fc.Generated {
 			return nil
 		}
-		return checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
+		return checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
 	})
 }
 
@@ -43,13 +43,13 @@ type fileScan struct {
 }
 
 func checkFile(
-	fset *token.FileSet, fc core.FileChange, f *ast.File, reporter core.Reporter,
+	fset *token.FileSet, fc core.FileChange, file *ast.File, reporter core.Reporter,
 ) []core.Finding {
-	scan := fileScan{fset: fset, fc: fc, file: f, reporter: reporter}
+	scan := fileScan{fset: fset, fc: fc, file: file, reporter: reporter}
 	var findings []core.Finding
-	for _, decl := range f.Decls {
+	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || !gotest.CoversFunc(fc, f, fn) {
+		if !ok || !gotest.CoversFunc(fc, file, fn) {
 			continue
 		}
 		if !directive.IsDirectiveGroup(fn.Doc) {

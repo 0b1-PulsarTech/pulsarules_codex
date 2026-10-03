@@ -19,28 +19,28 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return "import-groups" }
-func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
+func (analyzer *Analyzer) ID() string          { return "import-groups" }
+func (analyzer *Analyzer) Stage() core.StageID { return core.StageStatic }
 
-func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	modulePath, err := core.ModulePath(ctx.ProjectDir)
 	if err != nil || modulePath == "" {
 		return nil
 	}
-	reporter := a.reporter.Resolved(ctx)
-	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return a.checkFile(ctx.ASTCache.FileSet(), modulePath, fc, f, reporter)
+	reporter := analyzer.reporter.Resolved(ctx)
+	return core.RunPerGoFile(ctx, func(fc core.FileChange, file *ast.File) []core.Finding {
+		return analyzer.checkFile(ctx.ASTCache.FileSet(), modulePath, fc, file, reporter)
 	})
 }
 
-func (a *Analyzer) checkFile(
+func (analyzer *Analyzer) checkFile(
 	fset *token.FileSet,
 	modulePath string,
 	fc core.FileChange,
-	f *ast.File,
+	file *ast.File,
 	reporter core.Reporter,
 ) []core.Finding {
-	if len(f.Imports) == 0 {
+	if len(file.Imports) == 0 {
 		return nil
 	}
 
@@ -63,11 +63,11 @@ func (a *Analyzer) checkFile(
 		return groupStd
 	}
 
-	prevGroup := classify(f.Imports[0].Path.Value)
+	prevGroup := classify(file.Imports[0].Path.Value)
 
-	for _, spec := range f.Imports[1:] {
-		g := classify(spec.Path.Value)
-		if g < prevGroup {
+	for _, spec := range file.Imports[1:] {
+		spanGroup := classify(spec.Path.Value)
+		if spanGroup < prevGroup {
 			return []core.Finding{
 				reporter.At(
 					fc.Path,
@@ -81,7 +81,7 @@ func (a *Analyzer) checkFile(
 				),
 			}
 		}
-		prevGroup = g
+		prevGroup = spanGroup
 	}
 	return nil
 }

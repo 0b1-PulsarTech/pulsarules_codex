@@ -16,11 +16,11 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string { return "single-use-declaration" }
+func (analyzer *Analyzer) ID() string { return "single-use-declaration" }
 
-func (a *Analyzer) Stage() core.StageID { return core.StageAST }
+func (analyzer *Analyzer) Stage() core.StageID { return core.StageAST }
 
-func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if ctx.ASTCache == nil || ctx.Sources == nil {
 		return nil
 	}
@@ -28,7 +28,7 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		paramCheckConst = "check_const"
 		paramCheckVar   = "check_var"
 	)
-	params := ctx.Params(a.ID())
+	params := ctx.Params(analyzer.ID())
 	kinds := declKinds{
 		checkConst: params.Bool(paramCheckConst, true),
 		checkVar:   params.Bool(paramCheckVar, true),
@@ -37,14 +37,14 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		return nil
 	}
 
-	reporter := a.reporter.Resolved(ctx)
+	reporter := analyzer.reporter.Resolved(ctx)
 	ex := exemptionsFromParams(params)
 	var findings []core.Finding
-	for _, decl := range a.provider.Declarations(ctx) {
+	for _, decl := range analyzer.provider.Declarations(ctx) {
 		if !ex.eligible(decl, kinds) {
 			continue
 		}
-		findings = append(findings, checkCandidate(ctx, a.provider, decl, reporter)...)
+		findings = append(findings, checkCandidate(ctx, analyzer.provider, decl, reporter)...)
 	}
 	return findings
 }

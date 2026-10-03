@@ -14,7 +14,7 @@ import (
 func TestAnalyze(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	testCases := []struct {
 		name   string
@@ -36,7 +36,7 @@ func TestAnalyze(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := a.Analyze(testCase.ctx)
+			got := analyzer.Analyze(testCase.ctx)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d", len(got), testCase.expect)
 			}

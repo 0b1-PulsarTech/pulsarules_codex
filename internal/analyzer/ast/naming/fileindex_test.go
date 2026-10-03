@@ -85,9 +85,9 @@ func TestFileIndexExemptsNamesThatRepeatTheirType(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			f := parseSource(t, testCase.source)
-			idx := newFileIndex(f)
-			pos := identPos(t, f, testCase.ident, testCase.nth)
+			file := parseSource(t, testCase.source)
+			idx := newFileIndex(file)
+			pos := identPos(t, file, testCase.ident, testCase.nth)
 			if got := idx.typeDerived[pos]; got != testCase.want {
 				t.Fatalf("typeDerived for %q = %v, want %v", testCase.ident, got, testCase.want)
 			}
@@ -172,13 +172,13 @@ func parseSource(t *testing.T, source string) *ast.File {
 	return file
 }
 
-func identPos(t *testing.T, f *ast.File, name string, nth int) token.Pos {
+func identPos(t *testing.T, file *ast.File, name string, nth int) token.Pos {
 	t.Helper()
 
 	seen := 0
 	var found token.Pos
-	ast.Inspect(f, func(n ast.Node) bool {
-		id, ok := n.(*ast.Ident)
+	ast.Inspect(file, func(node ast.Node) bool {
+		id, ok := node.(*ast.Ident)
 		if !ok || id.Name != name || found != token.NoPos {
 			return true
 		}

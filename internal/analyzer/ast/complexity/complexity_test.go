@@ -14,7 +14,7 @@ import (
 func TestAnalyze(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	testCases := []struct {
 		name   string
@@ -36,7 +36,7 @@ func TestAnalyze(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := a.Analyze(testCase.ctx)
+			got := analyzer.Analyze(testCase.ctx)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d", len(got), testCase.expect)
 			}
@@ -47,7 +47,7 @@ func TestAnalyze(t *testing.T) {
 func TestAnalyze_HonoursConfiguredThresholds(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "foo.go")
 	src := []byte("package foo\nfunc f() {\n\tx := 1\n\t_ = x\n}\n")
@@ -63,14 +63,14 @@ func TestAnalyze_HonoursConfiguredThresholds(t *testing.T) {
 		ASTCache:     cache,
 		ChangedFiles: []core.FileChange{{Path: path, Extension: ".go"}},
 	}
-	if got := len(a.Analyze(ctx)); got != 0 {
+	if got := len(analyzer.Analyze(ctx)); got != 0 {
 		t.Fatalf("expected 0 findings against the default threshold, got %d", got)
 	}
 
 	ctx.Config = &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
 		"complexity": {Params: map[string]any{"max_func_lines": 1}},
 	}}
-	got := a.Analyze(ctx)
+	got := analyzer.Analyze(ctx)
 	if !hasFuncLinesFinding(got) {
 		t.Fatalf("a configured max_func_lines=1 should report the 4-line func, got %+v", got)
 	}
@@ -79,7 +79,7 @@ func TestAnalyze_HonoursConfiguredThresholds(t *testing.T) {
 func TestAnalyze_HonoursConfiguredSeverity(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "foo.go")
 	src := []byte("package foo\nfunc f() {\n\tx := 1\n\t_ = x\n}\n")
@@ -117,7 +117,7 @@ func TestAnalyze_HonoursConfiguredSeverity(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := a.Analyze(&core.AnalysisContext{
+			got := analyzer.Analyze(&core.AnalysisContext{
 				ASTCache:     cache,
 				ChangedFiles: changedFiles,
 				Config:       testCase.config,

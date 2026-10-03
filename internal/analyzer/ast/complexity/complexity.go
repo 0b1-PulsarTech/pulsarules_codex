@@ -30,23 +30,23 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return "complexity" }
-func (a *Analyzer) Stage() core.StageID { return core.StageAST }
+func (analyzer *Analyzer) ID() string          { return "complexity" }
+func (analyzer *Analyzer) Stage() core.StageID { return core.StageAST }
 
-func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	th := a.resolveThresholds(ctx)
-	return core.RunPerGoFile(ctx, func(fc core.FileChange, f *ast.File) []core.Finding {
-		return th.checkFile(ctx.ASTCache.FileSet(), fc, f)
+func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	th := analyzer.resolveThresholds(ctx)
+	return core.RunPerGoFile(ctx, func(fc core.FileChange, file *ast.File) []core.Finding {
+		return th.checkFile(ctx.ASTCache.FileSet(), fc, file)
 	})
 }
 
-func (a *Analyzer) resolveThresholds(ctx *core.AnalysisContext) thresholds {
-	params := ctx.Params(a.ID())
+func (analyzer *Analyzer) resolveThresholds(ctx *core.AnalysisContext) thresholds {
+	params := ctx.Params(analyzer.ID())
 	return thresholds{
-		maxComplexity: params.Int("max_complexity", a.maxComplexity),
-		maxFuncLines:  params.Int("max_func_lines", a.maxFuncLines),
-		maxParams:     params.Int("max_params", a.maxParams),
-		warnReporter:  a.warnReporter.Resolved(ctx),
-		infoReporter:  a.infoReporter.Resolved(ctx),
+		maxComplexity: params.Int("max_complexity", analyzer.maxComplexity),
+		maxFuncLines:  params.Int("max_func_lines", analyzer.maxFuncLines),
+		maxParams:     params.Int("max_params", analyzer.maxParams),
+		warnReporter:  analyzer.warnReporter.Resolved(ctx),
+		infoReporter:  analyzer.infoReporter.Resolved(ctx),
 	}
 }
