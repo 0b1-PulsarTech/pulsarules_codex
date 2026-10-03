@@ -18,7 +18,7 @@ func writeTestFile(t *testing.T, dir, relPath, content string) {
 	}
 }
 
-func TestFSSourceProvider_WalkSkipsExcludedDirs(t *testing.T) {
+func TestFSProvider_WalkSkipsExcludedDirs(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -32,7 +32,7 @@ func TestFSSourceProvider_WalkSkipsExcludedDirs(t *testing.T) {
 	writeTestFile(t, dir, "testdata/golden/case/fixture.go", "package fixture\n")
 	writeTestFile(t, dir, "internal/real.go", "package internal\n")
 
-	provider := NewSourceProvider(dir, NewSkipSet(DefaultSkipDirs()))
+	provider := NewProvider(dir, NewSkipSet(DefaultSkipDirs()))
 	var visited []string
 	provider.Walk(func(path, _ string) bool {
 		visited = append(visited, path)
@@ -53,7 +53,7 @@ func TestFSSourceProvider_WalkSkipsExcludedDirs(t *testing.T) {
 	}
 }
 
-func TestFSSourceProvider_WalkStopsOnFalse(t *testing.T) {
+func TestFSProvider_WalkStopsOnFalse(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -61,7 +61,7 @@ func TestFSSourceProvider_WalkStopsOnFalse(t *testing.T) {
 	writeTestFile(t, dir, "b.go", "package b\n")
 	writeTestFile(t, dir, "c.go", "package c\n")
 
-	provider := NewSourceProvider(dir, NewSkipSet(DefaultSkipDirs()))
+	provider := NewProvider(dir, NewSkipSet(DefaultSkipDirs()))
 	var visited []string
 	provider.Walk(func(path, _ string) bool {
 		visited = append(visited, path)
@@ -73,13 +73,13 @@ func TestFSSourceProvider_WalkStopsOnFalse(t *testing.T) {
 	}
 }
 
-func TestFSSourceProvider_WalkLowercasesExtension(t *testing.T) {
+func TestFSProvider_WalkLowercasesExtension(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
 	writeTestFile(t, dir, "README.MD", "# hi\n")
 
-	provider := NewSourceProvider(dir, NewSkipSet(DefaultSkipDirs()))
+	provider := NewProvider(dir, NewSkipSet(DefaultSkipDirs()))
 	var gotExt string
 	provider.Walk(func(_, ext string) bool {
 		gotExt = ext
@@ -91,10 +91,10 @@ func TestFSSourceProvider_WalkLowercasesExtension(t *testing.T) {
 	}
 }
 
-func TestFSSourceProvider_InMemoryFS(t *testing.T) {
+func TestFSProvider_InMemoryFS(t *testing.T) {
 	t.Parallel()
 
-	provider := NewFSSourceProvider(fstest.MapFS{
+	provider := NewFSProvider(fstest.MapFS{
 		"a.go":           &fstest.MapFile{Data: []byte("package a\n")},
 		"generated/b.go": &fstest.MapFile{Data: []byte("package b\n")},
 	}, "", NewSkipSet(DefaultSkipDirs()))
@@ -117,13 +117,13 @@ func TestFSSourceProvider_InMemoryFS(t *testing.T) {
 	}
 }
 
-func TestFSSourceProvider_ReadAbsolutePaths(t *testing.T) {
+func TestFSProvider_ReadAbsolutePaths(t *testing.T) {
 	t.Parallel()
 
 	projectDir, outsideDir := t.TempDir(), t.TempDir()
 	writeTestFile(t, projectDir, "pkg/a.go", "package a\n")
 	writeTestFile(t, outsideDir, "secret.go", "package secret\n")
-	provider := NewSourceProvider(projectDir, NewSkipSet(DefaultSkipDirs()))
+	provider := NewProvider(projectDir, NewSkipSet(DefaultSkipDirs()))
 	insideFile := filepath.Join(projectDir, "pkg", "a.go")
 	outsideFile := filepath.Join(outsideDir, "secret.go")
 	missingFile := filepath.Join(projectDir, "none.go")

@@ -39,7 +39,7 @@ func sweep(out io.Writer, root string, how mode) error {
 	var acted, remaining int
 
 	var walkErr error
-	sources.NewSourceProvider(root, sources.NewSkipSet(sources.DefaultSkipDirs())).
+	sources.NewProvider(root, sources.NewSkipSet(sources.DefaultSkipDirs())).
 		Walk(func(rel, _ string) bool {
 			// Walk yields a path relative to root; Abs would anchor it to the working directory.
 			found, err := inspectOrClean(cleaner, filepath.Join(root, rel), how)

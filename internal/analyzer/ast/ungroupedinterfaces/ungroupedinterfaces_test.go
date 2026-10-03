@@ -188,7 +188,7 @@ func TestAnalyze_EndToEnd(t *testing.T) {
 			}
 			ctx := &core.AnalysisContext{
 				ASTCache: cache,
-				Sources: sources.NewFSSourceProvider(fstest.MapFS{
+				Sources: sources.NewFSProvider(fstest.MapFS{
 					"foo.go": &fstest.MapFile{Data: []byte(source)},
 				}, "", sources.SkipSet{}),
 				ChangedFiles: []core.FileChange{

@@ -31,7 +31,7 @@ func buildCtx(
 	}
 	return &core.AnalysisContext{
 		ASTCache:     cache,
-		Sources:      sources.NewFSSourceProvider(mapFS, "", sources.SkipSet{}),
+		Sources:      sources.NewFSProvider(mapFS, "", sources.SkipSet{}),
 		ChangedFiles: changed,
 		Findings:     prior,
 	}

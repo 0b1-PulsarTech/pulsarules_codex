@@ -56,7 +56,7 @@ func NewSession(
 }
 
 type Discovery struct {
-	Sources       sources.SourceProvider
+	Sources       sources.Provider
 	ChangedFiles  []core.FileChange
 	GitHistory    []core.GitCommitEntry
 	StagedRenames []core.Rename
@@ -146,11 +146,11 @@ func (s *Session) attachSources(d *Discovery) {
 	paths, err := s.listFiles()
 	if err != nil {
 		s.logger.Warn("walking the filesystem instead of git's file list", slog.Any("error", err))
-		d.Sources, d.Skips = sources.NewSourceProvider(root, s.skips), s.skips
+		d.Sources, d.Skips = sources.NewProvider(root, s.skips), s.skips
 		return
 	}
-	base := sources.NewSourceProvider(root, s.gitSkips)
-	d.Sources = sources.NewListedSourceProvider(base, paths, s.gitSkips)
+	base := sources.NewProvider(root, s.gitSkips)
+	d.Sources = sources.NewListedProvider(base, paths, s.gitSkips)
 	d.Skips = s.gitSkips
 }
 

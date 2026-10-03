@@ -18,7 +18,7 @@ func (p *recordingProvider) Read(path string) ([]byte, bool) {
 
 func (p *recordingProvider) Walk(func(path string, ext string) bool) {}
 
-func TestListedSourceProvider_Walk(t *testing.T) {
+func TestListedProvider_Walk(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -54,7 +54,7 @@ func TestListedSourceProvider_Walk(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			provider := NewListedSourceProvider(
+			provider := NewListedProvider(
 				&recordingProvider{},
 				testCase.paths,
 				NewSkipSet(DefaultSkipDirs()),
@@ -79,7 +79,7 @@ func TestListedSourceProvider_Walk(t *testing.T) {
 	}
 }
 
-func TestListedSourceProvider_ReadDelegates(t *testing.T) {
+func TestListedProvider_ReadDelegates(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -99,7 +99,7 @@ func TestListedSourceProvider_ReadDelegates(t *testing.T) {
 				"a/b.go":   "package b\n",
 				"other.go": "package o\n",
 			}}
-			provider := NewListedSourceProvider(base, []string{"a/b.go"}, NewSkipSet(nil))
+			provider := NewListedProvider(base, []string{"a/b.go"}, NewSkipSet(nil))
 			got, ok := provider.Read(testCase.path)
 			if ok != testCase.wantOK || string(got) != testCase.want {
 				t.Fatalf("Read = %q, %v, want %q, %v", got, ok, testCase.want, testCase.wantOK)

@@ -32,7 +32,7 @@ func buildCtx(t *testing.T, files map[string]string, changed []string) *core.Ana
 
 	return &core.AnalysisContext{
 		ASTCache:     cache,
-		Sources:      sources.NewFSSourceProvider(mapFS, "", sources.SkipSet{}),
+		Sources:      sources.NewFSProvider(mapFS, "", sources.SkipSet{}),
 		ChangedFiles: changedFiles,
 	}
 }
@@ -274,7 +274,7 @@ func TestAnalyze_NoContext(t *testing.T) {
 		{
 			name: "no AST cache",
 			ctx: &core.AnalysisContext{
-				Sources: sources.NewFSSourceProvider(fstest.MapFS{}, "", sources.SkipSet{}),
+				Sources: sources.NewFSProvider(fstest.MapFS{}, "", sources.SkipSet{}),
 			},
 		},
 		{name: "no sources", ctx: &core.AnalysisContext{ASTCache: astcache.New()}},

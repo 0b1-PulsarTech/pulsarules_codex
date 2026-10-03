@@ -144,7 +144,7 @@ Three scopes (`scope.go`) control which analyzers run and what context is built:
 | `ScopeChanged` | static + AST + arch analyzers over changed files, skipping delegation   | the Claude Code `Stop` hook              |
 
 `ScopeCommit` still gathers staged renames and per-file staged status (`commit-move-purity` needs
-exactly that), even though it skips the wider `SourceProvider`/AST-cache work that `ScopeFull` and
+exactly that), even though it skips the wider `sources.Provider`/AST-cache work that `ScopeFull` and
 `ScopeChanged` do.
 
 ### Stages and the analyzer registry

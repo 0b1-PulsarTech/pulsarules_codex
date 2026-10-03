@@ -273,7 +273,7 @@ func TestScanFile_DirectiveLines(t *testing.T) {
 			langs.Register(langspec.Lookup(testCase.lang))
 			findings := NewAnalyzer(langs).Analyze(&core.AnalysisContext{
 				ProjectDir: dir,
-				Sources: sources.NewSourceProvider(
+				Sources: sources.NewProvider(
 					dir, sources.NewSkipSet(sources.DefaultSkipDirs()),
 				),
 				ChangedFiles: []core.FileChange{

@@ -122,12 +122,9 @@ func TestAnalyzeUsesCachedGoAST(t *testing.T) {
 	langs := core.NewLanguageRegistry()
 	langs.Register(langspec.Lookup("go"))
 	got := NewAnalyzer(langs).Analyze(&core.AnalysisContext{
-		ProjectDir: dir,
-		ASTCache:   cache,
-		Sources: sources.NewSourceProvider(
-			dir,
-			sources.NewSkipSet(sources.DefaultSkipDirs()),
-		),
+		ProjectDir:   dir,
+		ASTCache:     cache,
+		Sources:      sources.NewProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{{Path: "a.go", Extension: ".go"}},
 	})
 	if len(got) != 1 || got[0].Line != 3 {
@@ -164,7 +161,7 @@ func TestAnalyze(t *testing.T) {
 			}
 			got := NewAnalyzer(langs).Analyze(&core.AnalysisContext{
 				ProjectDir: dir,
-				Sources: sources.NewSourceProvider(
+				Sources: sources.NewProvider(
 					dir, sources.NewSkipSet(sources.DefaultSkipDirs()),
 				),
 				ChangedFiles: []core.FileChange{

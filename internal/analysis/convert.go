@@ -11,7 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-func walkAllFiles(provider sources.SourceProvider) []core.FileChange {
+func walkAllFiles(provider sources.Provider) []core.FileChange {
 	var files []core.FileChange
 	provider.Walk(func(path, ext string) bool {
 		files = append(files, core.FileChange{
@@ -47,7 +47,7 @@ func toCoreRenames(renames []vcs.Rename) []core.Rename {
 	return out
 }
 
-func markGenerated(files []core.FileChange, provider sources.SourceProvider) {
+func markGenerated(files []core.FileChange, provider sources.Provider) {
 	if provider == nil {
 		return
 	}
@@ -62,10 +62,7 @@ func markGenerated(files []core.FileChange, provider sources.SourceProvider) {
 	}
 }
 
-func populateASTCache(
-	changedFiles []core.FileChange,
-	provider sources.SourceProvider,
-) *astcache.Cache {
+func populateASTCache(changedFiles []core.FileChange, provider sources.Provider) *astcache.Cache {
 	if len(changedFiles) == 0 {
 		return nil
 	}

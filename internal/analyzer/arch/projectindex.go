@@ -7,7 +7,7 @@ type projectIndex struct {
 	graph  depGraph
 }
 
-func loadProjectIndex(provider sources.SourceProvider, modulePath string) *projectIndex {
+func loadProjectIndex(provider sources.Provider, modulePath string) *projectIndex {
 	pkgMap := discoverPackages(provider, modulePath)
 	// Each analyzer walks on its own: sharing one index would need a package-level global.
 	graph := buildGraph(pkgMap, modulePath)

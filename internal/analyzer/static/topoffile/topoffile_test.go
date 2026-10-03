@@ -64,11 +64,8 @@ func analyzeSource(t *testing.T, file, src string, config *core.AnalysisConfig) 
 	langs := core.NewLanguageRegistry()
 	langspec.RegisterAll(langs)
 	return NewAnalyzer(langs).Analyze(&core.AnalysisContext{
-		ProjectDir: dir,
-		Sources: sources.NewSourceProvider(
-			dir,
-			sources.NewSkipSet(sources.DefaultSkipDirs()),
-		),
+		ProjectDir:   dir,
+		Sources:      sources.NewProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		Config:       config,
 		ChangedFiles: []core.FileChange{{Path: file, Extension: filepath.Ext(file)}},
 	})
