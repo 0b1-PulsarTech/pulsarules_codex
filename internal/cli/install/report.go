@@ -22,9 +22,10 @@ func printWarning(out io.Writer, label string, err error) {
 	_, _ = fmt.Fprintf(out, "warning: %s: %s\n", label, escape.Line(err.Error()))
 }
 
-func printDependencyPulls(pulled []output.DependencyPull) {
+func printDependencyPulls(out io.Writer, pulled []output.DependencyPull) {
 	for _, dep := range pulled {
-		_, _ = fmt.Printf(
+		_, _ = fmt.Fprintf(
+			out,
 			"pulled in by dependency: %s (required by %s)\n",
 			dep.Skill,
 			dep.RequiredBy,
