@@ -1,4 +1,4 @@
-package pass
+package lexer
 
 import (
 	"slices"
@@ -39,10 +39,10 @@ func docblockPragmas() []string {
 }
 
 func IsExemptHeaderLine(line string) bool {
-	return IsGeneratedMarkerLine(line) || IsDirectiveHeaderLine(line)
+	return IsGeneratedMarkerLine(line) || isDirectiveHeaderLine(line)
 }
 
-func IsDirectiveHeaderLine(line string) bool {
+func isDirectiveHeaderLine(line string) bool {
 	trimmed := strings.TrimSpace(line)
 	return IsContentStartLine(trimmed) || hasAnyPrefix(trimmed, directiveHeaderPrefixes()) ||
 		isNolintDirective(trimmed) || isGlobalDirective(trimmed) ||
@@ -51,7 +51,7 @@ func IsDirectiveHeaderLine(line string) bool {
 
 func IsMachineReadCommentLine(line string) bool {
 	trimmed := strings.TrimSpace(line)
-	return IsDirectiveHeaderLine(trimmed) || hasAnyPrefix(trimmed, machineReadCommentPrefixes()) ||
+	return isDirectiveHeaderLine(trimmed) || hasAnyPrefix(trimmed, machineReadCommentPrefixes()) ||
 		isPulsarulesMarker(trimmed)
 }
 
@@ -74,14 +74,14 @@ func ExemptHeaderSpan(lines []string) int {
 	switch {
 	case strings.HasPrefix(first, "/*"):
 		span := blockSpan(lines, "/*", "*/")
-		if IsDirectiveHeaderLine(first) || hasDocblockPragma(lines[:span]) {
+		if isDirectiveHeaderLine(first) || hasDocblockPragma(lines[:span]) {
 			return span
 		}
 	case strings.HasPrefix(first, "<!--"):
-		if IsDirectiveHeaderLine(first) {
+		if isDirectiveHeaderLine(first) {
 			return blockSpan(lines, "<!--", "-->")
 		}
-	case IsDirectiveHeaderLine(first):
+	case isDirectiveHeaderLine(first):
 		return 1
 	}
 	return 0

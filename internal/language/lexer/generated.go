@@ -1,4 +1,4 @@
-package pass
+package lexer
 
 import (
 	"bytes"

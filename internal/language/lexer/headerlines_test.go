@@ -1,4 +1,4 @@
-package pass
+package lexer
 
 import (
 	"slices"
@@ -176,7 +176,7 @@ func TestIsDirectiveHeaderLine(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			if got := IsDirectiveHeaderLine(testCase.line); got != testCase.want {
+			if got := isDirectiveHeaderLine(testCase.line); got != testCase.want {
 				t.Fatalf(
 					"IsDirectiveHeaderLine(%q) = %v, want %v",
 					testCase.line,
@@ -321,7 +321,7 @@ func TestIsMachineReadCommentLine(t *testing.T) {
 func TestIsDirectiveHeaderLine_Goverter(t *testing.T) {
 	t.Parallel()
 
-	if IsDirectiveHeaderLine("// goverter:map A B") {
+	if isDirectiveHeaderLine("// goverter:map A B") {
 		t.Fatal("goverter lines are not top-of-file header directives")
 	}
 }

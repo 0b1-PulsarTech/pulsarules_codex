@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 func directivePrefixes() []string {
@@ -23,7 +23,7 @@ func isBlankComment(text string) bool {
 
 func IsDirectiveLine(text string) bool {
 	trimmed := strings.TrimSpace(text)
-	if isBlankComment(trimmed) || pass.IsExemptHeaderLine(trimmed) {
+	if isBlankComment(trimmed) || lexer.IsExemptHeaderLine(trimmed) {
 		return true
 	}
 	return slices.ContainsFunc(directivePrefixes(), func(prefix string) bool {
@@ -41,7 +41,8 @@ func IsDirectiveGroup(group *ast.CommentGroup) bool {
 }
 
 func IsSimplificationGroup(group *ast.CommentGroup) bool {
-	return group != nil && len(group.List) > 0 && pass.IsSimplificationMarker(group.List[0].Text)
+	return group != nil && len(group.List) > 0 &&
+		lexer.IsSimplificationMarker(group.List[0].Text)
 }
 
 func ProseLines(group *ast.CommentGroup) int {

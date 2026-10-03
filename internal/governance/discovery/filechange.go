@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -52,6 +53,6 @@ func MarkGenerated(files []pass.FileChange, sources pass.SourceProvider) {
 		if !ok {
 			continue
 		}
-		files[i].Generated = pass.IsGeneratedSource(src)
+		files[i].Generated = lexer.IsGeneratedSource(src)
 	}
 }

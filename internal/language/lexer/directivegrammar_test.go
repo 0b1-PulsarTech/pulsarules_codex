@@ -1,4 +1,4 @@
-package pass
+package lexer
 
 import "testing"
 
@@ -42,7 +42,7 @@ func TestIsDirectiveHeaderLine_Grammar(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			if got := IsDirectiveHeaderLine(testCase.line); got != testCase.want {
+			if got := isDirectiveHeaderLine(testCase.line); got != testCase.want {
 				t.Fatalf(
 					"IsDirectiveHeaderLine(%q) = %v, want %v",
 					testCase.line,

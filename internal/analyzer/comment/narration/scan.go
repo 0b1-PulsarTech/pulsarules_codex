@@ -3,7 +3,7 @@ package narration
 import (
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 const (
@@ -13,7 +13,7 @@ const (
 )
 
 type scanner struct {
-	syntax   pass.CommentSyntax
+	syntax   lexer.CommentSyntax
 	rules    rules
 	closer   string
 	rawOpen  bool
@@ -21,7 +21,7 @@ type scanner struct {
 	segments []segment
 }
 
-func scanSegments(src []byte, syntax pass.CommentSyntax, ext string) []segment {
+func scanSegments(src []byte, syntax lexer.CommentSyntax, ext string) []segment {
 	sc := &scanner{syntax: syntax, rules: rulesFor(syntax, ext)}
 	sc.region = regionScript
 	if sc.rules.sfc {

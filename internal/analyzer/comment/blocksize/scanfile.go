@@ -5,17 +5,18 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 func scanFile(
 	src []byte,
 	fc pass.FileChange,
-	syntax pass.CommentSyntax,
+	syntax lexer.CommentSyntax,
 	maxLines int,
 	reporter pass.Reporter,
 ) []pass.Finding {
 	var findings []pass.Finding
-	scanner := pass.NewCommentScanner(syntax)
+	scanner := lexer.NewCommentScanner(syntax)
 	blockStart := 0
 	blockLines := 0
 	exempt := false
@@ -42,14 +43,14 @@ func scanFile(
 			flush()
 			continue
 		}
-		if pass.IsMachineReadCommentLine(line) && !opensHandBlock(scanner, lines[idx:]) {
+		if lexer.IsMachineReadCommentLine(line) && !opensHandBlock(scanner, lines[idx:]) {
 			continue
 		}
 		if blockLines == 0 {
 			blockStart = idx + 1
 			// A simplification block states the ceiling and an upgrade path, which no
 			// 3-line cap holds.
-			exempt = pass.IsGeneratedMarkerLine(line) || pass.IsSimplificationMarker(line)
+			exempt = lexer.IsGeneratedMarkerLine(line) || lexer.IsSimplificationMarker(line)
 		}
 		blockLines++
 	}
@@ -58,18 +59,18 @@ func scanFile(
 }
 
 func directiveSpan(
-	scanner *pass.CommentScanner,
+	scanner *lexer.CommentScanner,
 	lines []string,
-	syntax pass.CommentSyntax,
+	syntax lexer.CommentSyntax,
 ) int {
 	if scanner.InBlock() {
 		return 0
 	}
-	span := pass.ExemptHeaderSpan(lines)
+	span := lexer.ExemptHeaderSpan(lines)
 	if span <= 1 {
 		return span
 	}
-	probe := pass.NewCommentScanner(syntax)
+	probe := lexer.NewCommentScanner(syntax)
 	// The opener must open a real block in this language, or its text is a string or heredoc.
 	probe.IsCommentLine(lines[0])
 	if !probe.InBlock() {
@@ -84,7 +85,7 @@ func directiveSpan(
 	return span
 }
 
-func opensHandBlock(scanner *pass.CommentScanner, lines []string) bool {
+func opensHandBlock(scanner *lexer.CommentScanner, lines []string) bool {
 	if !scanner.InBlock() {
 		return false
 	}
@@ -93,7 +94,7 @@ func opensHandBlock(scanner *pass.CommentScanner, lines []string) bool {
 		if rest, ok := strings.CutPrefix(trimmed, delims[0]); ok {
 			_, after, closed := strings.Cut(rest, delims[1])
 			remainder := append([]string{strings.TrimSpace(after)}, lines[1:]...)
-			return closed && pass.ExemptHeaderSpan(remainder) == 0
+			return closed && lexer.ExemptHeaderSpan(remainder) == 0
 		}
 	}
 	return false

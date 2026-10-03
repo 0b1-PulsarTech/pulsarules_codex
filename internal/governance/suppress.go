@@ -1,6 +1,9 @@
 package governance
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+)
 
 type Result struct {
 	Findings            []pass.Finding
@@ -34,7 +37,7 @@ func isGeneratedFile(path string, known map[string]bool, sources pass.SourceProv
 	generated := false
 	if sources != nil {
 		if src, found := sources.Read(path); found {
-			generated = pass.IsGeneratedSource(src)
+			generated = lexer.IsGeneratedSource(src)
 		}
 	}
 	known[path] = generated

@@ -1,12 +1,15 @@
 package language
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+)
 
 type Spec struct {
 	Name               string
 	Extensions         []string
 	CommentPrefixValue string
-	Syntax             pass.CommentSyntax
+	Syntax             lexer.CommentSyntax
 	PackageDeclaration func(line string) bool
 }
 
@@ -18,7 +21,7 @@ func (language handler) Extensions() []string { return language.spec.Extensions 
 
 func (language handler) CommentPrefix() string { return language.spec.CommentPrefixValue }
 
-func (language handler) CommentSyntax() pass.CommentSyntax { return language.spec.Syntax }
+func (language handler) CommentSyntax() lexer.CommentSyntax { return language.spec.Syntax }
 
 func (language handler) IsPackageDeclaration(line string) bool {
 	// Most languages have no line analogous to Go's package clause.

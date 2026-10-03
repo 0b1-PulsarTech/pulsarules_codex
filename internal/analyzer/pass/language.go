@@ -1,9 +1,11 @@
 package pass
 
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+
 type Language interface {
 	Extensions() []string
 	CommentPrefix() string
-	CommentSyntax() CommentSyntax
+	CommentSyntax() lexer.CommentSyntax
 	IsPackageDeclaration(line string) bool
 }
 

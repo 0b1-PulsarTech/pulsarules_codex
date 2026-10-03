@@ -1,4 +1,4 @@
-package pass
+package lexer
 
 type BlockDelim struct {
 	Open  string

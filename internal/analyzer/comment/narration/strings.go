@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 const (
@@ -24,9 +24,9 @@ type rules struct {
 	verbatim  bool
 }
 
-func rulesFor(syntax pass.CommentSyntax, ext string) rules {
+func rulesFor(syntax lexer.CommentSyntax, ext string) rules {
 	hasBlock := func(open string) bool {
-		return slices.ContainsFunc(syntax.Blocks, func(block pass.BlockDelim) bool {
+		return slices.ContainsFunc(syntax.Blocks, func(block lexer.BlockDelim) bool {
 			return block.Open == open
 		})
 	}

@@ -3,7 +3,7 @@ package banner
 import (
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 func firstContentLine(lines []string) (int, bool) {
@@ -13,10 +13,10 @@ func firstContentLine(lines []string) (int, bool) {
 			pos++
 			continue
 		}
-		if pass.IsContentStartLine(line) {
+		if lexer.IsContentStartLine(line) {
 			return 0, false
 		}
-		span := pass.ExemptHeaderSpan(lines[pos:])
+		span := lexer.ExemptHeaderSpan(lines[pos:])
 		if span == 0 {
 			return pos, true
 		}
