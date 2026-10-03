@@ -19,7 +19,6 @@ func defaultRuleMap() map[string]string {
 		"naming":                 "naming",
 		"top-of-file":            "comments",
 		"big-comment":            "comments",
-		"vacuous-doc":            "effective-go",
 		"history-narration":      "comments",
 		"doc-comment":            "effective-go",
 		"body-header-comment":    "effective-go",

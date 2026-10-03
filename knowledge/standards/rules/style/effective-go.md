@@ -25,7 +25,6 @@ analyzers:
     - file-size
     - text-markers
     - typographic-markers
-    - vacuous-doc
     - doc-comment
     - body-header-comment
     - too-many-results

@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/vacuousdoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/testdoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/complexity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/controlflow"
@@ -16,7 +15,6 @@ func astSpecs() []analyzerSpec {
 		staticSpec("shadowing", shadowing.NewAnalyzer),
 		staticSpec("complexity", complexity.NewAnalyzer),
 		staticSpec("named-returns", namedreturns.NewAnalyzer),
-		staticSpec("vacuous-doc", vacuousdoc.NewAnalyzer),
 		staticSpec("test-comment", testdoc.NewAnalyzer),
 		staticSpec("single-use-declaration", singleuse.NewAnalyzer),
 	}
