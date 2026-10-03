@@ -43,6 +43,20 @@ func qualified(expr ast.Expr, alias string) (pkg, name string, isPointer bool) {
 	return ident.Name, sel.Sel.Name, isPointer
 }
 
+func isTestingHandle(expr ast.Expr, alias string) bool {
+	pkg, name, isPointer := qualified(expr, alias)
+	switch {
+	case name == "TestingT":
+		return !isPointer
+	case pkg != alias:
+		return false
+	case name == "TB":
+		return !isPointer
+	default:
+		return isPointer && (name == "T" || name == "B" || name == "F")
+	}
+}
+
 func wantParam(name, prefix string) string {
 	if name == "TestMain" {
 		return "M"
