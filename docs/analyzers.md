@@ -39,6 +39,16 @@ each analyzer's own id.
   misread. "the only tool ever used to call x" is flagged; it cannot be told apart from
   "nobody ever used to call this".
 
+## variadic-index
+
+- Rule: `flag-arguments`.
+- Flags: positional indexing of a variadic parameter (`opts[0]`).
+- Params: none.
+- Remedies, both valid: take a named options struct, or range over the values
+  (`for _, opt := range opts`).
+- Known limits: pairwise comparison with two range indexes over the same variadic (for example
+  `a[i] vs a[j]`) is flagged, and the hint does not fit it.
+
 ## too-many-results
 
 - Rule: `effective-go`.
