@@ -11,6 +11,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -20,17 +21,17 @@ func runHook(inj remy.Injector, opts *cliopts.Options) error {
 	// Upgrade path: revisit if a no-op ever hides a failure operators need paged on.
 	idx, err := remy.Get[*knowledge.Index](inj)
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "hook: get knowledge index:", err)
+		printHookError(os.Stderr, "get knowledge index", err)
 		return nil
 	}
 	templates, err := remy.Get[fs.FS](inj)
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "hook: get templates:", err)
+		printHookError(os.Stderr, "get templates", err)
 		return nil
 	}
 	logger, err := remy.Get[*slog.Logger](inj)
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "hook: build logger:", err)
+		printHookError(os.Stderr, "build logger", err)
 		return nil
 	}
 	if closer, closerErr := remy.Get[io.Closer](inj); closerErr == nil {
@@ -52,4 +53,8 @@ func runHook(inj remy.Injector, opts *cliopts.Options) error {
 		return fmt.Errorf("dispatch hook %q: %w", opts.Mode, dispatchErr)
 	}
 	return nil
+}
+
+func printHookError(out io.Writer, label string, err error) {
+	_, _ = fmt.Fprintln(out, "hook: "+label+":", escape.Line(err.Error()))
 }

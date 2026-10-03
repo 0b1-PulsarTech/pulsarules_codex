@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -12,6 +13,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/evals"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/validate"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -27,13 +29,17 @@ func runValidate(inj remy.Injector, _ *cliopts.Options) error {
 		evals.ValidateCheck,
 	)
 	if !result.OK() {
-		_, _ = fmt.Fprintln(os.Stderr, "validation failed:")
-		for _, problem := range result.Errors {
-			_, _ = fmt.Fprintf(os.Stderr, "  - %s\n", problem)
-		}
+		printProblems(os.Stderr, result.Errors)
 		return errors.New("validation failed")
 	}
 	fmt.Printf("ok: %d rules, %d patterns, %d workflows, %d skills\n",
 		len(idx.Rules), len(idx.Patterns), len(idx.Workflows), len(idx.Skills))
 	return nil
+}
+
+func printProblems(out io.Writer, problems []string) {
+	_, _ = fmt.Fprintln(out, "validation failed:")
+	for _, problem := range problems {
+		_, _ = fmt.Fprintf(out, "  - %s\n", escape.Line(problem))
+	}
 }
