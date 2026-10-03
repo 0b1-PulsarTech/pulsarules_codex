@@ -183,8 +183,9 @@ files. `core.InPlaceAnalyzer` marks the second contract - an analyzer that rewri
   import outer-layer ones) and `ImportCycleAnalyzer` (package import-cycle detection).
 - `commit` - commit-message validation (`CommitAnalyzer`): format, emoji catalog and repetition
   window, tool-attribution trailers, delegating emoji lookups to `internal/emoji`.
-- `movepurity` - flags a staged rename below the configured git rename-similarity score, or one
-  staged alongside unrelated edits, as not a pure move.
+- `movepurity` - flags a staged rename that carries an edit beyond its package clause and import
+  fixups (reported as below `min_similarity` when the score is low), or one staged alongside
+  unrelated edits.
 - `branchname` - flags a checked-out branch whose name carries no recognized type prefix
   (Conventional Commit types, the gitflow lines, plus a project's own `extra_types`). Gated to
   `ScopeFull` - the pre-push run - since a branch name is not a property of a staged change.

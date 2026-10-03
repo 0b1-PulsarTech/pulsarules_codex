@@ -12,15 +12,15 @@ var _ core.Analyzer = (*Analyzer)(nil)
 
 type Analyzer struct {
 	minSimilarity int
-	diffs         diffReader
+	reader        gitReader
 	reporter      core.Reporter
 }
 
-func NewAnalyzer(diffs diffReader) *Analyzer {
+func NewAnalyzer(reader gitReader) *Analyzer {
 	const defaultMinSimilarity = 90
 	return &Analyzer{
 		minSimilarity: defaultMinSimilarity,
-		diffs:         diffs,
+		reader:        reader,
 		reporter:      core.NewReporter(AnalyzerID, core.SeverityWarning, core.CatCommit),
 	}
 }
@@ -37,17 +37,17 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	minSimilarity := params.Int(ParamMinSimilarity, a.minSimilarity)
 	reporter := a.reporter.Resolved(ctx)
 
+	var moves *moveContext
+	if a.reader != nil {
+		moves = newMoveContext(a.reader, ctx.StagedRenames)
+	}
 	var findings []core.Finding
 	for _, rename := range ctx.StagedRenames {
-		if rename.Score < minSimilarity {
-			findings = append(findings, notPureMoveFinding(reporter, rename))
-			continue
-		}
-		if finding, ok := a.renameEditFinding(reporter, rename); ok {
+		if finding, ok := renameFinding(moves, reporter, rename, minSimilarity); ok {
 			findings = append(findings, finding)
 		}
 	}
-	if edits := a.unrelatedStagedEdits(ctx.ChangedFiles, ctx.StagedRenames); len(edits) > 0 {
+	if edits := unrelatedStagedEdits(moves, ctx.ChangedFiles, ctx.StagedRenames); len(edits) > 0 {
 		findings = append(
 			findings,
 			mixedChangesetFinding(reporter, len(ctx.StagedRenames), len(edits)),
@@ -56,25 +56,32 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	return findings
 }
 
-func (a *Analyzer) renameEditFinding(
+func renameFinding(
+	moves *moveContext,
 	reporter core.Reporter,
 	rename core.Rename,
+	minSimilarity int,
 ) (core.Finding, bool) {
-	if a.diffs == nil {
-		return core.Finding{}, false
+	isLow := rename.Score < minSimilarity
+	if moves == nil {
+		return notPureMoveFinding(reporter, rename), isLow
 	}
-	const renameDiffProbeScore = 1
-	diff, err := a.diffs.StagedRenameDiff(rename.OldPath, rename.NewPath, renameDiffProbeScore)
-	if err == nil && isImportOnlyDiff(diff) {
+	switch got := moves.renameVerdict(rename); {
+	case got == verdictPure:
 		return core.Finding{}, false
+	case isLow:
+		return notPureMoveFinding(reporter, rename), true
+	default:
+		return renameCarriesEditFinding(reporter, rename), true
 	}
-	return renameCarriesEditFinding(reporter, rename), true
 }
 
-func (a *Analyzer) unrelatedStagedEdits(
+func unrelatedStagedEdits(
+	moves *moveContext,
 	changes []core.FileChange,
 	renames []core.Rename,
 ) []core.FileChange {
+	// Git status keys a rename by its new path, so both sides of a pair are skipped.
 	inRename := make(map[string]bool, len(renames)*2)
 	for _, rename := range renames {
 		inRename[rename.OldPath] = true
@@ -83,24 +90,17 @@ func (a *Analyzer) unrelatedStagedEdits(
 
 	var edits []core.FileChange
 	for _, change := range changes {
-		if !change.Staged || inRename[change.Path] {
+		changed := change.Path
+		if !change.Staged || inRename[changed] {
 			continue
 		}
-		if a.isPureImportChange(change.Path) {
-			continue
+		got := verdictEdited
+		if moves != nil {
+			got = moves.importChangeVerdict(changed)
 		}
-		edits = append(edits, change)
+		if got != verdictPure {
+			edits = append(edits, change)
+		}
 	}
 	return edits
-}
-
-func (a *Analyzer) isPureImportChange(path string) bool {
-	if a.diffs == nil {
-		return false
-	}
-	diff, err := a.diffs.StagedDiff(path)
-	if err != nil {
-		return false
-	}
-	return isImportOnlyDiff(diff)
 }

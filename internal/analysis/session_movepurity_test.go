@@ -57,6 +57,10 @@ type movePurityFixture struct {
 }
 
 func movePurityCases() []movePurityFixture {
+	return append(noUnrelatedEditCases(), mixedCommitCases()...)
+}
+
+func noUnrelatedEditCases() []movePurityFixture {
 	return []movePurityFixture{
 		{
 			name: "pure rename alone",
@@ -79,6 +83,34 @@ func movePurityCases() []movePurityFixture {
 			wantSubstr:  "not a pure move",
 		},
 		{
+			name: "no staged renames",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				writeCommittedFile(t, dir, "plain.go", "package plain\n")
+			},
+			wantFinding: false,
+		},
+		{
+			name: "rename above the threshold whose own file also gained a statement",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				original := strings.Repeat("same line\n", 20)
+				writeCommittedFile(t, dir, "old.go", original)
+				stageRename(t, dir, original+"var extra = 1\n")
+			},
+			wantFinding: true,
+			wantSubstr:  "carries an edit beyond the move",
+		},
+	}
+}
+
+func mixedCommitCases() []movePurityFixture {
+	const (
+		importerHead = "package importer\n\nimport (\n\t\"repo/"
+		importerTail = "/thing\"\n)\n\nfunc Use() { thing.Do() }\n"
+	)
+	return []movePurityFixture{
+		{
 			name: "pure rename staged alongside an unrelated edit",
 			setup: func(t *testing.T, dir string) {
 				t.Helper()
@@ -92,47 +124,17 @@ func movePurityCases() []movePurityFixture {
 			wantSubstr:  "mixes",
 		},
 		{
-			name: "no staged renames",
-			setup: func(t *testing.T, dir string) {
-				t.Helper()
-				writeCommittedFile(t, dir, "plain.go", "package plain\n")
-			},
-			wantFinding: false,
-		},
-		{
-			name: "pure rename staged alongside a pure import-path edit",
+			name: "pure rename staged alongside an unexplained import-path edit",
 			setup: func(t *testing.T, dir string) {
 				t.Helper()
 				body := "line one\nline two\nline three\nline four\n"
 				writeCommittedFile(t, dir, "old.go", body)
-				writeCommittedFile(
-					t,
-					dir,
-					"importer.go",
-					"package importer\n\nimport (\n\t\"repo/old/thing\"\n)\n\n"+
-						"func Use() { thing.Do() }\n",
-				)
+				writeCommittedFile(t, dir, "importer.go", importerHead+"old"+importerTail)
 				stageRename(t, dir, body)
-				stageModify(
-					t,
-					dir,
-					"importer.go",
-					"package importer\n\nimport (\n\t\"repo/new/thing\"\n)\n\n"+
-						"func Use() { thing.Do() }\n",
-				)
-			},
-			wantFinding: false,
-		},
-		{
-			name: "rename whose own file also gained a statement",
-			setup: func(t *testing.T, dir string) {
-				t.Helper()
-				original := strings.Repeat("same line\n", 20)
-				writeCommittedFile(t, dir, "old.go", original)
-				stageRename(t, dir, original+"var extra = 1\n")
+				stageModify(t, dir, "importer.go", importerHead+"new"+importerTail)
 			},
 			wantFinding: true,
-			wantSubstr:  "carries an edit beyond the move",
+			wantSubstr:  "mixes",
 		},
 	}
 }
