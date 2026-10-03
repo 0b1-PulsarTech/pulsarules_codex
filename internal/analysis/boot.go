@@ -8,12 +8,16 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func (r *StageRunner) registerForScope(index *knowledge.Index, repo vcs.Repository, scope Scope) {
+func (runner *StageRunner) registerForScope(
+	index *knowledge.Index,
+	repo vcs.Repository,
+	scope Scope,
+) {
 	langs := core.NewLanguageRegistry()
 	langspec.RegisterAll(langs)
 
-	for _, a := range registry.Analyzers(index, langs, repo, gatesFor(scope)) {
-		r.Register(a)
+	for _, analyzer := range registry.Analyzers(index, langs, repo, gatesFor(scope)) {
+		runner.Register(analyzer)
 	}
 }
 

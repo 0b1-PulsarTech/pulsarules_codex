@@ -41,23 +41,23 @@ func NewSkipSet(names []string) SkipSet {
 	return SkipSet{dirs: dirs}
 }
 
-func (s SkipSet) orDefault() SkipSet {
+func (skips SkipSet) orDefault() SkipSet {
 	// An empty list is a deliberate choice to skip nothing, not unconfigured.
-	if s.dirs == nil {
+	if skips.dirs == nil {
 		return NewSkipSet(DefaultSkipDirs())
 	}
-	return s
+	return skips
 }
 
-func (s SkipSet) SkipsDir(name string) bool { return s.orDefault().dirs[name] }
+func (skips SkipSet) SkipsDir(name string) bool { return skips.orDefault().dirs[name] }
 
-func (s SkipSet) SkipsPath(path string) bool {
+func (skips SkipSet) SkipsPath(path string) bool {
 	// Only directory segments count: a file named vendor is still analyzed.
 	dir := filepath.ToSlash(filepath.Dir(filepath.ToSlash(path)))
 	if dir == "." || dir == "/" {
 		return false
 	}
-	resolved := s.orDefault()
+	resolved := skips.orDefault()
 	for segment := range strings.SplitSeq(dir, "/") {
 		if resolved.dirs[segment] {
 			return true

@@ -17,9 +17,9 @@ func NewRouter(index *knowledge.Index) *Router {
 	return &Router{index: index}
 }
 
-func (r *Router) SkillsForFile(filePath string) []string {
+func (router *Router) SkillsForFile(filePath string) []string {
 	// A nil index routes nothing: a hook must never block a turn on a missing knowledge base.
-	if r == nil || r.index == nil {
+	if router == nil || router.index == nil {
 		return nil
 	}
 	ext := strings.ToLower(filepath.Ext(filePath))
@@ -29,24 +29,24 @@ func (r *Router) SkillsForFile(filePath string) []string {
 
 	var ids []string
 	if ext == ".go" {
-		for _, entry := range r.index.Router.Baseline.Always {
+		for _, entry := range router.index.Router.Baseline.Always {
 			ids = append(ids, entry.Skill)
 		}
 	}
-	for _, skill := range r.index.Skills {
+	for _, skill := range router.index.Skills {
 		if triggersName(skill.Triggers, ext) {
 			ids = append(ids, skill.ID)
 		}
 	}
 	if strings.HasSuffix(strings.ToLower(filePath), "_test.go") {
-		ids = append(ids, r.dispatchSkills("test")...)
+		ids = append(ids, router.dispatchSkills("test")...)
 	}
 	return slicesx.Dedupe(ids)
 }
 
-func (r *Router) dispatchSkills(keyword string) []string {
+func (router *Router) dispatchSkills(keyword string) []string {
 	var ids []string
-	for _, row := range r.index.Router.Dispatch {
+	for _, row := range router.index.Router.Dispatch {
 		// A new row naming an existing keyword is picked up with no Go change.
 		if hasWord(row.Signal, keyword) {
 			ids = append(ids, row.Skills...)

@@ -12,10 +12,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/contract"
 )
 
-func (d *Dispatcher) Dispatch(mode string, payload []byte) error {
+func (disp *Dispatcher) Dispatch(mode string, payload []byte) error {
 	in := decodeHookPayload(payload)
 	session := NewSessionTrackerFromID(in.SessionID)
-	d.warnMissingProjectDir(session)
+	disp.warnMissingProjectDir(session)
 	start := time.Now()
 
 	var (
@@ -24,72 +24,72 @@ func (d *Dispatcher) Dispatch(mode string, payload []byte) error {
 	)
 	switch mode {
 	case "session-start":
-		err = d.emitSessionStart(session)
+		err = disp.emitSessionStart(session)
 	case "pre-edit":
-		err = d.emitPreEdit(session, in)
+		err = disp.emitPreEdit(session, in)
 	case "post-edit":
-		err = d.emitPostEdit(session, in)
+		err = disp.emitPostEdit(session, in)
 	case "pre-search":
-		err = d.emitPreSearch(session, in)
+		err = disp.emitPreSearch(session, in)
 	case "user-prompt":
-		err = d.emitUserPrompt()
+		err = disp.emitUserPrompt()
 	case "stop":
-		findings, err = d.emitStop("Stop", session)
+		findings, err = disp.emitStop("Stop", session)
 	case "subagent-start":
-		err = d.emitSubagentStart()
+		err = disp.emitSubagentStart()
 	case "session-end":
 		session.Cleanup()
 	}
 
-	d.record(mode, session, start, findings, err)
+	disp.record(mode, session, start, findings, err)
 	// A hook must never block: a handler failure surfaces only through the log.
 	return nil
 }
 
-func (d *Dispatcher) emitSessionStart(session *SessionTracker) error {
+func (disp *Dispatcher) emitSessionStart(session *SessionTracker) error {
 	if !session.OncePerSession("session-start") {
 		return nil
 	}
-	text, err := contract.Session(d.templates)
+	text, err := contract.Session(disp.templates)
 	if err != nil {
 		return fmt.Errorf("session contract: %w", err)
 	}
-	d.emitOutput("SessionStart", text)
-	d.emitKnowledgeDrift()
+	disp.emitOutput("SessionStart", text)
+	disp.emitKnowledgeDrift()
 	return nil
 }
 
-func (d *Dispatcher) emitSubagentStart() error {
-	text, err := contract.Subagent(d.templates)
+func (disp *Dispatcher) emitSubagentStart() error {
+	text, err := contract.Subagent(disp.templates)
 	if err != nil {
 		return fmt.Errorf("subagent contract: %w", err)
 	}
 	// No OncePerSession gate: a subagent shares its parent's session id and would be muted.
-	d.emitOutput("SubagentStart", text)
+	disp.emitOutput("SubagentStart", text)
 	return nil
 }
 
-func (d *Dispatcher) emitContext(asset, event string) error {
-	return d.emitContextWithNotice(asset, event, "")
+func (disp *Dispatcher) emitContext(asset, event string) error {
+	return disp.emitContextWithNotice(asset, event, "")
 }
 
-func (d *Dispatcher) emitContextWithNotice(asset, event, notice string) error {
-	text, err := fs.ReadFile(d.templates, asset)
+func (disp *Dispatcher) emitContextWithNotice(asset, event, notice string) error {
+	text, err := fs.ReadFile(disp.templates, asset)
 	if err != nil {
 		return fmt.Errorf("read %s: %w", asset, err)
 	}
-	d.emitOutput(event, joinNotice(notice, strings.TrimSpace(string(text))))
+	disp.emitOutput(event, joinNotice(notice, strings.TrimSpace(string(text))))
 	return nil
 }
 
-func (d *Dispatcher) record(
+func (disp *Dispatcher) record(
 	mode string,
 	session *SessionTracker,
 	start time.Time,
 	findings int,
 	err error,
 ) {
-	if d.logger == nil {
+	if disp.logger == nil {
 		return
 	}
 	args := []any{
@@ -102,7 +102,7 @@ func (d *Dispatcher) record(
 	if err != nil {
 		args = append(args, slog.String("error", err.Error()))
 	}
-	d.logger.Info("hook dispatched", args...)
+	disp.logger.Info("hook dispatched", args...)
 }
 
 func filterInstalled(ids []string, skillsDir string) []string {

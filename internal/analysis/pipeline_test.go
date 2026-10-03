@@ -12,24 +12,24 @@ type stubAnalyzer struct {
 	findings []core.Finding
 }
 
-func (s stubAnalyzer) ID() string          { return s.id }
-func (s stubAnalyzer) Stage() core.StageID { return s.stage }
-func (s stubAnalyzer) Analyze(_ *core.AnalysisContext) []core.Finding {
-	return s.findings
+func (stub stubAnalyzer) ID() string          { return stub.id }
+func (stub stubAnalyzer) Stage() core.StageID { return stub.stage }
+func (stub stubAnalyzer) Analyze(_ *core.AnalysisContext) []core.Finding {
+	return stub.findings
 }
 
 func TestStageRunnerRegisterAndRun(t *testing.T) {
 	t.Parallel()
 
-	r := NewStageRunner(nil)
-	r.Register(stubAnalyzer{
+	runner := NewStageRunner(nil)
+	runner.Register(stubAnalyzer{
 		id:    "a1",
 		stage: core.StageStatic,
 		findings: []core.Finding{
 			{AnalyzerID: "a1", Message: "issue 1", Severity: core.SeverityWarning},
 		},
 	})
-	r.Register(stubAnalyzer{
+	runner.Register(stubAnalyzer{
 		id:    "a2",
 		stage: core.StageAST,
 		findings: []core.Finding{
@@ -38,7 +38,7 @@ func TestStageRunnerRegisterAndRun(t *testing.T) {
 	})
 
 	ctx := &core.AnalysisContext{}
-	findings := r.RunStages(ctx)
+	findings := runner.RunStages(ctx)
 	if len(findings) != 2 {
 		t.Fatalf("expected 2 findings, got %d", len(findings))
 	}
@@ -58,20 +58,20 @@ func TestStageRunnerDisabledAnalyzer(t *testing.T) {
 			"disabled": {Enabled: false},
 		},
 	}
-	r := NewStageRunner(cfg)
-	r.Register(stubAnalyzer{
+	runner := NewStageRunner(cfg)
+	runner.Register(stubAnalyzer{
 		id:       "disabled",
 		stage:    core.StageStatic,
 		findings: []core.Finding{{AnalyzerID: "disabled", Message: "should not appear"}},
 	})
-	r.Register(stubAnalyzer{
+	runner.Register(stubAnalyzer{
 		id:       "enabled",
 		stage:    core.StageStatic,
 		findings: []core.Finding{{AnalyzerID: "enabled", Message: "should appear"}},
 	})
 
 	ctx := &core.AnalysisContext{}
-	findings := r.RunStages(ctx)
+	findings := runner.RunStages(ctx)
 	if len(findings) != 1 {
 		t.Fatalf("expected 1 finding (disabled analyzer skipped), got %d", len(findings))
 	}
@@ -85,11 +85,11 @@ type stubInPlaceAnalyzer struct {
 	stage core.StageID
 }
 
-func (s stubInPlaceAnalyzer) ID() string          { return s.id }
-func (s stubInPlaceAnalyzer) Stage() core.StageID { return s.stage }
-func (s stubInPlaceAnalyzer) TransformsInPlace()  {}
+func (stub stubInPlaceAnalyzer) ID() string          { return stub.id }
+func (stub stubInPlaceAnalyzer) Stage() core.StageID { return stub.stage }
+func (stub stubInPlaceAnalyzer) TransformsInPlace()  {}
 
-func (s stubInPlaceAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+func (stub stubInPlaceAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if len(ctx.Findings) > 0 {
 		ctx.Findings = ctx.Findings[1:]
 	}
@@ -101,17 +101,17 @@ var _ core.InPlaceAnalyzer = stubInPlaceAnalyzer{}
 func TestStageRunnerInPlaceAnalyzerNotAppended(t *testing.T) {
 	t.Parallel()
 
-	r := NewStageRunner(nil)
-	r.Register(stubAnalyzer{
+	runner := NewStageRunner(nil)
+	runner.Register(stubAnalyzer{
 		id:    "producer",
 		stage: core.StageStatic,
 		findings: []core.Finding{
 			{AnalyzerID: "one"}, {AnalyzerID: "two"},
 		},
 	})
-	r.Register(stubInPlaceAnalyzer{id: "transformer", stage: core.StageOutput})
+	runner.Register(stubInPlaceAnalyzer{id: "transformer", stage: core.StageOutput})
 
-	findings := r.RunStages(&core.AnalysisContext{})
+	findings := runner.RunStages(&core.AnalysisContext{})
 	if len(findings) != 1 {
 		t.Fatalf(
 			"expected 1 finding (one dropped, none appended), got %d: %+v",
@@ -127,25 +127,25 @@ func TestStageRunnerInPlaceAnalyzerNotAppended(t *testing.T) {
 func TestStageRunnerOrdersByStage(t *testing.T) {
 	t.Parallel()
 
-	r := NewStageRunner(nil)
-	r.Register(stubAnalyzer{
+	runner := NewStageRunner(nil)
+	runner.Register(stubAnalyzer{
 		id:       "ast",
 		stage:    core.StageAST,
 		findings: []core.Finding{{AnalyzerID: "ast"}},
 	})
-	r.Register(stubAnalyzer{
+	runner.Register(stubAnalyzer{
 		id:       "static",
 		stage:    core.StageStatic,
 		findings: []core.Finding{{AnalyzerID: "static"}},
 	})
-	r.Register(stubAnalyzer{
+	runner.Register(stubAnalyzer{
 		id:       "arch",
 		stage:    core.StageArch,
 		findings: []core.Finding{{AnalyzerID: "arch"}},
 	})
 
 	ctx := &core.AnalysisContext{}
-	findings := r.RunStages(ctx)
+	findings := runner.RunStages(ctx)
 
 	want := []string{"static", "ast", "arch"}
 	if len(findings) != len(want) {

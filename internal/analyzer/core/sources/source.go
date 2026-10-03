@@ -36,40 +36,40 @@ func NewFSProvider(fsys fs.FS, projectDir string, skips SkipSet) Provider {
 	}
 }
 
-func (p *fsProvider) Read(path string) ([]byte, bool) {
-	p.mu.RLock()
-	content, ok := p.cache[path]
-	p.mu.RUnlock()
+func (provider *fsProvider) Read(path string) ([]byte, bool) {
+	provider.mu.RLock()
+	content, ok := provider.cache[path]
+	provider.mu.RUnlock()
 	if ok {
 		return content, true
 	}
 	rel := path
 	if filepath.IsAbs(rel) {
-		if p.projectDir == "" {
+		if provider.projectDir == "" {
 			return nil, false
 		}
 		var relErr error
-		if rel, relErr = filepath.Rel(p.projectDir, rel); relErr != nil {
+		if rel, relErr = filepath.Rel(provider.projectDir, rel); relErr != nil {
 			return nil, false
 		}
 	}
-	content, err := fs.ReadFile(p.fsys, filepath.ToSlash(rel))
+	content, err := fs.ReadFile(provider.fsys, filepath.ToSlash(rel))
 	if err != nil {
 		return nil, false
 	}
-	p.mu.Lock()
-	p.cache[path] = content
-	p.mu.Unlock()
+	provider.mu.Lock()
+	provider.cache[path] = content
+	provider.mu.Unlock()
 	return content, true
 }
 
-func (p *fsProvider) Walk(fn func(path string, ext string) bool) {
-	_ = fs.WalkDir(p.fsys, ".", func(path string, d fs.DirEntry, err error) error {
+func (provider *fsProvider) Walk(fn func(path string, ext string) bool) {
+	_ = fs.WalkDir(provider.fsys, ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return nil //nolint:nilerr // WalkDir callback: skip the bad entry, keep walking.
 		}
-		if d.IsDir() {
-			if path != "." && p.skips.SkipsDir(d.Name()) {
+		if entry.IsDir() {
+			if path != "." && provider.skips.SkipsDir(entry.Name()) {
 				return fs.SkipDir
 			}
 			return nil

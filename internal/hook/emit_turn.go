@@ -11,11 +11,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-func (d *Dispatcher) emitPreSearch(session *SessionTracker, in hookPayload) error {
+func (disp *Dispatcher) emitPreSearch(session *SessionTracker, in hookPayload) error {
 	if !searchTargetsGo(in) {
 		return nil
 	}
-	projectDir := d.resolveProjectDir()
+	projectDir := disp.resolveProjectDir()
 	if projectDir == "" {
 		return nil
 	}
@@ -23,14 +23,14 @@ func (d *Dispatcher) emitPreSearch(session *SessionTracker, in hookPayload) erro
 	if _, err := os.Stat(filepath.Join(projectDir, "go.mod")); err != nil {
 		return nil //nolint:nilerr // no go.mod means "not a Go project", not a failure.
 	}
-	skillsDir := d.resolveSkillsDir()
+	skillsDir := disp.resolveSkillsDir()
 	if skillsDir == "" || len(filterInstalled([]string{"gopls-navigation"}, skillsDir)) == 0 {
 		return nil
 	}
 	if !session.OncePerSession("pre-search") {
 		return nil
 	}
-	return d.emitContext("hooks/pre-search.txt", "PreToolUse")
+	return disp.emitContext("hooks/pre-search.txt", "PreToolUse")
 }
 
 func searchTargetsGo(in hookPayload) bool {
@@ -54,12 +54,12 @@ func searchTargetsGo(in hookPayload) bool {
 	}
 }
 
-func (d *Dispatcher) emitUserPrompt() error {
-	return d.emitContext("hooks/user-prompt.txt", "UserPromptSubmit")
+func (disp *Dispatcher) emitUserPrompt() error {
+	return disp.emitContext("hooks/user-prompt.txt", "UserPromptSubmit")
 }
 
-func (d *Dispatcher) emitStop(event string, session *SessionTracker) (int, error) {
-	projectDir := d.resolveProjectDir()
+func (disp *Dispatcher) emitStop(event string, session *SessionTracker) (int, error) {
+	projectDir := disp.resolveProjectDir()
 	if projectDir == "" {
 		return 0, nil
 	}
@@ -76,13 +76,13 @@ func (d *Dispatcher) emitStop(event string, session *SessionTracker) (int, error
 	if status.IsClean() {
 		return 0, nil
 	}
-	block, count := d.governance(repo, status)
+	block, count := disp.governance(repo, status)
 	if block == "" {
 		// Nothing actionable: stay silent rather than nagging about a
 		// dirty tree the governance checks have nothing to say about.
 		return 0, nil
 	}
-	text, err := fs.ReadFile(d.templates, "hooks/stop.txt")
+	text, err := fs.ReadFile(disp.templates, "hooks/stop.txt")
 	if err != nil {
 		return count, fmt.Errorf("read stop.txt: %w", err)
 	}
@@ -94,7 +94,7 @@ func (d *Dispatcher) emitStop(event string, session *SessionTracker) (int, error
 	if !session.FirstEmission(event, context) {
 		return count, nil
 	}
-	d.emitOutput(event, context)
+	disp.emitOutput(event, context)
 	return count, nil
 }
 

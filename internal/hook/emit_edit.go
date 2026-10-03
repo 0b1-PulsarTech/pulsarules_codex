@@ -12,9 +12,9 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 )
 
-func (d *Dispatcher) emitPreEdit(session *SessionTracker, in hookPayload) error {
+func (disp *Dispatcher) emitPreEdit(session *SessionTracker, in hookPayload) error {
 	filePath := in.ToolInput.FilePath
-	if len(d.router.SkillsForFile(filePath)) == 0 {
+	if len(disp.router.SkillsForFile(filePath)) == 0 {
 		return nil
 	}
 	// Gate per file path, not per session: the failure this hook guards
@@ -23,7 +23,7 @@ func (d *Dispatcher) emitPreEdit(session *SessionTracker, in hookPayload) error 
 	if !session.FirstEmission(preEditFileEvent(filePath), filePath) {
 		return nil
 	}
-	return d.emitContext("hooks/pre-edit.txt", "PreToolUse")
+	return disp.emitContext("hooks/pre-edit.txt", "PreToolUse")
 }
 
 func preEditFileEvent(filePath string) string {
@@ -33,23 +33,23 @@ func preEditFileEvent(filePath string) string {
 	return "pre-edit-file-" + hex.EncodeToString(sum[:eventKeyBytes])
 }
 
-func (d *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) error {
+func (disp *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) error {
 	filePath := in.ToolInput.FilePath
 
 	// Before the skills gate below, which returns early for any extension
 	// that routes no skill; no trigger names .md, where most markers live.
-	notice := d.autoCleanEdited(filePath)
+	notice := disp.autoCleanEdited(filePath)
 
-	relevant := d.router.SkillsForFile(filePath)
+	relevant := disp.router.SkillsForFile(filePath)
 	if len(relevant) == 0 {
 		if notice == "" {
 			return nil
 		}
-		d.emitOutput("PostToolUse", notice)
+		disp.emitOutput("PostToolUse", notice)
 		return nil
 	}
 
-	if skillsDir := d.resolveSkillsDir(); skillsDir != "" {
+	if skillsDir := disp.resolveSkillsDir(); skillsDir != "" {
 		relevant = filterInstalled(relevant, skillsDir)
 	} else {
 		// Without a skills dir we cannot tell which of the matched skills
@@ -58,10 +58,10 @@ func (d *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) error
 		relevant = nil
 	}
 	if len(relevant) == 0 {
-		return d.emitContextWithNotice("hooks/post-edit.txt", "PostToolUse", notice)
+		return disp.emitContextWithNotice("hooks/post-edit.txt", "PostToolUse", notice)
 	}
 
-	text, err := renderPostEditChecklist(d.templates, postEditChecklist{
+	text, err := renderPostEditChecklist(disp.templates, postEditChecklist{
 		BaseName: escape.Path(filepath.Base(filePath)),
 		SkillIDs: relevant,
 		IsGo:     strings.ToLower(filepath.Ext(filePath)) == ".go",
@@ -75,7 +75,7 @@ func (d *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) error
 	if !session.FirstEmission("PostToolUse", text) && notice == "" {
 		return nil
 	}
-	d.emitOutput("PostToolUse", joinNotice(notice, text))
+	disp.emitOutput("PostToolUse", joinNotice(notice, text))
 	return nil
 }
 

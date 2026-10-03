@@ -49,9 +49,9 @@ func TestSplitGenerated(t *testing.T) {
 					got.Findings,
 				)
 			}
-			for i, want := range testCase.wantKept {
-				if got.Findings[i].File != want {
-					t.Errorf("kept[%d].File = %q, want %q", i, got.Findings[i].File, want)
+			for idx, want := range testCase.wantKept {
+				if got.Findings[idx].File != want {
+					t.Errorf("kept file = %q, want %q", got.Findings[idx].File, want)
 				}
 			}
 		})
@@ -186,8 +186,8 @@ func TestAnalyzeIncludeGeneratedKeepsEverything(t *testing.T) {
 			result := NewSession(repo, "", nil, cfg).Analyze(ScopeChanged, nil, FileSetChanged)
 
 			hasEmDash := false
-			for _, f := range result.Findings {
-				if f.AnalyzerID == "typographic-markers" {
+			for _, finding := range result.Findings {
+				if finding.AnalyzerID == "typographic-markers" {
 					hasEmDash = true
 				}
 			}

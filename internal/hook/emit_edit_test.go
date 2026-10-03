@@ -225,20 +225,20 @@ func TestDispatchPreEditPerFile_OncePerFile(t *testing.T) {
 			t.Parallel()
 			id := uniqueSessionID(t)
 			disp, out := dispatchCapture(Deps{Index: idx})
-			for i, filePath := range testCase.filePaths {
+			for step, filePath := range testCase.filePaths {
 				out.Reset()
 				payload := fmt.Appendf(
 					nil, `{"tool_input":{"file_path":%q},"session_id":%q}`, filePath, id,
 				)
 				_ = disp.Dispatch("pre-edit", payload)
 				fired := strings.Contains(out.String(), "pre-edit reminder text")
-				if fired != testCase.wantFires[i] {
+				if fired != testCase.wantFires[step] {
 					t.Errorf(
 						"dispatch %d (%s): fired = %v, want %v",
-						i,
+						step,
 						filePath,
 						fired,
-						testCase.wantFires[i],
+						testCase.wantFires[step],
 					)
 				}
 			}

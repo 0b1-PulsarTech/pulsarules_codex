@@ -42,9 +42,10 @@ func TestMarkGenerated(t *testing.T) {
 			if len(files) != len(testCase.wantFlag) {
 				t.Fatalf("got %d files, want %d", len(files), len(testCase.wantFlag))
 			}
-			for i, want := range testCase.wantFlag {
-				if files[i].Generated != want {
-					t.Errorf("files[%d].Generated = %v, want %v", i, files[i].Generated, want)
+			for idx, want := range testCase.wantFlag {
+				if files[idx].Generated != want {
+					got := files[idx]
+					t.Errorf("%s Generated = %v, want %v", got.Path, got.Generated, want)
 				}
 			}
 		})

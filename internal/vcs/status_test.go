@@ -184,7 +184,7 @@ func TestStatus_IsCleanAndExtensions(t *testing.T) {
 					t.Fatalf("Extensions() = %v, missing %q", got, ext)
 				}
 			}
-			if s := testCase.status.String(); testCase.wantNonZero && s == "" {
+			if got := testCase.status.String(); testCase.wantNonZero && got == "" {
 				t.Fatal("String() = empty, want non-empty")
 			}
 		})

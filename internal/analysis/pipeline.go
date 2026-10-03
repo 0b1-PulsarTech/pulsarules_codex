@@ -16,20 +16,20 @@ func NewStageRunner(cfg *core.AnalysisConfig) *StageRunner {
 	}
 }
 
-func (r *StageRunner) Register(a core.Analyzer) {
-	r.stages[a.Stage()] = append(r.stages[a.Stage()], a)
+func (runner *StageRunner) Register(analyzer core.Analyzer) {
+	runner.stages[analyzer.Stage()] = append(runner.stages[analyzer.Stage()], analyzer)
 }
 
-func (r *StageRunner) RunStages(ctx *core.AnalysisContext) []core.Finding {
+func (runner *StageRunner) RunStages(ctx *core.AnalysisContext) []core.Finding {
 	for stage := core.StageContext; stage <= core.StageOutput; stage++ {
-		analyzers := r.stages[stage]
-		for _, a := range analyzers {
-			if !r.enabled(a) {
+		analyzers := runner.stages[stage]
+		for _, analyzer := range analyzers {
+			if !runner.enabled(analyzer) {
 				continue
 			}
-			findings := a.Analyze(ctx)
+			findings := analyzer.Analyze(ctx)
 			// An in-place analyzer already appended to ctx.Findings; skip its return.
-			if _, inPlace := a.(core.InPlaceAnalyzer); inPlace {
+			if _, inPlace := analyzer.(core.InPlaceAnalyzer); inPlace {
 				continue
 			}
 			ctx.Findings = append(ctx.Findings, findings...)
@@ -38,11 +38,11 @@ func (r *StageRunner) RunStages(ctx *core.AnalysisContext) []core.Finding {
 	return ctx.Findings
 }
 
-func (r *StageRunner) enabled(a core.Analyzer) bool {
-	if r.cfg == nil {
+func (runner *StageRunner) enabled(analyzer core.Analyzer) bool {
+	if runner.cfg == nil {
 		return true
 	}
-	cfg, ok := r.cfg.Analyzers[a.ID()]
+	cfg, ok := runner.cfg.Analyzers[analyzer.ID()]
 	if !ok {
 		return true
 	}

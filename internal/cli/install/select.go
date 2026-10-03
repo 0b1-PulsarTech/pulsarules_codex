@@ -67,8 +67,8 @@ func promptSkillSelection(idx *knowledge.Index) (output.Selection, error) {
 		return output.Selection{}, fmt.Errorf("parse skill selection: %w", err)
 	}
 	ids := make([]string, 0, len(picked))
-	for _, i := range picked {
-		ids = append(ids, catalog[i-1].ID)
+	for _, choice := range picked {
+		ids = append(ids, catalog[choice-1].ID)
 	}
 	// Selection.Resolve unions the mandatory skills in regardless of what is picked.
 	return output.Selection{IDs: ids}, nil

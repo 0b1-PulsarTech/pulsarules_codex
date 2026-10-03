@@ -13,37 +13,37 @@ type goldenRepo struct {
 
 var _ vcs.Repository = (*goldenRepo)(nil)
 
-func (g *goldenRepo) Root() string { return g.root }
+func (repo *goldenRepo) Root() string { return repo.root }
 
-func (g *goldenRepo) CurrentBranch() (string, error) { return "", nil }
+func (repo *goldenRepo) CurrentBranch() (string, error) { return "", nil }
 
-func (g *goldenRepo) HeadAuthorEpoch() (int64, bool, error) { return 0, false, nil }
+func (repo *goldenRepo) HeadAuthorEpoch() (int64, bool, error) { return 0, false, nil }
 
-func (g *goldenRepo) RecentSubjects(int) ([]string, error) { return nil, nil }
+func (repo *goldenRepo) RecentSubjects(int) ([]string, error) { return nil, nil }
 
-func (g *goldenRepo) WorktreeStatus() (vcs.Status, error) { return vcs.Status{}, nil }
+func (repo *goldenRepo) WorktreeStatus() (vcs.Status, error) { return vcs.Status{}, nil }
 
-func (g *goldenRepo) StagedRenames(int) ([]vcs.Rename, error) { return nil, nil }
+func (repo *goldenRepo) StagedRenames(int) ([]vcs.Rename, error) { return nil, nil }
 
-func (g *goldenRepo) HeadBlob(string) (string, error) { return "", nil }
+func (repo *goldenRepo) HeadBlob(string) (string, error) { return "", nil }
 
-func (g *goldenRepo) StagedBlob(string) (string, error) { return "", nil }
+func (repo *goldenRepo) StagedBlob(string) (string, error) { return "", nil }
 
-func (g *goldenRepo) HeadEntry(string) (mode, id string, err error) { return "", "", nil }
+func (repo *goldenRepo) HeadEntry(string) (mode, id string, err error) { return "", "", nil }
 
-func (g *goldenRepo) StagedEntry(string) (mode, id string, err error) { return "", "", nil }
+func (repo *goldenRepo) StagedEntry(string) (mode, id string, err error) { return "", "", nil }
 
-func (g *goldenRepo) HeadDir(string) ([]string, error) { return nil, nil }
+func (repo *goldenRepo) HeadDir(string) ([]string, error) { return nil, nil }
 
-func (g *goldenRepo) StagedDir(string) ([]string, error) { return nil, nil }
+func (repo *goldenRepo) StagedDir(string) ([]string, error) { return nil, nil }
 
-func (g *goldenRepo) ListFiles() ([]string, error) {
+func (repo *goldenRepo) ListFiles() ([]string, error) {
 	var files []string
-	err := filepath.WalkDir(g.root, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := filepath.WalkDir(repo.root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || entry.IsDir() {
 			return walkErr
 		}
-		rel, relErr := filepath.Rel(g.root, path)
+		rel, relErr := filepath.Rel(repo.root, path)
 		if relErr != nil {
 			return relErr
 		}

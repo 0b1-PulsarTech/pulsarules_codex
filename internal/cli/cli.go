@@ -18,9 +18,9 @@ type ExitError struct {
 	Code int
 }
 
-func (e *ExitError) Error() string {
+func (exitErr *ExitError) Error() string {
 	// Fallback only: the command printed its findings before returning this.
-	return fmt.Sprintf("exit code %d", e.Code)
+	return fmt.Sprintf("exit code %d", exitErr.Code)
 }
 
 func Run(inj remy.Injector, opts *cliopts.Options) error {
@@ -62,18 +62,18 @@ func HandleBootstrapErr(command string, err error) int {
 	return handleBootstrapErr(os.Stderr, command, err)
 }
 
-func handleBootstrapErr(w io.Writer, command string, err error) int {
+func handleBootstrapErr(out io.Writer, command string, err error) int {
 	if command == "hook" {
-		_, _ = fmt.Fprintln(w, "pulsarules_cli: hook:", escape.Line(err.Error()))
+		_, _ = fmt.Fprintln(out, "pulsarules_cli: hook:", escape.Line(err.Error()))
 		// A hook invocation must never block the caller's turn.
 		return 0
 	}
-	ReportError(w, err)
+	ReportError(out, err)
 	return 1
 }
 
-func ReportError(w io.Writer, err error) {
-	_, _ = fmt.Fprintln(w, "pulsarules_cli:", escape.Line(err.Error()))
+func ReportError(out io.Writer, err error) {
+	_, _ = fmt.Fprintln(out, "pulsarules_cli:", escape.Line(err.Error()))
 }
 
 func BootstrapOptions(opts *cliopts.Options) bootstrap.Options {

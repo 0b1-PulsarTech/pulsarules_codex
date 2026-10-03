@@ -10,12 +10,12 @@ type fakeProvider struct {
 	contents map[string][]byte
 }
 
-func (p fakeProvider) Read(path string) ([]byte, bool) {
-	src, ok := p.contents[path]
+func (provider fakeProvider) Read(path string) ([]byte, bool) {
+	src, ok := provider.contents[path]
 	return src, ok
 }
 
-func (p fakeProvider) Walk(func(path string, ext string) bool) {}
+func (provider fakeProvider) Walk(func(path string, ext string) bool) {}
 
 var _ sources.Provider = fakeProvider{}
 

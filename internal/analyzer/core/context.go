@@ -49,11 +49,11 @@ func (ctx *AnalysisContext) ChangedGoASTs() iter.Seq2[FileChange, *ast.File] {
 			if fc.Extension != ".go" {
 				continue
 			}
-			f := ctx.ASTCache.Get(fc.Path)
-			if f == nil {
+			file := ctx.ASTCache.Get(fc.Path)
+			if file == nil {
 				continue
 			}
-			if !yield(fc, f) {
+			if !yield(fc, file) {
 				return
 			}
 		}

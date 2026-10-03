@@ -22,11 +22,14 @@ type Error struct {
 	Err    error
 }
 
-func (e *Error) Error() string {
-	return fmt.Sprintf("%s %s: %v: %s", e.Name, strings.Join(e.Args, " "), e.Err, e.Stderr)
+func (execErr *Error) Error() string {
+	return fmt.Sprintf(
+		"%s %s: %v: %s",
+		execErr.Name, strings.Join(execErr.Args, " "), execErr.Err, execErr.Stderr,
+	)
 }
 
-func (e *Error) Unwrap() error { return e.Err }
+func (execErr *Error) Unwrap() error { return execErr.Err }
 
 type Command struct {
 	Name    string
