@@ -6,12 +6,13 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-func walkAllFiles(sources core.SourceProvider) []core.FileChange {
+func walkAllFiles(provider sources.SourceProvider) []core.FileChange {
 	var files []core.FileChange
-	sources.Walk(func(path, ext string) bool {
+	provider.Walk(func(path, ext string) bool {
 		files = append(files, core.FileChange{
 			Path:      path,
 			Extension: ext,
@@ -45,12 +46,12 @@ func toCoreRenames(renames []vcs.Rename) []core.Rename {
 	return out
 }
 
-func markGenerated(files []core.FileChange, sources core.SourceProvider) {
-	if sources == nil {
+func markGenerated(files []core.FileChange, provider sources.SourceProvider) {
+	if provider == nil {
 		return
 	}
 	for i := range files {
-		src, ok := sources.Read(files[i].Path)
+		src, ok := provider.Read(files[i].Path)
 		if !ok {
 			continue
 		}
@@ -60,7 +61,7 @@ func markGenerated(files []core.FileChange, sources core.SourceProvider) {
 
 func populateASTCache(
 	changedFiles []core.FileChange,
-	sources core.SourceProvider,
+	provider sources.SourceProvider,
 ) *astcache.Cache {
 	if len(changedFiles) == 0 {
 		return nil
@@ -71,7 +72,7 @@ func populateASTCache(
 		if fc.Extension != ".go" {
 			continue
 		}
-		src, ok := sources.Read(fc.Path)
+		src, ok := provider.Read(fc.Path)
 		if !ok {
 			continue
 		}

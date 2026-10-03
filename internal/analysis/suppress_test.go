@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
@@ -119,7 +120,10 @@ func TestSplitGenerated_UnlistedFiles(t *testing.T) {
 
 	ctx := &core.AnalysisContext{
 		ChangedFiles: nil,
-		Sources:      core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources: sources.NewSourceProvider(
+			dir,
+			sources.NewSkipSet(sources.DefaultSkipDirs()),
+		),
 	}
 	findings := []core.Finding{
 		{AnalyzerID: "golangci-lint", File: "gen.go"},

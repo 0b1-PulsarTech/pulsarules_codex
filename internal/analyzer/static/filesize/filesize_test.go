@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
 )
 
@@ -107,7 +108,7 @@ func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
 	write("huge_test.go", 500)
 
 	a := NewAnalyzer()
-	srcs := core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs()))
+	srcs := sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs()))
 
 	testCases := []struct {
 		name   string
@@ -162,7 +163,7 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 	a := NewAnalyzer()
 	got := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "testdata/big.go", Extension: ".go"},
 		},
@@ -184,7 +185,7 @@ func TestAnalyze_ReportsOnADartFileJustLikeGo(t *testing.T) {
 	a := NewAnalyzer()
 	got := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "big.dart", Extension: ".dart"},
 		},

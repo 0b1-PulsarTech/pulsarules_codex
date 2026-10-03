@@ -6,12 +6,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 )
 
 const DefaultMaxDepth = 3
 
-func Detect(root string, skip core.SkipSet, maxDepth int) (Set, error) {
+func Detect(root string, skip sources.SkipSet, maxDepth int) (Set, error) {
 	var found []Language
 	err := fs.WalkDir(os.DirFS(root), ".", func(
 		path string, entry fs.DirEntry, walkErr error,

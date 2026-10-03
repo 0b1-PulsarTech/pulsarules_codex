@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 )
 
 func TestDetect(t *testing.T) {
@@ -59,7 +59,7 @@ func TestDetect(t *testing.T) {
 				writeMarker(t, root, rel)
 			}
 
-			got, err := Detect(root, core.SkipSet{}, DefaultMaxDepth)
+			got, err := Detect(root, sources.SkipSet{}, DefaultMaxDepth)
 			if err != nil {
 				t.Fatalf("Detect: %v", err)
 			}
@@ -105,7 +105,7 @@ func TestDetect_MaxDepth(t *testing.T) {
 			root := t.TempDir()
 			writeMarker(t, root, testCase.marker)
 
-			got, err := Detect(root, core.SkipSet{}, testCase.maxDepth)
+			got, err := Detect(root, sources.SkipSet{}, testCase.maxDepth)
 			if err != nil {
 				t.Fatalf("Detect: %v", err)
 			}
@@ -131,7 +131,11 @@ func writeMarker(tb testing.TB, root, rel string) {
 func TestDetect_UnreadableRoot(t *testing.T) {
 	t.Parallel()
 
-	got, err := Detect(filepath.Join(t.TempDir(), "no-such-dir"), core.SkipSet{}, DefaultMaxDepth)
+	got, err := Detect(
+		filepath.Join(t.TempDir(), "no-such-dir"),
+		sources.SkipSet{},
+		DefaultMaxDepth,
+	)
 	if err == nil {
 		t.Fatalf("Detect on a missing root returned no error, set = %v", got.Strings())
 	}

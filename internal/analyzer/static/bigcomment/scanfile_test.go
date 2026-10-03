@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/langspec"
 )
 
@@ -272,7 +273,9 @@ func TestScanFile_DirectiveLines(t *testing.T) {
 			langs.Register(langspec.Lookup(testCase.lang))
 			findings := NewAnalyzer(langs).Analyze(&core.AnalysisContext{
 				ProjectDir: dir,
-				Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+				Sources: sources.NewSourceProvider(
+					dir, sources.NewSkipSet(sources.DefaultSkipDirs()),
+				),
 				ChangedFiles: []core.FileChange{
 					{Path: testCase.file, Extension: filepath.Ext(testCase.file)},
 				},

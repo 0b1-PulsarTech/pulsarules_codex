@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/langspec"
 )
 
@@ -63,8 +64,11 @@ func analyzeSource(t *testing.T, file, src string, config *core.AnalysisConfig) 
 	langs := core.NewLanguageRegistry()
 	langspec.RegisterAll(langs)
 	return NewAnalyzer(langs).Analyze(&core.AnalysisContext{
-		ProjectDir:   dir,
-		Sources:      core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		ProjectDir: dir,
+		Sources: sources.NewSourceProvider(
+			dir,
+			sources.NewSkipSet(sources.DefaultSkipDirs()),
+		),
 		Config:       config,
 		ChangedFiles: []core.FileChange{{Path: file, Extension: filepath.Ext(file)}},
 	})

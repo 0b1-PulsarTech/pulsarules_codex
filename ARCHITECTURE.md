@@ -300,7 +300,7 @@ The governance pipeline (see above) adds its own package set:
 | Package                          | Responsibility                                                                                      |
 |----------------------------------|-----------------------------------------------------------------------------------------------------|
 | `internal/analysis`               | `analysis.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`registerForScope`, `gatesFor`), `runner.go` (`toAnalysisConfig`), `output.go`, `format.go`, `history.go`, `registry/` (the analyzer table) |
-| `internal/analyzer/core`          | `Analyzer`/`InPlaceAnalyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Reporter.Resolved`, `EachChangedFile`, `LanguageRegistry`, `core/astcache`, `core/lexical` (comment/header lexing) |
+| `internal/analyzer/core`          | `Analyzer`/`InPlaceAnalyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Reporter.Resolved`, `EachChangedFile`, `LanguageRegistry`, `core/astcache`, `core/lexical` (comment/header lexing), `core/sources` (file sources, skip sets) |
 | `internal/analyzer/static/*`      | `filesize`, `textmarkers`, `topoffile`, `bigcomment` - text/structure checks                        |
 | `internal/analyzer/ast/*`         | `complexity`, `controlflow`, `shadowing`, `imports`, `naming` - `go/ast`-based checks                |
 | `internal/analyzer/arch`          | `PackageBoundaryAnalyzer`, `ImportCycleAnalyzer` - multi-file architecture checks                   |

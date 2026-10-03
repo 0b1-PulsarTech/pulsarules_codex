@@ -5,6 +5,7 @@ import (
 	"iter"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 )
 
 type FileChange struct {
@@ -33,8 +34,8 @@ type AnalysisContext struct {
 	GitHistory    []GitCommitEntry
 	Config        *AnalysisConfig
 	ASTCache      *astcache.Cache
-	Sources       SourceProvider
-	Skips         SkipSet
+	Sources       sources.SourceProvider
+	Skips         sources.SkipSet
 	Findings      []Finding
 }
 

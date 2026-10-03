@@ -8,7 +8,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/clean"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/mark"
@@ -39,7 +39,7 @@ func sweep(out io.Writer, root string, how mode) error {
 	var acted, remaining int
 
 	var walkErr error
-	core.NewSourceProvider(root, core.NewSkipSet(core.DefaultSkipDirs())).
+	sources.NewSourceProvider(root, sources.NewSkipSet(sources.DefaultSkipDirs())).
 		Walk(func(rel, _ string) bool {
 			// Walk yields a path relative to root; Abs would anchor it to the working directory.
 			found, err := inspectOrClean(cleaner, filepath.Join(root, rel), how)

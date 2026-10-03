@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/langspec"
 )
 
@@ -28,7 +29,7 @@ func TestBigComment_SmallComment(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "small.go", Extension: ".go"},
 		},
@@ -61,7 +62,7 @@ func TestBigComment_LargeBlock(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "big.go", Extension: ".go"},
 		},
@@ -108,7 +109,9 @@ func TestBigComment_Boundary(t *testing.T) {
 			a := NewAnalyzer(langs)
 			findings := a.Analyze(&core.AnalysisContext{
 				ProjectDir: dir,
-				Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+				Sources: sources.NewSourceProvider(
+					dir, sources.NewSkipSet(sources.DefaultSkipDirs()),
+				),
 				ChangedFiles: []core.FileChange{
 					{Path: "boundary.go", Extension: ".go"},
 				},
@@ -136,7 +139,7 @@ func TestBigComment_NoLanguage(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "file.txt", Extension: ".txt"},
 		},
@@ -166,7 +169,7 @@ func TestBigComment_GeneratedFileExempt(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "gen.go", Extension: ".go"},
 		},
@@ -201,7 +204,7 @@ func TestBigComment_SkipsTestdata(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "testdata/big.go", Extension: ".go"},
 		},
@@ -233,7 +236,7 @@ func TestBigComment_ReportsOnADartFileJustLikeGo(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "big.dart", Extension: ".dart"},
 		},
@@ -264,7 +267,7 @@ func TestBigComment_SvelteCSSSelector(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "widget.svelte", Extension: ".svelte"},
 		},
@@ -299,7 +302,7 @@ func TestBigComment_MultilineBlock(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "block.go", Extension: ".go"},
 		},
@@ -330,7 +333,7 @@ func TestBigComment_ReportsOnAMultilineHTMLComment(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "block.html", Extension: ".html"},
 		},
@@ -361,7 +364,7 @@ func TestBigComment_ReportsOnAMultilineLuaComment(t *testing.T) {
 	a := NewAnalyzer(langs)
 	findings := a.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
-		Sources:    core.NewSourceProvider(dir, core.NewSkipSet(core.DefaultSkipDirs())),
+		Sources:    sources.NewSourceProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
 			{Path: "block.lua", Extension: ".lua"},
 		},

@@ -3,7 +3,7 @@ package langdetect
 import (
 	"fmt"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 )
 
 func Resolve(repoDir, overrideCSV string) (Set, error) {
@@ -27,7 +27,7 @@ func Resolve(repoDir, overrideCSV string) (Set, error) {
 	}
 
 	// Markers live at depth 0 to 2 in a real layout; the cap leaves one level of slack above.
-	set, err = Detect(repoDir, core.SkipSet{}, DefaultMaxDepth)
+	set, err = Detect(repoDir, sources.SkipSet{}, DefaultMaxDepth)
 	if err != nil {
 		return Set{}, fmt.Errorf("detect languages: %w", err)
 	}
