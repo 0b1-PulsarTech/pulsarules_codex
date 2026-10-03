@@ -59,16 +59,16 @@ func installPostTargets(
 			TypographicSeverity: opts.TypographicSeverity,
 			BranchExtraTypes:    opts.BranchExtraTypes,
 		})
-		printReport(rpt)
+		printReport(os.Stdout, os.Stderr, rpt)
 		if hookErr != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "warning: git hooks: %v\n", hookErr)
+			printWarning(os.Stderr, "git hooks", hookErr)
 		}
 	}
 
 	// The binary is copied even with --no-git-hooks.
 	binaryErr := githook.InstallBinary(cfg.absBase)
 	if binaryErr != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "warning: binary: %v\n", binaryErr)
+		printWarning(os.Stderr, "binary", binaryErr)
 	} else {
 		_, _ = fmt.Println("installed governance binary")
 	}

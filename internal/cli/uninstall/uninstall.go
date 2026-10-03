@@ -40,7 +40,7 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	errs := uninstallTargets(deps, targets, ctx)
 
 	gitReport, hookErr := deps.hooks.Uninstall("git", install.UninstallContext{Dir: absBase})
-	printReport(gitReport)
+	printReport(os.Stdout, os.Stderr, gitReport)
 	if hookErr != nil {
 		errs = append(errs, hookErr)
 	}
@@ -82,7 +82,7 @@ func uninstallTargets(
 	var errs []error
 	for _, name := range targets {
 		report, uninstallErr := deps.targets.Uninstall(name, ctx)
-		printReport(report)
+		printReport(os.Stdout, os.Stderr, report)
 		if uninstallErr != nil {
 			// The target registry's Uninstall already wraps this as
 			// `uninstall target %q: %w`; re-wrapping here would double it.
