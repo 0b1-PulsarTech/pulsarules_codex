@@ -9,7 +9,7 @@ func cBlockComment() []core.BlockDelim {
 func specs() []Spec {
 	return []Spec{
 		goSpec(), clikeSpec(), hashSpec(), sqlSpec(),
-		luaSpec(), markupSpec(), sfcSpec(),
+		nixSpec(), luaSpec(), markupSpec(), sfcSpec(),
 	}
 }
 
@@ -55,6 +55,15 @@ func sqlSpec() Spec {
 		CommentPrefixValue: "--",
 		Syntax:             core.CommentSyntax{Line: []string{"--"}, Blocks: cBlockComment()},
 		PackageDeclaration: isSQLPackageDeclaration,
+	}
+}
+
+func nixSpec() Spec {
+	return Spec{
+		Name:               "nix",
+		Extensions:         []string{".nix"},
+		CommentPrefixValue: "#",
+		Syntax:             core.CommentSyntax{Line: []string{"#"}, Blocks: cBlockComment()},
 	}
 }
 

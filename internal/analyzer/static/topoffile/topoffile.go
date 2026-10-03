@@ -26,7 +26,7 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		return nil
 	}
 	reporter := a.reporter.Resolved(ctx)
-	extFilter := core.ExtensionFilter(ctx, a.ID(), []string{".go"})
+	extFilter := core.ExtensionFilter(ctx, a.ID(), defaultExtensions())
 	eligible := func(fc core.FileChange) bool {
 		return extFilter(fc) && a.langs.Lookup(fc.Extension) != nil
 	}
@@ -49,6 +49,10 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		}
 		return nil
 	})
+}
+
+func defaultExtensions() []string {
+	return []string{".go", ".proto", ".sql", ".nix", ".svelte", ".ts", ".dart"}
 }
 
 func firstNonBlank(src []byte) (string, int, bool) {
