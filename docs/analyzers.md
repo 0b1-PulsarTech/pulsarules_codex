@@ -39,6 +39,18 @@ each analyzer's own id.
   misread. "the only tool ever used to call x" is flagged; it cannot be told apart from
   "nobody ever used to call this".
 
+## loop-var-i
+
+- Rule: `naming`.
+- Flags: a `for` or `range` loop variable named `i` used for more than indexing or bounding.
+- Params: none.
+- Exemptions: an inner redeclaration of `i` (`:=`, `var`, `if`/`for`/`switch` init, closure param)
+  ends tracking; a user-defined `len`/`cap` is not a bound.
+- Known limits: only `len` and `cap` are bounds; a range value named `i` is not checked; pointer and
+  closure aliasing is not followed; a define in an `if`/`for`/`switch`/`range` init skips its
+  right-hand side; a root loop-init define right-hand side counts as a move (under-report,
+  contrived); labelled defines; named and generic composite types.
+
 ## variadic-index
 
 - Rule: `flag-arguments`.

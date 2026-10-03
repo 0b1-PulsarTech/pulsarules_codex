@@ -127,6 +127,7 @@ func TestApplyPreset_MinimalDisablesNewAnalyzers(t *testing.T) {
 		"doc-comment",
 		"body-header-comment",
 		"history-narration",
+		"loop-var-i",
 		"variadic-index",
 		"too-many-results",
 		"ungrouped-interfaces",
