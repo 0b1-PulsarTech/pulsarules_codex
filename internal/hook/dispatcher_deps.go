@@ -63,23 +63,23 @@ func NewDispatcher(deps Deps) *Dispatcher {
 	}
 }
 
-func (d *Dispatcher) resolveProjectDir() string {
-	if d.projectDir != "" {
-		return d.projectDir
+func (disp *Dispatcher) resolveProjectDir() string {
+	if disp.projectDir != "" {
+		return disp.projectDir
 	}
 	return os.Getenv("PULSARULES_PROJECT_DIR")
 }
 
-func (d *Dispatcher) resolveSkillsDir() string {
-	if d.skillsDir != "" {
-		return d.skillsDir
+func (disp *Dispatcher) resolveSkillsDir() string {
+	if disp.skillsDir != "" {
+		return disp.skillsDir
 	}
 	// The layout is host-specific (.claude/skills vs .opencode/skills): no hardcoded default.
 	return os.Getenv("PULSARULES_SKILLS_DIR")
 }
 
-func (d *Dispatcher) warnMissingProjectDir(session *sessionTracker) {
-	if d.resolveProjectDir() != "" {
+func (disp *Dispatcher) warnMissingProjectDir(session *sessionTracker) {
+	if disp.resolveProjectDir() != "" {
 		return
 	}
 	if !session.OncePerSession("no-project-dir") {
@@ -88,8 +88,8 @@ func (d *Dispatcher) warnMissingProjectDir(session *sessionTracker) {
 	msg := "pulsarules_codex: hook ran with no project dir resolved; reinstall the hook " +
 		"(pulsarules_cli install) so it exports PULSARULES_PROJECT_DIR"
 	// The logger discards output unless PULSARULES_LOG_LEVEL is set, which no hook wrapper sets.
-	_, _ = fmt.Fprintln(d.errOut, msg)
-	if d.logger != nil {
-		d.logger.Warn(msg)
+	_, _ = fmt.Fprintln(disp.errOut, msg)
+	if disp.logger != nil {
+		disp.logger.Warn(msg)
 	}
 }

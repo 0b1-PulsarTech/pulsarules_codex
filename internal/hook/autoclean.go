@@ -9,15 +9,15 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
-func (d *Dispatcher) autoCleanEdited(filePath string) string {
-	root := d.resolveProjectDir()
+func (disp *Dispatcher) autoCleanEdited(filePath string) string {
+	root := disp.resolveProjectDir()
 	if root == "" || filePath == "" {
 		return ""
 	}
 	report, err := cleaner.New(root).CleanFile(filePath)
 	if err != nil {
-		if d.logger != nil {
-			d.logger.Debug("auto-clean skipped", "path", filePath, "error", err.Error())
+		if disp.logger != nil {
+			disp.logger.Debug("auto-clean skipped", "path", filePath, "error", err.Error())
 		}
 		return ""
 	}

@@ -16,13 +16,13 @@ func NewListedProvider(base Provider, paths []string, skips SkipSet) Provider {
 	return &listedProvider{base: base, paths: paths, skips: skips}
 }
 
-func (p *listedProvider) Read(path string) ([]byte, bool) {
-	return p.base.Read(path)
+func (provider *listedProvider) Read(path string) ([]byte, bool) {
+	return provider.base.Read(path)
 }
 
-func (p *listedProvider) Walk(fn func(path string, ext string) bool) {
-	for _, path := range p.paths {
-		if p.skips.SkipsPath(path) {
+func (provider *listedProvider) Walk(fn func(path string, ext string) bool) {
+	for _, path := range provider.paths {
+		if provider.skips.SkipsPath(path) {
 			continue
 		}
 		if !fn(path, strings.ToLower(filepath.Ext(path))) {

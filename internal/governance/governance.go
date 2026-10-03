@@ -59,47 +59,47 @@ type Request struct {
 	Skips         source.SkipSet
 }
 
-func (s *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Result {
-	d := s.Discover(scope, status, files)
-	ctx := s.Load(d)
+func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Result {
+	discovery := sess.Discover(scope, status, files)
+	ctx := sess.Load(discovery)
 
-	sr := newPipeline(s.cfgAnalysis)
-	sr.registerForScope(s.index, s.repo, scope)
+	sr := newPipeline(sess.cfgAnalysis)
+	sr.registerForScope(sess.index, sess.repo, scope)
 	findings := sr.RunStages(ctx)
 
-	if s.cfgAnalysis != nil && s.cfgAnalysis.IncludeGenerated {
+	if sess.cfgAnalysis != nil && sess.cfgAnalysis.IncludeGenerated {
 		return Result{Findings: findings}
 	}
 	return splitGenerated(ctx, findings)
 }
 
-func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Request {
-	d := &Request{GitHistory: s.gitHistory(), Skips: s.skips}
-	if s.repo == nil {
-		return d
+func (sess *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Request {
+	discovery := &Request{GitHistory: sess.gitHistory(), Skips: sess.skips}
+	if sess.repo == nil {
+		return discovery
 	}
 
-	d.StagedRenames = s.stagedRenames()
+	discovery.StagedRenames = sess.stagedRenames()
 
 	if files == FileSetAll {
-		s.attachSources(d)
-		d.ChangedFiles = walkAllFiles(d.Sources)
-		return d
+		sess.attachSources(discovery)
+		discovery.ChangedFiles = walkAllFiles(discovery.Sources)
+		return discovery
 	}
 
-	d.ChangedFiles = s.changedFiles(scope, status)
+	discovery.ChangedFiles = sess.changedFiles(scope, status)
 	// Commit scope only analyzes changed files; whole-tree analyzers on other scopes need Sources.
-	if len(d.ChangedFiles) > 0 || scope != ScopeCommit {
-		s.attachSources(d)
+	if len(discovery.ChangedFiles) > 0 || scope != ScopeCommit {
+		sess.attachSources(discovery)
 	}
-	return d
+	return discovery
 }
 
-func (s *Session) changedFiles(scope Scope, status *vcs.Status) []pass.FileChange {
+func (sess *Session) changedFiles(scope Scope, status *vcs.Status) []pass.FileChange {
 	if status == nil {
-		fetched, err := s.repo.WorktreeStatus()
+		fetched, err := sess.repo.WorktreeStatus()
 		if err != nil {
-			s.logger.Warn("worktree status unavailable", slog.Any("error", err))
+			sess.logger.Warn("worktree status unavailable", slog.Any("error", err))
 			return nil
 		}
 		status = &fetched
@@ -113,33 +113,33 @@ func (s *Session) changedFiles(scope Scope, status *vcs.Status) []pass.FileChang
 	return changesToFileChanges(changes)
 }
 
-func (s *Session) Load(d *Request) *pass.Context {
+func (sess *Session) Load(discovery *Request) *pass.Context {
 	var root string
-	if s.repo != nil {
-		root = s.repo.Root()
+	if sess.repo != nil {
+		root = sess.repo.Root()
 	}
 
 	ctx := &pass.Context{
 		ProjectDir:    root,
-		CommitMsg:     s.commitMsg,
-		Config:        s.cfgAnalysis,
-		Sources:       d.Sources,
-		ChangedFiles:  d.ChangedFiles,
-		GitHistory:    d.GitHistory,
-		StagedRenames: d.StagedRenames,
-		Skips:         d.Skips,
+		CommitMsg:     sess.commitMsg,
+		Config:        sess.cfgAnalysis,
+		Sources:       discovery.Sources,
+		ChangedFiles:  discovery.ChangedFiles,
+		GitHistory:    discovery.GitHistory,
+		StagedRenames: discovery.StagedRenames,
+		Skips:         discovery.Skips,
 	}
 
-	if len(d.ChangedFiles) > 0 && d.Sources != nil {
-		markGenerated(ctx.ChangedFiles, d.Sources)
-		ctx.ASTCache = populateASTCache(d.ChangedFiles, d.Sources)
+	if len(discovery.ChangedFiles) > 0 && discovery.Sources != nil {
+		markGenerated(ctx.ChangedFiles, discovery.Sources)
+		ctx.ASTCache = populateASTCache(discovery.ChangedFiles, discovery.Sources)
 	}
 	return ctx
 }
 
-func (s *Session) attachSources(d *Request) {
-	d.Sources, d.Skips = ListedSources(
-		s.repo, s.skips, s.gitSkips, s.logger)
+func (sess *Session) attachSources(discovery *Request) {
+	discovery.Sources, discovery.Skips = ListedSources(
+		sess.repo, sess.skips, sess.gitSkips, sess.logger)
 }
 
 type fileLister interface {

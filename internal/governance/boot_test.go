@@ -133,8 +133,8 @@ func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
 			langs := pass.NewLanguageRegistry()
 			built := registry.Analyzers(nil, langs, nil, maxGateFor(testCase.scope))
 			got := make([]string, len(built))
-			for i, a := range built {
-				got[i] = a.ID()
+			for idx, analyzer := range built {
+				got[idx] = analyzer.ID()
 			}
 			if !slices.Equal(got, testCase.want) {
 				t.Fatalf("ids = %v, want %v", got, testCase.want)

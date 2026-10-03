@@ -23,36 +23,36 @@ func New() *Cache {
 	}
 }
 
-func (c *Cache) FileSet() *token.FileSet { return c.fset }
+func (cache *Cache) FileSet() *token.FileSet { return cache.fset }
 
-func (c *Cache) Parse(path string, src []byte) (*ast.File, error) {
-	c.mu.RLock()
-	if f, ok := c.file[path]; ok {
-		c.mu.RUnlock()
-		return f, nil
+func (cache *Cache) Parse(path string, src []byte) (*ast.File, error) {
+	cache.mu.RLock()
+	if file, ok := cache.file[path]; ok {
+		cache.mu.RUnlock()
+		return file, nil
 	}
-	if err, ok := c.err[path]; ok {
-		c.mu.RUnlock()
+	if err, ok := cache.err[path]; ok {
+		cache.mu.RUnlock()
 		return nil, err
 	}
-	c.mu.RUnlock()
+	cache.mu.RUnlock()
 
-	f, err := parser.ParseFile(c.fset, path, src, parser.ParseComments)
+	file, err := parser.ParseFile(cache.fset, path, src, parser.ParseComments)
 	if err != nil {
 		err = fmt.Errorf("parse %s: %w", path, err)
-		c.mu.Lock()
-		c.err[path] = err
-		c.mu.Unlock()
+		cache.mu.Lock()
+		cache.err[path] = err
+		cache.mu.Unlock()
 		return nil, err
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.file[path] = f
-	return f, nil
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	cache.file[path] = file
+	return file, nil
 }
 
-func (c *Cache) Get(path string) *ast.File {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.file[path]
+func (cache *Cache) Get(path string) *ast.File {
+	cache.mu.RLock()
+	defer cache.mu.RUnlock()
+	return cache.file[path]
 }

@@ -81,7 +81,7 @@ type listedRepo struct {
 	paths []string
 }
 
-func (l listedRepo) ListFiles() ([]string, error) { return l.paths, nil }
+func (repo listedRepo) ListFiles() ([]string, error) { return repo.paths, nil }
 
 func skipFixture(t *testing.T) string {
 	t.Helper()
@@ -242,9 +242,9 @@ type countingRepo struct {
 	listCalls *int
 }
 
-func (c countingRepo) ListFiles() ([]string, error) {
-	*c.listCalls++
-	return c.goldenRepo.ListFiles()
+func (repo countingRepo) ListFiles() ([]string, error) {
+	*repo.listCalls++
+	return repo.goldenRepo.ListFiles()
 }
 
 func typographicFiles(findings []pass.Finding) map[string]bool {

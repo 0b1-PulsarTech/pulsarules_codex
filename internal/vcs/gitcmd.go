@@ -16,12 +16,12 @@ type gitError struct {
 	err    error
 }
 
-func (e *gitError) Error() string {
-	return fmt.Sprintf("git %s: %v: %s", strings.Join(e.args, " "), e.err, e.stderr)
+func (gitErr *gitError) Error() string {
+	return fmt.Sprintf("git %s: %v: %s", strings.Join(gitErr.args, " "), gitErr.err, gitErr.stderr)
 }
 
-func (e *gitError) Unwrap() error {
-	return e.err
+func (gitErr *gitError) Unwrap() error {
+	return gitErr.err
 }
 
 func runGit(dir string, args ...string) (string, error) {

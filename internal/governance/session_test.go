@@ -56,10 +56,11 @@ func TestSession_WithCommitMsg(t *testing.T) {
 	findings := sess.Analyze(ScopeFull, nil, FileSetChanged).Findings
 
 	found := false
-	for _, f := range findings {
-		if f.AnalyzerID == "commit-emoji-required" || f.AnalyzerID == "commit-type-required" {
+	for _, finding := range findings {
+		if finding.AnalyzerID == "commit-emoji-required" ||
+			finding.AnalyzerID == "commit-type-required" {
 			found = true
-			if f.RuleSummary == "" {
+			if finding.RuleSummary == "" {
 				t.Error("expected RuleSummary to be populated for commit finding")
 			}
 		}
@@ -162,11 +163,11 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 
 	changedFindings := NewSession(repo, "", nil, cfg).
 		Analyze(ScopeChanged, nil, FileSetChanged).Findings
-	for _, f := range changedFindings {
-		if f.AnalyzerID == "typographic-markers" {
+	for _, finding := range changedFindings {
+		if finding.AnalyzerID == "typographic-markers" {
 			t.Fatalf(
 				"FileSetChanged on a clean tree must not see committed defects, got %+v",
-				f,
+				finding,
 			)
 		}
 	}
@@ -174,8 +175,8 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 	allFindings := NewSession(repo, "", nil, cfg).
 		Analyze(ScopeChanged, nil, FileSetAll).Findings
 	foundAll := false
-	for _, f := range allFindings {
-		if f.AnalyzerID == "typographic-markers" && f.File == "violation.go" {
+	for _, finding := range allFindings {
+		if finding.AnalyzerID == "typographic-markers" && finding.File == "violation.go" {
 			foundAll = true
 		}
 	}

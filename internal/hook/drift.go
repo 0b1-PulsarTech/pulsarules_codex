@@ -10,13 +10,13 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func (d *Dispatcher) emitKnowledgeDrift() {
-	projectDir := d.resolveProjectDir()
+func (disp *Dispatcher) emitKnowledgeDrift() {
+	projectDir := disp.resolveProjectDir()
 	if projectDir == "" {
 		return
 	}
 	if notice, found := knowledgeDriftNotice(projectDir); found {
-		d.emitOutput("SessionStart", notice)
+		disp.emitOutput("SessionStart", notice)
 	}
 }
 

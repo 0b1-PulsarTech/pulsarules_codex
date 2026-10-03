@@ -28,8 +28,8 @@ func TestDispatcher_ProjectDirEnvFallback(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Setenv("PULSARULES_PROJECT_DIR", testCase.envDir)
-			d := NewDispatcher(Deps{ProjectDir: testCase.projectDir})
-			if got := d.resolveProjectDir(); got != testCase.want {
+			disp := NewDispatcher(Deps{ProjectDir: testCase.projectDir})
+			if got := disp.resolveProjectDir(); got != testCase.want {
 				t.Errorf("resolveProjectDir() = %q, want %q", got, testCase.want)
 			}
 		})
@@ -56,8 +56,8 @@ func TestDispatcher_SkillsDirEnvFallback(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Setenv("PULSARULES_SKILLS_DIR", testCase.envDir)
-			d := NewDispatcher(Deps{SkillsDir: testCase.skillsDir})
-			if got := d.resolveSkillsDir(); got != testCase.want {
+			disp := NewDispatcher(Deps{SkillsDir: testCase.skillsDir})
+			if got := disp.resolveSkillsDir(); got != testCase.want {
 				t.Errorf("resolveSkillsDir() = %q, want %q", got, testCase.want)
 			}
 		})

@@ -8,25 +8,25 @@ import (
 func TestParseAndCache(t *testing.T) {
 	t.Parallel()
 
-	c := New()
+	cache := New()
 	src := []byte("package main\n\nfunc main() {}\n")
 
-	f, err := c.Parse("test.go", src)
+	file, err := cache.Parse("test.go", src)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if f == nil {
+	if file == nil {
 		t.Fatal("parsed file is nil")
 	}
-	if f.Name.Name != "main" {
-		t.Errorf("package name = %q, want main", f.Name.Name)
+	if file.Name.Name != "main" {
+		t.Errorf("package name = %q, want main", file.Name.Name)
 	}
 
-	cached := c.Get("test.go")
+	cached := cache.Get("test.go")
 	if cached == nil {
 		t.Fatal("Get returned nil after Parse")
 	}
-	if cached != f {
+	if cached != file {
 		t.Error("Get returned a different pointer than Parse")
 	}
 }
@@ -34,17 +34,17 @@ func TestParseAndCache(t *testing.T) {
 func TestParseErrorCachedAcrossRepeatedParses(t *testing.T) {
 	t.Parallel()
 
-	c := New()
+	cache := New()
 	src := []byte("package main\n\nfunc broken(\n")
 
 	var first error
 	for call := range 3 {
-		f, err := c.Parse("broken.go", src)
+		file, err := cache.Parse("broken.go", src)
 		if err == nil {
 			t.Fatalf("call %d: expected parse error for broken code", call)
 		}
-		if f != nil {
-			t.Fatalf("call %d: parsed file = %v, want nil", call, f)
+		if file != nil {
+			t.Fatalf("call %d: parsed file = %v, want nil", call, file)
 		}
 		if call == 0 {
 			first = err
@@ -54,7 +54,7 @@ func TestParseErrorCachedAcrossRepeatedParses(t *testing.T) {
 	}
 
 	files := 0
-	c.FileSet().Iterate(func(*token.File) bool {
+	cache.FileSet().Iterate(func(*token.File) bool {
 		files++
 		return true
 	})
@@ -66,11 +66,11 @@ func TestParseErrorCachedAcrossRepeatedParses(t *testing.T) {
 func TestFileSetShared(t *testing.T) {
 	t.Parallel()
 
-	c := New()
-	_, _ = c.Parse("a.go", []byte("package a\n"))
-	_, _ = c.Parse("b.go", []byte("package b\n"))
+	cache := New()
+	_, _ = cache.Parse("a.go", []byte("package a\n"))
+	_, _ = cache.Parse("b.go", []byte("package b\n"))
 
-	fs := c.FileSet()
+	fs := cache.FileSet()
 	if fs == nil {
 		t.Fatal("FileSet is nil")
 	}

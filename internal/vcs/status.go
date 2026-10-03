@@ -22,32 +22,32 @@ type Status struct {
 	Changes []Change
 }
 
-func (s Status) IsClean() bool {
-	return len(s.Changes) == 0
+func (status Status) IsClean() bool {
+	return len(status.Changes) == 0
 }
 
-func (s Status) Extensions() map[string]bool {
-	exts := make(map[string]bool, len(s.Changes))
-	for _, c := range s.Changes {
-		exts[c.Extension] = true
+func (status Status) Extensions() map[string]bool {
+	exts := make(map[string]bool, len(status.Changes))
+	for _, change := range status.Changes {
+		exts[change.Extension] = true
 	}
 	return exts
 }
 
-func (s Status) String() string {
-	lines := make([]string, 0, len(s.Changes))
-	for _, c := range s.Changes {
-		xy := string([]byte{c.Staging, c.Worktree})
-		if c.OldPath != "" {
+func (status Status) String() string {
+	lines := make([]string, 0, len(status.Changes))
+	for _, change := range status.Changes {
+		xy := string([]byte{change.Staging, change.Worktree})
+		if change.OldPath != "" {
 			lines = append(
 				lines,
 				fmt.Sprintf(
-					"%s %s -> %s", xy, printable.Path(c.OldPath), printable.Path(c.Path),
+					"%s %s -> %s", xy, printable.Path(change.OldPath), printable.Path(change.Path),
 				),
 			)
 			continue
 		}
-		lines = append(lines, xy+" "+printable.Path(c.Path))
+		lines = append(lines, xy+" "+printable.Path(change.Path))
 	}
 	return strings.Join(lines, "\n")
 }

@@ -10,13 +10,13 @@ type recordingProvider struct {
 	reads []string
 }
 
-func (p *recordingProvider) Read(path string) ([]byte, bool) {
-	p.reads = append(p.reads, path)
-	content, ok := p.files[path]
+func (provider *recordingProvider) Read(path string) ([]byte, bool) {
+	provider.reads = append(provider.reads, path)
+	content, ok := provider.files[path]
 	return []byte(content), ok
 }
 
-func (p *recordingProvider) Walk(func(path string, ext string) bool) {}
+func (provider *recordingProvider) Walk(func(path string, ext string) bool) {}
 
 func TestListedProvider_Walk(t *testing.T) {
 	t.Parallel()

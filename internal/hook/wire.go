@@ -36,14 +36,14 @@ func decodeHookPayload(payload []byte) hookPayload {
 	return in
 }
 
-func (d *Dispatcher) emitOutput(event, context string) {
+func (disp *Dispatcher) emitOutput(event, context string) {
 	out, err := json.Marshal(Output{HookSpecificOutput: Specific{
 		HookEventName:     event,
 		AdditionalContext: context,
 	}})
 	if err != nil {
-		_, _ = fmt.Fprintln(d.errOut, "hook: marshal:", err)
+		_, _ = fmt.Fprintln(disp.errOut, "hook: marshal:", err)
 		return
 	}
-	_, _ = fmt.Fprintln(d.out, string(out))
+	_, _ = fmt.Fprintln(disp.out, string(out))
 }

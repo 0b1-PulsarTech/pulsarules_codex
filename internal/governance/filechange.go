@@ -52,12 +52,12 @@ func markGenerated(files []pass.FileChange, provider source.Provider) {
 		return
 	}
 	atlasDirs := map[string]bool{}
-	for i := range files {
-		src, ok := provider.Read(files[i].Path)
+	for idx := range files {
+		src, ok := provider.Read(files[idx].Path)
 		if !ok {
 			continue
 		}
-		files[i].Generated = memoAtlas(files[i].Path, atlasDirs, provider) ||
+		files[idx].Generated = memoAtlas(files[idx].Path, atlasDirs, provider) ||
 			lexer.IsGeneratedSource(src)
 	}
 }
@@ -83,13 +83,13 @@ func populateASTCache(changedFiles []pass.FileChange, provider source.Provider) 
 	return cache
 }
 
-func (s *Session) stagedRenames() []pass.Rename {
+func (sess *Session) stagedRenames() []pass.Rename {
 	const renameProbeScore = 1
 	// Low so a partial rename still reaches move-purity, which judges it against its own
 	// minimum instead of git's detector dropping it first.
-	renames, err := s.repo.StagedRenames(renameProbeScore)
+	renames, err := sess.repo.StagedRenames(renameProbeScore)
 	if err != nil {
-		s.logger.Warn("staged renames unavailable", slog.Any("error", err))
+		sess.logger.Warn("staged renames unavailable", slog.Any("error", err))
 		return nil
 	}
 	return toCoreRenames(renames)

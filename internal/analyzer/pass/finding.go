@@ -23,17 +23,17 @@ func NewReporter(analyzerID string, severity Severity, category Category) Report
 	return Reporter{analyzerID: analyzerID, severity: severity, category: category}
 }
 
-func ResolveReporter(r Reporter, ctx *Context) Reporter {
+func ResolveReporter(reporter Reporter, ctx *Context) Reporter {
 	// Shared reporters are built once; severity is per-run policy, so each run resolves a copy.
-	r.severity = ctx.Params(r.analyzerID).Severity(r.severity)
-	return r
+	reporter.severity = ctx.Params(reporter.analyzerID).Severity(reporter.severity)
+	return reporter
 }
 
-func (r Reporter) At(file string, line int, message, suggestion string) Finding {
+func (reporter Reporter) At(file string, line int, message, suggestion string) Finding {
 	return Finding{
-		AnalyzerID: r.analyzerID,
-		Severity:   r.severity,
-		Category:   r.category,
+		AnalyzerID: reporter.analyzerID,
+		Severity:   reporter.severity,
+		Category:   reporter.category,
 		File:       file,
 		Line:       line,
 		Message:    message,
@@ -41,17 +41,17 @@ func (r Reporter) At(file string, line int, message, suggestion string) Finding 
 	}
 }
 
-func (r Reporter) New(message string) Finding {
+func (reporter Reporter) New(message string) Finding {
 	return Finding{
-		AnalyzerID: r.analyzerID,
-		Severity:   r.severity,
-		Category:   r.category,
+		AnalyzerID: reporter.analyzerID,
+		Severity:   reporter.severity,
+		Category:   reporter.category,
 		Message:    message,
 	}
 }
 
-func (r Reporter) NewWithSuggestion(message, suggestion string) Finding {
-	f := r.New(message)
-	f.Suggestion = suggestion
-	return f
+func (reporter Reporter) NewWithSuggestion(message, suggestion string) Finding {
+	finding := reporter.New(message)
+	finding.Suggestion = suggestion
+	return finding
 }
