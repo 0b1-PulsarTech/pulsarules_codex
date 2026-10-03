@@ -3,6 +3,7 @@ package bigcomment
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
@@ -19,6 +20,7 @@ type directiveCase struct {
 
 func directiveCases() []directiveCase {
 	prose := "// one\n// two\n// three\n// four\n"
+	goverter := "// one\n// goverter:map A B\n//goverter:ignore C\n// goverter:name D\n"
 	return []directiveCase{
 		{
 			name: "sqlc annotation then prose",
@@ -42,6 +44,36 @@ func directiveCases() []directiveCase {
 			want: 1,
 		},
 		{
+			name: "prose plus three goverter lines",
+			file: "a.go",
+			lang: "go",
+			src:  goverter + "package a\n",
+			want: 0,
+		},
+		{
+			name: "pulsarules marker does not count but its reasons do",
+			file: "a.go",
+			lang: "go",
+			src:  "package a\n\n//pulsarules:process-lifetime\n" + prose + "var x int\n",
+			want: 1,
+		},
+		{
+			name: "pulsarules attached marker plus three reasons",
+			file: "a.go",
+			lang: "go",
+			src: "package a\n\n//pulsarules:process-lifetime r\n// one\n// two\n// three\n" +
+				"var x int\n",
+			want: 0,
+		},
+		{
+			name: "five pulsarules lines with a space after the colon are prose",
+			file: "a.go",
+			lang: "go",
+			src: "package a\n\n// pulsarules: one\n// pulsarules: two\n// pulsarules: three\n" +
+				"// pulsarules: four\n// pulsarules: five\nvar x int\n",
+			want: 1,
+		},
+		{
 			name: "pure directive block",
 			file: "a.go",
 			lang: "go",
@@ -56,6 +88,12 @@ func directiveCases() []directiveCase {
 			src:  "//go:build x\n// one\n// two\n// three\npackage a\n",
 			want: 0,
 		},
+	}
+}
+
+func multiLineAndMarkerCases() []directiveCase {
+	prose := "// one\n// two\n// three\n// four\n"
+	return []directiveCase{
 		{
 			name: "generated marker exempts the block",
 			file: "a.go",
@@ -70,13 +108,154 @@ func directiveCases() []directiveCase {
 			src:  "package a\n\n// simplification: x\n" + prose + "func f() {}\n",
 			want: 0,
 		},
+		{
+			name: "five-line svelte-ignore block",
+			file: "a.svelte",
+			lang: "sfc",
+			src: "<!-- svelte-ignore a11y-a\n  a11y-b\n  a11y-c\n  a11y-d\n  a11y-e -->\n" +
+				"<div></div>\n",
+			want: 0,
+		},
+		{
+			name: "five-line eslint-disable block comment",
+			file: "a.ts",
+			lang: "clike",
+			src:  "/* eslint-disable\n   no-a,\n   no-b,\n   no-c,\n   no-d */\nconst a = 1\n",
+			want: 0,
+		},
+		{
+			name: "pragma-only four-line docblock",
+			file: "a.ts",
+			lang: "clike",
+			src:  "/**\n * @jest-environment jsdom\n * @format\n */\nconst a = 1\n",
+			want: 0,
+		},
+		{
+			name: "prose block after a directive block still counts",
+			file: "a.ts",
+			lang: "clike",
+			src:  "/* eslint-disable\n   no-a */\n" + prose + "const a = 1\n",
+			want: 1,
+		},
 	}
 }
 
-func TestBigComment_DirectiveLinesDoNotCountTowardABlock(t *testing.T) {
+func midBlockAndUnclosedCases() []directiveCase {
+	return []directiveCase{
+		{
+			name: "directive line inside a hand jsdoc block does not hide it",
+			file: "a.ts",
+			lang: "clike",
+			src: "/**\n * one\n * two\n /* eslint-disable\n * three\n * four\n * five\n */\n" +
+				"const a = 1\n",
+			want: 1,
+		},
+		{
+			name: "svelte-ignore line inside a hand html block does not hide it",
+			file: "a.svelte",
+			lang: "sfc",
+			src: "<!--\n one\n two\n <!-- svelte-ignore a11y-a\n three\n four\n-->\n" +
+				"<div></div>\n",
+			want: 1,
+		},
+		{
+			name: "unclosed directive opener in a template literal does not hide later comments",
+			file: "a.ts",
+			lang: "clike",
+			src: "const a = `\n/* eslint-disable\n`\n// one\n// two\n// three\n// four\n" +
+				"// five\nconst b = 1\n",
+			want: 1,
+		},
+	}
+}
+
+func wrongLanguageOpenerCases() []directiveCase {
+	return []directiveCase{
+		{
+			name: "svelte-ignore opener inside a typescript template literal does " +
+				"not hide later comments",
+			file: "a.ts",
+			lang: "clike",
+			src: "const a = `\n<!-- svelte-ignore a11y\n`\n// one\n// two\n// three\n" +
+				"// four\n// five\nconst b = 1\n",
+			want: 1,
+		},
+		{
+			name: "svelte-ignore opener inside a dart multi-line string does not " +
+				"hide later comments",
+			file: "a.dart",
+			lang: "clike",
+			src: "const a = '''\n<!-- svelte-ignore a11y\n'''\n// one\n// two\n// three\n" +
+				"// four\n// five\nconst b = 1\n",
+			want: 1,
+		},
+		{
+			name: "block opener inside a shell heredoc does not hide later comments",
+			file: "a.sh",
+			lang: "hash",
+			src: "cat <<'EOF'\n/* eslint-disable\nEOF\n# one\n# two\n# three\n# four\n" +
+				"# five\nx\n",
+			want: 1,
+		},
+		{
+			name: "block opener inside a python string does not hide later comments",
+			file: "a.py",
+			lang: "hash",
+			src: "s = \"\"\"\n/* eslint-disable\n\"\"\"\n# one\n# two\n# three\n# four\n" +
+				"# five\nx = 1\n",
+			want: 1,
+		},
+	}
+}
+
+func sameLineBlockCases() []directiveCase {
+	return []directiveCase{
+		{
+			name: "five-line hand block holding an unclosed directive opener stays counted",
+			file: "a.ts",
+			lang: "clike",
+			src:  "/**\n one\n /* eslint-disable\n two\n */\nx\n",
+			want: 1,
+		},
+		{
+			name: "directive closed on the same line as a hand block opener counts the hand block",
+			file: "a.ts",
+			lang: "clike",
+			src:  "/* eslint-disable */ /* hand\n one\n two\n three */\nx\n",
+			want: 1,
+		},
+		{
+			name: "directive closed on its own line with trailing line comments stay exempt",
+			file: "a.ts",
+			lang: "clike",
+			src: "/* eslint-disable a */ // why\n/* eslint-disable b */ // why\n" +
+				"/* eslint-disable c */ // why\n/* eslint-disable d */ // why\nx\n",
+			want: 0,
+		},
+		{
+			name: "second directive block after a closed directive stays exempt",
+			file: "a.ts",
+			lang: "clike",
+			src:  "/* eslint-disable */ /* global a,\n b */\n// c\n// d\nx\n",
+			want: 0,
+		},
+		{
+			name: "html hand block after a closed svelte-ignore counts",
+			file: "a.svelte",
+			lang: "sfc",
+			src:  "<!-- svelte-ignore x --> <!-- hand\n a\n b\n c -->\n<div></div>\n",
+			want: 1,
+		},
+	}
+}
+
+func TestScanFile_DirectiveLines(t *testing.T) {
 	t.Parallel()
 
-	testCases := directiveCases()
+	testCases := slices.Concat(
+		directiveCases(), multiLineAndMarkerCases(), midBlockAndUnclosedCases(),
+		wrongLanguageOpenerCases(), sameLineBlockCases(),
+	)
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()

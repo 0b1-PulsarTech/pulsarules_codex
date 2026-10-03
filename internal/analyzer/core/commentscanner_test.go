@@ -116,3 +116,38 @@ func TestCommentScanner_GoBlockContinuation(t *testing.T) {
 		}
 	}
 }
+
+func TestCommentScanner_InBlock(t *testing.T) {
+	t.Parallel()
+
+	syntax := CommentSyntax{
+		Line:   []string{"//"},
+		Blocks: []BlockDelim{{Open: "/*", Close: "*/"}},
+	}
+	testCases := []struct {
+		name  string
+		lines []string
+		want  bool
+	}{
+		{"fresh scanner", nil, false},
+		{"open block", []string{"/* eslint-disable"}, true},
+		{"open block continued", []string{"/* a", "b"}, true},
+		{"closed block", []string{"/* a", "*/"}, false},
+		{"one-line block", []string{"/* a */"}, false},
+		{"block closed then reopened", []string{"/* a */ /* b"}, true},
+		{"line comment", []string{"// a"}, false},
+		{"unsupported delimiter", []string{"<!-- svelte-ignore a"}, false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			scanner := NewCommentScanner(syntax)
+			for _, line := range testCase.lines {
+				scanner.IsCommentLine(line)
+			}
+			if got := scanner.InBlock(); got != testCase.want {
+				t.Errorf("InBlock() = %v, want %v", got, testCase.want)
+			}
+		})
+	}
+}

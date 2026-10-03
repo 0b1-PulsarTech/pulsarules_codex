@@ -11,6 +11,8 @@ func NewCommentScanner(syntax CommentSyntax) *CommentScanner {
 	return &CommentScanner{syntax: syntax}
 }
 
+func (scan *CommentScanner) InBlock() bool { return scan.open != nil }
+
 func (scan *CommentScanner) IsCommentLine(line string) bool {
 	rest := strings.TrimSpace(line)
 	sawComment := false
