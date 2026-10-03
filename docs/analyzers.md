@@ -39,6 +39,14 @@ each analyzer's own id.
   misread. "the only tool ever used to call x" is flagged; it cannot be told apart from
   "nobody ever used to call this".
 
+## too-many-results
+
+- Rule: `effective-go`.
+- Flags: a function, method, func type, interface method or func literal returning more than
+  `max_results` values.
+- Params: `max_results` (default 3).
+- Remedy: return a named result of an anonymous struct, or a named struct type when reused.
+
 ## package-level-var
 
 - Rule: `code-smells` (global state).

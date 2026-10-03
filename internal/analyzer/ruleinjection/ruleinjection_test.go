@@ -182,6 +182,7 @@ func TestLookupRule(t *testing.T) {
 		{"history-narration", "effective-go"},
 		{"doc-comment", "effective-go"},
 		{"body-header-comment", "effective-go"},
+		{"too-many-results", "effective-go"},
 		{"package-level-var", "code-smells"},
 		{"package-file-count", "code-placement-go"},
 		{"vacuous-doc", "effective-go"},

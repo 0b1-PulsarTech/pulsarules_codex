@@ -38,6 +38,7 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 		"doc-comment":         {Enabled: false},
 		"body-header-comment": {Enabled: false},
 		"history-narration":   {Enabled: false},
+		"too-many-results":    {Enabled: false},
 		"package-level-var":   {Enabled: false},
 		"package-file-count":  {Enabled: false},
 	}
