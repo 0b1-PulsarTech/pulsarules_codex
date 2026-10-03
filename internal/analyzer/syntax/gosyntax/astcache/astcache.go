@@ -12,12 +12,14 @@ type Cache struct {
 	fset *token.FileSet
 	mu   sync.RWMutex
 	file map[string]*ast.File
+	err  map[string]error
 }
 
 func New() *Cache {
 	return &Cache{
 		fset: token.NewFileSet(),
 		file: make(map[string]*ast.File),
+		err:  make(map[string]error),
 	}
 }
 
@@ -29,11 +31,19 @@ func (c *Cache) Parse(path string, src []byte) (*ast.File, error) {
 		c.mu.RUnlock()
 		return f, nil
 	}
+	if err, ok := c.err[path]; ok {
+		c.mu.RUnlock()
+		return nil, err
+	}
 	c.mu.RUnlock()
 
 	f, err := parser.ParseFile(c.fset, path, src, parser.ParseComments)
 	if err != nil {
-		return nil, fmt.Errorf("parse %s: %w", path, err)
+		err = fmt.Errorf("parse %s: %w", path, err)
+		c.mu.Lock()
+		c.err[path] = err
+		c.mu.Unlock()
+		return nil, err
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
