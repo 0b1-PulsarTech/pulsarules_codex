@@ -42,11 +42,12 @@ func TestTopOfFile_ExtensionOutsideDefaultsSkipped(t *testing.T) {
 }
 
 type languageCase struct {
-	name string
-	file string
-	src  string
-	want int
-	line int
+	name     string
+	file     string
+	src      string
+	want     int
+	line     int
+	severity core.Severity
 }
 
 func analyzeSource(t *testing.T, file, src string, config *core.AnalysisConfig) []core.Finding {
@@ -98,9 +99,21 @@ func TestTopOfFile_Languages(t *testing.T) {
 			if findings[0].Line != testCase.line {
 				t.Errorf("line = %d, want %d", findings[0].Line, testCase.line)
 			}
-			if findings[0].Severity != core.SeverityError {
-				t.Errorf("severity = %d, want error", findings[0].Severity)
+			if findings[0].Severity != testCase.severity {
+				t.Errorf("severity = %d, want %d", findings[0].Severity, testCase.severity)
 			}
 		})
+	}
+}
+
+func TestTopOfFile_SeverityParam(t *testing.T) {
+	t.Parallel()
+
+	config := &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
+		"top-of-file": {Enabled: true, Params: map[string]any{core.ParamSeverity: "error"}},
+	}}
+	findings := analyzeSource(t, "a.ts", "// a note\nconst a = 1\n", config)
+	if len(findings) != 1 || findings[0].Severity != core.SeverityError {
+		t.Fatalf("want one error-severity finding, got %+v", findings)
 	}
 }
