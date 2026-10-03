@@ -9,7 +9,7 @@ tags:
 steps:
     - architecture & placement; no cross-app imports; non-API under internal/; source deps point inward (no infra/transport/driver in domain)
     - stop signs (no globals, no init side effects, no panic outside main, no raw SQL in handlers, no dbgen out of repos, no direct cross-module calls, no transport in domain, no silent error swallowing)
-    - style (formatter, imports, doc comments, casing, any, consumer interfaces)
+    - style (formatter, imports, comments, casing, any, consumer interfaces)
     - errors & logging (%w wrapping, errors.Is/As, no status from use cases, slog typed attrs, no PII)
     - persistence (ent/sqlc/atlas/goverter, no tenant_id predicate, real-DB repo tests)
     - concurrency (goroutine ownership, ctx-first, errgroup, ctx.Done loops, -race clean)
@@ -60,9 +60,9 @@ composes_patterns:
    repositories; no direct cross-module calls (use facades); no transport imports in domain; no
    silent error swallowing. (rules: [[startup]], [[dependency-injection]], [[database]],
    [[interop]], [[transport]], [[errors]])
-3. **Style:** formatter run; three-group imports; doc comments on exported symbols; correct acronym
-   casing; `any` not `interface{}`; consumer-declared small interfaces. (rule: [[effective-go]],
-   [[naming]], [[imports]], [[types]])
+3. **Style:** formatter run; three-group imports; no doc comments (see [[comments]]); correct
+   acronym casing; `any` not `interface{}`; consumer-declared small interfaces. (rule:
+   [[effective-go]], [[naming]], [[imports]], [[types]])
 4. **Errors & logging:** boundary errors wrapped with `%w` + verb prefix; sentinels compared with
    `errors.Is`/`As`; no status codes from use cases; `slog` typed attrs only; no secrets/PII in
    logs. (rules: [[errors]], [[logging]])

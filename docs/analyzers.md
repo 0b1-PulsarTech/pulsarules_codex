@@ -28,7 +28,7 @@ each analyzer's own id.
 
 ## history-narration
 
-- Rule: `effective-go`.
+- Rule: `comments`.
 - Flags: comment text such as "was replaced by", "used to be", "the old code", "previously we",
   "no longer needed", "it/this/we/they/never used to ...".
 - Params: `extensions` (default: the source extensions known to the language registry).
