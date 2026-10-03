@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -42,9 +43,9 @@ func printProfiles(out io.Writer, profiles []knowledge.Profile) {
 		_, _ = fmt.Fprintf(
 			out,
 			"  %s [%s] - %s\n",
-			profile.ID,
-			profile.Axis,
-			profile.Description,
+			escape.Line(profile.ID),
+			escape.Line(profile.Axis),
+			escape.Line(profile.Description),
 		)
 	}
 }

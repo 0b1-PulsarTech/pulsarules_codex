@@ -11,6 +11,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/output"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -48,8 +49,8 @@ func printSkillCatalog(out io.Writer, catalog []knowledge.Skill) {
 			"  %2d. [%s] %s - %s%s\n",
 			pos+1,
 			mark,
-			skill.ID,
-			knowledge.FirstSentence(skill.Description),
+			escape.Line(skill.ID),
+			escape.Line(knowledge.FirstSentence(skill.Description)),
 			note,
 		)
 	}
