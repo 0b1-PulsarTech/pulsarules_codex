@@ -114,3 +114,39 @@ func TestSweep_IsIdempotent(t *testing.T) {
 		t.Errorf("second sweep acted again: %q", second.String())
 	}
 }
+
+func TestSweep_QuotesForgedPath(t *testing.T) {
+	t.Parallel()
+
+	name := "a\n[ERROR] x\nb.md"
+	testCases := []struct {
+		name string
+		how  mode
+	}{
+		{"report", report},
+		{"rewrite", rewrite},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			body := []byte("a\u200Bb\n")
+			if err := os.WriteFile(filepath.Join(root, name), body, 0o600); err != nil {
+				t.Skipf("filesystem refuses the name: %v", err)
+			}
+			var out strings.Builder
+			if err := sweep(&out, root, testCase.how); err != nil {
+				t.Fatalf("sweep: %v", err)
+			}
+			for line := range strings.SplitSeq(out.String(), "\n") {
+				if strings.HasPrefix(line, "[ERROR]") {
+					t.Errorf("forged line in output: %q", out.String())
+				}
+			}
+			if !strings.Contains(out.String(), `\n[ERROR] x\nb.md"`) {
+				t.Errorf("path not quoted: %q", out.String())
+			}
+		})
+	}
+}

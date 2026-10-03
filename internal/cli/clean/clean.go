@@ -11,6 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible/cleaner"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
@@ -84,8 +85,9 @@ func inspectOrClean(cleaner *cleaner.Cleaner, path string, how mode) (cleaner.Re
 }
 
 func printReport(out io.Writer, found cleaner.Report, how mode) {
+	path := printable.Path(found.Path)
 	for _, acted := range found.Acted {
-		_, _ = fmt.Fprintf(out, "%s:%d removed %s\n", found.Path, acted.Line, acted.Name)
+		_, _ = fmt.Fprintf(out, "%s:%d removed %s\n", path, acted.Line, acted.Name)
 	}
 	verb := "found"
 	if how == rewrite {
@@ -93,7 +95,7 @@ func printReport(out io.Writer, found cleaner.Report, how mode) {
 	}
 	for _, left := range found.Remaining {
 		_, _ = fmt.Fprintf(
-			out, "%s:%d %s %s (%s)\n", found.Path, left.Line, verb, left.Name, advice(left.Class),
+			out, "%s:%d %s %s (%s)\n", path, left.Line, verb, left.Name, advice(left.Class),
 		)
 	}
 }
