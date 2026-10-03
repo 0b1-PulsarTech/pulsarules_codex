@@ -1,0 +1,279 @@
+package banner
+
+import (
+	"slices"
+	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+)
+
+func TestFirstContentLine_Languages(t *testing.T) {
+	t.Parallel()
+
+	runLanguageCases(t, slices.Concat(
+		requiredHeaderCases(), docblockHeaderCases(), generatedBannerCases(), proseBannerCases(),
+		proseBannerTSDartCases(), proseBannerSQLCases(),
+	))
+}
+
+func requiredHeaderCases() []languageCase {
+	return slices.Concat(requiredHeaderBasicCases(), requiredHeaderExtendedCases())
+}
+
+func requiredHeaderBasicCases() []languageCase {
+	const (
+		goSev = pass.SeverityError
+		warn  = pass.SeverityWarning
+	)
+	return []languageCase{
+		{name: "go debug directive", file: "a.go", src: "//go:debug panicnil=1\npackage a\n"},
+		{
+			name:     "hand comment after a go debug directive",
+			file:     "a.go",
+			src:      "//go:debug panicnil=1\n// hand\npackage a\n",
+			want:     1,
+			line:     2,
+			severity: goSev,
+		},
+		{name: "dart format width", file: "a.dart", src: "// dart format width=120\nclass A {}\n"},
+		{name: "dart format off", file: "a.dart", src: "// dart format off\nclass A {}\n"},
+		{
+			name:     "hand comment after a dart format line",
+			file:     "a.dart",
+			src:      "// dart format width=120\n// hand\nclass A {}\n",
+			want:     1,
+			line:     2,
+			severity: warn,
+		},
+		{name: "atlas txmode", file: "a.sql", src: "-- atlas:txmode none\n\nSELECT 1;\n"},
+		{name: "atlas nolint", file: "a.sql", src: "-- atlas:nolint destructive\nSELECT 1;\n"},
+		{name: "atlas delimiter", file: "a.sql", src: "-- atlas:delimiter \\\\\nSELECT 1;\n"},
+		{
+			name:     "hand comment after an atlas directive",
+			file:     "a.sql",
+			src:      "-- atlas:txmode none\n-- hand\nSELECT 1;\n",
+			want:     1,
+			line:     2,
+			severity: warn,
+		},
+		{name: "global comment", file: "a.ts", src: "/*global window*/\nconst a = 1\n"},
+		{
+			name:     "global prose is a hand comment",
+			file:     "a.ts",
+			src:      "/* global counters live here. */\nconst a = 1\n",
+			want:     1,
+			line:     1,
+			severity: warn,
+		},
+	}
+}
+
+func requiredHeaderExtendedCases() []languageCase {
+	const (
+		goSev = pass.SeverityError
+		warn  = pass.SeverityWarning
+	)
+	return []languageCase{
+		{name: "eslint without a space", file: "a.ts", src: "/*eslint-disable*/\nconst a = 1\n"},
+		{
+			name:     "nolint prose is a hand comment",
+			file:     "a.go",
+			src:      "//nolint is never used here, by policy.\npackage a\n",
+			want:     1,
+			line:     1,
+			severity: goSev,
+		},
+		{
+			name:     "dart format prose is a hand comment",
+			file:     "a.dart",
+			src:      "// dart format is enforced by CI, not by hand.\nclass A {}\n",
+			want:     1,
+			line:     1,
+			severity: warn,
+		},
+		{
+			name:     "atlas prose is a hand comment",
+			file:     "a.sql",
+			src:      "-- atlas: we tried it and it was slow.\nSELECT 1;\n",
+			want:     1,
+			line:     1,
+			severity: warn,
+		},
+		{name: "tslint disable", file: "a.ts", src: "/* tslint:disable */\nconst a = 1\n"},
+		{name: "biome ignore all", file: "a.ts", src: "// biome-ignore-all lint: x\n" +
+			"const a = 1\n"},
+		{name: "bare nolint", file: "a.go", src: "//nolint\npackage a\n"},
+		{name: "nolint with linters", file: "a.go", src: "//nolint:gosec // why\npackage a\n"},
+		{
+			name: "liquibase formatted sql",
+			file: "a.sql",
+			src:  "--liquibase formatted sql\nSELECT 1;\n",
+		},
+	}
+}
+
+func docblockHeaderCases() []languageCase {
+	const warn = pass.SeverityWarning
+	return []languageCase{
+		{
+			name:     "jest pragma followed by prose is a hand docblock",
+			file:     "a.ts",
+			src:      "/**\n * @jest-environment jsdom\n * Helpers for a.\n */\nconst a = 1\n",
+			want:     1,
+			line:     1,
+			severity: warn,
+		},
+		{
+			name:     "prose followed by a format pragma line is a hand docblock",
+			file:     "a.ts",
+			src:      "/**\n * Helpers.\n * @format is applied by CI.\n */\nconst a = 1\n",
+			want:     1,
+			line:     1,
+			severity: warn,
+		},
+		{name: "flow strict docblock", file: "a.ts", src: "/** @flow strict */\nconst a = 1\n"},
+		{
+			name: "jest environment docblock with args",
+			file: "a.ts",
+			src:  "/**\n * @jest-environment jsdom\n */\nconst a = 1\n",
+		},
+		{
+			name:     "hand comment after a multi-line svelte ignore",
+			file:     "a.svelte",
+			src:      "<!-- svelte-ignore a11y-x\n  a11y-y -->\n<!-- hand -->\n<div></div>\n",
+			want:     1,
+			line:     3,
+			severity: warn,
+		},
+		{
+			name:     "hand comment above a goose marker",
+			file:     "a.sql",
+			src:      "-- hand\n-- +goose Up\nSELECT 1;\n",
+			want:     1,
+			line:     1,
+			severity: warn,
+		},
+		{
+			name:     "sqlc annotation inside a hand block does not end the scan",
+			file:     "a.sql",
+			src:      "/* hand\n-- name: X :one\n*/\nSELECT 1;\n",
+			want:     1,
+			line:     1,
+			severity: warn,
+		},
+	}
+}
+
+func generatedBannerCases() []languageCase {
+	const (
+		goSev   = pass.SeverityError
+		warn    = pass.SeverityWarning
+		openapi = "/**\n * This file was auto-generated by openapi-typescript.\n" +
+			" * Do not make direct changes to the file.\n */\n\nexport interface A {}\n"
+	)
+	return []languageCase{
+		{
+			name: "dart protoc plugin 22 header",
+			file: "address.pb.dart",
+			src: "// This is a generated file - do not edit.\n//\n" +
+				"// Generated from common/locaismundi/v1/address.proto.\n\nclass A {}\n",
+		},
+		{
+			name: "dart build_runner header",
+			file: "a.g.dart",
+			src:  "// GENERATED CODE - DO NOT MODIFY BY HAND\n\npart of 'a.dart';\n",
+		},
+		{
+			name: "dart protoc plugin banner after a bare comment line",
+			file: "a.dart",
+			src: "//\n//  Generated code. Do not modify.\n//  source: a.proto\n//\n\n" +
+				"class A {}\n",
+		},
+		{
+			name: "pigeon banner",
+			file: "a.dart",
+			src:  "// Autogenerated from Pigeon (v22.0.0), do not edit directly.\n\nclass A {}\n",
+		},
+		{
+			name: "openapi typescript banner in a block comment",
+			file: "a.ts",
+			src:  openapi,
+		},
+	}
+}
+
+func proseBannerCases() []languageCase {
+	const (
+		goSev = pass.SeverityError
+		warn  = pass.SeverityWarning
+	)
+	return []languageCase{
+		{
+			name:     "at-generated mentioned mid-sentence",
+			file:     "a.go",
+			src:      "// Package a assigns @generated ids to rows.\npackage a\n",
+			want:     1,
+			line:     1,
+			severity: goSev,
+		},
+		{
+			name: "protoc banner quoted mid-sentence",
+			file: "a.go",
+			src: "// This mirrors the Generated code. Do not modify. banner of " +
+				"protoc.\npackage a\n",
+			want:     1,
+			line:     1,
+			severity: goSev,
+		},
+	}
+}
+
+func proseBannerTSDartCases() []languageCase {
+	const warn = pass.SeverityWarning
+
+	return []languageCase{
+		{
+			name: "ts thin client block naming openapi-typescript",
+			file: "a.ts",
+			src: "/**\n * Thin client; the file was auto-generated " +
+				"by openapi-typescript upstream.\n" +
+				" */\nconst a = 1\n",
+			want:     1,
+			line:     1,
+			severity: warn,
+		},
+		{
+			name: "dart pigeon phrase hand-maintained",
+			file: "a.dart",
+			src: "// Autogenerated from Pigeon in spirit, hand-maintained since.\n" +
+				"class A {}\n",
+			want:     1,
+			line:     1,
+			severity: warn,
+		},
+	}
+}
+
+func proseBannerSQLCases() []languageCase {
+	const warn = pass.SeverityWarning
+
+	return []languageCase{
+		{
+			name: "sql sqlc banner quoted mid-sentence",
+			file: "a.sql",
+			src: "-- Generated code. Do not modify. is what sqlc writes; this one is hand.\n" +
+				"SELECT 1;\n",
+			want:     1,
+			line:     1,
+			severity: warn,
+		},
+		{
+			name:     "sql at-generated mentioned mid-sentence",
+			file:     "a.sql",
+			src:      "-- Keeps the @generated identity column docs.\nSELECT 1;\n",
+			want:     1,
+			line:     1,
+			severity: warn,
+		},
+	}
+}

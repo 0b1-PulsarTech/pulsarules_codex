@@ -8,28 +8,17 @@ import (
 )
 
 func leadingCommentLine(lang pass.Language, extension string, src []byte) (int, bool) {
-	const utf8BOM = "\xef\xbb\xbf"
-	lines := strings.Split(string(bytes.TrimPrefix(src, []byte(utf8BOM))), "\n")
-	pos := 0
-	for pos < len(lines) {
-		line := lines[pos]
-		if strings.TrimSpace(line) == "" {
-			pos++
-			continue
-		}
-		if pass.IsGeneratedMarkerLine(line) {
-			return 0, false
-		}
-		if pass.IsContentStartLine(line) {
-			return 0, false
-		}
-		if span := pass.ExemptHeaderSpan(lines[pos:]); span > 0 {
-			pos += span
-			continue
-		}
-		return pos + 1, isComment(lang, extension, line)
+	// The BOM is dropped only so line 1 splits cleanly; IsGeneratedSource strips its own.
+	body := bytes.TrimPrefix(src, []byte("\xef\xbb\xbf"))
+	if pass.IsGeneratedSource(body) {
+		return 0, false
 	}
-	return 0, false
+	lines := strings.Split(string(body), "\n")
+	pos, ok := firstContentLine(lines)
+	if !ok {
+		return 0, false
+	}
+	return pos + 1, isComment(lang, extension, lines[pos])
 }
 
 func isComment(lang pass.Language, extension, line string) bool {
