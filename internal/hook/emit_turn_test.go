@@ -209,62 +209,40 @@ func TestDispatchUserPrompt_EveryDispatch(t *testing.T) {
 func TestDispatchPreSearch(t *testing.T) {
 	t.Parallel()
 
+	const goGlob = `"pattern":"foo","glob":"*.go"`
+	ready := preSearchFixture{hasGoMod: true, hasGoplsSkill: true}
 	testCases := []struct {
-		name          string
-		toolName      string
-		toolInput     string
-		hasGoMod      bool
-		hasGoplsSkill bool
-		wantFire      bool
+		name      string
+		toolName  string
+		toolInput string
+		fixture   preSearchFixture
+		wantFire  bool
 	}{
 		{
-			name:          "grep on go glob fires",
-			toolName:      "Grep",
-			toolInput:     `"pattern":"foo","glob":"*.go"`,
-			hasGoMod:      true,
-			hasGoplsSkill: true,
-			wantFire:      true,
+			name: "grep on go glob fires", toolName: "Grep", toolInput: goGlob,
+			fixture: ready, wantFire: true,
 		},
 		{
-			name:          "bash grep command fires",
-			toolName:      "Bash",
-			toolInput:     `"command":"grep -rn foo ."`,
-			hasGoMod:      true,
-			hasGoplsSkill: true,
-			wantFire:      true,
+			name: "bash grep command fires", toolName: "Bash",
+			toolInput: `"command":"grep -rn foo ."`, fixture: ready, wantFire: true,
 		},
 		{
-			name:          "grep on markdown stays silent",
-			toolName:      "Grep",
-			toolInput:     `"pattern":"foo","glob":"*.md"`,
-			hasGoMod:      true,
-			hasGoplsSkill: true,
-			wantFire:      false,
+			name: "grep on markdown stays silent", toolName: "Grep",
+			toolInput: `"pattern":"foo","glob":"*.md"`, fixture: ready,
 		},
 		{
-			name:          "no go.mod stays silent",
-			toolName:      "Grep",
-			toolInput:     `"pattern":"foo","glob":"*.go"`,
-			hasGoMod:      false,
-			hasGoplsSkill: true,
-			wantFire:      false,
+			name: "no go.mod stays silent", toolName: "Grep", toolInput: goGlob,
+			fixture: preSearchFixture{hasGoplsSkill: true},
 		},
 		{
-			name:          "gopls-navigation not installed stays silent",
-			toolName:      "Grep",
-			toolInput:     `"pattern":"foo","glob":"*.go"`,
-			hasGoMod:      true,
-			hasGoplsSkill: false,
-			wantFire:      false,
+			name: "gopls-navigation not installed stays silent", toolName: "Grep",
+			toolInput: goGlob, fixture: preSearchFixture{hasGoMod: true},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			dir, skillsDir := preSearchProjectDir(t, preSearchFixture{
-				hasGoMod:      testCase.hasGoMod,
-				hasGoplsSkill: testCase.hasGoplsSkill,
-			})
+			dir, skillsDir := preSearchProjectDir(t, testCase.fixture)
 			disp, out := dispatchCapture(Deps{ProjectDir: dir, SkillsDir: skillsDir})
 			payload := fmt.Sprintf(
 				`{"tool_name":%q,"tool_input":{%s},"session_id":%q}`,
