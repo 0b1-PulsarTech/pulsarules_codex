@@ -2,6 +2,8 @@ package arch
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 )
 
@@ -24,17 +26,8 @@ func findCycles(g depGraph) [][]string {
 	var dfs func(node string)
 	dfs = func(node string) {
 		if inStack[node] {
-			start := -1
-			for i, p := range stack {
-				if p == node {
-					start = i
-					break
-				}
-			}
-			if start >= 0 {
-				cycle := make([]string, len(stack)-start)
-				copy(cycle, stack[start:])
-				cycles = append(cycles, cycle)
+			if start := slices.Index(stack, node); start >= 0 {
+				cycles = append(cycles, rotateToSmallest(slices.Clone(stack[start:])))
 			}
 			return
 		}
@@ -45,7 +38,7 @@ func findCycles(g depGraph) [][]string {
 		inStack[node] = true
 		stack = append(stack, node)
 
-		for _, dep := range g[node] {
+		for _, dep := range slices.Sorted(slices.Values(g[node])) {
 			dfs(dep)
 		}
 
@@ -53,12 +46,17 @@ func findCycles(g depGraph) [][]string {
 		inStack[node] = false
 	}
 
-	for node := range g {
+	for _, node := range slices.Sorted(maps.Keys(g)) {
 		if !visited[node] {
 			dfs(node)
 		}
 	}
 	return cycles
+}
+
+func rotateToSmallest(cycle []string) []string {
+	smallest := slices.Index(cycle, slices.Min(cycle))
+	return slices.Concat(cycle[smallest:], cycle[:smallest])
 }
 
 func classifyLayer(pkgPath string) string {
@@ -95,7 +93,8 @@ func checkBoundaries(g depGraph, modulePath string) []string {
 		"domain":    layerRankDomain,
 	}
 
-	for pkg, deps := range g {
+	for _, pkg := range slices.Sorted(maps.Keys(g)) {
+		deps := g[pkg]
 		pkgLayer := classifyLayer(pkg)
 		for _, dep := range deps {
 			depLayer := classifyLayer(dep)

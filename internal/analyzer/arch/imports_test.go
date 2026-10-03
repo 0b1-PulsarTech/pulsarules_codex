@@ -98,7 +98,8 @@ func TestDiscoverPackages(t *testing.T) {
 	t.Parallel()
 
 	const module = "example.com/mod"
-	for _, testCase := range discoverCases(module) {
+	testCases := discoverCases(module)
+	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			projectDir := t.TempDir()
@@ -143,50 +144,69 @@ func TestFindCycles(t *testing.T) {
 	testCases := []struct {
 		name  string
 		graph depGraph
-		wantN int
+		want  [][]string
 	}{
 		{
-			name: "no cycles",
-			graph: depGraph{
-				"a": {"b"},
-				"b": {"c"},
-				"c": nil,
-			},
-			wantN: 0,
+			name:  "no cycles",
+			graph: depGraph{"a": {"b"}, "b": {"c"}, "c": nil},
+			want:  nil,
 		},
 		{
-			name: "direct cycle",
-			graph: depGraph{
-				"a": {"b"},
-				"b": {"a"},
-			},
-			wantN: 1,
+			name:  "direct cycle",
+			graph: depGraph{"a": {"b"}, "b": {"a"}},
+			want:  [][]string{{"a", "b"}},
 		},
 		{
-			name: "self loop",
-			graph: depGraph{
-				"a": {"a"},
-			},
-			wantN: 1,
+			name:  "self loop",
+			graph: depGraph{"a": {"a"}},
+			want:  [][]string{{"a"}},
 		},
 		{
-			name: "indirect cycle",
-			graph: depGraph{
-				"a": {"b"},
-				"b": {"c"},
-				"c": {"a"},
-			},
-			wantN: 1,
+			name:  "indirect cycle",
+			graph: depGraph{"a": {"b"}, "b": {"c"}, "c": {"a"}},
+			want:  [][]string{{"a", "b", "c"}},
+		},
+		{
+			name:  "disjoint cycles come out in root order",
+			graph: depGraph{"x": {"y"}, "y": {"x"}, "a": {"b"}, "b": {"a"}},
+			want:  [][]string{{"a", "b"}, {"x", "y"}},
+		},
+		{
+			name:  "dependencies are walked in sorted order",
+			graph: depGraph{"a": {"c", "b"}, "b": {"c"}, "c": {"a"}},
+			want:  [][]string{{"a", "b", "c"}},
+		},
+		{
+			name:  "a cycle reached through a tail is rotated to its smallest member",
+			graph: depGraph{"a": {"d"}, "d": {"b"}, "b": {"d"}},
+			want:  [][]string{{"b", "d"}},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			cycles := findCycles(testCase.graph)
-			if len(cycles) != testCase.wantN {
-				t.Fatalf("got %d cycles, want %d: %v", len(cycles), testCase.wantN, cycles)
+			if got := findCycles(testCase.graph); !reflect.DeepEqual(got, testCase.want) {
+				t.Fatalf("findCycles = %v, want %v", got, testCase.want)
 			}
 		})
+	}
+}
+
+func TestFindCycles_IsDeterministic(t *testing.T) {
+	t.Parallel()
+
+	graph := depGraph{
+		"c": {"a"},
+		"b": {"c"},
+		"a": {"b"},
+		"d": {"c", "b"},
+	}
+	want := [][]string{{"a", "b", "c"}}
+
+	for range 50 {
+		if got := findCycles(graph); !reflect.DeepEqual(got, want) {
+			t.Fatalf("findCycles = %v, want %v", got, want)
+		}
 	}
 }
 
@@ -283,6 +303,28 @@ func TestCheckBoundaries(t *testing.T) {
 	}
 }
 
+func TestCheckBoundaries_IsDeterministic(t *testing.T) {
+	t.Parallel()
+
+	graph := depGraph{
+		"example.com/domain/c": {"example.com/infra/db"},
+		"example.com/domain/a": {"example.com/transport/rest"},
+		"example.com/domain/b": {"example.com/infra/db", "example.com/cmd/app"},
+	}
+	want := []string{
+		"domain/a (domain) imports transport/rest (transport): inner layer depends on outer",
+		"domain/b (domain) imports infra/db (infra): inner layer depends on outer",
+		"domain/b (domain) imports cmd/app (cmd): inner layer depends on outer",
+		"domain/c (domain) imports infra/db (infra): inner layer depends on outer",
+	}
+
+	for range 50 {
+		if got := checkBoundaries(graph, "example.com"); !reflect.DeepEqual(got, want) {
+			t.Fatalf("checkBoundaries = %v, want %v", got, want)
+		}
+	}
+}
+
 func TestDiscoverRealProject(t *testing.T) {
 	t.Parallel()
 	t.Skip("runs against the actual project tree - enable manually")
@@ -290,17 +332,17 @@ func TestDiscoverRealProject(t *testing.T) {
 	if len(pkgs) == 0 {
 		t.Fatal("no packages discovered")
 	}
-	g := buildGraph(pkgs, "github.com/0b1-PulsarTech/pulsarules_codex")
-	cycles := findCycles(g)
+	graph := buildGraph(pkgs, "github.com/0b1-PulsarTech/pulsarules_codex")
+	cycles := findCycles(graph)
 	if len(cycles) > 0 {
-		for _, c := range cycles {
-			t.Errorf("cycle: %s", strings.Join(c, " → "))
+		for _, cycle := range cycles {
+			t.Errorf("cycle: %s", strings.Join(cycle, " → "))
 		}
 	}
-	violations := checkBoundaries(g, "github.com/0b1-PulsarTech/pulsarules_codex")
+	violations := checkBoundaries(graph, "github.com/0b1-PulsarTech/pulsarules_codex")
 	if len(violations) > 0 {
-		for _, v := range violations {
-			t.Logf("boundary: %s", v)
+		for _, violation := range violations {
+			t.Logf("boundary: %s", violation)
 		}
 	}
 }
