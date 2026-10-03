@@ -2,8 +2,8 @@ package vcs
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Change struct {
@@ -46,44 +46,13 @@ func (s Status) String() string {
 }
 
 func (repo *repository) WorktreeStatus() (Status, error) {
-	out, err := runGit(repo.root, "status", "--porcelain")
+	const statusTimeout = 30 * time.Second
+	// --no-optional-locks keeps a background run from rewriting the user's index.
+	// A whole-tree untracked listing on a large repo outlasts the 2s default.
+	out, err := runGitWithin(statusTimeout, repo.root, "--no-optional-locks",
+		"status", "--porcelain", "-z", "--untracked-files=all")
 	if err != nil {
 		return Status{}, fmt.Errorf("read worktree status: %w", err)
 	}
 	return parseStatus(out), nil
-}
-
-const porcelainPrefixLength = 3
-
-func parseStatus(out string) Status {
-	if out == "" {
-		return Status{}
-	}
-
-	lines := strings.Split(out, "\n")
-	changes := make([]Change, 0, len(lines))
-	for _, line := range lines {
-		if len(line) < porcelainPrefixLength {
-			continue
-		}
-		changes = append(changes, parseStatusLine(line))
-	}
-	return Status{Changes: changes}
-}
-
-func parseStatusLine(line string) Change {
-	staging, worktree := line[0], line[1]
-	path, oldPath := line[porcelainPrefixLength:], ""
-	if before, after, found := strings.Cut(path, " -> "); found {
-		oldPath, path = before, after
-	}
-	return Change{
-		Path:      path,
-		OldPath:   oldPath,
-		Extension: strings.ToLower(filepath.Ext(path)),
-		IsTest:    strings.HasSuffix(path, "_test.go"),
-		Staging:   staging,
-		Worktree:  worktree,
-		Staged:    staging != ' ' && staging != '?',
-	}
 }
