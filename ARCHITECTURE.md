@@ -20,7 +20,7 @@ frontmatter; the fourth is generated.
 | Profile  | `knowledge/standards/profiles.yaml`     | Install-time customization that overrides a skill's composition       |
 | Router   | `knowledge/standards/router.yaml`       | The router's baseline, dispatch table, and order as filterable data   |
 
-A **skill** is never authored directly. `knowledge/standards/skills.yaml` declares the 36 skills,
+A **skill** is never authored directly. `knowledge/standards/skills.yaml` declares the 45 skills,
 each naming the rules, patterns, and workflows it composes (`compose_rules`, `compose_patterns`,
 `compose_workflows`), plus triggers, load policy (`always_load`), composition `order`, and
 skill-level dependencies (`compose_skills`). The installer renders a skill by transcluding the
@@ -133,19 +133,32 @@ history, and staged renames with no AST parsing and returns a `Discovery`; `Load
 `astcache.Cache`; then a `StageRunner` is built, registered for `scope`, and run. Separating
 `Discover` from `Load` lets a caller inspect or edit the discovered state first; `status` is the
 already-computed `vcs.Status`, so a caller that read it already (a hook) does not pay for a second
-read.
+read. `files` is a `FileSet`: `FileSetChanged` analyzes the changed files, `FileSetAll` (the
+`--all-files` flag) walks every source file in the tree.
+
+The file walk is git-listed: `Session.attachSources` asks the repository for `git ls-files -z --cached
+--others --exclude-standard` (`vcs.ListFiles`) and wraps the provider in `sources.NewListedProvider`, so
+ignored build output is never read. If the repository cannot list files it logs a warning and falls
+back to a plain filesystem walk with `sources.DefaultSkipDirs`. A `.sql` file in a directory holding an
+`atlas.sum` (an Atlas migration directory) is marked generated, as is any file whose own header says so
+(`lexical.IsGeneratedSource`); generated-file findings are split out of the result unless
+`GovernanceConfig.IncludeGenerated` is set.
 
 Three scopes (`scope.go`) control which analyzers run and what context is built:
 
-| Scope          | Runs                                                                    | Used by                                  |
-|----------------|-------------------------------------------------------------------------|------------------------------------------|
-| `ScopeFull`    | every registered analyzer, full project context                         | `governance` command (default)           |
-| `ScopeCommit`  | static + AST + commit analyzers, for pre-commit hooks                   | `commitlint` (the git `commit-msg` hook) |
-| `ScopeChanged` | static + AST + arch analyzers over changed files, skipping delegation   | the Claude Code `Stop` hook              |
+| Scope          | Runs                                                                | Used by                                   |
+|----------------|---------------------------------------------------------------------|-------------------------------------------|
+| `ScopeFull`    | every registered analyzer, full project context                     | `governance` command (default)            |
+| `ScopeCommit`  | static-gate analyzers over files with a staged change               | `commitlint`; `governance --scope commit` |
+| `ScopeChanged` | static + arch gates over changed files, skipping the full-only gate | the Claude Code `Stop` hook               |
 
-`ScopeCommit` still gathers staged renames and per-file staged status (`commit-move-purity` needs
-exactly that), even though it skips the wider `sources.Provider`/AST-cache work that `ScopeFull` and
-`ScopeChanged` do.
+`ScopeCommit` drops every change with nothing staged (`Session.changedFiles` keeps only
+`Change.Staged`), so a file edited only in the worktree is not analyzed. The file analyzers (all but
+`commit-move-purity`, which reads the staged and HEAD blobs) still read each kept file's
+working-tree bytes, so a partially staged file is judged with its unstaged hunks included. It still
+gathers staged renames (`commit-move-purity` needs exactly that), and it attaches the file provider
+only when a staged change exists (with the default changed-file set), since it never runs the
+whole-tree analyzers.
 
 ### Stages and the analyzer registry
 
@@ -172,53 +185,78 @@ changed files as text under the run's skip set, while `core.RunPerGoFile` iterat
 files. `core.InPlaceAnalyzer` marks the second contract - an analyzer that rewrites `ctx.Findings`
 (rule injection, output) instead of returning new ones. The families:
 
-- `static/*` - pure text/structure checks needing no parser: `filesize` (line-count ceiling),
-  `textmarkers` (invisible carriers, exotic spaces and AI typographic punctuation), `topoffile` and
-  `bigcomment` (comment placement and length, both via the `LanguageRegistry`).
+- `static/*` - text/structure checks (`topoffile`, `bigcomment`, `historynarration` and
+  `simplificationpath` read each language's comment syntax through the `LanguageRegistry`; for `.go`
+  files `historynarration` reads comments from a Go AST, parsing the file itself when the AST cache
+  lacks it, and falls back to the comment scanner only on a parse error): `filesize` (line-count
+  ceiling), `textmarkers` (invisible carriers, exotic spaces and AI typographic punctuation),
+  `topoffile` and `bigcomment` (comment placement and length, so they cover non-Go files too),
+  `historynarration` (comments that narrate history instead of stating the invariant) and
+  `simplificationpath` (a simplification comment must name its upgrade path).
 - `ast/*` - `go/ast`-based checks: `complexity` (cyclomatic complexity, function size, parameter
-  count, flag arguments, magic numbers), `controlflow` (redundant else, deep nesting), `shadowing`
-  (variable/builtin shadowing via a scope stack), `imports` (three-group import order), `naming`
-  (identifier conventions).
+  count, flag arguments, magic numbers), `controlflow` (redundant else, deep nesting), `shadowing`,
+  `imports` (three-group import order), `naming`, `namedreturns`, `singleusedecl`, `timediscipline`,
+  `contextdiscipline`, `pproflabels`, and the style checks `doccomment` (`doc-comment`),
+  `bodyheadercomment` (`body-header-comment`), `testcomment` (`test-comment`), `loopvari`
+  (`loop-var-i`), `variadicindex` (`variadic-index`), `toomanyresults` (`too-many-results`),
+  `ungroupedinterfaces`, `packagelevelvar` (`package-level-var`) and `packagefilecount`
+  (`package-file-count`). The `recommended` preset leaves all of them enabled (warning level, except
+  `import-groups` and `pprof-labels`, which are errors, and `complexity`'s magic-number findings,
+  which are info); `minimal` disables `complexity`, `control-flow`, `shadowing`, `named-returns`,
+  `context-discipline`, `single-use-declaration`, `test-comment` and every style check, keeping
+  `import-groups`, `naming`, `time-discipline` and `pprof-labels`. `ast/directive` recognizes
+  directive comments (`//go:`, `//nolint`, `//pulsarules:`, ...) so comment checks skip them, and
+  `ast/gotest` holds shared test-function helpers.
 - `arch` - multi-file architecture checks: `PackageBoundaryAnalyzer` (inner-layer packages must not
   import outer-layer ones) and `ImportCycleAnalyzer` (package import-cycle detection).
-- `commit` - commit-message validation (`CommitAnalyzer`): format, emoji catalog and repetition
+- `commit` - commit-message validation (`commit.Analyzer`): format, emoji catalog and repetition
   window, tool-attribution trailers, delegating emoji lookups to `internal/emoji`.
 - `movepurity` - flags a staged rename that carries an edit beyond its package clause and import
   fixups (reported as below `min_similarity` when the score is low), or one staged alongside
-  unrelated edits.
+  unrelated edits (`movepurity/gosrc` reads Go declarations).
 - `branchname` - flags a checked-out branch whose name carries no recognized type prefix
   (Conventional Commit types, the gitflow lines, plus a project's own `extra_types`). Gated to
-  `ScopeFull` - the pre-push run - since a branch name is not a property of a staged change.
+  `GateFullOnly` - the pre-push run - since a branch name is not a property of a staged change.
 - `delegation/golangcilint` - shells out to an external tool and translates its output into
   `core.Finding`s; gated to `GateFullOnly` since spawning a process is only worth the cost on a full run.
+- `ruleinjection` and `output` - the in-place stages that attach each finding's rule ID and rule
+  summary, then sort findings by severity, file and line and drop adjacent duplicates.
 - `core/astcache` - a per-invocation cache of parsed Go ASTs, populated once in `Session.Load` so
   analyzers call `Get(path)` instead of each re-parsing the same file.
-- `langspec` - the single data-driven `Language` handler and the spec table behind it (go, clike,
-  hash, sql, lua, markup, sfc). The `clike` spec covers the `//` and `/* */` family (`.dart`, `.ts`,
-  `.js`, `.java`, `.rs`, `.c`, ...). Only the `go` spec (`package` clause) and the `sql` spec
-  (`CREATE SCHEMA`) carry a package-declaration predicate.
+- `core/lexical` - comment and header lexing shared by the comment analyzers: `CommentSyntax`, the
+  directive grammar, `IsGeneratedSource` and header-line extraction.
+- `core/sources` - the file `Provider`, the skip-directory sets, and the git-listed provider wrapper.
+- `langspec` - the single data-driven `Language` handler and the spec table behind it (go, clike, hash,
+  sql, nix, lua, markup, sfc). The `clike` spec covers the `//` and `/* */` family (`.dart`, `.ts`,
+  `.js`, `.java`, `.rs`, `.c`, ...). Only the `go` spec (`package` clause) and the `sql` spec (`CREATE
+  SCHEMA`) carry a package-declaration predicate.
 
 ### internal/vcs
 
-`vcs.Repository` is the typed, read-only git port the whole governance pipeline depends on (`Root`,
-`HeadAuthorEpoch`, `RecentSubjects`, `CurrentBranch`, `WorktreeStatus`, `StagedRenames`). The
-package-level `vcs.CommonDir` resolves the git dir every linked worktree of a repository shares -
-the git-hook installer joins it with `hooks` to find the dir git actually runs hook scripts from.
-`vcs.Open` walks up from a directory to the repository root (resolving a linked worktree) and
-returns `ErrNoRepository` rather than a bare error when the directory is not a git repository, so
-callers can degrade quietly. Every git read in the product goes through `gitcmd.go`'s one `runGit`
-helper, which runs `git -C <dir> <args>` under a 2-second timeout with `LC_ALL=C` pinned (so
-`isEmptyRepoError`'s English-message match survives a localized git install). The one deliberate
-exception is `tools/emojigen`, documented in its own source: it shells out directly because it scans
-an entire reference repository's history (`git log --all --max-count=1000000`), which a per-object
-walk through this package would run orders of magnitude slower, and `tools/` is not a runtime
-dependency the vcs port needs to cover.
+`vcs.Repository` is the typed, read-only git port the whole governance pipeline depends on
+(`Root`, `HeadAuthorEpoch`, `RecentSubjects`, `CurrentBranch`, `WorktreeStatus`, `StagedRenames`,
+plus the `BlobReader` and `TreeReader` embeds for HEAD and index content). The concrete repository
+also has `ListFiles`, which `analysis.Session` reaches through its own small `fileLister`
+interface. `WorktreeStatus` runs `git --no-optional-locks status --porcelain -z
+--untracked-files=all`, so a background run never rewrites the user's index and a path with
+unusual bytes is not quoted. The package-level `vcs.CommonDir` resolves the git dir every linked
+worktree of a repository shares - the git-hook installer joins it with `hooks` to find the dir git
+actually runs hook scripts from. `vcs.Open` walks up from a directory to the repository root
+(resolving a linked worktree) and returns `ErrNoRepository` rather than a bare error when the
+directory is not a git repository, so callers can degrade quietly. Every git read in the product
+goes through `gitcmd.go`'s `runGit` helper (and its `runGitWithin` variant, which `WorktreeStatus`
+and `ListFiles` use for a 30-second budget on large trees), which runs `git -C <dir> <args>` under a
+2-second default timeout with `LC_ALL=C` pinned (so `isEmptyRepoError`'s English-message match
+survives a localized git install). The one deliberate exception is `tools/emojigen`, documented in
+its own source: it shells out directly because it scans an entire reference repository's history
+(`git log --all --max-count=1000000`), which a per-object walk through this package would run orders
+of magnitude slower, and `tools/` is not a runtime dependency the vcs port needs to cover.
 
 ### internal/hook
 
-`Dispatcher.Dispatch(mode, payload)` is the one decode point for a Claude Code hook payload
-(`decodeHookPayload`, which degrades a malformed payload to its zero value rather than failing,
-since a hook must never block the agent's turn) and routes it to a per-mode handler
+`Dispatcher.Dispatch(mode, payload)` (`hook.go`) is the one decode point for a Claude Code hook
+payload (`decodeHookPayload`, which degrades a malformed payload to its zero value rather than
+failing, since a hook must never block the agent's turn) and routes it to a per-mode handler
 (`session-start`, `pre-edit`, `post-edit`, `pre-search`, `user-prompt`, `stop`, `subagent-start`,
 `session-end`). It always returns nil; failures surface only through the optional `*slog.Logger`.
 `Router.SkillsForFile` resolves which skills a `post-edit` event should announce from
@@ -228,20 +266,21 @@ files) instead of a hardcoded per-extension map, so a new skill trigger routes w
 `SessionTracker` (`session.go`) writes per-session marker files under the OS temp dir, keyed by
 event and session ID (an ID that is not a plain token is hashed first), so `OncePerSession` and
 content-hashed `FirstEmission` deduplicate repeat emissions within one session; `Cleanup` scans and
-removes them at `session-end`. The `checklist` subpackage's `Typed` and `checks.go`'s
-`RunGovernanceCheck` are what the `stop` handler calls into the governance pipeline through: the
-latter opens a `Session` at `analysis.ScopeChanged` and formats findings with `analysis.StyleHook`.
-`drift.go` runs once per session at `session-start`: it compares `knowledge.Fingerprint()` (the
-digest of the standards the binary embeds, see `knowledge/fingerprint.go`) against the project's
-`knowledge/` tree on disk and warns when the binary trails the source it was built from. This is a
-guard for the development repo itself - a consumer project has no `knowledge/` tree and stays
-silent.
+removes them at `session-end`. The `checklist` subpackage's `Typed` builds the per-extension
+post-edit checklist bullets from the worktree status, and `checks.go`'s `RunGovernanceCheck` is what
+the `stop` handler calls into the governance pipeline through: it opens a `Session`, runs it over
+the changed files at the scope the caller passes (the `Stop` hook passes `analysis.ScopeChanged`),
+and formats findings with `analysis.StyleHook`. `drift.go` runs once per session at `session-start`:
+it compares `knowledge.Fingerprint()` (the digest of the standards the binary embeds, see
+`knowledge/fingerprint.go`) against the project's `knowledge/` tree on disk and warns when the
+binary trails the source it was built from. This is a guard for the development repo itself - a
+consumer project has no `knowledge/` tree and stays silent.
 
 ### internal/config
 
 `GovernanceConfig` is the top-level runtime configuration: per-analyzer enable/params
-(`AnalyzerConfig`), emoji rules (`EmojiConfig`), and move-purity thresholds (`MovePurityConfig`).
-`Defaults()` returns the embedded baseline; `presets.go` applies a named preset
+(`AnalyzerConfig`), emoji rules (`EmojiConfig`), move-purity thresholds (`MovePurityConfig`), and
+`IncludeGenerated`. `Defaults()` returns the embedded baseline; `presets.go` applies a named preset
 (strict/recommended/minimal) in-memory. `internal/analysis/runner.go`'s `toAnalysisConfig` converts
 a `GovernanceConfig` into the `core.AnalysisConfig` the `StageRunner`'s `enabled()` check reads,
 projecting `EmojiConfig`/`MovePurityConfig` onto the `commit-lint` and `commit-move-purity`
@@ -278,18 +317,20 @@ binary themselves.
 
 | Package                          | Responsibility                                                                                                                |
 |----------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| `knowledge`                      | `embed.go` (embed), `model.go` (Rule/Pattern/Workflow/Skill), `frontmatter.go` (fence parser), `load.go` + `read*.go` (loading), `index.go` (Index) |
+| `knowledge`                      | `embed.go` (embed), `model.go` (Rule/Pattern/Workflow/Skill), `frontmatter.go` (fence parser), `load.go` + `read*.go` (loading), `index.go` (Index), `fingerprint.go` |
 | `internal/skill/render`          | `render.go` (Renderer + transclusion), `compose.go`, `router*.go`, `sidecar.go`, `namespace.go` (template funcs)              |
-| `internal/skill/validate`        | `validate.go` (pipeline), `checks.go` (reference + body integrity checks)                                                     |
-| `internal/skill/output`          | `install.go`, `selection.go` (Selection), `generate.go`, `package.go`, `write.go`                                             |
+| `internal/skill/validate`        | `validate.go` (`Validate` pipeline + `Check` seam), `checks*.go` (reference, body, profile, emoji, normative integrity checks) |
+| `internal/skill/output`          | `install.go`, `selection.go` (Selection), `generate.go`, `package.go`, `remove.go`, `write.go`                                  |
 | `internal/skill/hookwire`        | `hooks.go` (install hook), `settings.go` (idempotent settings.json/.local merge, `$CLAUDE_PROJECT_DIR`)             |
 | `internal/skill/mcpwire`         | `mcp.go` (merge gopls into `.mcp.json`), `gopls.go` (PATH check + generate gopls-navigation from `gopls mcp -instructions`)   |
 | `internal/skill/opencodewire`    | `config.go` (merge `opencode.json`: instructions + gopls mcp, SkillsSubdir), `unwire.go`                                      |
 | `internal/skill/agentswire`      | `agents.go` (render the root `AGENTS.md`, scoped to the selected skills), `uninstall.go` (marker-gated removal)               |
 | `internal/skill/cursorwire`      | `rules.go` (marker-gated write of one `.mdc` per rule under `.cursor/rules`), `remove.go`                                     |
-| `internal/skill/target`          | `target.go` (`Target`/`Context`/`Report`), `registry.go` (`Registry`), `claude.go`, `opencode.go`, `agents.go`, `cursor.go` - one Strategy per install layout |
+| `internal/skill/target`          | `target.go` (`Target`/`Context`, `Report` aliasing `internal/report`), `registry.go` (`Registry`), `claude.go`, `opencode.go`, `agents.go`, `cursor.go` - one Strategy per install layout |
 | `internal/langdetect`            | `detect.go` (`Detect`: depth-capped marker walk), `resolve.go` (`Resolve`: override > persisted config > detect), `config.go` (`.pulsarules-languages.json` load/save/remove), `language.go`, `set.go` |
 | `cmd/pulsarules_cli`             | `main.go` only: parse args, run `bootstrap.DoInjections`, dispatch to `internal/cli`, the one place that calls `os.Exit` |
+| `internal/cli`                   | one file per command (generate, list, validate, package, hook, commitlint, governance, clean, evals), `install/`, `uninstall/`, and `cliopts/` (flag parsing, `usage.txt`) |
+| `internal/bootstrap`             | `DoInjections` - the composition root that registers knowledge, vcs, obs and the registries in the injector |
 
 `knowledge` is the asset + embed anchor; the `internal/skill/*` packages are cohesive operation
 units (most source files carry a name-matched `_test.go`); commands live in `internal/cli`, and
@@ -300,21 +341,23 @@ The governance pipeline (see above) adds its own package set:
 
 | Package                          | Responsibility                                                                                      |
 |----------------------------------|-----------------------------------------------------------------------------------------------------|
-| `internal/analysis`               | `analysis.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`registerForScope`, `gatesFor`), `runner.go` (`toAnalysisConfig`), `output.go`, `format.go`, `history.go`, `registry/` (the analyzer table) |
-| `internal/analyzer/core`          | `Analyzer`/`InPlaceAnalyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Reporter.Resolved`, `EachChangedFile`, `LanguageRegistry`, `core/astcache`, `core/lexical` (comment/header lexing), `core/sources` (file sources, skip sets) |
-| `internal/analyzer/static/*`      | `filesize`, `textmarkers`, `topoffile`, `bigcomment` - text/structure checks                        |
-| `internal/analyzer/ast/*`         | `complexity`, `controlflow`, `shadowing`, `imports`, `naming` - `go/ast`-based checks                |
+| `internal/analysis`               | `analysis.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`registerForScope`, `gatesFor`), `runner.go` (`toAnalysisConfig`), `convert.go`, `suppress.go` (generated-file split), `format.go`, `history.go`, `output.go` (`CountBySeverity`), `registry/` (the analyzer table) |
+| `internal/analyzer/core`          | `Analyzer`/`InPlaceAnalyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Reporter.Resolved`, `EachChangedFile`, `LanguageRegistry`; stdlib plus its own subpackages only: `core/astcache`, `core/lexical` (comment/header lexing), `core/sources` (file sources, skip sets, git-listed provider) |
+| `internal/analyzer/static/*`      | `filesize`, `textmarkers`, `topoffile`, `bigcomment`, `historynarration`, `simplificationpath` - text/structure checks |
+| `internal/analyzer/ast/*`         | `go/ast`-based checks: complexity, control flow, shadowing, imports, naming, named-returns, single-use-declaration, time-discipline, context-discipline, pprof-labels, and the doc-comment, body-header-comment, test-comment, loop-var, variadic-index, result-count, interface-grouping, package-var and package-file-count style checks |
 | `internal/analyzer/arch`          | `PackageBoundaryAnalyzer`, `ImportCycleAnalyzer` - multi-file architecture checks                   |
-| `internal/analyzer/commit`        | `CommitAnalyzer` - commit-message format, emoji, and trailer rules                                  |
+| `internal/analyzer/commit`        | `Analyzer` - commit-message format, emoji, and trailer rules                                        |
 | `internal/analyzer/movepurity`    | flags a staged rename that is not a pure move                                                       |
-| `internal/analyzer/branchname`    | flags a branch name with no recognized type prefix; `ScopeFull` (pre-push) only                     |
-| `internal/analyzer/delegation/*`  | `golangcilint` - shells out to an external tool, gated to `ScopeFull`                              |
-| `internal/analyzer/langspec`      | one data-driven `Language` handler plus the spec table for every language (go, clike, hash, sql, lua, markup, sfc) |
-| `internal/vcs`                    | `Repository` port, `Open`, `CommonDir`, `Status`/`Rename` types, `gitcmd.go`'s `runGit`              |
+| `internal/analyzer/ruleinjection`, `internal/analyzer/output` | in-place stages: attach each finding's rule ID and rule summary; sort findings by severity, file and line and drop adjacent duplicates |
+| `internal/analyzer/branchname`    | flags a branch name with no recognized type prefix; `GateFullOnly` (pre-push) only                  |
+| `internal/analyzer/delegation/*`  | `golangcilint` - shells out to an external tool, gated to `GateFullOnly`                            |
+| `internal/analyzer/langspec`      | one data-driven `Language` handler plus the spec table for every language (go, clike, hash, sql, nix, lua, markup, sfc) |
+| `internal/vcs`                    | `Repository` port, `Open`, `CommonDir`, `Status`/`Rename` types, `files.go` (`ListFiles`), `gitcmd.go`'s `runGit` |
 | `internal/execx`                  | `Run` - the one external-process seam (timeout, env, captured stderr, typed `*execx.Error`)          |
 | `internal/report`                 | `Report{Notes,Warnings}` with `Note`/`Warn`/`Merge` - the one install/uninstall report value         |
 | `internal/jsonconfig`             | `Read` - read a JSON config file, tolerating an absent one, shared by every merge/unmerge site       |
 | `internal/hook`                   | `hook.go`/`dispatcher_deps.go` (`Dispatcher`), `router.go` (`Router`), `session.go` (`SessionTracker`), `checks.go` (`RunGovernanceCheck`), `checklist/`, `install/*` (per-target hook installers) |
+| `internal/text`                   | `escape` (control-character escaping for printed output), `clean`/`mark` (invisible-text cleaning)    |
 | `internal/config`                 | `GovernanceConfig` and its sub-configs, `presets.go`                                                 |
 | `internal/obs`                    | `New` (off-by-default `slog.Logger`), tail-truncating log rotation                                   |
 | `internal/emoji`                  | `Catalog`, `Anchors`/`themes.go`, `data/{catalog,types,themes}.txt`                                  |
@@ -392,10 +435,10 @@ skill's own text needs rewriting).
 
 There is one known deviation: `knowledge/` is a top-level exported Go package, outside the allowed
 set in `code-placement` (`cmd/`, `internal/`, `pkg/`, `build/` for a single module). It is not
-compliant with that rule, and the files that import it are not a reason to call it compliant. It
-stays top-level for two reasons: `knowledge/embed.go` does `//go:embed standards templates`, and
-`go:embed` can only reach files at or below the package that declares the directive, so the embed
-forces `knowledge/` to sit above `standards/`; and burying `standards/` under `pkg/` would defeat
-the portability guarantee above: it must stay usable as an engineering handbook on its own,
+compliant with that rule, and the ~48 files that import it are not a reason to call it compliant.
+It stays top-level for two reasons: `knowledge/embed.go` does `//go:embed standards templates`,
+and `go:embed` can only reach files at or below the package that declares the directive, so the
+embed forces `knowledge/` to sit above `standards/`; and burying `standards/` under `pkg/` would
+defeat the portability guarantee above: it must stay usable as an engineering handbook on its own,
 independent of `pkg/`'s Go-API framing. Revisit this placement if a second module or binary ever
 appears in this repo.
