@@ -140,6 +140,24 @@ func toolingMigrationCases() []headerTestCase {
 		{name: "c8 ignore", line: "/* c8 ignore start */", want: true},
 		{name: "coverage ignore file", line: "// coverage:ignore-file", want: true},
 		{name: "ordinary comment", line: "// a helper", want: false},
+		{name: "go debug", line: "//go:debug panicnil=1", want: true},
+		{name: "dart format width", line: "// dart format width=120", want: true},
+		{name: "dart format off", line: "// dart format off", want: true},
+		{name: "atlas txmode", line: "-- atlas:txmode none", want: true},
+		{name: "atlas nolint", line: "-- atlas:nolint destructive", want: true},
+		{name: "atlas delimiter", line: "-- atlas:delimiter \\\\", want: true},
+		{name: "global comment", line: "/* global window */", want: true},
+		{name: "tslint disable", line: "/* tslint:disable */", want: true},
+		{name: "biome ignore all", line: "// biome-ignore-all lint: legacy", want: true},
+		{name: "bare nolint", line: "//nolint", want: true},
+		{
+			name: "nolint with linters after a space is outside the grammar",
+			line: "//nolint gosec",
+			want: false,
+		},
+		{name: "nolint glued to a word is prose", line: "//nolinting is fun", want: false},
+		{name: "liquibase formatted sql", line: "--liquibase formatted sql", want: true},
+		{name: "dart format prose", line: "// dart formatting notes", want: false},
 	}
 }
 
@@ -207,6 +225,28 @@ func TestExemptHeaderSpan(t *testing.T) {
 		},
 		{name: "unclosed prose docblock", lines: []string{"/*", "text"}, want: 0},
 		{
+			name:  "jest pragma followed by prose is a hand docblock",
+			lines: []string{"/**", " * @jest-environment jsdom", " * Helpers for a.", " */"},
+			want:  0,
+		},
+		{
+			name:  "prose followed by a format pragma line is a hand docblock",
+			lines: []string{"/**", " * Helpers for a.", " * @format is applied by CI.", " */"},
+			want:  0,
+		},
+		{name: "pure flow strict docblock", lines: []string{"/** @flow strict */", "x"}, want: 1},
+		{
+			name:  "pure jsdom docblock with args",
+			lines: []string{"/**", " * @jest-environment jsdom", " */", "x"},
+			want:  3,
+		},
+		{
+			name:  "multi-line svelte ignore spans to the closing arrow",
+			lines: []string{"<!-- svelte-ignore a11y-x", "  a11y-y -->", "<!-- hand -->"},
+			want:  2,
+		},
+		{name: "plain html comment", lines: []string{"<!-- hand -->"}, want: 0},
+		{
 			name:  "multi-line directive block",
 			lines: []string{"/* eslint-disable", " a */", "x"},
 			want:  2,
@@ -245,5 +285,13 @@ func TestIsContentStartLine(t *testing.T) {
 				t.Fatalf("IsContentStartLine(%q) = %v, want %v", testCase.line, got, testCase.want)
 			}
 		})
+	}
+}
+
+func TestIsDirectiveHeaderLine_Goverter(t *testing.T) {
+	t.Parallel()
+
+	if IsDirectiveHeaderLine("// goverter:map A B") {
+		t.Fatal("goverter lines are not top-of-file header directives")
 	}
 }

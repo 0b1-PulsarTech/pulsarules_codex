@@ -70,21 +70,9 @@ func analyzeSource(t *testing.T, file, src string, config *core.AnalysisConfig) 
 	})
 }
 
-func TestTopOfFile_Languages(t *testing.T) {
-	t.Parallel()
+func runLanguageCases(t *testing.T, testCases []languageCase) {
+	t.Helper()
 
-	var testCases []languageCase
-	for _, group := range [][]languageCase{
-		goCases(),
-		scriptCases(),
-		docblockCases(),
-		dartCases(),
-		markupCases(),
-		sqlCases(),
-		dataCases(),
-	} {
-		testCases = append(testCases, group...)
-	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()

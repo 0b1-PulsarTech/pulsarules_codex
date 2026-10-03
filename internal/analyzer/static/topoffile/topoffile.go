@@ -22,8 +22,8 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		return nil
 	}
 	// Required header lines (core.ExemptHeaderSpan) are skipped so a hand comment after
-	// them is still flagged; a core.IsContentStartLine line ends the scan, and a
-	// core.IsGeneratedMarkerLine line before it exempts the file in full.
+	// them is still flagged; a core.IsContentStartLine line ends the scan, and a file
+	// core.IsGeneratedSource accepts is exempt in full.
 	extFilter := core.ExtensionFilter(ctx, a.ID(), defaultExtensions())
 	eligible := func(fc core.FileChange) bool {
 		return extFilter(fc) && a.langs.Lookup(fc.Extension) != nil

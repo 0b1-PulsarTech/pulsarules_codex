@@ -1,8 +1,26 @@
 package topoffile
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+import (
+	"slices"
+	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+)
+
+func TestLeadingCommentLine_Languages(t *testing.T) {
+	t.Parallel()
+
+	runLanguageCases(t, slices.Concat(
+		goCases(), scriptCases(), docblockCases(), dartCases(), markupCases(), sqlCases(),
+		dataCases(),
+	))
+}
 
 func goCases() []languageCase {
+	return slices.Concat(goBasicCases(), goExtendedCases())
+}
+
+func goBasicCases() []languageCase {
 	const goSev = core.SeverityError
 	return []languageCase{
 		{name: "go clean file", file: "a.go", src: "package a\n\nimport \"fmt\"\n"},
@@ -46,6 +64,12 @@ func goCases() []languageCase {
 			line:     1,
 			severity: goSev,
 		},
+	}
+}
+
+func goExtendedCases() []languageCase {
+	const goSev = core.SeverityError
+	return []languageCase{
 		{
 			name:     "go goverter line is a hand comment",
 			file:     "a.go",
