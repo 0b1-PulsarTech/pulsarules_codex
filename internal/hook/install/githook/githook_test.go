@@ -217,7 +217,7 @@ func TestUninstall_FingerprintedHooks(
 	foreign := filepath.Join(dir, ".git", "hooks", "pre-push")
 	seedFile(t, foreign, "#!/bin/sh\necho mine\n", 0o700)
 
-	removed, _, _, err := Uninstall(dir)
+	res, err := Uninstall(dir)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
@@ -225,8 +225,8 @@ func TestUninstall_FingerprintedHooks(
 	for _, name := range wantRemoved {
 		assertMissing(t, filepath.Join(dir, ".git", "hooks", name))
 	}
-	if len(removed) != len(wantRemoved) {
-		t.Errorf("removed = %v, want 2 hooks", removed)
+	if len(res.Removed) != len(wantRemoved) {
+		t.Errorf("removed = %v, want 2 hooks", res.Removed)
 	}
 	assertMissing(t, filepath.Join(dir, ".git", "hooks", "pulsarules_cli"))
 	if _, statErr := os.Stat(foreign); statErr != nil {
@@ -238,7 +238,7 @@ func TestUninstall_DirectoryInstall(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if _, _, _, err := Uninstall(dir); err != nil {
+	if _, err := Uninstall(dir); err != nil {
 		t.Fatalf("Uninstall on untouched dir: %v", err)
 	}
 }
@@ -256,16 +256,16 @@ func TestUninstall_RestoresBackup(
 		t.Fatalf("Install: %v", err)
 	}
 
-	removed, restored, _, err := Uninstall(dir)
+	res, err := Uninstall(dir)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
-	if len(removed) != 1 || removed[0] != "pre-commit" {
-		t.Fatalf("removed = %v, want [pre-commit]", removed)
+	if len(res.Removed) != 1 || res.Removed[0] != "pre-commit" {
+		t.Fatalf("removed = %v, want [pre-commit]", res.Removed)
 	}
 	wantMsg := marker.RestoreMessage(preCommit)
-	if len(restored) != 1 || restored[0] != wantMsg {
-		t.Fatalf("restored = %v, want [%q]", restored, wantMsg)
+	if len(res.Restored) != 1 || res.Restored[0] != wantMsg {
+		t.Fatalf("restored = %v, want [%q]", res.Restored, wantMsg)
 	}
 	assertContent(t, preCommit, foreign)
 	assertMissing(t, preCommit+marker.BackupSuffix)

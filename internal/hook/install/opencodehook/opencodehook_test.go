@@ -90,11 +90,11 @@ func TestUninstall_RemovesPluginAndGitignore(t *testing.T) {
 		t.Fatalf("Install: %v", err)
 	}
 
-	removed, _, _, err := Uninstall(dir)
+	res, err := Uninstall(dir)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
-	if !removed {
+	if !res.Removed {
 		t.Error("expected Uninstall to report the plugin as removed")
 	}
 
@@ -116,11 +116,11 @@ func TestUninstall_RemovesPluginAndGitignore(t *testing.T) {
 func TestUninstall_UntouchedDir(t *testing.T) {
 	t.Parallel()
 
-	removed, _, _, err := Uninstall(t.TempDir())
+	res, err := Uninstall(t.TempDir())
 	if err != nil {
 		t.Fatalf("Uninstall on untouched dir: %v", err)
 	}
-	if removed {
+	if res.Removed {
 		t.Error("expected Uninstall on an untouched dir to report nothing removed")
 	}
 }
@@ -256,12 +256,15 @@ func TestUninstall_RestoresForeignPlugin(t *testing.T) {
 	if _, err := Install(dir, testTemplates(t)); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
-	removed, restored, _, err := Uninstall(dir)
+	res, err := Uninstall(dir)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
-	if !removed || len(restored) != 1 {
-		t.Fatalf("removed = %v, restored = %v, want a removal with one restore", removed, restored)
+	if !res.Removed || len(res.Restored) != 1 {
+		t.Fatalf(
+			"removed = %v, restored = %v, want a removal with one restore",
+			res.Removed, res.Restored,
+		)
 	}
 	got, err := os.ReadFile(pluginPath)
 	if err != nil || string(got) != foreign {
