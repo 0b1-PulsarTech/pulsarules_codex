@@ -1,0 +1,105 @@
+package bodyheader
+
+import (
+	"fmt"
+	"go/ast"
+	"go/token"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast/testfunc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+)
+
+type Analyzer struct{}
+
+func NewAnalyzer() *Analyzer {
+	return &Analyzer{}
+}
+
+func (analyzer *Analyzer) ID() string { return "body-header-comment" }
+
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+
+func (analyzer *Analyzer) reporter() pass.Reporter {
+	return pass.NewReporter(analyzer.ID(), pass.SeverityWarning, pass.CatAST)
+}
+
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	const defaultMinLines = 2
+	reporter := pass.ResolveReporter(analyzer.reporter(), ctx)
+	minLines := ctx.Params(analyzer.ID()).Int("min_lines", defaultMinLines)
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+		if fc.Generated {
+			return nil
+		}
+		settings := check{fset: ctx.ASTCache.FileSet(), reporter: reporter, minLines: minLines}
+		return settings.file(fc, file)
+	})
+}
+
+type bodySite struct {
+	name string
+	body *ast.BlockStmt
+}
+
+type check struct {
+	fset     *token.FileSet
+	reporter pass.Reporter
+	minLines int
+}
+
+func (settings check) file(fc pass.FileChange, file *ast.File) []pass.Finding {
+	var findings []pass.Finding
+	for _, site := range bodySites(fc, file) {
+		groups := headerGroups(file.Comments, site.body)
+		lines := 0
+		for _, group := range groups {
+			lines += goast.ProseLines(group)
+		}
+		if lines < settings.minLines {
+			continue
+		}
+		findings = append(findings, settings.reporter.At(
+			fc.Path,
+			settings.fset.Position(groups[0].Pos()).Line,
+			fmt.Sprintf("%s opens with a %d-line comment block", site.name, lines),
+			"delete it; a removed doc comment is never moved into the body, "+
+				"keep only a one-line why at the statement it explains",
+		))
+	}
+	return findings
+}
+
+func bodySites(fc pass.FileChange, file *ast.File) []bodySite {
+	var sites []bodySite
+	ast.Inspect(file, func(node ast.Node) bool {
+		switch fn := node.(type) {
+		case *ast.FuncDecl:
+			if testfunc.Covers(fc, file, fn) {
+				return false
+			}
+			if fn.Body != nil {
+				sites = append(sites, bodySite{name: fn.Name.Name, body: fn.Body})
+			}
+		case *ast.FuncLit:
+			sites = append(sites, bodySite{name: "function literal", body: fn.Body})
+		}
+		return true
+	})
+	return sites
+}
+
+func headerGroups(all []*ast.CommentGroup, body *ast.BlockStmt) []*ast.CommentGroup {
+	limit := body.Rbrace
+	if len(body.List) > 0 {
+		limit = body.List[0].Pos()
+	}
+	var groups []*ast.CommentGroup
+	for _, group := range all {
+		if group.Pos() > body.Lbrace && group.End() <= limit &&
+			!goast.IsDirectiveGroup(group) && !goast.IsSimplificationGroup(group) {
+			groups = append(groups, group)
+		}
+	}
+	return groups
+}
