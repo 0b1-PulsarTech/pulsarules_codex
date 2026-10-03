@@ -1,9 +1,11 @@
 package vcs
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRunGit_FailureNamesTheFile(t *testing.T) {
@@ -59,5 +61,20 @@ func TestIsEmptyRepoError(t *testing.T) {
 				t.Errorf("isEmptyRepoError(%v) = %v, want %v", testCase.err, got, testCase.want)
 			}
 		})
+	}
+}
+
+func TestRunGitWithin_Timeout(t *testing.T) {
+	t.Parallel()
+
+	_, err := runGitWithin(time.Nanosecond, t.TempDir(), "--version")
+	if err == nil {
+		t.Fatal("runGitWithin: expected an error for an expired timeout")
+	}
+	if _, ok := errors.AsType[*gitError](err); !ok {
+		t.Fatalf("err = %T, want *gitError", err)
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v, want context.DeadlineExceeded", err)
 	}
 }

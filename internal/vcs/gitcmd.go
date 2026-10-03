@@ -26,12 +26,17 @@ func (e *gitError) Unwrap() error {
 
 func runGit(dir string, args ...string) (string, error) {
 	const gitTimeout = 2 * time.Second
+	// A hung git (e.g. a credential prompt) must not block the pipeline.
+	return runGitWithin(gitTimeout, dir, args...)
+}
+
+func runGitWithin(timeout time.Duration, dir string, args ...string) (string, error) {
 	full := append([]string{"-C", dir}, args...)
 	// Shell out to git: this package must match git's own status, rename and listing output.
 	result, err := execx.Run(context.Background(), execx.Command{
 		Name:    "git",
 		Args:    full,
-		Timeout: gitTimeout,
+		Timeout: timeout,
 		// Git translates diagnostics per locale; LC_ALL=C keeps stderr in
 		// the language isEmptyRepoError's match was written against.
 		Env: []string{"LC_ALL=C"},
