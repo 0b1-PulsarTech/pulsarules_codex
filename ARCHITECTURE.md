@@ -147,20 +147,20 @@ Three scopes (`scope.go`) control which analyzers run and what context is built:
 exactly that), even though it skips the wider `SourceProvider`/AST-cache work that `ScopeFull` and
 `ScopeChanged` do.
 
-### Stages and the analyzer table
+### Stages and the analyzer registry
 
 `StageRunner` (`pipeline.go`) holds analyzers grouped by `core.StageID` and runs them in stage order
 (`StageContext` through `StageOutput`), skipping an analyzer that is disabled in `AnalysisConfig`.
-`internal/analysis` owns the single ordered table of every analyzer the binary registers (`specs()`,
-concatenated from `coreSpecs`, `commitSpecs`, `astSpecs`, `pipelineSpecs` in run order). Each entry
-declares its id, a builder, and a `Gate`: `GateStatic` (every scope;
+`internal/analysis/registry` owns the single ordered table of every analyzer the binary registers
+(`specs()`, concatenated from `coreSpecs`, `commitSpecs`, `astSpecs`, `pipelineSpecs` in run order).
+Each entry declares its id, a builder, and a `registry.Gate`: `GateStatic` (every scope;
 static/AST/commit/rule-injection/output work that stays useful with only a commit message or only
 changed files), `GateArch` (architecture analyzers, which need a source set) or `GateFullOnly`
-(golangci-lint and branch-name, which only a full run pays for). `boot.go`'s `gatesFor(scope)` maps
-a scope to its gates (`ScopeCommit` = static; `ScopeChanged` = static + arch; `ScopeFull` = all
-three), and `registerForScope` builds the `core.LanguageRegistry` (via `langspec.RegisterAll`, the
-one data-driven registration for every language) once and registers `Analyzers(..., gates)`. Adding
-an analyzer is one entry in the table.
+(golangci-lint and branch-name, which only a full run pays for). `analysis/boot.go`'s
+`gatesFor(scope)` maps a scope to its gates (`ScopeCommit` = static; `ScopeChanged` = static + arch;
+`ScopeFull` = all three), and `registerForScope` builds the `core.LanguageRegistry` (via
+`langspec.RegisterAll`, the one data-driven registration for every language) once and registers
+`registry.Analyzers(..., gates)`. Adding an analyzer is one entry in the table.
 
 ### internal/analyzer/** families
 
@@ -299,7 +299,7 @@ The governance pipeline (see above) adds its own package set:
 
 | Package                          | Responsibility                                                                                      |
 |----------------------------------|-----------------------------------------------------------------------------------------------------|
-| `internal/analysis`               | `analysis.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`registerForScope`, `gatesFor`), `spec.go` (`Gate`, `Analyzers`), `specs*.go` (the analyzer table), `runner.go` (`toAnalysisConfig`), `output.go`, `format.go`, `history.go` |
+| `internal/analysis`               | `analysis.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`registerForScope`, `gatesFor`), `runner.go` (`toAnalysisConfig`), `output.go`, `format.go`, `history.go`, `registry/` (the analyzer table) |
 | `internal/analyzer/core`          | `Analyzer`/`InPlaceAnalyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Reporter.Resolved`, `EachChangedFile`, `LanguageRegistry`, `core/astcache` |
 | `internal/analyzer/static/*`      | `filesize`, `textmarkers`, `topoffile`, `bigcomment` - text/structure checks                        |
 | `internal/analyzer/ast/*`         | `complexity`, `controlflow`, `shadowing`, `imports`, `naming` - `go/ast`-based checks                |
@@ -351,11 +351,11 @@ with the code that reads them. Every assertion in `model.go`'s `Assertion` carri
 a human or LLM reader.
 
 `evals.ValidateCheck` matches `validate.Check`'s `func(*knowledge.Index) []string` shape and is
-injected via the same `extra` seam `analysis.RuleAnalyzersCheck` uses (`internal/cli/validate.go`):
-every scenario's `skill` must resolve against `skills.yaml` (`idx.SkillExists`), every scenario must
-declare a non-empty `trap` and at least one assertion, every assertion's `Kind` must be `machine`
-(with a `Check`) or `judge` (without one), and a `Check` must have a known type and, for the two
-regex types, a pattern that compiles.
+injected via the same `extra` seam `registry.RuleAnalyzersCheck` uses
+(`internal/cli/validate.go`): every scenario's `skill` must resolve against `skills.yaml`
+(`idx.SkillExists`), every scenario must declare a non-empty `trap` and at least one assertion,
+every assertion's `Kind` must be `machine` (with a `Check`) or `judge` (without one), and a
+`Check` must have a known type and, for the two regex types, a pattern that compiles.
 
 `evals.Grade(scenario, artifact)` scores every `machine` assertion's `Check` against the artifact
 string and reports `pass`/`fail`; `judge` assertions report `needs_judge` untouched, since `Grade`

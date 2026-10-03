@@ -7,7 +7,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/evals"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
@@ -23,7 +23,7 @@ func runValidate(inj remy.Injector, _ *cliopts.Options) error {
 	result := validate.Validate(
 		idx,
 		render.LintSections,
-		analysis.RuleAnalyzersCheck,
+		registry.RuleAnalyzersCheck,
 		evals.ValidateCheck,
 	)
 	if !result.OK() {

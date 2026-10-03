@@ -1,4 +1,4 @@
-package analysis
+package registry
 
 import (
 	"log/slog"
