@@ -6,16 +6,27 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const (
+	regionMarkup = iota
+	regionScript
+	regionStyle
+)
+
 type scanner struct {
 	syntax   pass.CommentSyntax
 	rules    rules
 	closer   string
 	rawOpen  bool
+	region   int
 	segments []segment
 }
 
 func scanSegments(src []byte, syntax pass.CommentSyntax, ext string) []segment {
 	sc := &scanner{syntax: syntax, rules: rulesFor(syntax, ext)}
+	sc.region = regionScript
+	if sc.rules.sfc {
+		sc.region = regionMarkup
+	}
 	for index, line := range strings.Split(string(src), "\n") {
 		sc.scanLine(index+1, line)
 	}
@@ -51,6 +62,13 @@ func (sc *scanner) step(num int, line string, pos int) (next int, done bool) {
 	if sc.rawOpen {
 		return sc.rawStep(line, pos)
 	}
+	if sc.region == regionMarkup {
+		return sc.markupStep(line, pos), false
+	}
+	if tail := sc.regionEnd(line[pos:]); sc.rules.sfc && tail > 0 {
+		sc.region = regionMarkup
+		return pos + tail, false
+	}
 	if skip := sc.rules.quoteLen(line, pos); skip > 0 {
 		return pos + skip, false
 	}
@@ -77,14 +95,15 @@ func (sc *scanner) rawStep(line string, pos int) (next int, done bool) {
 func (sc *scanner) openComment(num int, line string, pos int) (next int, done bool) {
 	rest := line[pos:]
 	for _, block := range sc.syntax.Blocks {
-		if !strings.HasPrefix(rest, block.Open) {
+		if block.Open == "<!--" && sc.rules.sfc || !strings.HasPrefix(rest, block.Open) {
 			continue
 		}
 		sc.closer = block.Close
 		return pos + len(block.Open), false
 	}
 	for _, prefix := range sc.syntax.Line {
-		if strings.HasPrefix(rest, prefix) && lineStart(line, pos, prefix) {
+		if sc.region != regionStyle && strings.HasPrefix(rest, prefix) &&
+			lineStart(line, pos, prefix) {
 			sc.add(num, rest[len(prefix):])
 			return len(line), true
 		}
