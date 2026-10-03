@@ -66,6 +66,27 @@ func (a *Analyzer) walkStmt(
 		a.walkAssign(s, scopes, report)
 	case *ast.DeclStmt:
 		a.walkDecl(s.Decl, scopes, report)
+	case *ast.BlockStmt:
+		a.walkBlock(s, scopes, report)
+	case *ast.LabeledStmt:
+		a.walkStmt(s.Stmt, scopes, report)
+	case *ast.CaseClause:
+		// Each clause is its own implicit block, so two clauses declaring the
+		// same name are two declarations, not one plus a reassignment.
+		a.walkClause(nil, s.Body, scopes, report)
+	case *ast.CommClause:
+		a.walkClause(s.Comm, s.Body, scopes, report)
+	default:
+		a.walkBranch(stmt, scopes, report)
+	}
+}
+
+func (a *Analyzer) walkBranch(
+	stmt ast.Stmt,
+	scopes *scopeStack,
+	report reporter,
+) {
+	switch s := stmt.(type) {
 	case *ast.IfStmt:
 		a.walkIf(s, scopes, report)
 	case *ast.ForStmt:
@@ -78,16 +99,6 @@ func (a *Analyzer) walkStmt(
 		a.walkTypeSwitch(s, scopes, report)
 	case *ast.SelectStmt:
 		a.walkSelect(s, scopes, report)
-	case *ast.BlockStmt:
-		a.walkBlock(s, scopes, report)
-	case *ast.LabeledStmt:
-		a.walkStmt(s.Stmt, scopes, report)
-	case *ast.CaseClause:
-		// Each clause is its own implicit block, so two clauses declaring the
-		// same name are two declarations, not one plus a reassignment.
-		a.walkClause(nil, s.Body, scopes, report)
-	case *ast.CommClause:
-		a.walkClause(s.Comm, s.Body, scopes, report)
 	}
 }
 
