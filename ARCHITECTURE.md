@@ -418,6 +418,36 @@ without-score, and a delta - and flag the same two anomalies `cc-skills-golang` 
 with a high without-score (the skill may not be earning its bytes) and a low with-score (the
 skill's own text needs rewriting).
 
+## Design decisions
+
+Cross-cutting choices whose reason no longer sits beside one line of code.
+
+- `config.AnalyzerConfig` mirrors `core.AnalyzerConfig` field for field on purpose, so
+  `internal/analyzer/core` imports only the standard library and its own subpackages;
+  `analysis.toAnalysisConfig` is the single converter.
+- `os.Exit` is called only in `main`. A command that must set the exit status returns a
+  `*cli.ExitError`; only `cmd/pulsarules_cli/main.go` turns it into a process exit.
+- There is one composition root: `bootstrap.DoInjections` is the only place that registers
+  collaborators in the injector; command handlers resolve what they need from it and nothing else
+  reads it.
+- `clean`'s `mode` is a named type, not a bool, so no call site can pass the rewriting value by
+  accident; only `--write` selects it.
+- `execx.Error` carries the invocation and its trimmed stderr, so callers wrap it without
+  re-parsing. `execx.Result.Stdout` stays raw for callers to trim.
+- `vcs` shells out to the `git` binary, because this package must match git's own status,
+  rename and listing output.
+- `langdetect.Language` is a plain string so it round-trips through the persisted config and
+  `--languages` with no translation table; a monorepo can mix languages, so detection, config and
+  the override all deal in a `Set`. An empty detected `Set` means unknown (markers not written
+  yet), never "no language", so `Resolve` never persists a detection that found nothing.
+- `report.Report` flows from producer through installer to the printer that owns stdout/stderr;
+  callers `Merge` it without gating on whether it holds anything.
+- A malformed data record is a build defect, so `emoji.NewCatalog` returns an error instead of a
+  narrower catalog, and `readRecords` takes an `fs.FS` so tests inject a fabricated one rather
+  than touching the embedded data.
+- Finding text and paths are untrusted file content, so `internal/text/escape` quotes control
+  characters when they are printed, never in the analyzers.
+
 ## Portability
 
 - Markdown + frontmatter + `skills.yaml` are the source of truth; the Go installer is a thin,
