@@ -7,13 +7,6 @@ import (
 	"unicode/utf8"
 )
 
-func isExported(name string) bool {
-	for _, r := range name {
-		return unicode.IsUpper(r)
-	}
-	return false
-}
-
 func numberedStem(name string) (stem string, value int, ok bool) {
 	if name == "" {
 		return "", 0, false

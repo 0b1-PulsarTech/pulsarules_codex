@@ -2,11 +2,11 @@ package greeting
 
 import "strings"
 
-func (c Card) Render() string {
-	parts := []string{"Dear " + c.Recipient + ",", c.Message}
+func (card Card) Render() string {
+	parts := []string{"Dear " + card.Recipient + ",", card.Message}
 	return strings.Join(parts, " ")
 }
 
-func (c Card) IsAddressed() bool {
-	return c.Recipient != ""
+func (card Card) IsAddressed() bool {
+	return card.Recipient != ""
 }

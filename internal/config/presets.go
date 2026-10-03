@@ -38,12 +38,14 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 		"doc-comment":          {Enabled: false},
 		"body-header-comment":  {Enabled: false},
 		"history-narration":    {Enabled: false},
-		"loop-var-i":           {Enabled: false},
 		"variadic-index":       {Enabled: false},
 		"too-many-results":     {Enabled: false},
 		"ungrouped-interfaces": {Enabled: false},
 		"package-level-var":    {Enabled: false},
 		"package-file-count":   {Enabled: false},
+		// Minimal keeps upper-case single letters on funcs, methods, types, consts,
+		// vars and fields.
+		"single-letter-name": {Enabled: true, Params: map[string]any{"exported_only": true}},
 	}
 }
 

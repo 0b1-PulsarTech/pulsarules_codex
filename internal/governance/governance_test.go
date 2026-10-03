@@ -86,7 +86,7 @@ func (repo listedRepo) ListFiles() ([]string, error) { return repo.paths, nil }
 func skipFixture(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	body := "package x\n\n// bad note \u2014 trips typographic-markers\n"
+	body := "package demo\n\n// bad note \u2014 trips typographic-markers\n"
 	for _, name := range []string{
 		"main.go", "target/x.go", "build/y.go", "vendor/v.go", "ignored.go",
 	} {
@@ -210,7 +210,7 @@ func TestSession_SkipDirs_GitMode(t *testing.T) {
 
 	dir := t.TempDir()
 	gitInitRepo(t, dir)
-	body := "package x\n\n// bad note \u2014 trips typographic-markers\n"
+	body := "package demo\n\n// bad note \u2014 trips typographic-markers\n"
 	writeFileAtDir(t, dir, "target/x.go", body)
 	writeFileAtDir(t, dir, "vendor/v.go", body)
 	runGitAt(t, dir, "add", "-A")
@@ -235,7 +235,7 @@ func TestSession_SkipDirs_GitMode(t *testing.T) {
 	}
 }
 
-const emDashBody = "package x\n\n// bad note \u2014 trips typographic-markers\n"
+const emDashBody = "package demo\n\n// bad note \u2014 trips typographic-markers\n"
 
 type countingRepo struct {
 	*goldenRepo
@@ -294,7 +294,7 @@ func TestSession_ScopeCommit_OnlyStagedChangesGate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
-			writeFileAtDir(t, dir, "a.go", "package x\n")
+			writeFileAtDir(t, dir, "a.go", "package demo\n")
 			writeFileAtDir(t, dir, "scratch/x.go", emDashBody)
 
 			session := NewSession(&goldenRepo{root: dir}, "", nil, nil)
@@ -330,7 +330,7 @@ func TestSession_Discover_ListsOnDemand(t *testing.T) {
 			t.Parallel()
 			calls := 0
 			dir := t.TempDir()
-			writeFileAtDir(t, dir, "a.go", "package x\n")
+			writeFileAtDir(t, dir, "a.go", "package demo\n")
 			repo := countingRepo{goldenRepo: &goldenRepo{root: dir}, listCalls: &calls}
 
 			session := NewSession(repo, "", nil, nil)

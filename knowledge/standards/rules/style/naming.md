@@ -10,7 +10,7 @@ linters:
     - revive
 analyzers:
     - naming
-    - loop-var-i
+    - single-letter-name
 ---
 
 # Naming
@@ -33,9 +33,11 @@ Applies to: all Go identifiers, packages, files, and tests.
 5. Files are `snake_case.go`; group action verbs (`create_thing.go`, `list_things.go`).
 6. Colocate tests as `<source>_test.go` next to `<source>.go`.
 7. One concept per file (~180 lines, ~468 for a `_test.go`); split before exceeding it.
-8. A loop variable named `i` may only index or bound (`s[i]`, `i < len(s)`); once it is used for
-   anything else, name it after what it holds (`row`, `attempt`, `offset`) (`loop-var-i`). Avoid
-   other bare loop variables (`n`, `e`) where a meaningful name helps readability.
+8. No identifier is a single letter, anywhere: variables, loop variables (even a pure index),
+   parameters, results, receivers, struct fields, interface methods, functions, types, type
+   parameters (receiver type parameters included), constants, labels, import aliases and the package
+   name. A short abbreviation is fine (`srv`, `row`, `idx`); only `_` and a `testing` T/B/F/M/TB
+   parameter are exempt (`single-letter-name`).
 9. Name a consumer-declared collaborator port for its role - what the consumer needs from it
    (`Repository`, `Store`, `Resolver`, `Sender`, `Notifier`) - never a generic `Port` or a
    transport-leaking name like `metaAPIPort`, even when the implementation is an HTTP-API client.
@@ -52,8 +54,8 @@ Applies to: all Go identifiers, packages, files, and tests.
 - `snake_case` identifiers; generic `util`/`common`/`helpers` package names.
 - `Id`/`Http`/`Url`/`Jwt` casing.
 - Stuttering type/function names (`foo.FooService`).
-- A loop variable `i` used for more than indexing or bounding.
-- Single-letter exported names; misleading abbreviations.
+- A single-letter identifier of any kind, receivers and loop variables included.
+- Misleading abbreviations.
 - A generic `Port`/`metaAPIPort` collaborator-port name; name the port for its role.
 - A `Get`-prefixed getter (`GetName()` instead of `Name()`).
 - A boolean variable or field whose name does not read as an `is`/`has`/`can` question (`admin bool`
@@ -65,7 +67,7 @@ Applies to: all Go identifiers, packages, files, and tests.
 - [ ] Acronyms cased correctly (`ID`, `HTTP`, `URL`).
 - [ ] No stuttering type/func names.
 - [ ] Files `snake_case.go`; tests colocated as `<source>_test.go`.
-- [ ] A loop variable `i` only indexes or bounds; any other use carries a descriptive name.
+- [ ] No single-letter identifier of any kind; only `_` and a testing T/B/F/M/TB parameter.
 - [ ] Getters carry no `Get` prefix; boolean predicates use `Is`/`Has`/`Can`.
 - [ ] Boolean variables/fields read as an `is`/`has`/`can` true/false question.
 {{end}}
