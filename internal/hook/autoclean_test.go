@@ -159,18 +159,6 @@ func TestEmitPostEdit_CleanFileSilent(t *testing.T) {
 	}
 }
 
-func postEditPayload(t *testing.T, path, sessionID string) []byte {
-	t.Helper()
-	payload, err := json.Marshal(map[string]any{
-		"session_id": sessionID,
-		"tool_input": map[string]string{"file_path": path},
-	})
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
-	return payload
-}
-
 func TestAutoCleanEdited_EscapesTheReportedPath(t *testing.T) {
 	t.Parallel()
 

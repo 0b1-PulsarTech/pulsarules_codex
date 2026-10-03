@@ -3,8 +3,10 @@ package hook
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -14,6 +16,7 @@ import (
 	"testing/fstest"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/contract"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -86,6 +89,51 @@ func gitInit(t *testing.T, dir string) {
 	if out, err := exec.CommandContext(t.Context(), "git", "-C", dir, "init").
 		CombinedOutput(); err != nil {
 		t.Fatalf("git init: %v\n%s", err, out)
+	}
+}
+
+func TestDispatchSessionStart(t *testing.T) {
+	t.Parallel()
+
+	disp, out := dispatchCapture(Deps{})
+	_ = disp.Dispatch("session-start", newSessionPayload(t))
+	ctx := extractContext(t, out.String())
+	for _, want := range []string{"contract text", "commit tail text"} {
+		if !strings.Contains(ctx, want) {
+			t.Errorf("missing %q:\n%s", want, ctx)
+		}
+	}
+}
+
+func TestDispatchSessionEnd_Markers(t *testing.T) {
+	t.Parallel()
+
+	id := uniqueSessionID(t)
+	session := fmt.Appendf(nil, `{"session_id":%q}`, id)
+	disp, _ := dispatchCapture(Deps{Index: preEditIndex(t)})
+
+	_ = disp.Dispatch("session-start", session)
+	_ = disp.Dispatch(
+		"pre-edit",
+		fmt.Appendf(nil, `{"tool_input":{"file_path":"a.go"},"session_id":%q}`, id),
+	)
+
+	markers := []string{
+		"skill-route-session-start." + id,
+		"skill-hook-" + preEditFileEvent("a.go") + "." + id,
+	}
+	for _, name := range markers {
+		if _, err := os.Stat(filepath.Join(os.TempDir(), name)); err != nil {
+			t.Errorf("marker %q not created before session-end: %v", name, err)
+		}
+	}
+
+	_ = disp.Dispatch("session-end", session)
+
+	for _, name := range markers {
+		if _, err := os.Stat(filepath.Join(os.TempDir(), name)); !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("marker %q not removed after session-end (stat err = %v)", name, err)
+		}
 	}
 }
 
@@ -168,5 +216,98 @@ func TestDispatchContract_SessionAndSubagent(t *testing.T) {
 				t.Errorf("%s emitted %q, want %q", testCase.mode, got, testCase.want)
 			}
 		})
+	}
+}
+
+func stubGovernance(block string, count int) func(vcs.Repository, vcs.Status) (string, int) {
+	return func(vcs.Repository, vcs.Status) (string, int) {
+		return block, count
+	}
+}
+
+func TestDispatchPostEdit_ExplicitSkillsDir(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		filePath     string
+		installSkill string
+		wantContains string
+	}{
+		{
+			name:         "go file emits the skill when it is installed",
+			filePath:     "pkg/foo.go",
+			installSkill: "go-style",
+			wantContains: "go-style",
+		},
+		{
+			name:         "go file falls back to generic when no skills installed",
+			filePath:     "pkg/foo.go",
+			wantContains: "post-edit generic reminder",
+		},
+		{
+			name:         "markdown extension produces no output",
+			filePath:     "README.md",
+			wantContains: "",
+		},
+		{
+			name:         "sql file emits the skill when it is installed",
+			filePath:     "query.sql",
+			installSkill: "database-persistence",
+			wantContains: "database-persistence",
+		},
+		{
+			name:         "test file emits the skill when it is installed",
+			filePath:     "internal/service/service_test.go",
+			installSkill: "integration-tests",
+			wantContains: "integration-tests",
+		},
+		{
+			name:         "proto file emits the skill when it is installed",
+			filePath:     "api.proto",
+			installSkill: "grpc-adapter",
+			wantContains: "grpc-adapter",
+		},
+	}
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			skillsDir := t.TempDir()
+			if testCase.installSkill != "" {
+				installSkillFixture(t, skillsDir, testCase.installSkill)
+			}
+			disp, out := dispatchCapture(Deps{Index: idx, SkillsDir: skillsDir})
+			payload := postEditPayload(t, testCase.filePath, uniqueSessionID(t))
+			_ = disp.Dispatch("post-edit", payload)
+			if testCase.wantContains == "" {
+				if strings.TrimSpace(out.String()) != "" {
+					t.Errorf("expected no output for %q, got %q", testCase.filePath, out.String())
+				}
+				return
+			}
+			ctx := extractContext(t, out.String())
+			if !strings.Contains(ctx, testCase.wantContains) {
+				t.Errorf("output missing %q:\n%s", testCase.wantContains, ctx)
+			}
+		})
+	}
+}
+
+func TestDispatchPostEdit_SkillsDirUnset(t *testing.T) {
+	t.Setenv("PULSARULES_SKILLS_DIR", "")
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	disp, out := dispatchCapture(Deps{Index: idx})
+	_ = disp.Dispatch("post-edit", postEditPayload(t, "pkg/foo.go", uniqueSessionID(t)))
+	ctx := extractContext(t, out.String())
+	if !strings.Contains(ctx, "post-edit generic reminder") {
+		t.Errorf("expected the generic reminder, got %q", ctx)
 	}
 }
