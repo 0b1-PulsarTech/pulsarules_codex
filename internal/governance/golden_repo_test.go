@@ -25,3 +25,15 @@ func (g *goldenRepo) StagedRenames(int) ([]vcs.Rename, error) { return nil, nil 
 func (g *goldenRepo) StagedDiff(string) (string, error) { return "", nil }
 
 func (g *goldenRepo) StagedRenameDiff(string, string, int) (string, error) { return "", nil }
+
+func (g *goldenRepo) HeadBlob(string) (string, error) { return "", nil }
+
+func (g *goldenRepo) StagedBlob(string) (string, error) { return "", nil }
+
+func (g *goldenRepo) HeadEntry(string) (mode, id string, err error) { return "", "", nil }
+
+func (g *goldenRepo) StagedEntry(string) (mode, id string, err error) { return "", "", nil }
+
+func (g *goldenRepo) HeadDir(string) ([]string, error) { return nil, nil }
+
+func (g *goldenRepo) StagedDir(string) ([]string, error) { return nil, nil }
