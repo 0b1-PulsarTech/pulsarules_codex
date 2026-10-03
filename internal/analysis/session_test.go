@@ -196,6 +196,7 @@ func TestSession_ScopeCommit_StaticSources(t *testing.T) {
 	); err != nil {
 		t.Fatalf("write: %v", err)
 	}
+	runGitAt(t, dir, "add", "violation.go")
 
 	repo, err := vcs.Open(dir)
 	if err != nil {

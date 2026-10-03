@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
@@ -90,16 +91,26 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Disc
 		return d
 	}
 
+	d.ChangedFiles = s.changedFiles(scope, status)
+	return d
+}
+
+func (s *Session) changedFiles(scope Scope, status *vcs.Status) []core.FileChange {
 	if status == nil {
 		fetched, err := s.repo.WorktreeStatus()
 		if err != nil {
 			s.logger.Warn("worktree status unavailable", slog.Any("error", err))
-			return d
+			return nil
 		}
 		status = &fetched
 	}
-	d.ChangedFiles = changesToFileChanges(status.Changes)
-	return d
+	changes := status.Changes
+	if scope == ScopeCommit {
+		changes = slices.DeleteFunc(slices.Clone(changes), func(change vcs.Change) bool {
+			return !change.Staged
+		})
+	}
+	return changesToFileChanges(changes)
 }
 
 func (s *Session) Load(d *Discovery) *core.AnalysisContext {

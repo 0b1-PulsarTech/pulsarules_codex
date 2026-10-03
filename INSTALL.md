@@ -220,11 +220,12 @@ analyzes only files `git status` reports as changed; `--all-files` analyzes ever
 (`git ls-files`: tracked plus untracked-but-not-ignored), minus tool and dependency directories such
 as `.claude/`, `testdata/`, `vendor/` and `node_modules/`. It falls back to a filesystem walk
 (skipping `sources.DefaultSkipDirs`) only if `git ls-files` itself fails; governance requires a git
-work tree. `--scope commit` runs the lightweight static + AST + commit checks only (what the
-pre-commit hook uses); `--scope changed` adds the architecture analyzers over the changed files
-(what the Stop hook uses); `--scope full` (default) adds delegation and the `branch-name` check. An
-unrecognized value is rejected by name rather than silently running the full set.
-`--preset recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity`
+work tree. `--scope commit` runs the lightweight static-gate checks over files that have a staged
+change only (a file with only unstaged edits is skipped; a partially staged file is read as it is on
+disk; what the pre-commit hook uses); `--scope changed` adds the architecture analyzers over all
+changed files (what the Stop hook uses); `--scope full` (default) adds delegation and the
+`branch-name` check. An unrecognized value is rejected by name rather than silently running the full
+set. `--preset recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity`
 overrides how hard a `typographic-markers` finding lands for this run; `--branch-extra-types` widens
 the branch-type prefixes `branch-name` accepts (see the install flags of the same name for the
 baked-in variants). Findings in generated files (detected by a generator banner such as

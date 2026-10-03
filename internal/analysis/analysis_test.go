@@ -265,6 +265,37 @@ func TestSession_ScopeCommit_FileList(t *testing.T) {
 	}
 }
 
+func TestSession_ScopeCommit_OnlyStagedChangesGate(t *testing.T) {
+	t.Parallel()
+
+	status := &vcs.Status{Changes: []vcs.Change{
+		{Path: "a.go", Extension: ".go", Staged: true},
+		{Path: "scratch/x.go", Extension: ".go"},
+	}}
+	testCases := []struct {
+		name        string
+		scope       Scope
+		wantScratch bool
+	}{
+		{"commit ignores an untracked file", ScopeCommit, false},
+		{"changed still reports it", ScopeChanged, true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			writeFileAtDir(t, dir, "a.go", "package x\n")
+			writeFileAtDir(t, dir, "scratch/x.go", emDashBody)
+
+			session := NewSession(&goldenRepo{root: dir}, "", nil, nil)
+			findings := session.Analyze(testCase.scope, status, FileSetChanged).Findings
+			if got := typographicFiles(findings)["scratch/x.go"]; got != testCase.wantScratch {
+				t.Fatalf("scratch/x.go reported = %v, want %v", got, testCase.wantScratch)
+			}
+		})
+	}
+}
+
 func TestSession_FileSetChanged_Siblings(t *testing.T) {
 	t.Parallel()
 

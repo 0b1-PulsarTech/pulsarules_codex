@@ -38,9 +38,10 @@ architecture, and delegated tool analyzers, keeping only static checks.
 
 --scope limits the governance analysis to a subset of analyzers (full = all;
 changed = static-gate (static, AST, commit) and architecture analyzers, skipping
-the full-only analyzers (golangci-lint, branch-name); commit = static + AST +
-commit analyzers only, skipping delegation and arch). Use --scope commit in
-pre-commit hooks for fast checks.
+the full-only analyzers (golangci-lint, branch-name); commit = static-gate
+analyzers over files with a staged change; a partially staged file is read from
+disk, unstaged hunks included). Use --scope commit in pre-commit hooks for fast
+checks.
 
 --golangci-config overrides the golangci-lint config discovery path. When unset,
 the runner searches the project root, tools/, and build/ directories for
@@ -110,9 +111,10 @@ enable emoji-variance against recent git history. Exits non-zero on
 error-severity findings.
 
 governance runs the analyzer pipeline (static, AST, architecture, delegation,
-rule injection) against the project and prints findings to stderr. Exits
-non-zero on any error-severity finding. Use --scope commit in pre-commit hooks
-for a lightweight run that omits delegation and architecture checks.
+rule injection) against the project and prints findings to stderr. Exits non-zero
+on any error-severity finding. Use --scope commit in pre-commit hooks for a
+lightweight run over files with a staged change that omits delegation and
+architecture checks.
 
 By default governance analyzes only files git reports as changed (via
 `git status`), so it reports nothing on a clean tree - the fast path the Stop
