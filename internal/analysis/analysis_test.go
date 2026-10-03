@@ -237,6 +237,16 @@ func TestSession_SkipDirs_GitMode(t *testing.T) {
 
 const emDashBody = "package x\n\n// bad note \u2014 trips typographic-markers\n"
 
+type countingRepo struct {
+	*goldenRepo
+	listCalls *int
+}
+
+func (c countingRepo) ListFiles() ([]string, error) {
+	*c.listCalls++
+	return c.goldenRepo.ListFiles()
+}
+
 func typographicFiles(findings []core.Finding) map[string]bool {
 	seen := map[string]bool{}
 	for _, finding := range findings {
@@ -291,6 +301,42 @@ func TestSession_ScopeCommit_OnlyStagedChangesGate(t *testing.T) {
 			findings := session.Analyze(testCase.scope, status, FileSetChanged).Findings
 			if got := typographicFiles(findings)["scratch/x.go"]; got != testCase.wantScratch {
 				t.Fatalf("scratch/x.go reported = %v, want %v", got, testCase.wantScratch)
+			}
+		})
+	}
+}
+
+func TestSession_Discover_ListsOnDemand(t *testing.T) {
+	t.Parallel()
+
+	staged := &vcs.Status{Changes: []vcs.Change{{Path: "a.go", Extension: ".go", Staged: true}}}
+	testCases := []struct {
+		name      string
+		scope     Scope
+		status    *vcs.Status
+		wantCalls int
+	}{
+		{"commit-msg hook with an empty status", ScopeCommit, &vcs.Status{}, 0},
+		{"commit with only unstaged changes", ScopeCommit, &vcs.Status{
+			Changes: []vcs.Change{{Path: "a.go", Extension: ".go"}},
+		}, 0},
+		{"commit with a staged change", ScopeCommit, staged, 1},
+		{"changed with an empty status still feeds arch", ScopeChanged, &vcs.Status{}, 1},
+		{"pre-commit with nothing staged", ScopeCommit, nil, 0},
+		{"changed reading the worktree itself", ScopeChanged, nil, 1},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			calls := 0
+			dir := t.TempDir()
+			writeFileAtDir(t, dir, "a.go", "package x\n")
+			repo := countingRepo{goldenRepo: &goldenRepo{root: dir}, listCalls: &calls}
+
+			session := NewSession(repo, "", nil, nil)
+			session.Discover(testCase.scope, testCase.status, FileSetChanged)
+			if calls != testCase.wantCalls {
+				t.Fatalf("ListFiles calls = %d, want %d", calls, testCase.wantCalls)
 			}
 		})
 	}
