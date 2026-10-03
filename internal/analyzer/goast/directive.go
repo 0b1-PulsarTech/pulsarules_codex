@@ -40,6 +40,10 @@ func IsDirectiveGroup(group *ast.CommentGroup) bool {
 	})
 }
 
+func IsSimplificationGroup(group *ast.CommentGroup) bool {
+	return group != nil && len(group.List) > 0 && pass.IsSimplificationMarker(group.List[0].Text)
+}
+
 func proseLines(group *ast.CommentGroup) int {
 	if group == nil {
 		return 0
