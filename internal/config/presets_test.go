@@ -129,6 +129,7 @@ func TestApplyPreset_MinimalDisablesNewAnalyzers(t *testing.T) {
 		"history-narration",
 		"variadic-index",
 		"too-many-results",
+		"ungrouped-interfaces",
 		"package-level-var",
 		"package-file-count",
 	}

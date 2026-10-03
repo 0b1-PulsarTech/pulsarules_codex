@@ -35,13 +35,14 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 		"single-use-declaration": {Enabled: false},
 		// First-adoption noise: these analyzers flag existing code written before
 		// the rules they enforce.
-		"doc-comment":         {Enabled: false},
-		"body-header-comment": {Enabled: false},
-		"history-narration":   {Enabled: false},
-		"variadic-index":      {Enabled: false},
-		"too-many-results":    {Enabled: false},
-		"package-level-var":   {Enabled: false},
-		"package-file-count":  {Enabled: false},
+		"doc-comment":          {Enabled: false},
+		"body-header-comment":  {Enabled: false},
+		"history-narration":    {Enabled: false},
+		"variadic-index":       {Enabled: false},
+		"too-many-results":     {Enabled: false},
+		"ungrouped-interfaces": {Enabled: false},
+		"package-level-var":    {Enabled: false},
+		"package-file-count":   {Enabled: false},
 	}
 }
 
