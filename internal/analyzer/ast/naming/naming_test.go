@@ -130,11 +130,6 @@ func checkFileNameShapeCases() []checkFileTestCase {
 			expect: 0,
 		},
 		{
-			name:   "single letter exported",
-			source: "package foo\nvar X string\n",
-			expect: 1,
-		},
-		{
 			name:   "underscore skipped",
 			source: "package foo\nfunc f() { _ = 1 }\n",
 			expect: 0,

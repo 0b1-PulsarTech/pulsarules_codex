@@ -24,7 +24,7 @@ func defaultRuleMap() map[string]string {
 		"body-header-comment":    "effective-go",
 		"too-many-results":       "effective-go",
 		"ungrouped-interfaces":   "effective-go",
-		"loop-var-i":             "naming",
+		"single-letter-name":     "naming",
 		"variadic-index":         "flag-arguments",
 		"package-level-var":      "code-smells",
 		"package-file-count":     "code-placement-go",

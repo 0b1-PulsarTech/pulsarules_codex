@@ -193,20 +193,22 @@ files. `core.InPlaceAnalyzer` marks the second contract - an analyzer that rewri
   `topoffile` and `bigcomment` (comment placement and length, so they cover non-Go files too),
   `historynarration` (comments that narrate history instead of stating the invariant) and
   `simplificationpath` (a simplification comment must name its upgrade path).
-- `ast/*` - `go/ast`-based checks: `complexity` (cyclomatic complexity, function size, parameter
-  count, flag arguments, magic numbers), `controlflow` (redundant else, deep nesting), `shadowing`,
-  `imports` (three-group import order), `naming`, `namedreturns`, `singleusedecl`, `timediscipline`,
+- `ast/*` - `go/ast`-based checks: `complexity` (cyclomatic complexity, function size, parameter count,
+  flag arguments, magic numbers), `controlflow` (redundant else, deep nesting), `shadowing`, `imports`
+  (three-group import order), `naming`, `namedreturns`, `singleusedecl`, `timediscipline`,
   `contextdiscipline`, `pproflabels`, and the style checks `doccomment` (`doc-comment`),
-  `bodyheadercomment` (`body-header-comment`), `testcomment` (`test-comment`), `loopvari`
-  (`loop-var-i`), `variadicindex` (`variadic-index`), `toomanyresults` (`too-many-results`),
-  `ungroupedinterfaces`, `packagelevelvar` (`package-level-var`) and `packagefilecount`
-  (`package-file-count`). The `recommended` preset leaves all of them enabled (warning level, except
-  `import-groups` and `pprof-labels`, which are errors, and `complexity`'s magic-number findings,
-  which are info); `minimal` disables `complexity`, `control-flow`, `shadowing`, `named-returns`,
+  `bodyheadercomment` (`body-header-comment`), `testcomment` (`test-comment`),
+  `singleletter` (`single-letter-name`), `variadicindex` (`variadic-index`),
+  `toomanyresults` (`too-many-results`), `ungroupedinterfaces`,
+  `packagelevelvar` (`package-level-var`) and `packagefilecount` (`package-file-count`). The
+  `recommended` preset leaves all of them enabled (warning level, except `import-groups` and
+  `pprof-labels`, which are errors, and `complexity`'s magic-number findings, which are info);
+  `minimal` disables `complexity`, `control-flow`, `shadowing`, `named-returns`,
   `context-discipline`, `single-use-declaration`, `test-comment` and every style check, keeping
-  `import-groups`, `naming`, `time-discipline` and `pprof-labels`. `ast/directive` recognizes
-  directive comments (`//go:`, `//nolint`, `//pulsarules:`, ...) so comment checks skip them, and
-  `ast/gotest` holds shared test-function helpers.
+  `import-groups`, `naming`, `time-discipline` and `pprof-labels`, plus `single-letter-name` for
+  upper-case single letters on functions, methods, types, constants, variables and fields (locals
+  included). `ast/directive` recognizes directive comments (`//go:`, `//nolint`, `//pulsarules:`,
+  ...) so comment checks skip them, and `ast/gotest` holds shared test-function helpers.
 - `arch` - multi-file architecture checks: `PackageBoundaryAnalyzer` (inner-layer packages must not
   import outer-layer ones) and `ImportCycleAnalyzer` (package import-cycle detection).
 - `commit` - commit-message validation (`commit.Analyzer`): format, emoji catalog and repetition
@@ -344,7 +346,7 @@ The governance pipeline (see above) adds its own package set:
 | `internal/analysis`               | `analysis.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`registerForScope`, `gatesFor`), `runner.go` (`toAnalysisConfig`), `convert.go`, `suppress.go` (generated-file split), `format.go`, `history.go`, `output.go` (`CountBySeverity`), `registry/` (the analyzer table) |
 | `internal/analyzer/core`          | `Analyzer`/`InPlaceAnalyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Reporter.Resolved`, `EachChangedFile`, `LanguageRegistry`; stdlib plus its own subpackages only: `core/astcache`, `core/lexical` (comment/header lexing), `core/sources` (file sources, skip sets, git-listed provider) |
 | `internal/analyzer/static/*`      | `filesize`, `textmarkers`, `topoffile`, `bigcomment`, `historynarration`, `simplificationpath` - text/structure checks |
-| `internal/analyzer/ast/*`         | `go/ast`-based checks: complexity, control flow, shadowing, imports, naming, named-returns, single-use-declaration, time-discipline, context-discipline, pprof-labels, and the doc-comment, body-header-comment, test-comment, loop-var, variadic-index, result-count, interface-grouping, package-var and package-file-count style checks |
+| `internal/analyzer/ast/*`         | `go/ast`-based checks: complexity, control flow, shadowing, imports, naming, named-returns, single-use-declaration, time-discipline, context-discipline, pprof-labels, and the doc-comment, body-header-comment, test-comment, single-letter-name, variadic-index, result-count, interface-grouping, package-var and package-file-count style checks |
 | `internal/analyzer/arch`          | `PackageBoundaryAnalyzer`, `ImportCycleAnalyzer` - multi-file architecture checks                   |
 | `internal/analyzer/commit`        | `Analyzer` - commit-message format, emoji, and trailer rules                                        |
 | `internal/analyzer/movepurity`    | flags a staged rename that is not a pure move                                                       |

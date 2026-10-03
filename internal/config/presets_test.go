@@ -127,7 +127,6 @@ func TestApplyPreset_MinimalDisablesNewAnalyzers(t *testing.T) {
 		"doc-comment",
 		"body-header-comment",
 		"history-narration",
-		"loop-var-i",
 		"variadic-index",
 		"too-many-results",
 		"ungrouped-interfaces",
@@ -147,5 +146,18 @@ func TestApplyPreset_MinimalDisablesNewAnalyzers(t *testing.T) {
 				t.Errorf("%s should be disabled in minimal preset", testCase)
 			}
 		})
+	}
+}
+
+func TestApplyPreset_MinimalSingleLetters(t *testing.T) {
+	t.Parallel()
+
+	cfg := Defaults()
+	cfg.Preset = PresetMinimal
+	cfg.ApplyPreset()
+
+	got := cfg.Analyzers["single-letter-name"]
+	if !got.Enabled || got.Params["exported_only"] != true {
+		t.Fatalf("single-letter-name = %+v, want enabled with exported_only", got)
 	}
 }

@@ -4,11 +4,13 @@ Each analyzer below enforces a rule from `knowledge/standards/rules/`. Params ar
 there is no project-config surface for them yet. `extensions` is a common param name, read under
 each analyzer's own id. Findings in generated files are dropped unless `--include-generated` is
 passed; the Go AST analyzers documented here (`test-comment`, `doc-comment`, `body-header-comment`,
-`loop-var-i`, `variadic-index`, `too-many-results`, `ungrouped-interfaces`, `package-level-var` and
-`package-file-count`) also skip generated files, even under `--include-generated`.
-`--preset minimal` disables `test-comment`, `single-use-declaration`, `doc-comment`,
-`body-header-comment`, `history-narration`, `loop-var-i`, `variadic-index`, `too-many-results`,
-`ungrouped-interfaces`, `package-level-var` and `package-file-count`.
+`variadic-index`, `too-many-results`, `ungrouped-interfaces`, `package-level-var`,
+`package-file-count` and `single-letter-name`) also skip generated files, even under
+`--include-generated`. `--preset minimal` disables `test-comment`, `single-use-declaration`,
+`doc-comment`, `body-header-comment`, `history-narration`, `variadic-index`, `too-many-results`,
+`ungrouped-interfaces`, `package-level-var` and `package-file-count`; it keeps `single-letter-name`
+with `exported_only` set, so only upper case single letters on a function, method, type, constant,
+variable, field or interface method are reported.
 
 ## doc-comment
 
@@ -45,17 +47,30 @@ passed; the Go AST analyzers documented here (`test-comment`, `doc-comment`, `bo
   misread. "the only tool ever used to call x" is flagged; it cannot be told apart from
   "nobody ever used to call this".
 
-## loop-var-i
+## single-letter-name
 
 - Rule: `naming`.
-- Flags: a `for` or `range` loop variable named `i` used for more than indexing or bounding.
-- Params: none.
-- Exemptions: an inner redeclaration of `i` (`:=`, `var`, `if`/`for`/`switch` init, closure param)
-  ends tracking; a user-defined `len`/`cap` is not a bound.
-- Known limits: only `len` and `cap` are bounds; a range value named `i` is not checked; pointer and
-  closure aliasing is not followed; a define in an `if`/`for`/`switch`/`range` init skips its
-  right-hand side; a root loop-init define right-hand side counts as a move (under-report,
-  contrived); labelled defines; named and generic composite types.
+- Flags: any declared identifier whose name is exactly one letter (`_` and `.` are not letters).
+  Sites: the package clause, function and method names, receivers, receiver type parameters
+  (`func (pair Pair[K, V])`), parameters and results of every func type (declaration, literal,
+  interface method, func-typed field), type names and type parameters, `const`/`var` names
+  (package level and local), struct fields, interface method names, `:=` left-hand sides
+  (including `if`, `switch`, `for` and `select` forms), `range` key and value, type switch
+  bindings, labels and import aliases. Only declarations are reported; each is reported once
+  (a package clause once per file).
+- Params: `exported_only` (bool, default false); when true a single letter is reported only if it
+  is upper case and names a function, method, type, constant, variable, field or interface method;
+  type parameters, the package clause, labels, receivers, loop variables, parameters, results, type
+  switch bindings and import aliases are skipped. `--preset minimal` sets it.
+- Exemptions: `_`; `import . "x"` and `import _ "x"` are not aliases; a parameter typed
+  `*testing.T`, `*testing.B`, `*testing.F`, `*testing.M` or `testing.TB`, where `testing` is the
+  name the file imports "testing" under (every import of it counts, aliases included; a file
+  without the import gets no exemption). Under `import . "testing"` the bare `*T`, `*B`, `*F`,
+  `*M` and `TB` are exempt.
+- Syntactic: no type information is used, so a `:=` that reassigns an existing single-letter
+  variable alongside a new one is reported again (a go/types count found 0 such sites in this
+  repo and in terectek_comms), and a type named `testing.T` from another package is told apart
+  only by the import name.
 
 ## variadic-index
 

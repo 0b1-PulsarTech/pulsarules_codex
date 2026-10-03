@@ -51,12 +51,6 @@ func (checker fileChecker) check(name string, pos token.Pos) {
 		return
 	}
 
-	if isExported(name) && len(name) == 1 {
-		checker.emit(
-			pos, fmt.Sprintf("single-letter exported name %q", name), "use a descriptive name",
-		)
-	}
-
 	if checker.isSequential(name) {
 		checker.emit(
 			pos,
