@@ -13,50 +13,70 @@ type anchor struct {
 	file string
 }
 
+type dirAnchors struct {
+	order    []string
+	seen     map[string]bool
+	primary  map[string]string
+	fallback map[string]string
+}
+
+func newDirAnchors() *dirAnchors {
+	return &dirAnchors{
+		seen:     make(map[string]bool),
+		primary:  make(map[string]string),
+		fallback: make(map[string]string),
+	}
+}
+
+func (set *dirAnchors) add(fc pass.FileChange, file string, src []byte) {
+	dir := path.Dir(file)
+	if !set.seen[dir] {
+		set.seen[dir] = true
+		set.order = append(set.order, dir)
+	}
+	switch {
+	case fc.Generated || lexer.IsGeneratedSource(src):
+	case isTestFile(file, fc.Extension):
+		if set.fallback[dir] == "" {
+			set.fallback[dir] = file
+		}
+	case set.primary[dir] == "":
+		set.primary[dir] = file
+	}
+}
+
+func (set *dirAnchors) anchors() []anchor {
+	found := make([]anchor, 0, len(set.order))
+	for _, dir := range set.order {
+		file := set.primary[dir]
+		if file == "" {
+			// A test file is the last resort so a test-only change still surfaces the finding.
+			file = set.fallback[dir]
+		}
+		if file != "" {
+			found = append(found, anchor{dir: dir, file: file})
+		}
+	}
+	return found
+}
+
 func changedAnchors(
 	ctx *pass.Context,
 	eligible func(pass.FileChange) bool,
 ) []anchor {
-	var order []string
-	seen := make(map[string]bool)
-	primary := make(map[string]string)
-	fallback := make(map[string]string)
+	set := newDirAnchors()
 	for _, fc := range ctx.ChangedFiles {
 		file := filepath.ToSlash(fc.Path)
-		dir := path.Dir(file)
-		if !eligible(fc) || isNonPackageDir(dir) {
+		if !eligible(fc) || isNonPackageDir(path.Dir(file)) {
 			continue
 		}
 		src, ok := ctx.Sources.Read(file)
 		if !ok {
 			continue
 		}
-		if !seen[dir] {
-			seen[dir] = true
-			order = append(order, dir)
-		}
-		switch {
-		case fc.Generated || lexer.IsGeneratedSource(src):
-		case isTestFile(file, fc.Extension):
-			if fallback[dir] == "" {
-				fallback[dir] = file
-			}
-		case primary[dir] == "":
-			primary[dir] = file
-		}
+		set.add(fc, file, src)
 	}
-	anchors := make([]anchor, 0, len(order))
-	for _, dir := range order {
-		file := primary[dir]
-		if file == "" {
-			// A test file is the last resort so a test-only change still surfaces the finding.
-			file = fallback[dir]
-		}
-		if file != "" {
-			anchors = append(anchors, anchor{dir: dir, file: file})
-		}
-	}
-	return anchors
+	return set.anchors()
 }
 
 func malformedAnchor(ctx *pass.Context, anchors []anchor) string {
