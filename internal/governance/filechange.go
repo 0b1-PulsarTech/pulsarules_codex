@@ -1,6 +1,7 @@
 package governance
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -83,4 +84,16 @@ func populateASTCache(
 		}
 	}
 	return cache
+}
+
+func (s *Session) stagedRenames() []pass.Rename {
+	const renameProbeScore = 1
+	// Low so a partial rename still reaches move-purity, which judges it against its own
+	// minimum instead of git's detector dropping it first.
+	renames, err := s.repo.StagedRenames(renameProbeScore)
+	if err != nil {
+		s.logger.Warn("staged renames unavailable", slog.Any("error", err))
+		return nil
+	}
+	return toCoreRenames(renames)
 }
