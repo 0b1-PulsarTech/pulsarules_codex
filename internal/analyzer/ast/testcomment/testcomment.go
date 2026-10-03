@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/directive"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/gotest"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
@@ -34,47 +35,58 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	})
 }
 
+type fileScan struct {
+	fset     *token.FileSet
+	fc       core.FileChange
+	file     *ast.File
+	reporter core.Reporter
+}
+
 func checkFile(
 	fset *token.FileSet, fc core.FileChange, f *ast.File, reporter core.Reporter,
 ) []core.Finding {
+	scan := fileScan{fset: fset, fc: fc, file: f, reporter: reporter}
 	var findings []core.Finding
 	for _, decl := range f.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
-		if !ok {
+		if !ok || !gotest.CoversFunc(fc, f, fn) {
 			continue
 		}
-		kind, ok := gotest.TestKind(f, fn)
-		if !ok {
-			continue
-		}
-		if group, ok := nonExemptGroup(fn.Doc); ok {
+		if !directive.IsDirectiveGroup(fn.Doc) {
 			findings = append(findings, reporter.At(
 				fc.Path,
-				fset.Position(group.Pos()).Line,
+				fset.Position(fn.Doc.Pos()).Line,
 				fmt.Sprintf(
-					"%s carries a doc comment; the test name pins what it verifies",
+					"%s carries a doc comment; test functions and helpers carry no comments",
 					fn.Name.Name,
 				),
-				"delete it, or move a genuine precondition into a why: comment on a helper it "+
-					"calls",
+				directive.HintFor(fn.Doc, "delete it; the name carries what it does"),
 			))
 		}
-		for _, group := range bodyComments(f.Comments, fn) {
-			if kind == gotest.KindExample && isExampleOutputComment(group) {
-				continue
-			}
-			if inner, ok := nonExemptGroup(group); ok {
-				findings = append(findings, reporter.At(
-					fc.Path,
-					fset.Position(inner.Pos()).Line,
-					fmt.Sprintf(
-						"comment inside %s narrates what the test already names",
-						fn.Name.Name,
-					),
-					"delete it, or rename the test/sub-case so the name carries it",
-				))
-			}
+		findings = append(findings, scan.body(fn)...)
+	}
+	return findings
+}
+
+func (scan fileScan) body(fn *ast.FuncDecl) []core.Finding {
+	kind, _ := gotest.TestKind(scan.file, fn)
+	var findings []core.Finding
+	for _, group := range bodyComments(scan.file.Comments, fn) {
+		if kind == gotest.KindExample && isExampleOutputComment(group) {
+			continue
 		}
+		if directive.IsDirectiveGroup(group) {
+			continue
+		}
+		findings = append(findings, scan.reporter.At(
+			scan.fc.Path,
+			scan.fset.Position(group.Pos()).Line,
+			fmt.Sprintf(
+				"comment inside %s; test functions and helpers carry no comments",
+				fn.Name.Name,
+			),
+			directive.HintFor(group, "delete it; the name carries what it does"),
+		))
 	}
 	return findings
 }
@@ -82,18 +94,6 @@ func checkFile(
 func isExampleOutputComment(group *ast.CommentGroup) bool {
 	text := strings.ToLower(strings.TrimSpace(group.Text()))
 	return strings.HasPrefix(text, "output:") || strings.HasPrefix(text, "unordered output:")
-}
-
-func nonExemptGroup(group *ast.CommentGroup) (*ast.CommentGroup, bool) {
-	if group == nil {
-		return nil, false
-	}
-	for _, c := range group.List {
-		if !core.IsExemptHeaderLine(c.Text) {
-			return group, true
-		}
-	}
-	return nil, false
 }
 
 func bodyComments(all []*ast.CommentGroup, fn *ast.FuncDecl) []*ast.CommentGroup {
