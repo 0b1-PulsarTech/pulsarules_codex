@@ -37,6 +37,19 @@ linters:
     - bodyclose
     - sqlclosecheck
   settings:
+    # ST1020-ST1022 demand a doc comment that opens with the symbol name, which contradicts
+    # the doc-comment analyzer banning doc comments. Spell out the default exclusions: a bare
+    # `checks: [...]` list replaces the default set and would silently drop every SA check.
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+        - -ST1003
+        - -ST1016
+        - -ST1020
+        - -ST1021
+        - -ST1022
+        - -ST1023
     govet:
       enable:
         - shadow
