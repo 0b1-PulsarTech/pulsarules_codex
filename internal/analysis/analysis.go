@@ -1,6 +1,8 @@
 package analysis
 
 import (
+	"log/slog"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
@@ -21,6 +23,7 @@ type Session struct {
 	index       *knowledge.Index
 	cfgAnalysis *core.AnalysisConfig
 	skips       sources.SkipSet
+	logger      *slog.Logger
 }
 
 func NewSession(
@@ -39,6 +42,7 @@ func NewSession(
 		index:       index,
 		cfgAnalysis: toAnalysisConfig(cfg),
 		skips:       sources.NewSkipSet(sources.DefaultSkipDirs()),
+		logger:      slog.Default(),
 	}
 }
 
@@ -69,10 +73,7 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Disc
 		return d
 	}
 
-	const renameProbeScore = 1
-	if renames, err := s.repo.StagedRenames(renameProbeScore); err == nil {
-		d.StagedRenames = toCoreRenames(renames)
-	}
+	d.StagedRenames = s.stagedRenames()
 
 	d.Sources = sources.NewSourceProvider(s.repo.Root(), s.skips)
 
@@ -84,6 +85,7 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Disc
 	if status == nil {
 		fetched, err := s.repo.WorktreeStatus()
 		if err != nil {
+			s.logger.Warn("worktree status unavailable", slog.Any("error", err))
 			return d
 		}
 		status = &fetched

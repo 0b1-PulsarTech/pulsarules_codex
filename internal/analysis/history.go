@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -26,7 +27,11 @@ func (s *Session) gitHistory() []core.GitCommitEntry {
 		window++
 	}
 	subjects, err := s.repo.RecentSubjects(window)
-	if err != nil || len(subjects) == 0 {
+	if err != nil {
+		s.logger.Warn("commit history unavailable", slog.Any("error", err))
+		return nil
+	}
+	if len(subjects) == 0 {
 		return nil
 	}
 	// On an amend or a rebase reword HEAD is the old commit; keeping it self-collides.
@@ -62,7 +67,11 @@ func (s *Session) authorDateMatchesHead() bool {
 		return false
 	}
 	headEpoch, hasHead, err := s.repo.HeadAuthorEpoch()
-	if err != nil || !hasHead {
+	if err != nil {
+		s.logger.Warn("head author date unavailable", slog.Any("error", err))
+		return false
+	}
+	if !hasHead {
 		return false
 	}
 	// A fresh commit in HEAD's author second looks the same, so its repeat goes unseen.
