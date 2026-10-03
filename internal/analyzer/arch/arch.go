@@ -40,7 +40,7 @@ func (a *PackageBoundaryAnalyzer) ID() string          { return "arch-boundary" 
 func (a *PackageBoundaryAnalyzer) Stage() pass.StageID { return pass.StageArch }
 
 func (a *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	if ctx.ProjectDir == "" {
+	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}
 	reporter := pass.ResolveReporter(a.reporter, ctx)
@@ -50,7 +50,7 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 		return findings
 	}
 
-	idx := loadProjectIndex(ctx.ProjectDir, modulePath)
+	idx := loadProjectIndex(ctx.Sources, modulePath)
 	violations := checkBoundaries(idx.graph, modulePath)
 
 	for _, v := range violations {
@@ -78,7 +78,7 @@ func (a *ImportCycleAnalyzer) ID() string          { return "import-cycle" }
 func (a *ImportCycleAnalyzer) Stage() pass.StageID { return pass.StageArch }
 
 func (a *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	if ctx.ProjectDir == "" {
+	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}
 	reporter := pass.ResolveReporter(a.reporter, ctx)
@@ -88,7 +88,7 @@ func (a *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 		return findings
 	}
 
-	idx := loadProjectIndex(ctx.ProjectDir, modulePath)
+	idx := loadProjectIndex(ctx.Sources, modulePath)
 	cycles := findCycles(idx.graph)
 
 	for _, cycle := range cycles {
