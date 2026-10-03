@@ -29,19 +29,19 @@ func (opencodeInstaller) Install(ctx Context) (report.Report, error) {
 }
 
 func (opencodeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
-	removed, restored, orphaned, err := opencode.Uninstall(ctx.Dir)
+	res, err := opencode.Uninstall(ctx.Dir)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("uninstall opencode hook: %w", err)
 	}
 	var rpt report.Report
 	// A restore is worth reporting even when nothing else was removed.
-	for _, msg := range restored {
+	for _, msg := range res.Restored {
 		rpt.Note("%s", msg)
 	}
-	for _, msg := range orphaned {
+	for _, msg := range res.Orphaned {
 		rpt.Warn("%s", msg)
 	}
-	if removed {
+	if res.Removed {
 		rpt.Note(
 			"removed opencode governance plugin: %s",
 			filepath.Join(ctx.Dir, ".opencode", "plugins"),

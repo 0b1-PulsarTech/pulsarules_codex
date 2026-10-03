@@ -6,6 +6,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/narration"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/packagevar"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filecount"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/signature/resultcount"
 )
 
 func styleSpecs() []analyzerSpec {
@@ -13,6 +14,7 @@ func styleSpecs() []analyzerSpec {
 		staticSpec("doc-comment", doc.NewAnalyzer),
 		staticSpec("body-header-comment", bodyheader.NewAnalyzer),
 		langSpec("history-narration", narration.NewAnalyzer),
+		staticSpec("too-many-results", resultcount.NewAnalyzer),
 		staticSpec("package-level-var", packagevar.NewAnalyzer),
 		staticSpec("package-file-count", filecount.NewAnalyzer),
 	}

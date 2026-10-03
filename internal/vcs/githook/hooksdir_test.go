@@ -86,12 +86,12 @@ func TestUninstall_LinkedWorktree(t *testing.T) {
 		t.Fatalf("Install from worktree: %v", err)
 	}
 
-	removed, _, _, err := Uninstall(worktree)
+	res, err := Uninstall(worktree)
 	if err != nil {
 		t.Fatalf("Uninstall from worktree: %v", err)
 	}
-	if !slices.Contains(removed, "commit-msg") {
-		t.Errorf("removed = %v, want it to contain commit-msg", removed)
+	if !slices.Contains(res.Removed, "commit-msg") {
+		t.Errorf("removed = %v, want it to contain commit-msg", res.Removed)
 	}
 	if _, err = os.Lstat(
 		filepath.Join(mainDir, ".git", "hooks", "commit-msg"),
@@ -129,10 +129,11 @@ func TestUninstall_OrphanedBackup(t *testing.T) {
 		t.Fatalf("second Install: %v", err)
 	}
 
-	_, _, notes, err := Uninstall(dir)
+	res, err := Uninstall(dir)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
+	notes := res.Orphaned
 	if len(notes) != 1 {
 		t.Fatalf("notes = %v, want exactly one", notes)
 	}
