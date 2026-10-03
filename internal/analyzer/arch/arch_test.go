@@ -30,7 +30,7 @@ func TestPackageBoundary_Violation(t *testing.T) {
 	t.Parallel()
 
 	projectDir := newBoundaryAndCycleFixture(t)
-	ctx := &core.AnalysisContext{ProjectDir: projectDir}
+	ctx := &core.AnalysisContext{ProjectDir: projectDir, Sources: newSources(projectDir)}
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -52,7 +52,7 @@ func TestImportCycle_DetectsCycle(t *testing.T) {
 	t.Parallel()
 
 	projectDir := newBoundaryAndCycleFixture(t)
-	ctx := &core.AnalysisContext{ProjectDir: projectDir}
+	ctx := &core.AnalysisContext{ProjectDir: projectDir, Sources: newSources(projectDir)}
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
@@ -75,7 +75,7 @@ func TestPackageBoundaryAnalyzer_Analyze_NoGoMod(t *testing.T) {
 
 	projectDir := t.TempDir()
 	writeFile(t, projectDir, "domain/user.go", "package domain\n")
-	ctx := &core.AnalysisContext{ProjectDir: projectDir}
+	ctx := &core.AnalysisContext{ProjectDir: projectDir, Sources: newSources(projectDir)}
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -89,7 +89,7 @@ func TestImportCycleAnalyzer_Analyze_NoGoMod(t *testing.T) {
 
 	projectDir := t.TempDir()
 	writeFile(t, projectDir, "domain/user.go", "package domain\n")
-	ctx := &core.AnalysisContext{ProjectDir: projectDir}
+	ctx := &core.AnalysisContext{ProjectDir: projectDir, Sources: newSources(projectDir)}
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
@@ -104,7 +104,7 @@ func TestPackageBoundary_MalformedGoMod(t *testing.T) {
 	projectDir := t.TempDir()
 	writeFile(t, projectDir, "go.mod", "go 1.24\n")
 	writeFile(t, projectDir, "domain/user.go", "package domain\n")
-	ctx := &core.AnalysisContext{ProjectDir: projectDir}
+	ctx := &core.AnalysisContext{ProjectDir: projectDir, Sources: newSources(projectDir)}
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -125,7 +125,7 @@ func TestImportCycle_MalformedGoMod(t *testing.T) {
 	projectDir := t.TempDir()
 	writeFile(t, projectDir, "go.mod", "go 1.24\n")
 	writeFile(t, projectDir, "domain/user.go", "package domain\n")
-	ctx := &core.AnalysisContext{ProjectDir: projectDir}
+	ctx := &core.AnalysisContext{ProjectDir: projectDir, Sources: newSources(projectDir)}
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
@@ -169,6 +169,20 @@ func TestArchAnalyzers_ReportTheirRegisteredID(t *testing.T) {
 	}
 }
 
+func TestAnalyzers_Analyze_NilSources(t *testing.T) {
+	t.Parallel()
+
+	projectDir := newBoundaryAndCycleFixture(t)
+	ctx := &core.AnalysisContext{ProjectDir: projectDir}
+
+	if findings := NewPackageBoundaryAnalyzer().Analyze(ctx); findings != nil {
+		t.Errorf("arch-boundary: expected nil findings without Sources, got %v", findings)
+	}
+	if findings := NewImportCycleAnalyzer().Analyze(ctx); findings != nil {
+		t.Errorf("import-cycle: expected nil findings without Sources, got %v", findings)
+	}
+}
+
 func TestImportCycle_LaterFile(t *testing.T) {
 	t.Parallel()
 
@@ -177,7 +191,7 @@ func TestImportCycle_LaterFile(t *testing.T) {
 	writeFile(t, projectDir, "a/a1.go", "package a\n")
 	writeFile(t, projectDir, "a/a2.go", "package a\n\nimport _ \"example.com/target/b\"\n")
 	writeFile(t, projectDir, "b/b.go", "package b\n\nimport _ \"example.com/target/a\"\n")
-	ctx := &core.AnalysisContext{ProjectDir: projectDir}
+	ctx := &core.AnalysisContext{ProjectDir: projectDir, Sources: newSources(projectDir)}
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
