@@ -1,6 +1,10 @@
 package analysis
 
 import (
+	"bytes"
+	"errors"
+	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit"
@@ -114,6 +118,52 @@ func TestSessionReplacesHead_AuthorDate(t *testing.T) {
 					gotReplaces, testCase.wantReplaces, entries)
 			}
 		})
+	}
+}
+
+type failingHistoryRepo struct {
+	vcs.Repository
+}
+
+func (failingHistoryRepo) RecentSubjects(int) ([]string, error) {
+	return nil, errors.New("log exploded")
+}
+
+func TestSessionGitHistory_LogsRecentSubjectsFailure(t *testing.T) {
+	t.Parallel()
+
+	var logs bytes.Buffer
+	sess := NewSession(failingHistoryRepo{}, "", nil, nil)
+	sess.logger = slog.New(slog.NewTextHandler(&logs, nil))
+
+	if entries := sess.gitHistory(); entries != nil {
+		t.Fatalf("gitHistory() = %+v, want nil when the log fails", entries)
+	}
+	if !strings.Contains(logs.String(), "log exploded") {
+		t.Fatalf("log output %q does not report the RecentSubjects error", logs.String())
+	}
+}
+
+type failingEpochRepo struct {
+	vcs.Repository
+}
+
+func (failingEpochRepo) HeadAuthorEpoch() (int64, bool, error) {
+	return 0, false, errors.New("epoch exploded")
+}
+
+func TestSessionReplacesHead_LogsAuthorEpochFailure(t *testing.T) {
+	t.Setenv("GIT_AUTHOR_DATE", "@1704067200 +0000")
+
+	var logs bytes.Buffer
+	sess := NewSession(failingEpochRepo{}, "reworded", nil, nil)
+	sess.logger = slog.New(slog.NewTextHandler(&logs, nil))
+
+	if sess.replacesHead("another subject") {
+		t.Fatal("replacesHead = true, want false when the author epoch is unavailable")
+	}
+	if !strings.Contains(logs.String(), "epoch exploded") {
+		t.Fatalf("log output %q does not report the HeadAuthorEpoch error", logs.String())
 	}
 }
 
