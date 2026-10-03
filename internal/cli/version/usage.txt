@@ -43,6 +43,10 @@ analyzers over files with a staged change; a partially staged file is read from
 disk, unstaged hunks included). Use --scope commit in pre-commit hooks for fast
 checks.
 
+Flags must come before a positional argument: parsing stops at the first one, so
+`pulsarules_cli list --root DIR rules` honors --root and `list rules --root DIR`
+silently ignores it.
+
 --golangci-config overrides the golangci-lint config discovery path. When unset,
 the runner searches the project root, tools/, and build/ directories for
 .golangci.yml, and on go.work repositories runs per-module.
