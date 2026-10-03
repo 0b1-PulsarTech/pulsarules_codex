@@ -65,6 +65,7 @@ Print a catalog table to stdout. Kinds: `skills` (default), `rules`, `patterns`,
 ```sh
 pulsarules_cli list            # skills
 pulsarules_cli list rules
+pulsarules_cli list --root . rules   # flags go before the kind; `list rules --root .` ignores --root
 ```
 
 ### Install
