@@ -9,7 +9,7 @@ import (
 func TestOutputAnalyzer_SortBySeverity(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 	ctx := &pass.Context{
 		Findings: []pass.Finding{
 			{AnalyzerID: "a", Severity: pass.SeverityInfo, File: "b.go", Line: 5, Message: "info"},
@@ -30,7 +30,7 @@ func TestOutputAnalyzer_SortBySeverity(t *testing.T) {
 		},
 	}
 
-	a.Analyze(ctx)
+	analyzer.Analyze(ctx)
 
 	if len(ctx.Findings) != 3 {
 		t.Fatalf("expected 3 findings, got %d", len(ctx.Findings))
@@ -49,7 +49,7 @@ func TestOutputAnalyzer_SortBySeverity(t *testing.T) {
 func TestOutputAnalyzer_SortByFileThenLine(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 	ctx := &pass.Context{
 		Findings: []pass.Finding{
 			{AnalyzerID: "a", Severity: pass.SeverityWarning, File: "b.go", Line: 5},
@@ -58,7 +58,7 @@ func TestOutputAnalyzer_SortByFileThenLine(t *testing.T) {
 		},
 	}
 
-	a.Analyze(ctx)
+	analyzer.Analyze(ctx)
 
 	if ctx.Findings[0].File != "a.go" || ctx.Findings[0].Line != 3 {
 		t.Errorf("expected a.go:3 first, got %s:%d", ctx.Findings[0].File, ctx.Findings[0].Line)
@@ -74,7 +74,7 @@ func TestOutputAnalyzer_SortByFileThenLine(t *testing.T) {
 func TestOutputAnalyzer_Dedup(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 	ctx := &pass.Context{
 		Findings: []pass.Finding{
 			{AnalyzerID: "x", Severity: pass.SeverityError, File: "a.go", Line: 1, Message: "dup"},
@@ -90,7 +90,7 @@ func TestOutputAnalyzer_Dedup(t *testing.T) {
 		},
 	}
 
-	a.Analyze(ctx)
+	analyzer.Analyze(ctx)
 
 	if len(ctx.Findings) != 2 {
 		t.Fatalf("expected 2 after dedup, got %d", len(ctx.Findings))
@@ -100,9 +100,9 @@ func TestOutputAnalyzer_Dedup(t *testing.T) {
 func TestOutputAnalyzer_Empty(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 	ctx := &pass.Context{Findings: nil}
-	a.Analyze(ctx)
+	analyzer.Analyze(ctx)
 	if len(ctx.Findings) != 0 {
 		t.Errorf("expected 0 findings, got %d", len(ctx.Findings))
 	}

@@ -19,29 +19,29 @@ func NewAnalyzer(langs *pass.LanguageRegistry) *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return "big-comment" }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string          { return "big-comment" }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	if a.langs == nil {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	if analyzer.langs == nil {
 		return nil
 	}
-	ml := a.resolveMaxLines(ctx)
-	reporter := pass.ResolveReporter(a.reporter, ctx)
-	extFilter := pass.ExtensionFilter(ctx, a.ID(), pass.DefaultSourceExtensions())
+	ml := analyzer.resolveMaxLines(ctx)
+	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	extFilter := pass.ExtensionFilter(ctx, analyzer.ID(), pass.DefaultSourceExtensions())
 	eligible := func(fc pass.FileChange) bool {
-		return extFilter(fc) && a.langs.Lookup(fc.Extension) != nil
+		return extFilter(fc) && analyzer.langs.Lookup(fc.Extension) != nil
 	}
 	return pass.EachChangedFile(
 		ctx,
 		eligible,
 		func(fc pass.FileChange, src []byte) []pass.Finding {
-			syntax := a.langs.Lookup(fc.Extension).CommentSyntax()
+			syntax := analyzer.langs.Lookup(fc.Extension).CommentSyntax()
 			return scanFile(src, fc, syntax, limit{maxLines: ml, reporter: reporter})
 		},
 	)
 }
 
-func (a *Analyzer) resolveMaxLines(ctx *pass.Context) int {
-	return ctx.Params(a.ID()).Int("max_lines", a.maxLines)
+func (analyzer *Analyzer) resolveMaxLines(ctx *pass.Context) int {
+	return ctx.Params(analyzer.ID()).Int("max_lines", analyzer.maxLines)
 }

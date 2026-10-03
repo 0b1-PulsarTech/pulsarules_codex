@@ -29,14 +29,14 @@ func NewAnalyzer(repo branchReader) *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return ID }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string          { return ID }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	if a.repo == nil {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	if analyzer.repo == nil {
 		return nil
 	}
-	branch, err := a.repo.CurrentBranch()
+	branch, err := analyzer.repo.CurrentBranch()
 	// Silent on an unreadable repo: failing the run because git was unavailable
 	// would block work over a naming rule with nothing to say.
 	if err != nil || branch == "" || isExemptBranch(branch) {
@@ -46,7 +46,7 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if hasAllowedType(branch, allowed) {
 		return nil
 	}
-	return []pass.Finding{pass.ResolveReporter(a.reporter, ctx).New(fmt.Sprintf(
+	return []pass.Finding{pass.ResolveReporter(analyzer.reporter, ctx).New(fmt.Sprintf(
 		"branch %q does not start with a type prefix (want <type>/<description>, type one of %s)",
 		branch, strings.Join(allowed, "|"),
 	))}

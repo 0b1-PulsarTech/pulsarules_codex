@@ -42,54 +42,54 @@ func NewRunner(golangciLintPath string) *Runner {
 	}
 }
 
-func (r *Runner) Run(projectDir, configPath string) []pass.Finding {
-	if r.path == "" {
+func (runner *Runner) Run(projectDir, configPath string) []pass.Finding {
+	if runner.path == "" {
 		return nil
 	}
 	// A missing binary is an environment fact, not a finding.
-	if _, err := exec.LookPath(r.path); err != nil {
+	if _, err := exec.LookPath(runner.path); err != nil {
 		return nil
 	}
-	return r.runLint(projectDir, configPath)
+	return runner.runLint(projectDir, configPath)
 }
 
-func (r *Runner) runLint(projectDir, configPath string) []pass.Finding {
+func (runner *Runner) runLint(projectDir, configPath string) []pass.Finding {
 	if hasGoWork(projectDir) {
-		return r.runPerModule(projectDir, configPath)
+		return runner.runPerModule(projectDir, configPath)
 	}
 
-	return r.runSingle(projectDir, configPath)
+	return runner.runSingle(projectDir, configPath)
 }
 
-func (r *Runner) runPerModule(projectDir, configPath string) []pass.Finding {
+func (runner *Runner) runPerModule(projectDir, configPath string) []pass.Finding {
 	modules := parseGoWorkModules(projectDir)
 	if len(modules) == 0 {
-		return r.runSingle(projectDir, configPath)
+		return runner.runSingle(projectDir, configPath)
 	}
 
 	configFlag := resolvedConfigFlag(projectDir, configPath)
 
-	allFindings := r.forcedBaselineFindings(configFlag)
+	allFindings := runner.forcedBaselineFindings(configFlag)
 	for _, mod := range modules {
 		modDir := filepath.Join(projectDir, mod)
-		result, err := r.run(projectDir, lintArgs(modDir+"/...", configFlag))
-		allFindings = append(allFindings, r.parseOutput(result, err)...)
+		result, err := runner.run(projectDir, lintArgs(modDir+"/...", configFlag))
+		allFindings = append(allFindings, runner.parseOutput(result, err)...)
 	}
 	return allFindings
 }
 
-func (r *Runner) runSingle(projectDir, configPath string) []pass.Finding {
+func (runner *Runner) runSingle(projectDir, configPath string) []pass.Finding {
 	configFlag := resolvedConfigFlag(projectDir, configPath)
-	result, err := r.run(projectDir, lintArgs("./...", configFlag))
-	return append(r.forcedBaselineFindings(configFlag), r.parseOutput(result, err)...)
+	result, err := runner.run(projectDir, lintArgs("./...", configFlag))
+	return append(runner.forcedBaselineFindings(configFlag), runner.parseOutput(result, err)...)
 }
 
-func (r *Runner) run(projectDir string, args []string) (process.Result, error) {
+func (runner *Runner) run(projectDir string, args []string) (process.Result, error) {
 	result, err := process.Run(context.Background(), process.Command{
-		Name:    r.path,
+		Name:    runner.path,
 		Args:    args,
 		Dir:     projectDir,
-		Timeout: r.timeout,
+		Timeout: runner.timeout,
 	})
 	if err != nil {
 		// %w keeps *execx.Error (and the *exec.ExitError it wraps) reachable through

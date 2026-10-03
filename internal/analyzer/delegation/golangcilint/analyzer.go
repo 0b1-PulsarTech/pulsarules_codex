@@ -12,12 +12,12 @@ func NewAnalyzer(path string) *Analyzer {
 	return &Analyzer{runner: NewRunner(path)}
 }
 
-func (a *Analyzer) ID() string          { return golangciLintID }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string          { return golangciLintID }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	configPath := extractGolangciConfigPath(ctx)
-	return a.runner.Run(ctx.ProjectDir, configPath)
+	return analyzer.runner.Run(ctx.ProjectDir, configPath)
 }
 
 func extractGolangciConfigPath(ctx *pass.Context) string {

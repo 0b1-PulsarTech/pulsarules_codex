@@ -86,13 +86,13 @@ func NewAnalyzer(index *knowledge.Index) *Analyzer {
 	return &Analyzer{index: index}
 }
 
-func (a *Analyzer) ID() string          { return "rule-injection" }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageRuleInjection }
+func (analyzer *Analyzer) ID() string          { return "rule-injection" }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageRuleInjection }
 
-func (a *Analyzer) TransformsInPlace() {}
+func (analyzer *Analyzer) TransformsInPlace() {}
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	injectRuleSummaries(ctx.Findings, a.index)
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	injectRuleSummaries(ctx.Findings, analyzer.index)
 	return nil
 }
 

@@ -15,12 +15,12 @@ var errMissing = errors.New("missing blob")
 func TestAnalyzer_Identity(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer(nil)
-	if a.ID() != "commit-move-purity" {
-		t.Fatalf("ID() = %q, want commit-move-purity", a.ID())
+	analyzer := NewAnalyzer(nil)
+	if analyzer.ID() != "commit-move-purity" {
+		t.Fatalf("ID() = %q, want commit-move-purity", analyzer.ID())
 	}
-	if a.Stage() != pass.StageStatic {
-		t.Fatalf("Stage() = %d, want StageStatic", a.Stage())
+	if analyzer.Stage() != pass.StageStatic {
+		t.Fatalf("Stage() = %d, want StageStatic", analyzer.Stage())
 	}
 }
 
@@ -36,12 +36,12 @@ func TestAnalyzer_Analyze(t *testing.T) {
 
 	testCases := analyzeCases()
 
-	a := NewAnalyzer(nil)
+	analyzer := NewAnalyzer(nil)
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			findings := a.Analyze(testCase.ctx)
+			findings := analyzer.Analyze(testCase.ctx)
 			if len(findings) != testCase.wantFindings {
 				t.Fatalf("Analyze() returned %d findings, want %d: %+v",
 					len(findings), testCase.wantFindings, findings)
@@ -129,8 +129,8 @@ func TestAnalyzer_Analyze_ParamsOverride(t *testing.T) {
 		}},
 	}
 
-	a := NewAnalyzer(nil)
-	findings := a.Analyze(ctx)
+	analyzer := NewAnalyzer(nil)
+	findings := analyzer.Analyze(ctx)
 	if len(findings) != 1 {
 		t.Fatalf(
 			"expected one finding once min_similarity is raised above the score, got %+v",

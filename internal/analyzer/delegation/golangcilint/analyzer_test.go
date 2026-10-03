@@ -54,11 +54,11 @@ func TestExtractGolangciConfigPath(t *testing.T) {
 func TestAnalyzer_StageRegistryKey(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer("golangci-lint")
-	if got := a.ID(); got != "golangci-lint" {
+	analyzer := NewAnalyzer("golangci-lint")
+	if got := analyzer.ID(); got != "golangci-lint" {
 		t.Errorf("ID() = %q, want %q", got, "golangci-lint")
 	}
-	if got := a.Stage(); got != pass.StageStatic {
+	if got := analyzer.Stage(); got != pass.StageStatic {
 		t.Errorf("Stage() = %v, want StageStatic", got)
 	}
 }
@@ -66,8 +66,8 @@ func TestAnalyzer_StageRegistryKey(t *testing.T) {
 func TestAnalyzer_SkipsWithoutBinary(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer("/nonexistent/golangci-lint")
-	findings := a.Analyze(&pass.Context{
+	analyzer := NewAnalyzer("/nonexistent/golangci-lint")
+	findings := analyzer.Analyze(&pass.Context{
 		ProjectDir: t.TempDir(),
 		Config:     &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{}},
 	})

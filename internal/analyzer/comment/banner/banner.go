@@ -14,28 +14,28 @@ func NewAnalyzer(langs *pass.LanguageRegistry) *Analyzer {
 	return &Analyzer{langs: langs}
 }
 
-func (a *Analyzer) ID() string          { return "top-of-file" }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string          { return "top-of-file" }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	if a.langs == nil {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	if analyzer.langs == nil {
 		return nil
 	}
 	// Required header lines (lexical.ExemptHeaderSpan) are skipped so a hand comment after
 	// them is still flagged; a lexical.IsContentStartLine line ends the scan, and a file
 	// lexical.IsGeneratedSource accepts is exempt in full.
-	extFilter := pass.ExtensionFilter(ctx, a.ID(), defaultExtensions())
+	extFilter := pass.ExtensionFilter(ctx, analyzer.ID(), defaultExtensions())
 	eligible := func(fc pass.FileChange) bool {
-		return extFilter(fc) && a.langs.Lookup(fc.Extension) != nil
+		return extFilter(fc) && analyzer.langs.Lookup(fc.Extension) != nil
 	}
 	return pass.EachChangedFile(ctx, eligible, func(
 		fc pass.FileChange, src []byte,
 	) []pass.Finding {
-		lineNum, ok := leadingCommentLine(a.langs.Lookup(fc.Extension), fc.Extension, src)
+		lineNum, ok := leadingCommentLine(analyzer.langs.Lookup(fc.Extension), fc.Extension, src)
 		if !ok {
 			return nil
 		}
-		return []pass.Finding{reporterFor(ctx, a.ID(), fc.Extension).At(
+		return []pass.Finding{reporterFor(ctx, analyzer.ID(), fc.Extension).At(
 			fc.Path,
 			lineNum,
 			"file starts with a comment",

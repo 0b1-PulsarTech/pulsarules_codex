@@ -10,18 +10,18 @@ import (
 type depGraph map[string][]string
 
 func buildGraph(pkgs map[string]*pkgImports, modulePath string) depGraph {
-	g := make(depGraph, len(pkgs))
+	graph := make(depGraph, len(pkgs))
 	for pkg, info := range pkgs {
-		g[pkg] = localImports(modulePath, info.Imports)
+		graph[pkg] = localImports(modulePath, info.Imports)
 	}
-	return g
+	return graph
 }
 
-func findCycles(g depGraph) [][]string {
+func findCycles(graph depGraph) [][]string {
 	var cycles [][]string
 	visited := make(map[string]bool)
 	inStack := make(map[string]bool)
-	stack := make([]string, 0, len(g))
+	stack := make([]string, 0, len(graph))
 
 	var dfs func(node string)
 	dfs = func(node string) {
@@ -38,7 +38,7 @@ func findCycles(g depGraph) [][]string {
 		inStack[node] = true
 		stack = append(stack, node)
 
-		for _, dep := range slices.Sorted(slices.Values(g[node])) {
+		for _, dep := range slices.Sorted(slices.Values(graph[node])) {
 			dfs(dep)
 		}
 
@@ -46,7 +46,7 @@ func findCycles(g depGraph) [][]string {
 		inStack[node] = false
 	}
 
-	for _, node := range slices.Sorted(maps.Keys(g)) {
+	for _, node := range slices.Sorted(maps.Keys(graph)) {
 		if !visited[node] {
 			dfs(node)
 		}
@@ -77,7 +77,7 @@ func classifyLayer(pkgPath string) string {
 
 const layerUnclassified = ""
 
-func checkBoundaries(g depGraph, modulePath string) []string {
+func checkBoundaries(graph depGraph, modulePath string) []string {
 	const (
 		layerRankCmd = iota
 		layerRankTransport
@@ -93,8 +93,8 @@ func checkBoundaries(g depGraph, modulePath string) []string {
 		"domain":    layerRankDomain,
 	}
 
-	for _, pkg := range slices.Sorted(maps.Keys(g)) {
-		deps := g[pkg]
+	for _, pkg := range slices.Sorted(maps.Keys(graph)) {
+		deps := graph[pkg]
 		pkgLayer := classifyLayer(pkg)
 		for _, dep := range deps {
 			depLayer := classifyLayer(dep)

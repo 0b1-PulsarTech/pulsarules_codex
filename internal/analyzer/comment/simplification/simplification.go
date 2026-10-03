@@ -21,23 +21,23 @@ func NewAnalyzer(langs *pass.LanguageRegistry) *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return "simplification-path" }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string          { return "simplification-path" }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	if a.langs == nil {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	if analyzer.langs == nil {
 		return nil
 	}
-	reporter := pass.ResolveReporter(a.reporter, ctx)
-	extFilter := pass.ExtensionFilter(ctx, a.ID(), pass.DefaultSourceExtensions())
+	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	extFilter := pass.ExtensionFilter(ctx, analyzer.ID(), pass.DefaultSourceExtensions())
 	eligible := func(fc pass.FileChange) bool {
-		return extFilter(fc) && a.langs.Lookup(fc.Extension) != nil
+		return extFilter(fc) && analyzer.langs.Lookup(fc.Extension) != nil
 	}
 	return pass.EachChangedFile(
 		ctx,
 		eligible,
 		func(fc pass.FileChange, src []byte) []pass.Finding {
-			return scanFile(src, fc.Path, a.langs.Lookup(fc.Extension), reporter)
+			return scanFile(src, fc.Path, analyzer.langs.Lookup(fc.Extension), reporter)
 		},
 	)
 }

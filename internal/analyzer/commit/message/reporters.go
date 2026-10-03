@@ -42,22 +42,22 @@ func defaultRuleReporters() ruleReporters {
 	}
 }
 
-func (rr ruleReporters) resolved(ctx *pass.Context) ruleReporters {
-	rr.initial = pass.ResolveReporter(rr.initial, ctx)
-	rr.merge = pass.ResolveReporter(rr.merge, ctx)
-	rr.emojiRequired = pass.ResolveReporter(rr.emojiRequired, ctx)
-	rr.emojiCount = pass.ResolveReporter(rr.emojiCount, ctx)
-	rr.typeRequired = pass.ResolveReporter(rr.typeRequired, ctx)
-	rr.typeEnum = pass.ResolveReporter(rr.typeEnum, ctx)
-	rr.scopeCharset = pass.ResolveReporter(rr.scopeCharset, ctx)
-	rr.descRequired = pass.ResolveReporter(rr.descRequired, ctx)
-	rr.descLength = pass.ResolveReporter(rr.descLength, ctx)
-	rr.descCapitalize = pass.ResolveReporter(rr.descCapitalize, ctx)
-	rr.descNoPeriod = pass.ResolveReporter(rr.descNoPeriod, ctx)
-	rr.bodyLength = pass.ResolveReporter(rr.bodyLength, ctx)
-	rr.bodyTotalLength = pass.ResolveReporter(rr.bodyTotalLength, ctx)
-	rr.noCoauthor = pass.ResolveReporter(rr.noCoauthor, ctx)
-	return rr
+func (reporters ruleReporters) resolved(ctx *pass.Context) ruleReporters {
+	reporters.initial = pass.ResolveReporter(reporters.initial, ctx)
+	reporters.merge = pass.ResolveReporter(reporters.merge, ctx)
+	reporters.emojiRequired = pass.ResolveReporter(reporters.emojiRequired, ctx)
+	reporters.emojiCount = pass.ResolveReporter(reporters.emojiCount, ctx)
+	reporters.typeRequired = pass.ResolveReporter(reporters.typeRequired, ctx)
+	reporters.typeEnum = pass.ResolveReporter(reporters.typeEnum, ctx)
+	reporters.scopeCharset = pass.ResolveReporter(reporters.scopeCharset, ctx)
+	reporters.descRequired = pass.ResolveReporter(reporters.descRequired, ctx)
+	reporters.descLength = pass.ResolveReporter(reporters.descLength, ctx)
+	reporters.descCapitalize = pass.ResolveReporter(reporters.descCapitalize, ctx)
+	reporters.descNoPeriod = pass.ResolveReporter(reporters.descNoPeriod, ctx)
+	reporters.bodyLength = pass.ResolveReporter(reporters.bodyLength, ctx)
+	reporters.bodyTotalLength = pass.ResolveReporter(reporters.bodyTotalLength, ctx)
+	reporters.noCoauthor = pass.ResolveReporter(reporters.noCoauthor, ctx)
+	return reporters
 }
 
 type emojiReporters struct {
@@ -78,10 +78,10 @@ func defaultEmojiReporters() emojiReporters {
 	}
 }
 
-func (er emojiReporters) resolved(ctx *pass.Context) emojiReporters {
-	er.prohibited = pass.ResolveReporter(er.prohibited, ctx)
-	er.catalog = pass.ResolveReporter(er.catalog, ctx)
-	er.repeat = pass.ResolveReporter(er.repeat, ctx)
-	er.softRepeat = pass.ResolveReporter(er.softRepeat, ctx)
-	return er
+func (reporters emojiReporters) resolved(ctx *pass.Context) emojiReporters {
+	reporters.prohibited = pass.ResolveReporter(reporters.prohibited, ctx)
+	reporters.catalog = pass.ResolveReporter(reporters.catalog, ctx)
+	reporters.repeat = pass.ResolveReporter(reporters.repeat, ctx)
+	reporters.softRepeat = pass.ResolveReporter(reporters.softRepeat, ctx)
+	return reporters
 }

@@ -23,21 +23,21 @@ func NewAnalyzer(reader gitReader) *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string { return ID }
+func (analyzer *Analyzer) ID() string { return ID }
 
-func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if len(ctx.StagedRenames) == 0 {
 		return nil
 	}
-	params := ctx.Params(a.ID())
-	minSimilarity := params.Int(ParamMinSimilarity, a.minSimilarity)
-	reporter := pass.ResolveReporter(a.reporter, ctx)
+	params := ctx.Params(analyzer.ID())
+	minSimilarity := params.Int(ParamMinSimilarity, analyzer.minSimilarity)
+	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
 
 	var moves *moveContext
-	if a.reader != nil {
-		moves = newMoveContext(a.reader, ctx.StagedRenames)
+	if analyzer.reader != nil {
+		moves = newMoveContext(analyzer.reader, ctx.StagedRenames)
 	}
 	var findings []pass.Finding
 	for _, rename := range ctx.StagedRenames {

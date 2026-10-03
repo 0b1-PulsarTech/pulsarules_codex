@@ -36,14 +36,14 @@ func NewPackageBoundaryAnalyzer() *PackageBoundaryAnalyzer {
 	}
 }
 
-func (a *PackageBoundaryAnalyzer) ID() string          { return "arch-boundary" }
-func (a *PackageBoundaryAnalyzer) Stage() pass.StageID { return pass.StageArch }
+func (analyzer *PackageBoundaryAnalyzer) ID() string          { return "arch-boundary" }
+func (analyzer *PackageBoundaryAnalyzer) Stage() pass.StageID { return pass.StageArch }
 
-func (a *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}
-	reporter := pass.ResolveReporter(a.reporter, ctx)
+	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
 
 	modulePath, findings := resolveModuleOrFindings(reporter, ctx.ProjectDir)
 	if modulePath == "" {
@@ -53,11 +53,11 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	idx := loadProjectIndex(ctx.Sources, modulePath)
 	violations := checkBoundaries(idx.graph, modulePath)
 
-	for _, v := range violations {
+	for _, violation := range violations {
 		findings = append(findings, reporter.At(
 			".",
 			0,
-			v,
+			violation,
 			"invert the dependency or move the import to the correct layer",
 		))
 	}
@@ -74,14 +74,14 @@ func NewImportCycleAnalyzer() *ImportCycleAnalyzer {
 	}
 }
 
-func (a *ImportCycleAnalyzer) ID() string          { return "import-cycle" }
-func (a *ImportCycleAnalyzer) Stage() pass.StageID { return pass.StageArch }
+func (analyzer *ImportCycleAnalyzer) ID() string          { return "import-cycle" }
+func (analyzer *ImportCycleAnalyzer) Stage() pass.StageID { return pass.StageArch }
 
-func (a *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}
-	reporter := pass.ResolveReporter(a.reporter, ctx)
+	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
 
 	modulePath, findings := resolveModuleOrFindings(reporter, ctx.ProjectDir)
 	if modulePath == "" {
@@ -92,14 +92,14 @@ func (a *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	cycles := findCycles(idx.graph)
 
 	for _, cycle := range cycles {
-		var b strings.Builder
-		for hop, p := range cycle {
+		var builder strings.Builder
+		for hop, pkg := range cycle {
 			if hop > 0 {
-				b.WriteString(" → ")
+				builder.WriteString(" → ")
 			}
-			b.WriteString(stripModule(p, modulePath))
+			builder.WriteString(stripModule(pkg, modulePath))
 		}
-		path := b.String()
+		path := builder.String()
 		findings = append(findings, reporter.At(
 			".",
 			0,

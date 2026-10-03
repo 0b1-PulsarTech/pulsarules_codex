@@ -14,13 +14,13 @@ type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer { return &Analyzer{} }
 
-func (a *Analyzer) ID() string { return "output" }
+func (analyzer *Analyzer) ID() string { return "output" }
 
-func (a *Analyzer) Stage() pass.StageID { return pass.StageOutput }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageOutput }
 
-func (a *Analyzer) TransformsInPlace() {}
+func (analyzer *Analyzer) TransformsInPlace() {}
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if len(ctx.Findings) == 0 {
 		return nil
 	}

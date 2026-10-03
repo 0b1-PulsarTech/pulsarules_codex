@@ -13,7 +13,7 @@ type repoStub struct {
 	err    error
 }
 
-func (r repoStub) CurrentBranch() (string, error) { return r.branch, r.err }
+func (repo repoStub) CurrentBranch() (string, error) { return repo.branch, repo.err }
 
 var errStub = errors.New("git unavailable")
 

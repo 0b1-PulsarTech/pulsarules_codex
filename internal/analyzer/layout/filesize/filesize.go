@@ -21,13 +21,13 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return "file-size" }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string          { return "file-size" }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	limits := newLineLimits(a.resolveMaxLines(ctx))
-	reporter := pass.ResolveReporter(a.reporter, ctx)
-	eligible := pass.ExtensionFilter(ctx, a.ID(), pass.DefaultSourceExtensions())
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	limits := newLineLimits(analyzer.resolveMaxLines(ctx))
+	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	eligible := pass.ExtensionFilter(ctx, analyzer.ID(), pass.DefaultSourceExtensions())
 	return pass.EachChangedFile(ctx, eligible, func(
 		fc pass.FileChange, src []byte,
 	) []pass.Finding {
@@ -45,8 +45,8 @@ func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	})
 }
 
-func (a *Analyzer) resolveMaxLines(ctx *pass.Context) int {
-	return ctx.Params(a.ID()).Int("max_lines", a.maxLines)
+func (analyzer *Analyzer) resolveMaxLines(ctx *pass.Context) int {
+	return ctx.Params(analyzer.ID()).Int("max_lines", analyzer.maxLines)
 }
 
 type lineLimits struct {
@@ -64,11 +64,11 @@ func newLineLimits(maxLines int) lineLimits {
 	}
 }
 
-func (l lineLimits) forFile(path string) int {
+func (limits lineLimits) forFile(path string) int {
 	if pass.IsTestPath(path) {
-		return l.test
+		return limits.test
 	}
-	return l.production
+	return limits.production
 }
 
 func countLines(src []byte) int {

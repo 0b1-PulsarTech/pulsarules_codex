@@ -86,12 +86,12 @@ func discoverCases(module string) []discoverCase {
 }
 
 func goFile(pkg string, imports ...string) string {
-	var b strings.Builder
-	b.WriteString("package " + pkg + "\n")
+	var builder strings.Builder
+	builder.WriteString("package " + pkg + "\n")
 	for _, imp := range imports {
-		b.WriteString("import \"" + imp + "\"\n")
+		builder.WriteString("import \"" + imp + "\"\n")
 	}
-	return b.String()
+	return builder.String()
 }
 
 func TestDiscoverPackages(t *testing.T) {
@@ -129,11 +129,11 @@ func TestBuildGraph(t *testing.T) {
 		"example.com/b": {Imports: []string{"example.com/c"}},
 		"example.com/c": {Imports: []string{"os"}},
 	}
-	g := buildGraph(pkgs, "example.com")
-	if len(g) != 3 {
-		t.Fatalf("expected 3 entries in graph, got %d", len(g))
+	graph := buildGraph(pkgs, "example.com")
+	if len(graph) != 3 {
+		t.Fatalf("expected 3 entries in graph, got %d", len(graph))
 	}
-	if !slices.Contains(g["example.com/a"], "example.com/b") {
+	if !slices.Contains(graph["example.com/a"], "example.com/b") {
 		t.Error("example.com/a should depend on example.com/b")
 	}
 }

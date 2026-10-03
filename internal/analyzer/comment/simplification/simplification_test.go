@@ -113,8 +113,8 @@ func TestAnalyze(t *testing.T) {
 func TestAnalyze_NoLangs(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer(nil)
-	got := a.Analyze(
+	analyzer := NewAnalyzer(nil)
+	got := analyzer.Analyze(
 		&pass.Context{ChangedFiles: []pass.FileChange{{Path: "x.go", Extension: ".go"}}},
 	)
 	if got != nil {
@@ -125,8 +125,8 @@ func TestAnalyze_NoLangs(t *testing.T) {
 func TestAnalyze_NoSources(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer(testLangs())
-	got := a.Analyze(
+	analyzer := NewAnalyzer(testLangs())
+	got := analyzer.Analyze(
 		&pass.Context{ChangedFiles: []pass.FileChange{{Path: "x.go", Extension: ".go"}}},
 	)
 	if got != nil {
@@ -143,8 +143,8 @@ func TestAnalyze_UnknownLanguageSkipped(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	a := NewAnalyzer(testLangs())
-	got := a.Analyze(&pass.Context{
+	analyzer := NewAnalyzer(testLangs())
+	got := analyzer.Analyze(&pass.Context{
 		ProjectDir:   dir,
 		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{{Path: "notes.json", Extension: ".json"}},
@@ -158,8 +158,8 @@ func TestAnalyze_NonexistentFileSkipped(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	a := NewAnalyzer(testLangs())
-	got := a.Analyze(&pass.Context{
+	analyzer := NewAnalyzer(testLangs())
+	got := analyzer.Analyze(&pass.Context{
 		ProjectDir:   dir,
 		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{{Path: "gone.go", Extension: ".go"}},
@@ -185,8 +185,8 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	a := NewAnalyzer(testLangs())
-	got := a.Analyze(&pass.Context{
+	analyzer := NewAnalyzer(testLangs())
+	got := analyzer.Analyze(&pass.Context{
 		ProjectDir:   dir,
 		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		ChangedFiles: []pass.FileChange{{Path: "testdata/no_label.go", Extension: ".go"}},

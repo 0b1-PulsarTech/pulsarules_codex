@@ -16,7 +16,7 @@ type disabledLinters struct {
 	} `yaml:"linters"`
 }
 
-func (r *Runner) forcedBaselineFindings(configPath string) []pass.Finding {
+func (runner *Runner) forcedBaselineFindings(configPath string) []pass.Finding {
 	if configPath == "" {
 		return nil
 	}
@@ -29,7 +29,7 @@ func (r *Runner) forcedBaselineFindings(configPath string) []pass.Finding {
 	forcedLinters := forcedLinters()
 	var cfg disabledLinters
 	if err = yaml.Unmarshal(raw, &cfg); err != nil {
-		return []pass.Finding{r.warning.At(configPath, 0, fmt.Sprintf(
+		return []pass.Finding{runner.warning.At(configPath, 0, fmt.Sprintf(
 			"cannot read the golangci-lint config, so the forced baseline "+
 				"(%v) cannot be confirmed: %v",
 			forcedLinters,
@@ -44,7 +44,7 @@ func (r *Runner) forcedBaselineFindings(configPath string) []pass.Finding {
 		}
 		// An explicit disable beats -E (golangci-lint v2.12.2, under both `default: standard`
 		// and `default: all`), and silently: the run reports nothing for that linter.
-		findings = append(findings, r.warning.At(configPath, 0, fmt.Sprintf(
+		findings = append(findings, runner.warning.At(configPath, 0, fmt.Sprintf(
 			"linters.disable turns off %q, which this baseline forces via -E; "+
 				"an explicit disable wins over -E, so that check silently reports nothing",
 			linter,

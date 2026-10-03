@@ -31,17 +31,17 @@ func NewTextAnalyzer() *TextAnalyzer {
 	}}
 }
 
-func (a *TextAnalyzer) ID() string { return "text-markers" }
+func (analyzer *TextAnalyzer) ID() string { return "text-markers" }
 
-func (a *TextAnalyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *TextAnalyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *TextAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *TextAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	reporters := textReporters{
-		carrier:     pass.ResolveReporter(a.reporters.carrier, ctx),
-		contextual:  pass.ResolveReporter(a.reporters.contextual, ctx),
-		frontmatter: pass.ResolveReporter(a.reporters.frontmatter, ctx),
+		carrier:     pass.ResolveReporter(analyzer.reporters.carrier, ctx),
+		contextual:  pass.ResolveReporter(analyzer.reporters.contextual, ctx),
+		frontmatter: pass.ResolveReporter(analyzer.reporters.frontmatter, ctx),
 	}
-	return eachMarkedFile(ctx, a.ID(), func(fc pass.FileChange, src string) []pass.Finding {
+	return eachMarkedFile(ctx, analyzer.ID(), func(fc pass.FileChange, src string) []pass.Finding {
 		return checkCarriers(fc, src, reporters)
 	})
 }
@@ -86,13 +86,13 @@ func NewTypographicAnalyzer() *TypographicAnalyzer {
 	}
 }
 
-func (a *TypographicAnalyzer) ID() string { return "typographic-markers" }
+func (analyzer *TypographicAnalyzer) ID() string { return "typographic-markers" }
 
-func (a *TypographicAnalyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *TypographicAnalyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *TypographicAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	reporter := pass.ResolveReporter(a.reporter, ctx)
-	return eachMarkedFile(ctx, a.ID(), func(fc pass.FileChange, src string) []pass.Finding {
+func (analyzer *TypographicAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	return eachMarkedFile(ctx, analyzer.ID(), func(fc pass.FileChange, src string) []pass.Finding {
 		return checkTypographic(fc, src, reporter)
 	})
 }
