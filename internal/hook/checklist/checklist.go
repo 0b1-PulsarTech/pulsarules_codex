@@ -1,4 +1,4 @@
-package hook
+package checklist
 
 import (
 	"strings"
