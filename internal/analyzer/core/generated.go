@@ -112,7 +112,8 @@ func IsSimplificationMarker(line string) bool {
 	return false
 }
 
-func isGeneratedMarkerLine(trimmed string) bool {
+func IsGeneratedMarkerLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
 	prefix, ok := matchingLinePrefix(trimmed)
 	if !ok {
 		return false

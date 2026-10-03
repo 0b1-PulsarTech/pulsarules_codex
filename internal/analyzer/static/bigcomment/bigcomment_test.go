@@ -210,6 +210,7 @@ func TestBigComment_SkipsTestdata(t *testing.T) {
 		t.Fatalf("got %d findings for a testdata fixture, want 0: %+v", len(findings), findings)
 	}
 }
+
 func TestBigComment_ReportsOnADartFileJustLikeGo(t *testing.T) {
 	t.Parallel()
 

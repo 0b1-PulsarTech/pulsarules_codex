@@ -21,19 +21,77 @@ func directiveHeaderPrefixes() []string {
 	}
 }
 
-func IsExemptHeaderLine(line string) bool {
-	trimmed := strings.TrimSpace(line)
-	if isGeneratedMarkerLine(trimmed) {
-		return true
+func migrationMarkerPrefixes() []string {
+	return []string{"-- +goose ", "-- migrate:", "-- +migrate "}
+}
+
+func docblockPragmas() []string {
+	return []string{
+		"@jest-environment", "@vitest-environment", "@format", "@prettier",
+		"@jsx", "@jsxImportSource", "@flow",
 	}
-	return isSQLCAnnotation(trimmed) || slices.ContainsFunc(
-		directiveHeaderPrefixes(),
-		func(prefix string) bool { return strings.HasPrefix(trimmed, prefix) },
-	)
+}
+
+func IsExemptHeaderLine(line string) bool {
+	return IsGeneratedMarkerLine(line) || IsDirectiveHeaderLine(line)
+}
+
+func IsDirectiveHeaderLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return IsContentStartLine(trimmed) || hasAnyPrefix(trimmed, directiveHeaderPrefixes())
+}
+
+func IsContentStartLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return isSQLCAnnotation(trimmed) || hasAnyPrefix(trimmed, migrationMarkerPrefixes())
+}
+
+func hasAnyPrefix(text string, prefixes []string) bool {
+	return slices.ContainsFunc(prefixes, func(prefix string) bool {
+		return strings.HasPrefix(text, prefix)
+	})
+}
+
+func ExemptHeaderSpan(lines []string) int {
+	if len(lines) == 0 {
+		return 0
+	}
+	first := strings.TrimSpace(lines[0])
+	if !strings.HasPrefix(first, "/*") {
+		if IsDirectiveHeaderLine(first) {
+			return 1
+		}
+		return 0
+	}
+	span := blockSpan(lines)
+	if IsDirectiveHeaderLine(first) || hasDocblockPragma(lines[:span]) {
+		return span
+	}
+	return 0
+}
+
+func blockSpan(lines []string) int {
+	for idx, line := range lines {
+		rest := line
+		if idx == 0 {
+			rest = strings.TrimSpace(line)[len("/*"):]
+		}
+		if strings.Contains(rest, "*/") {
+			return idx + 1
+		}
+	}
+	return len(lines)
+}
+
+func hasDocblockPragma(block []string) bool {
+	return slices.ContainsFunc(block, func(line string) bool {
+		fields := strings.Fields(strings.TrimLeft(strings.TrimSpace(line), "/* \t"))
+		return len(fields) > 0 && slices.Contains(docblockPragmas(), fields[0])
+	})
 }
 
 func isSQLCAnnotation(trimmed string) bool {
-	body, ok := strings.CutPrefix(trimmed, "-- name: ")
+	body, ok := sqlcBody(trimmed)
 	if !ok {
 		return false
 	}
@@ -52,4 +110,15 @@ func isSQLCAnnotation(trimmed string) bool {
 		return true
 	}
 	return false
+}
+
+func sqlcBody(trimmed string) (string, bool) {
+	if body, ok := strings.CutPrefix(trimmed, "-- name: "); ok {
+		return body, true
+	}
+	block, ok := strings.CutPrefix(trimmed, "/* name: ")
+	if !ok {
+		return "", false
+	}
+	return strings.CutSuffix(block, " */")
 }
