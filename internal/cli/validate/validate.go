@@ -9,7 +9,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/evals"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/validate"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -23,7 +23,7 @@ func RunValidate(inj remy.Injector, _ *version.Options) error {
 	result := validate.Validate(
 		idx,
 		render.LintSections,
-		governance.RuleAnalyzersCheck,
+		registry.RuleAnalyzersCheck,
 		evals.ValidateCheck,
 	)
 	if !result.OK() {

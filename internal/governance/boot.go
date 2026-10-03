@@ -2,6 +2,7 @@ package governance
 
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -11,20 +12,20 @@ func (r *StageRunner) registerForScope(index *knowledge.Index, repo vcs.Reposito
 	langs := pass.NewLanguageRegistry()
 	language.RegisterAll(langs)
 
-	for _, a := range Analyzers(index, langs, repo, maxGateFor(scope)) {
+	for _, a := range registry.Analyzers(index, langs, repo, maxGateFor(scope)) {
 		r.Register(a)
 	}
 }
 
-func maxGateFor(scope Scope) []Gate {
+func maxGateFor(scope Scope) []registry.Gate {
 	switch scope {
 	case ScopeCommit:
 		// The pre-commit and commit-msg hooks run it, so only the fast static gate may.
-		return []Gate{GateStatic}
+		return []registry.Gate{registry.GateStatic}
 	case ScopeChanged:
 		// golangci-lint needs the whole project; branch-name guards a push.
-		return []Gate{GateStatic, GateArch}
+		return []registry.Gate{registry.GateStatic, registry.GateArch}
 	default:
-		return []Gate{GateStatic, GateArch, GateFullOnly}
+		return []registry.Gate{registry.GateStatic, registry.GateArch, registry.GateFullOnly}
 	}
 }

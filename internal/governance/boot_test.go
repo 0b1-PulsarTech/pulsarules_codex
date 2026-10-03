@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 )
 
 func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
@@ -128,7 +129,7 @@ func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
 			t.Parallel()
 
 			langs := pass.NewLanguageRegistry()
-			built := Analyzers(nil, langs, nil, maxGateFor(testCase.scope))
+			built := registry.Analyzers(nil, langs, nil, maxGateFor(testCase.scope))
 			got := make([]string, len(built))
 			for i, a := range built {
 				got[i] = a.ID()
