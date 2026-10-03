@@ -87,7 +87,7 @@ func (d *Dispatcher) emitStop(event string, session *sessionTracker) (int, error
 		return count, fmt.Errorf("read stop.txt: %w", err)
 	}
 	context := strings.TrimSpace(string(text)) + block
-	if bullets := checklist.TypedChecklist(status); bullets != "" {
+	if bullets := checklist.Typed(status); bullets != "" {
 		context += "\n" + bullets
 	}
 	context += "\n\nUncommitted changes:\n" + status.String()

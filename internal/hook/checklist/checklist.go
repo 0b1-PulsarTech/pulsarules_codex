@@ -6,19 +6,16 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-func TypedChecklist(status vcs.Status) string {
+func Typed(status vcs.Status) string {
 	present := status.Extensions()
 	var bullets []string
-	seen := map[string]bool{}
+	// A fixed order keeps output stable for the content-based dedup in SessionTracker.
 	for _, ext := range []string{".go", ".sql", ".yaml", ".md"} {
 		if !present[ext] {
 			continue
 		}
 		for _, bullet := range bulletsFor(ext) {
-			if !seen[bullet] {
-				seen[bullet] = true
-				bullets = append(bullets, "  - "+bullet)
-			}
+			bullets = append(bullets, "  - "+bullet)
 		}
 	}
 	return strings.Join(bullets, "\n")
