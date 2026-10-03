@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 type Change struct {
@@ -37,10 +39,15 @@ func (s Status) String() string {
 	for _, c := range s.Changes {
 		xy := string([]byte{c.Staging, c.Worktree})
 		if c.OldPath != "" {
-			lines = append(lines, fmt.Sprintf("%s %s -> %s", xy, c.OldPath, c.Path))
+			lines = append(
+				lines,
+				fmt.Sprintf(
+					"%s %s -> %s", xy, printable.Path(c.OldPath), printable.Path(c.Path),
+				),
+			)
 			continue
 		}
-		lines = append(lines, xy+" "+c.Path)
+		lines = append(lines, xy+" "+printable.Path(c.Path))
 	}
 	return strings.Join(lines, "\n")
 }
