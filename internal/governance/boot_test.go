@@ -92,9 +92,9 @@ func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
 		"top-of-file", "big-comment", "simplification-path", "commit-lint",
 		"commit-move-purity", "control-flow", "shadowing", "complexity", "named-returns",
 		"vacuous-doc", "test-comment", "single-use-declaration", "doc-comment",
-		"body-header-comment", "history-narration", "variadic-index", "too-many-results",
-		"ungrouped-interfaces", "package-level-var", "package-file-count",
-		"time-discipline", "context-discipline", "pprof-labels",
+		"body-header-comment", "history-narration", "loop-var-i", "variadic-index",
+		"too-many-results", "ungrouped-interfaces", "package-level-var",
+		"package-file-count", "time-discipline", "context-discipline", "pprof-labels",
 	}
 	tail := []string{"rule-injection", "output"}
 	arch := []string{"arch-boundary", "import-cycle"}

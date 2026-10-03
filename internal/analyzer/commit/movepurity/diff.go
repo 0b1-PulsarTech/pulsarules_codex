@@ -67,10 +67,10 @@ func isGoIdentifier(s string) bool {
 	if s == "" {
 		return false
 	}
-	for i, r := range s {
+	for offset, r := range s {
 		switch {
 		case r == '_' || unicode.IsLetter(r):
-		case i > 0 && unicode.IsDigit(r):
+		case offset > 0 && unicode.IsDigit(r):
 		default:
 			return false
 		}

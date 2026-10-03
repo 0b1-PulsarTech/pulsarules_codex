@@ -3,6 +3,7 @@ package install
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"slices"
 	"strconv"
@@ -33,21 +34,30 @@ func resolveSelection(opts *version.Options, idx *knowledge.Index) (selection.Ch
 	}
 }
 
-func promptSkillSelection(idx *knowledge.Index) (selection.Choice, error) {
-	catalog := idx.SkillsOrdered()
-	_, _ = fmt.Println("Select skills to install (mandatory skills are always included):")
-	for i, skill := range catalog {
+func printSkillCatalog(out io.Writer, catalog []knowledge.Skill) {
+	_, _ = fmt.Fprintln(out, "Select skills to install (mandatory skills are always included):")
+	for pos, skill := range catalog {
 		mark, note := " ", ""
 		if skill.AlwaysLoad {
 			// Mandatory skills show pre-selected and locked, so the user sees the whole
 			// baseline.
 			mark, note = "x", " (mandatory, locked)"
 		}
-		_, _ = fmt.Printf(
+		_, _ = fmt.Fprintf(
+			out,
 			"  %2d. [%s] %s - %s%s\n",
-			i+1, mark, skill.ID, knowledge.FirstSentence(skill.Description), note,
+			pos+1,
+			mark,
+			skill.ID,
+			knowledge.FirstSentence(skill.Description),
+			note,
 		)
 	}
+}
+
+func promptSkillSelection(idx *knowledge.Index) (selection.Choice, error) {
+	catalog := idx.SkillsOrdered()
+	printSkillCatalog(os.Stdout, catalog)
 	_, _ = fmt.Print("skills> (e.g. 1,4,7-9 | a = all | Enter = mandatory-only): ")
 	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
 

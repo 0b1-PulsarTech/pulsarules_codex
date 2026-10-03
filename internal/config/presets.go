@@ -38,6 +38,7 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 		"doc-comment":          {Enabled: false},
 		"body-header-comment":  {Enabled: false},
 		"history-narration":    {Enabled: false},
+		"loop-var-i":           {Enabled: false},
 		"variadic-index":       {Enabled: false},
 		"too-many-results":     {Enabled: false},
 		"ungrouped-interfaces": {Enabled: false},

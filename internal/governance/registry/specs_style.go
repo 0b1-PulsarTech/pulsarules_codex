@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/loopvari"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/bodyheader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/doc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/comment/narration"
@@ -16,6 +17,7 @@ func styleSpecs() []analyzerSpec {
 		staticSpec("doc-comment", doc.NewAnalyzer),
 		staticSpec("body-header-comment", bodyheader.NewAnalyzer),
 		langSpec("history-narration", narration.NewAnalyzer),
+		staticSpec("loop-var-i", loopvari.NewAnalyzer),
 		staticSpec("variadic-index", variadicindex.NewAnalyzer),
 		staticSpec("too-many-results", resultcount.NewAnalyzer),
 		staticSpec("ungrouped-interfaces", interfacegroup.NewAnalyzer),

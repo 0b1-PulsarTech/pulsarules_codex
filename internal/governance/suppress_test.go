@@ -49,9 +49,9 @@ func TestSplitGenerated(t *testing.T) {
 					got.Findings,
 				)
 			}
-			for i, want := range testCase.wantKept {
-				if got.Findings[i].File != want {
-					t.Errorf("kept[%d].File = %q, want %q", i, got.Findings[i].File, want)
+			for idx, want := range testCase.wantKept {
+				if got.Findings[idx].File != want {
+					t.Errorf("kept[%d].File = %q, want %q", idx, got.Findings[idx].File, want)
 				}
 			}
 		})
