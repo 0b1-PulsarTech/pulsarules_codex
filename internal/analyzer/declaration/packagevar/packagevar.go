@@ -47,6 +47,9 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 			errFuncs:  siblings.errFuncs,
 			embeds:    embedGroups(file),
 		}
+		if isTestFile(fc.Path) {
+			scan.assigned = dirScans.assigned[pkgKey{dir: dir, pkg: file.Name.Name}]
+		}
 		return scan.run()
 	})
 }
@@ -68,6 +71,8 @@ func alreadyReported(ctx *pass.Context) map[site]bool {
 	}
 	return reported
 }
+
+func isTestFile(file string) bool { return strings.HasSuffix(file, "_test.go") }
 
 func dirOf(file string) string { return path.Dir(filepath.ToSlash(file)) }
 
