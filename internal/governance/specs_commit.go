@@ -28,7 +28,7 @@ func commitSpecs() []analyzerSpec {
 				}
 				return message.NewAnalyzer(catalog)
 			},
-			scopes: staticScopes(),
+			gate: GateStatic,
 		},
 		{
 			id: "commit-move-purity",
@@ -37,7 +37,7 @@ func commitSpecs() []analyzerSpec {
 			) pass.Analyzer {
 				return movepurity.NewAnalyzer(repo)
 			},
-			scopes: staticScopes(),
+			gate: GateStatic,
 		},
 	}
 }

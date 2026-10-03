@@ -1,57 +1,30 @@
 package governance
 
 import (
-	"slices"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-type analyzerBuilder func(
-	index *knowledge.Index,
-	langs *pass.LanguageRegistry,
-	repo vcs.Repository,
-) pass.Analyzer
-
-type analyzerSpec struct {
-	id     string
-	build  analyzerBuilder
-	scopes []Scope
-}
-
-func staticScopes() []Scope {
-	return []Scope{ScopeFull, ScopeCommit, ScopeChanged}
-}
-
-func archScopes() []Scope {
-	return []Scope{ScopeFull, ScopeChanged}
-}
-
-func delegationScopes() []Scope {
-	return []Scope{ScopeFull}
-}
-
 func (r *StageRunner) registerForScope(index *knowledge.Index, repo vcs.Repository, scope Scope) {
 	langs := pass.NewLanguageRegistry()
 	language.RegisterAll(langs)
 
-	for _, spec := range analyzerSpecs() {
-		if !slices.Contains(spec.scopes, scope) {
-			continue
-		}
-		if a := spec.build(index, langs, repo); a != nil {
-			r.Register(a)
-		}
+	for _, a := range Analyzers(index, langs, repo, maxGateFor(scope)) {
+		r.Register(a)
 	}
 }
 
-func RegisteredAnalyzerIDs() []string {
-	specs := analyzerSpecs()
-	ids := make([]string, len(specs))
-	for i, spec := range specs {
-		ids[i] = spec.id
+func maxGateFor(scope Scope) []Gate {
+	switch scope {
+	case ScopeCommit:
+		// The pre-commit and commit-msg hooks run it, so only the fast static gate may.
+		return []Gate{GateStatic}
+	case ScopeChanged:
+		// golangci-lint needs the whole project; branch-name guards a push.
+		return []Gate{GateStatic, GateArch}
+	default:
+		return []Gate{GateStatic, GateArch, GateFullOnly}
 	}
-	return ids
 }

@@ -10,7 +10,7 @@ import (
 func TestRuleAnalyzersCheck(t *testing.T) {
 	t.Parallel()
 
-	registered := RegisteredAnalyzerIDs()
+	registered := IDs()
 	if len(registered) == 0 {
 		t.Fatal("expected at least one registered analyzer id")
 	}
@@ -55,7 +55,7 @@ func TestRuleAnalyzersCheck(t *testing.T) {
 	}
 }
 
-func TestRuleAnalyzersCheck_EmbeddedKnowledgeBaseDeclaresOnlyRegisteredAnalyzers(t *testing.T) {
+func TestRuleAnalyzersCheck_EmbeddedKnowledge(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")

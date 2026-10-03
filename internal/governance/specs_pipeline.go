@@ -16,38 +16,25 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func pipelineAnalyzerSpecs() []analyzerSpec {
+func pipelineSpecs() []analyzerSpec {
 	return slices.Concat([]analyzerSpec{
 		staticSpec("time-discipline", clock.NewAnalyzer),
 		staticSpec("context-discipline", loopexit.NewAnalyzer),
 		staticSpec("pprof-labels", pproflabel.NewAnalyzer),
 		{
+			// Full-only gate, which is where the pre-push hook runs. A branch
+			// name is not a property of a staged change, so gating a commit on it
+			// would block work that a rename before pushing fixes.
 			id: "branch-name",
 			build: func(
 				_ *knowledge.Index, _ *pass.LanguageRegistry, repo vcs.Repository,
 			) pass.Analyzer {
 				return branch.NewAnalyzer(repo)
 			},
-			scopes: []Scope{ScopeFull},
+			gate: GateFullOnly,
 		},
-		{
-			id: "arch-boundary",
-			build: func(
-				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
-			) pass.Analyzer {
-				return arch.NewPackageBoundaryAnalyzer()
-			},
-			scopes: archScopes(),
-		},
-		{
-			id: "import-cycle",
-			build: func(
-				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
-			) pass.Analyzer {
-				return arch.NewImportCycleAnalyzer()
-			},
-			scopes: archScopes(),
-		},
+		gatedSpec("arch-boundary", GateArch, arch.NewPackageBoundaryAnalyzer),
+		gatedSpec("import-cycle", GateArch, arch.NewImportCycleAnalyzer),
 	}, delegationSpecs(), []analyzerSpec{
 		{
 			id: "rule-injection",
@@ -56,7 +43,7 @@ func pipelineAnalyzerSpecs() []analyzerSpec {
 			) pass.Analyzer {
 				return rulesummary.NewAnalyzer(index)
 			},
-			scopes: staticScopes(),
+			gate: GateStatic,
 		},
 		staticSpec("output", output.NewAnalyzer),
 	})
@@ -71,7 +58,7 @@ func delegationSpecs() []analyzerSpec {
 			) pass.Analyzer {
 				return golangcilint.NewAnalyzer("golangci-lint")
 			},
-			scopes: delegationScopes(),
+			gate: GateFullOnly,
 		},
 	}
 }
