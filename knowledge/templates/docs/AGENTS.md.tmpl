@@ -17,7 +17,7 @@ patterns, workflows), summarized as the skill list below. When this project also
 tool-specific layout (`pulsarules_cli install --target claude` renders `.claude/skills/`,
 `--target opencode` renders `.opencode/skills/`), each skill's full instructions live there as
 `<id>/SKILL.md`. When a rule or pattern is ambiguous, fall back to the Effective Go / Code Review
-Comments baseline.
+Comments baseline, minus its doc-comment requirement: these standards ban doc comments.
 
 ## Mandatory routing contract (read before any Go/SQL/config change)
 
