@@ -35,7 +35,8 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 		"single-use-declaration": {Enabled: false},
 		// First-adoption noise: these analyzers flag existing code written before
 		// the rules they enforce.
-		"doc-comment": {Enabled: false},
+		"doc-comment":         {Enabled: false},
+		"body-header-comment": {Enabled: false},
 	}
 }
 

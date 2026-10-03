@@ -21,6 +21,7 @@ func defaultRuleMap() map[string]string {
 		"big-comment":            "effective-go",
 		"vacuous-doc":            "effective-go",
 		"doc-comment":            "effective-go",
+		"body-header-comment":    "effective-go",
 		"test-comment":           "effective-go",
 		"simplification-path":    "minimalism",
 		"single-use-declaration": "minimalism",

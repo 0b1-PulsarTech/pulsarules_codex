@@ -15,3 +15,12 @@ there is no project-config surface for them yet.
   comment on a `const` or `var` declaration and a comment on a struct field are not flagged.
 - Behaviour: when a directive (for example `// goverter:`) and prose share a group the hint says to
   keep the directive lines.
+
+## body-header-comment
+
+- Rule: `effective-go`.
+- Flags: a comment block of `min_lines` or more prose lines directly opening a function or function
+  literal body; the comment lines before the first statement, summed.
+- Params: `min_lines` (default 2).
+- Exemptions: directive lines are not counted; a group led by a simplification-path marker is exempt;
+  test functions and helpers.
