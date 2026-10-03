@@ -10,6 +10,7 @@ type Finding struct {
 	Suggestion  string
 	RuleID      string
 	RuleSummary string
+	Symbol      string
 }
 
 type Reporter struct {

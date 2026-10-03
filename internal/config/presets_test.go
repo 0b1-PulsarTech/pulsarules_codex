@@ -127,6 +127,7 @@ func TestApplyPreset_MinimalDisablesNewAnalyzers(t *testing.T) {
 		"doc-comment",
 		"body-header-comment",
 		"history-narration",
+		"package-level-var",
 		"package-file-count",
 	}
 

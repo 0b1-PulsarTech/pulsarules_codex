@@ -39,6 +39,14 @@ each analyzer's own id.
   misread. "the only tool ever used to call x" is flagged; it cannot be told apart from
   "nobody ever used to call this".
 
+## package-level-var
+
+- Rule: `code-smells` (global state).
+- Flags: every package-level `var` that is not exempt, mutable or not.
+- Params: none.
+- Exemptions: a name already reported by `single-use-declaration` is not reported twice.
+- Skipped: directories Go ignores (leading `.` or `_`, `testdata`).
+
 ## package-file-count
 
 - Rule: `code-placement-go`.

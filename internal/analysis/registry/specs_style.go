@@ -4,6 +4,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/bodyheadercomment"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/doccomment"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/packagefilecount"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/packagelevelvar"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/static/historynarration"
 )
 
@@ -12,6 +13,7 @@ func styleSpecs() []analyzerSpec {
 		staticSpec("doc-comment", doccomment.NewAnalyzer),
 		staticSpec("body-header-comment", bodyheadercomment.NewAnalyzer),
 		langSpec("history-narration", historynarration.NewAnalyzer),
+		staticSpec("package-level-var", packagelevelvar.NewAnalyzer),
 		staticSpec("package-file-count", packagefilecount.NewAnalyzer),
 	}
 }

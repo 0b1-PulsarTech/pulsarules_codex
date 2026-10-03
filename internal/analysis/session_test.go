@@ -3,6 +3,7 @@ package analysis
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
@@ -234,5 +235,75 @@ func TestSession_ScopeCommit_EmptyStatus(t *testing.T) {
 	findings := sess.Analyze(ScopeCommit, &vcs.Status{}, FileSetChanged).Findings
 	if len(findings) != 0 {
 		t.Fatalf("expected 0 findings with an explicit empty status, got %+v", findings)
+	}
+}
+
+func TestSession_PackageLevelVarState(t *testing.T) {
+	t.Parallel()
+
+	const source = "package p\n\n" +
+		"var helperCount = 0\n\n" +
+		"var sharedLimit = 0\n\n" +
+		"func Track() int {\n\thelperCount++\n\tsharedLimit++\n\treturn sharedLimit\n}\n\n" +
+		"func Reset() {\n\tsharedLimit = 0\n}\n"
+
+	testCases := []struct {
+		name               string
+		disableSingleUse   bool
+		wantSingleUseLines []int
+		wantPackageVarLine []int
+	}{
+		{
+			name:               "single-use-declaration enabled claims the one-function var",
+			wantSingleUseLines: []int{3},
+			wantPackageVarLine: []int{5},
+		},
+		{
+			name: "single-use-declaration disabled " +
+				"leaves both vars to package-level-var",
+			disableSingleUse:   true,
+			wantSingleUseLines: nil,
+			wantPackageVarLine: []int{3, 5},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			repoDir := t.TempDir()
+			if err := os.WriteFile(
+				filepath.Join(repoDir, "p.go"),
+				[]byte(source),
+				0o600,
+			); err != nil {
+				t.Fatalf("write fixture: %v", err)
+			}
+			cfg := config.Defaults()
+			cfg.ApplyPreset()
+			if testCase.disableSingleUse {
+				cfg.Analyzers["single-use-declaration"] = config.AnalyzerConfig{Enabled: false}
+			}
+			result := NewSession(&goldenRepo{root: repoDir}, "", nil, cfg).
+				Analyze(ScopeChanged, nil, FileSetAll)
+
+			linesByAnalyzer := make(map[string][]int)
+			for _, finding := range result.Findings {
+				linesByAnalyzer[finding.AnalyzerID] = append(
+					linesByAnalyzer[finding.AnalyzerID], finding.Line,
+				)
+			}
+			got := linesByAnalyzer["single-use-declaration"]
+			if !slices.Equal(got, testCase.wantSingleUseLines) {
+				t.Errorf(
+					"single-use-declaration lines = %v, want %v",
+					got,
+					testCase.wantSingleUseLines,
+				)
+			}
+			got = linesByAnalyzer["package-level-var"]
+			if !slices.Equal(got, testCase.wantPackageVarLine) {
+				t.Errorf("package-level-var lines = %v, want %v", got, testCase.wantPackageVarLine)
+			}
+		})
 	}
 }

@@ -16,10 +16,12 @@ func checkCandidate(
 	if !ok {
 		return nil
 	}
-	return []core.Finding{reporter.At(
+	finding := reporter.At(
 		decl.File,
 		decl.Line,
 		fmt.Sprintf("%s is referenced only inside %s", decl.Name, owner),
 		fmt.Sprintf("move the declaration inside %s", owner),
-	)}
+	)
+	finding.Symbol = decl.Name
+	return []core.Finding{finding}
 }
