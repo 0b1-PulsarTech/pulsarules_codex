@@ -8,12 +8,13 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
 )
 
+type limit struct {
+	maxLines int
+	reporter core.Reporter
+}
+
 func scanFile(
-	src []byte,
-	fc core.FileChange,
-	syntax lexical.CommentSyntax,
-	maxLines int,
-	reporter core.Reporter,
+	src []byte, fc core.FileChange, syntax lexical.CommentSyntax, bound limit,
 ) []core.Finding {
 	var findings []core.Finding
 	scanner := lexical.NewCommentScanner(syntax)
@@ -21,11 +22,12 @@ func scanFile(
 	blockLines := 0
 	exempt := false
 	flush := func() {
-		if blockLines > maxLines && !exempt {
-			findings = append(findings, reporter.At(
+		if blockLines > bound.maxLines && !exempt {
+			findings = append(findings, bound.reporter.At(
 				fc.Path,
 				blockStart,
-				"comment block is "+strconv.Itoa(blockLines)+" lines, max "+strconv.Itoa(maxLines),
+				"comment block is "+strconv.Itoa(blockLines)+" lines, max "+
+					strconv.Itoa(bound.maxLines),
 				"split the comment or move the explanation into named functions/types",
 			))
 		}

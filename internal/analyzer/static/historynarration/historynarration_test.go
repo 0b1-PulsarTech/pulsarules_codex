@@ -31,7 +31,7 @@ func runScan(t *testing.T, testCase scanCase) {
 	}
 	syntax := langspec.Lookup(name).CommentSyntax()
 	fc := core.FileChange{Path: "f", Extension: "." + ext}
-	got := scanFile([]byte(source), fc, syntax, NewAnalyzer(nil).reporter(), parsedGo{})
+	got := scanFile([]byte(source), fc, NewAnalyzer(nil).reporter(), commentSource{syntax: syntax})
 	if len(got) != testCase.expect {
 		t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
 	}
@@ -45,9 +45,8 @@ func TestScanFileUnparsableGo(t *testing.T) {
 	got := scanFile(
 		[]byte("// used to be a loop\nfunc ("),
 		fc,
-		syntax,
 		NewAnalyzer(nil).reporter(),
-		parsedGo{},
+		commentSource{syntax: syntax},
 	)
 	if len(got) != 1 || got[0].Line != 1 {
 		t.Fatalf("findings = %+v, want one on line 1", got)
@@ -72,7 +71,8 @@ func TestScanFileUnparsableGoFallback(t *testing.T) {
 			syntax := langspec.Lookup("go").CommentSyntax()
 			fc := core.FileChange{Path: "f.go", Extension: ".go"}
 			got := scanFile(
-				[]byte(testCase.source), fc, syntax, NewAnalyzer(nil).reporter(), parsedGo{},
+				[]byte(testCase.source), fc, NewAnalyzer(nil).reporter(),
+				commentSource{syntax: syntax},
 			)
 			if len(got) != testCase.expect {
 				t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
@@ -87,7 +87,7 @@ func TestScanFileSplitPhraseLine(t *testing.T) {
 	syntax := langspec.Lookup("go").CommentSyntax()
 	fc := core.FileChange{Path: "f.go", Extension: ".go"}
 	source := "package p\n\n// the guard was\n// replaced by a check\n"
-	got := scanFile([]byte(source), fc, syntax, NewAnalyzer(nil).reporter(), parsedGo{})
+	got := scanFile([]byte(source), fc, NewAnalyzer(nil).reporter(), commentSource{syntax: syntax})
 	if len(got) != 1 || got[0].Line != 3 {
 		t.Fatalf("findings = %+v, want one on line 3", got)
 	}
@@ -99,7 +99,7 @@ func TestScanFileMessageNamesPhrase(t *testing.T) {
 	syntax := langspec.Lookup("go").CommentSyntax()
 	fc := core.FileChange{Path: "f.go", Extension: ".go"}
 	source := "package p\n\n// we never ever used to retry\n"
-	got := scanFile([]byte(source), fc, syntax, NewAnalyzer(nil).reporter(), parsedGo{})
+	got := scanFile([]byte(source), fc, NewAnalyzer(nil).reporter(), commentSource{syntax: syntax})
 	want := "comment narrates history: \"never ever used to retry\""
 	if len(got) != 1 || got[0].Message != want {
 		t.Fatalf("findings = %+v, want one with message %q", got, want)

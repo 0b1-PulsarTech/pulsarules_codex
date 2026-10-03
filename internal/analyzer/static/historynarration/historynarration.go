@@ -37,7 +37,8 @@ func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		eligible,
 		func(fc core.FileChange, src []byte) []core.Finding {
 			syntax := analyzer.langs.Lookup(fc.Extension).CommentSyntax()
-			return scanFile(src, fc, syntax, reporter, analyzer.cachedGo(ctx, fc))
+			source := commentSource{syntax: syntax, parsed: analyzer.cachedGo(ctx, fc)}
+			return scanFile(src, fc, reporter, source)
 		},
 	)
 }
@@ -68,13 +69,17 @@ func commentBlocks(
 	return blocks(scanSegments(src, syntax, fc.Extension))
 }
 
+type commentSource struct {
+	syntax lexical.CommentSyntax
+	parsed parsedGo
+}
+
 func scanFile(
-	src []byte, fc core.FileChange, syntax lexical.CommentSyntax, reporter core.Reporter,
-	parsed parsedGo,
+	src []byte, fc core.FileChange, reporter core.Reporter, source commentSource,
 ) []core.Finding {
 	var findings []core.Finding
 	phrases := narrationPhrases()
-	for _, block := range commentBlocks(src, fc, syntax, parsed) {
+	for _, block := range commentBlocks(src, fc, source.syntax, source.parsed) {
 		for _, found := range findHits(wordsOf(block), phrases) {
 			findings = append(findings, reporter.At(
 				fc.Path,

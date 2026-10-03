@@ -37,7 +37,7 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		eligible,
 		func(fc core.FileChange, src []byte) []core.Finding {
 			syntax := a.langs.Lookup(fc.Extension).CommentSyntax()
-			return scanFile(src, fc, syntax, ml, reporter)
+			return scanFile(src, fc, syntax, limit{maxLines: ml, reporter: reporter})
 		},
 	)
 }
