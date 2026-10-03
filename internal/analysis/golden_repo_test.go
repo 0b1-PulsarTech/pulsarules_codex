@@ -1,6 +1,9 @@
 package analysis
 
 import (
+	"io/fs"
+	"path/filepath"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -33,3 +36,19 @@ func (g *goldenRepo) StagedEntry(string) (mode, id string, err error) { return "
 func (g *goldenRepo) HeadDir(string) ([]string, error) { return nil, nil }
 
 func (g *goldenRepo) StagedDir(string) ([]string, error) { return nil, nil }
+
+func (g *goldenRepo) ListFiles() ([]string, error) {
+	var files []string
+	err := filepath.WalkDir(g.root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil || entry.IsDir() {
+			return walkErr
+		}
+		rel, relErr := filepath.Rel(g.root, path)
+		if relErr != nil {
+			return relErr
+		}
+		files = append(files, filepath.ToSlash(rel))
+		return nil
+	})
+	return files, err
+}

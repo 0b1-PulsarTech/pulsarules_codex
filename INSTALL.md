@@ -216,25 +216,27 @@ pulsarules_cli commitlint --file .git/COMMIT_EDITMSG --project .
 
 Run the analyzer pipeline (static, AST, architecture, delegation, rule injection) against the
 project and print findings to stderr, exiting non-zero on any error-severity finding. By default it
-analyzes only files `git status` reports as changed; `--all-files` walks the whole source tree
-instead (skipping `.git/`, `.claude/`, `.opencode/`, `generated/`, `build/`, and `vendor/`).
-`--scope commit` runs the lightweight static + AST + commit checks only (what the pre-commit hook
-uses); `--scope changed` adds the architecture analyzers over the changed files (what the Stop hook
-uses); `--scope full` (default) adds delegation and the `branch-name` check. An unrecognized value
-is rejected by name rather than silently running the full set. `--preset recommended|strict|minimal`
-selects analyzer thresholds. `--typographic-severity` overrides how hard a `typographic-markers`
-finding lands for this run; `--branch-extra-types` widens the branch-type prefixes `branch-name`
-accepts (see the install flags of the same name for the baked-in variants). Findings in generated
-files (detected by a generator banner such as `// Code generated ... DO NOT EDIT.`, or a `.sql` file
-in a directory with an Atlas `atlas.sum`) are suppressed by default; `--include-generated` turns
-that off.
+analyzes only files `git status` reports as changed; `--all-files` analyzes every file git lists
+(`git ls-files`: tracked plus untracked-but-not-ignored), minus tool and dependency directories such
+as `.claude/`, `testdata/`, `vendor/` and `node_modules/`. It falls back to a filesystem walk
+(skipping `sources.DefaultSkipDirs`) only if `git ls-files` itself fails; governance requires a git
+work tree. `--scope commit` runs the lightweight static + AST + commit checks only (what the
+pre-commit hook uses); `--scope changed` adds the architecture analyzers over the changed files
+(what the Stop hook uses); `--scope full` (default) adds delegation and the `branch-name` check. An
+unrecognized value is rejected by name rather than silently running the full set.
+`--preset recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity`
+overrides how hard a `typographic-markers` finding lands for this run; `--branch-extra-types` widens
+the branch-type prefixes `branch-name` accepts (see the install flags of the same name for the
+baked-in variants). Findings in generated files (detected by a generator banner such as
+`// Code generated ... DO NOT EDIT.`, or a `.sql` file in a directory with an Atlas `atlas.sum`) are
+suppressed by default; `--include-generated` turns that off.
 
 ```sh
 # the exact governance gate task tools:governance / CI run:
 pulsarules_cli governance --project . --all-files
 
 # full sweep, explicit scope:
-pulsarules_cli governance --scope full --all-files
+pulsarules_cli governance --project . --scope full --all-files
 ```
 
 ### Clean

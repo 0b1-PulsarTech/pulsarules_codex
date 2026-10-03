@@ -1,6 +1,8 @@
 package analysis
 
 import (
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
@@ -23,7 +25,12 @@ type Session struct {
 	index       *knowledge.Index
 	cfgAnalysis *core.AnalysisConfig
 	skips       sources.SkipSet
+	gitSkips    sources.SkipSet
 	logger      *slog.Logger
+}
+
+type fileLister interface {
+	ListFiles() ([]string, error)
 }
 
 func NewSession(
@@ -42,6 +49,7 @@ func NewSession(
 		index:       index,
 		cfgAnalysis: toAnalysisConfig(cfg),
 		skips:       sources.NewSkipSet(sources.DefaultSkipDirs()),
+		gitSkips:    sources.NewSkipSet(sources.GitSkipDirs()),
 		logger:      slog.Default(),
 	}
 }
@@ -51,6 +59,7 @@ type Discovery struct {
 	ChangedFiles  []core.FileChange
 	GitHistory    []core.GitCommitEntry
 	StagedRenames []core.Rename
+	Skips         sources.SkipSet
 }
 
 func (s *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Result {
@@ -68,15 +77,14 @@ func (s *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Result
 }
 
 func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Discovery {
-	d := &Discovery{GitHistory: s.gitHistory()}
+	d := &Discovery{GitHistory: s.gitHistory(), Skips: s.skips}
 	if s.repo == nil {
 		return d
 	}
 
 	d.StagedRenames = s.stagedRenames()
 
-	d.Sources = sources.NewSourceProvider(s.repo.Root(), s.skips)
-
+	s.attachSources(d)
 	if files == FileSetAll {
 		d.ChangedFiles = walkAllFiles(d.Sources)
 		return d
@@ -108,7 +116,7 @@ func (s *Session) Load(d *Discovery) *core.AnalysisContext {
 		ChangedFiles:  d.ChangedFiles,
 		GitHistory:    d.GitHistory,
 		StagedRenames: d.StagedRenames,
-		Skips:         s.skips,
+		Skips:         d.Skips,
 	}
 
 	if len(d.ChangedFiles) > 0 && d.Sources != nil {
@@ -116,4 +124,29 @@ func (s *Session) Load(d *Discovery) *core.AnalysisContext {
 		ctx.ASTCache = populateASTCache(d.ChangedFiles, d.Sources)
 	}
 	return ctx
+}
+
+func (s *Session) attachSources(d *Discovery) {
+	root := s.repo.Root()
+	paths, err := s.listFiles()
+	if err != nil {
+		s.logger.Warn("walking the filesystem instead of git's file list", slog.Any("error", err))
+		d.Sources, d.Skips = sources.NewSourceProvider(root, s.skips), s.skips
+		return
+	}
+	base := sources.NewSourceProvider(root, s.gitSkips)
+	d.Sources = sources.NewListedSourceProvider(base, paths, s.gitSkips)
+	d.Skips = s.gitSkips
+}
+
+func (s *Session) listFiles() ([]string, error) {
+	lister, ok := s.repo.(fileLister)
+	if !ok {
+		return nil, fmt.Errorf("repository cannot list files: %w", errors.ErrUnsupported)
+	}
+	paths, err := lister.ListFiles()
+	if err != nil {
+		return nil, fmt.Errorf("list repository files: %w", err)
+	}
+	return paths, nil
 }
