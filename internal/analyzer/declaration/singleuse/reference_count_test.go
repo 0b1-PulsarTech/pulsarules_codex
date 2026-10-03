@@ -46,6 +46,7 @@ func TestCheckCandidate(t *testing.T) {
 				Line:       3,
 				Message:    "helperCount is referenced only inside Track",
 				Suggestion: "move the declaration inside Track",
+				Symbol:     "helperCount",
 			}},
 		},
 	}

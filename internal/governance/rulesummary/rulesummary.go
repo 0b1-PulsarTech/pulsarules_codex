@@ -23,6 +23,7 @@ func defaultRuleMap() map[string]string {
 		"history-narration":      "effective-go",
 		"doc-comment":            "effective-go",
 		"body-header-comment":    "effective-go",
+		"package-level-var":      "code-smells",
 		"package-file-count":     "code-placement-go",
 		"test-comment":           "effective-go",
 		"simplification-path":    "minimalism",

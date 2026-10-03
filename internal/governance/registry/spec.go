@@ -58,6 +58,7 @@ func IDs() []string {
 }
 
 func specs() []analyzerSpec {
+	// Table order is run order; package-level-var dedupes against single-use-declaration.
 	return slices.Concat(coreSpecs(), commitSpecs(), astSpecs(), styleSpecs(), pipelineSpecs())
 }
 

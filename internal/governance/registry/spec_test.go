@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -27,6 +28,21 @@ func TestLangSpec_InjectedRegistry(t *testing.T) {
 	}
 	if built.langs != langs {
 		t.Fatalf("constructor got %p, want the injected %p", built.langs, langs)
+	}
+}
+
+func TestIDs_PackageLevelVarOrder(t *testing.T) {
+	t.Parallel()
+
+	ids := IDs()
+	dependency := slices.Index(ids, "single-use-declaration")
+	dependent := slices.Index(ids, "package-level-var")
+	if dependency < 0 || dependent < 0 {
+		t.Fatalf("missing ids: dependency=%d dependent=%d", dependency, dependent)
+	}
+	if dependency >= dependent {
+		t.Fatalf("single-use-declaration at %d must precede package-level-var at %d",
+			dependency, dependent)
 	}
 }
 
