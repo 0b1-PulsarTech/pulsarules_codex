@@ -1,6 +1,7 @@
 package vcs
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -194,5 +195,89 @@ func TestStagedRenameDiff(t *testing.T) {
 	}
 	if strings.Contains(diff, "+line one") {
 		t.Fatalf("StagedRenameDiff() = %q, want the shared lines to stay out of the delta", diff)
+	}
+}
+
+func TestStagedRenames_UserDiffConfig(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		config [][]string
+		oldDir string
+		newDir string
+	}{
+		{
+			"color always",
+			[][]string{{"color.diff", "always"}, {"color.ui", "always"}},
+			"conf",
+			"deploy",
+		},
+		{"external diff", [][]string{{"diff.external", "false"}}, "conf", "deploy"},
+		{"textconv", [][]string{{"diff.strip.textconv", "true"}}, "conf", "deploy"},
+		{"quoted non-ascii path", nil, "conf", "d\u00e9ploy"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			initRepo(t, dir)
+			for _, pair := range testCase.config {
+				runGitOrFatal(t, dir, "config", pair[0], pair[1])
+			}
+			body := "name: a\nport: 80\nhost: x\n"
+			writeAndCommit(t, dir, "initial", map[string]string{
+				".gitattributes":            "*.yaml diff=strip\n",
+				testCase.oldDir + "/a.yaml": body,
+			})
+			runGitOrFatal(t, dir, "rm", "-q", testCase.oldDir+"/a.yaml")
+			writeFile(t, dir, testCase.newDir+"/a.yaml", "name: a\nport: 6666\nhost: x\n")
+			runGitOrFatal(t, dir, "add", "-A")
+
+			repo, err := Open(dir)
+			if err != nil {
+				t.Fatalf("Open: %v", err)
+			}
+			renames, err := repo.StagedRenames(1)
+			if err != nil {
+				t.Fatalf("StagedRenames: %v", err)
+			}
+			want := Rename{
+				OldPath: testCase.oldDir + "/a.yaml", NewPath: testCase.newDir + "/a.yaml",
+			}
+			if len(renames) != 1 || renames[0].OldPath != want.OldPath ||
+				renames[0].NewPath != want.NewPath || renames[0].Score >= 100 {
+				t.Fatalf("StagedRenames() = %+v, want one partial pair %+v", renames, want)
+			}
+		})
+	}
+}
+
+func TestParseNameStatus(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		fields []string
+		want   []Rename
+	}{
+		{"empty", []string{""}, nil},
+		{"modify then rename", []string{"M", "a", "R090", "b", "c", ""}, []Rename{{"b", "c", 90}}},
+		{"copy is not a rename", []string{"C100", "a", "b", ""}, nil},
+		{"truncated rename", []string{"R090", "b"}, nil},
+		{"bad score", []string{"Rxx", "b", "c"}, nil},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := parseNameStatus(testCase.fields)
+			if !slices.Equal(got, testCase.want) {
+				t.Fatalf(
+					"parseNameStatus(%q) = %+v, want %+v", testCase.fields, got, testCase.want,
+				)
+			}
+		})
 	}
 }
