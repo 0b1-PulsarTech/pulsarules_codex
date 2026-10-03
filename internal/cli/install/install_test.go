@@ -88,7 +88,11 @@ func TestInstallPostTargets_EmptyGitHooks(t *testing.T) {
 	hookReg := install.NewRegistry()
 
 	output := captureStdout(t, func() {
-		if err := installPostTargets(opts, dir, nil, hookReg, []string{}); err != nil {
+		if err := installPostTargets(
+			opts,
+			installConfig{absBase: dir, gitHooks: []string{}},
+			installCollaborators{hooks: hookReg},
+		); err != nil {
 			t.Fatalf("installPostTargets: %v", err)
 		}
 	})

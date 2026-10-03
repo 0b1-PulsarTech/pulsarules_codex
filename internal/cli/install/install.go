@@ -51,7 +51,7 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 		}
 	}
 
-	return installPostTargets(opts, cfg.absBase, deps.templates, deps.hooks, cfg.gitHooks)
+	return installPostTargets(opts, cfg, deps)
 }
 
 func printHooksBlock(templates fs.FS) error {
