@@ -1,6 +1,8 @@
 package hook
 
 import (
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -48,5 +50,30 @@ func TestEmitPostEdit_EscapesBaseName(t *testing.T) {
 				t.Errorf("context %q lacks the quoted name %s", ctx, want)
 			}
 		})
+	}
+}
+
+func TestEmitPostEdit_CleanNoticeOnReminder(t *testing.T) {
+	t.Parallel()
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	root := t.TempDir()
+	path := filepath.Join(root, "a.go")
+	if writeErr := os.WriteFile(path, []byte("package a // x\u200By\n"), 0o600); writeErr != nil {
+		t.Fatalf("seed: %v", writeErr)
+	}
+	deps := Deps{Index: idx, ProjectDir: root, SkillsDir: t.TempDir()}
+	disp, out := dispatchCapture(deps)
+	_ = disp.Dispatch("post-edit", postEditPayload(t, path, uniqueSessionID(t)))
+
+	ctx := extractContext(t, out.String())
+	if !strings.Contains(ctx, "invisible marker") {
+		t.Errorf("context %q lacks the clean notice", ctx)
+	}
+	if !strings.Contains(ctx, "post-edit generic reminder") {
+		t.Errorf("context %q lacks the generic reminder", ctx)
 	}
 }
