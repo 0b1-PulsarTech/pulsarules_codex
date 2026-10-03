@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 )
 
 type Change struct {
@@ -37,10 +39,15 @@ func (s Status) String() string {
 	for _, c := range s.Changes {
 		xy := string([]byte{c.Staging, c.Worktree})
 		if c.OldPath != "" {
-			lines = append(lines, fmt.Sprintf("%s %s -> %s", xy, c.OldPath, c.Path))
+			lines = append(
+				lines,
+				fmt.Sprintf(
+					"%s %s -> %s", xy, escape.Path(c.OldPath), escape.Path(c.Path),
+				),
+			)
 			continue
 		}
-		lines = append(lines, xy+" "+c.Path)
+		lines = append(lines, xy+" "+escape.Path(c.Path))
 	}
 	return strings.Join(lines, "\n")
 }

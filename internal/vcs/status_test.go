@@ -291,6 +291,38 @@ func TestWorktreeStatus_StagedCopy(t *testing.T) {
 	}
 }
 
+func TestStatus_StringRoutesPathsThroughEscape(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		path    string
+		oldPath string
+		want    string
+	}{
+		{"arrow in untracked name", "a -> b.go", "", "?? \"a -> b.go\""},
+		{"arrow in old path", "y.go", "x -> m.go", "?? \"x -> m.go\" -> y.go"},
+		{"rename with newline in new path", "n\new.go", "old.go", "?? old.go -> \"n\\new.go\""},
+		{"rename with newline in old path", "new.go", "o\nld.go", "?? \"o\\nld.go\" -> new.go"},
+		{"plain path", "a.go", "", "?? a.go"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			change := Change{
+				Path:     testCase.path,
+				OldPath:  testCase.oldPath,
+				Staging:  '?',
+				Worktree: '?',
+			}
+			if got := (Status{Changes: []Change{change}}).String(); got != testCase.want {
+				t.Fatalf("String() = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}
+
 func TestWorktreeStatus_LeavesIndexUntouched(t *testing.T) {
 	t.Parallel()
 
