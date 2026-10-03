@@ -30,10 +30,6 @@ type Session struct {
 	logger      *slog.Logger
 }
 
-type fileLister interface {
-	ListFiles() ([]string, error)
-}
-
 func NewSession(
 	repo vcs.Repository,
 	commitMsg string,
@@ -142,20 +138,30 @@ func (s *Session) Load(d *Request) *pass.Context {
 }
 
 func (s *Session) attachSources(d *Request) {
-	root := s.repo.Root()
-	paths, err := s.listFiles()
-	if err != nil {
-		s.logger.Warn("walking the filesystem instead of git's file list", slog.Any("error", err))
-		d.Sources, d.Skips = source.NewProvider(root, s.skips), s.skips
-		return
-	}
-	base := source.NewProvider(root, s.gitSkips)
-	d.Sources = source.NewListedProvider(base, paths, s.gitSkips)
-	d.Skips = s.gitSkips
+	d.Sources, d.Skips = ListedSources(
+		s.repo, s.skips, s.gitSkips, s.logger)
 }
 
-func (s *Session) listFiles() ([]string, error) {
-	lister, ok := s.repo.(fileLister)
+type fileLister interface {
+	ListFiles() ([]string, error)
+}
+
+//nolint:ireturn // factory constructor returns interface
+func ListedSources(
+	repo vcs.Repository, skips, gitSkips source.SkipSet, logger *slog.Logger,
+) (source.Provider, source.SkipSet) {
+	root := repo.Root()
+	paths, err := listFiles(repo)
+	if err != nil {
+		logger.Warn("walking the filesystem instead of git's file list", slog.Any("error", err))
+		return source.NewProvider(root, skips), skips
+	}
+	base := source.NewProvider(root, gitSkips)
+	return source.NewListedProvider(base, paths, gitSkips), gitSkips
+}
+
+func listFiles(repo vcs.Repository) ([]string, error) {
+	lister, ok := repo.(fileLister)
 	if !ok {
 		return nil, fmt.Errorf("repository cannot list files: %w", errors.ErrUnsupported)
 	}
