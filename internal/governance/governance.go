@@ -3,7 +3,6 @@ package governance
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -72,13 +71,13 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Requ
 
 	const renameProbeScore = 1
 	if renames, err := s.repo.StagedRenames(renameProbeScore); err == nil {
-		d.StagedRenames = discovery.ToCoreRenames(renames)
+		d.StagedRenames = toCoreRenames(renames)
 	}
 
 	d.Sources = source.NewSourceProvider(s.repo.Root(), s.skips)
 
 	if files == FileSetAll {
-		d.ChangedFiles = discovery.WalkAllFiles(d.Sources)
+		d.ChangedFiles = walkAllFiles(d.Sources)
 		return d
 	}
 
@@ -89,7 +88,7 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Requ
 		}
 		status = &fetched
 	}
-	d.ChangedFiles = discovery.ChangesToFileChanges(status.Changes)
+	d.ChangedFiles = changesToFileChanges(status.Changes)
 	return d
 }
 
@@ -111,7 +110,7 @@ func (s *Session) Load(d *Request) *pass.Context {
 	}
 
 	if len(d.ChangedFiles) > 0 && d.Sources != nil {
-		discovery.MarkGenerated(ctx.ChangedFiles, d.Sources)
+		markGenerated(ctx.ChangedFiles, d.Sources)
 		ctx.ASTCache = populateASTCache(d.ChangedFiles, d.Sources)
 	}
 	return ctx
