@@ -85,13 +85,17 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Requ
 
 	d.StagedRenames = s.stagedRenames()
 
-	s.attachSources(d)
 	if files == FileSetAll {
+		s.attachSources(d)
 		d.ChangedFiles = walkAllFiles(d.Sources)
 		return d
 	}
 
 	d.ChangedFiles = s.changedFiles(scope, status)
+	// Commit scope only analyzes changed files; whole-tree analyzers on other scopes need Sources.
+	if len(d.ChangedFiles) > 0 || scope != ScopeCommit {
+		s.attachSources(d)
+	}
 	return d
 }
 
