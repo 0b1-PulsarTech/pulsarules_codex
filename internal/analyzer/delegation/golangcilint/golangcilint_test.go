@@ -12,8 +12,8 @@ import (
 func TestRun_NoBinary(t *testing.T) {
 	t.Parallel()
 
-	r := NewRunner("")
-	findings := r.Run(".", "")
+	runner := NewRunner("")
+	findings := runner.Run(".", "")
 	if len(findings) != 0 {
 		t.Fatalf("expected 0 findings with empty path, got %d", len(findings))
 	}
@@ -22,8 +22,8 @@ func TestRun_NoBinary(t *testing.T) {
 func TestRun_MissingBinary(t *testing.T) {
 	t.Parallel()
 
-	r := NewRunner("/nonexistent/golangci-lint")
-	findings := r.Run(".", "")
+	runner := NewRunner("/nonexistent/golangci-lint")
+	findings := runner.Run(".", "")
 	if len(findings) != 0 {
 		t.Fatalf("expected 0 findings for a missing binary, got %d: %+v", len(findings), findings)
 	}
@@ -33,11 +33,11 @@ func TestRun_TimeoutIsARealFailureNotASilentSkip(t *testing.T) {
 	t.Parallel()
 
 	script := writeExecSleepScriptNoGrandchild(t)
-	r := NewRunner(script)
-	r.timeout = 50 * time.Millisecond
+	runner := NewRunner(script)
+	runner.timeout = 50 * time.Millisecond
 
 	start := time.Now()
-	findings := r.Run(t.TempDir(), "")
+	findings := runner.Run(t.TempDir(), "")
 	elapsed := time.Since(start)
 
 	if elapsed > 2*time.Second {

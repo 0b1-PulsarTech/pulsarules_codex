@@ -31,17 +31,17 @@ func NewTextAnalyzer() *TextAnalyzer {
 	}}
 }
 
-func (a *TextAnalyzer) ID() string { return "text-markers" }
+func (analyzer *TextAnalyzer) ID() string { return "text-markers" }
 
-func (a *TextAnalyzer) Stage() core.StageID { return core.StageStatic }
+func (analyzer *TextAnalyzer) Stage() core.StageID { return core.StageStatic }
 
-func (a *TextAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+func (analyzer *TextAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	reporters := textReporters{
-		carrier:     a.reporters.carrier.Resolved(ctx),
-		contextual:  a.reporters.contextual.Resolved(ctx),
-		frontmatter: a.reporters.frontmatter.Resolved(ctx),
+		carrier:     analyzer.reporters.carrier.Resolved(ctx),
+		contextual:  analyzer.reporters.contextual.Resolved(ctx),
+		frontmatter: analyzer.reporters.frontmatter.Resolved(ctx),
 	}
-	return eachMarkedFile(ctx, a.ID(), func(fc core.FileChange, src string) []core.Finding {
+	return eachMarkedFile(ctx, analyzer.ID(), func(fc core.FileChange, src string) []core.Finding {
 		return checkCarriers(fc, src, reporters)
 	})
 }
@@ -86,13 +86,13 @@ func NewTypographicAnalyzer() *TypographicAnalyzer {
 	}
 }
 
-func (a *TypographicAnalyzer) ID() string { return "typographic-markers" }
+func (analyzer *TypographicAnalyzer) ID() string { return "typographic-markers" }
 
-func (a *TypographicAnalyzer) Stage() core.StageID { return core.StageStatic }
+func (analyzer *TypographicAnalyzer) Stage() core.StageID { return core.StageStatic }
 
-func (a *TypographicAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
-	reporter := a.reporter.Resolved(ctx)
-	return eachMarkedFile(ctx, a.ID(), func(fc core.FileChange, src string) []core.Finding {
+func (analyzer *TypographicAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	reporter := analyzer.reporter.Resolved(ctx)
+	return eachMarkedFile(ctx, analyzer.ID(), func(fc core.FileChange, src string) []core.Finding {
 		return checkTypographic(fc, src, reporter)
 	})
 }

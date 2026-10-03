@@ -14,7 +14,7 @@ import (
 func TestAnalyze(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	testCases := []struct {
 		name   string
@@ -46,7 +46,7 @@ func TestAnalyze(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := a.Analyze(testCase.ctx)
+			got := analyzer.Analyze(testCase.ctx)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d", len(got), testCase.expect)
 			}
@@ -107,7 +107,7 @@ func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
 	write("big_test.go", 300)
 	write("huge_test.go", 500)
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 	srcs := sources.NewProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs()))
 
 	testCases := []struct {
@@ -134,7 +134,7 @@ func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := a.Analyze(&core.AnalysisContext{
+			got := analyzer.Analyze(&core.AnalysisContext{
 				ProjectDir:   dir,
 				Sources:      srcs,
 				ChangedFiles: []core.FileChange{testCase.change},
@@ -160,8 +160,8 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	a := NewAnalyzer()
-	got := a.Analyze(&core.AnalysisContext{
+	analyzer := NewAnalyzer()
+	got := analyzer.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
 		Sources:    sources.NewProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{
@@ -182,8 +182,8 @@ func TestAnalyze_ReportsOnADartFileJustLikeGo(t *testing.T) {
 		t.Fatalf("write big.dart: %v", err)
 	}
 
-	a := NewAnalyzer()
-	got := a.Analyze(&core.AnalysisContext{
+	analyzer := NewAnalyzer()
+	got := analyzer.Analyze(&core.AnalysisContext{
 		ProjectDir: dir,
 		Sources:    sources.NewProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
 		ChangedFiles: []core.FileChange{

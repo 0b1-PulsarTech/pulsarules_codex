@@ -15,12 +15,12 @@ func NewGolangcilintAnalyzer(path string) *GolangcilintAnalyzer {
 	return &GolangcilintAnalyzer{runner: golangcilint.NewRunner(path)}
 }
 
-func (a *GolangcilintAnalyzer) ID() string          { return golangciLintID }
-func (a *GolangcilintAnalyzer) Stage() core.StageID { return core.StageStatic }
+func (analyzer *GolangcilintAnalyzer) ID() string          { return golangciLintID }
+func (analyzer *GolangcilintAnalyzer) Stage() core.StageID { return core.StageStatic }
 
-func (a *GolangcilintAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+func (analyzer *GolangcilintAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	configPath := extractGolangciConfigPath(ctx)
-	return a.runner.Run(ctx.ProjectDir, configPath)
+	return analyzer.runner.Run(ctx.ProjectDir, configPath)
 }
 
 func extractGolangciConfigPath(ctx *core.AnalysisContext) string {

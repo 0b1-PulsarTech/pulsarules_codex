@@ -36,14 +36,14 @@ func NewPackageBoundaryAnalyzer() *PackageBoundaryAnalyzer {
 	}
 }
 
-func (a *PackageBoundaryAnalyzer) ID() string          { return "arch-boundary" }
-func (a *PackageBoundaryAnalyzer) Stage() core.StageID { return core.StageArch }
+func (analyzer *PackageBoundaryAnalyzer) ID() string          { return "arch-boundary" }
+func (analyzer *PackageBoundaryAnalyzer) Stage() core.StageID { return core.StageArch }
 
-func (a *PackageBoundaryAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}
-	reporter := a.reporter.Resolved(ctx)
+	reporter := analyzer.reporter.Resolved(ctx)
 
 	modulePath, findings := resolveModulePathOrFindings(reporter, ctx.ProjectDir)
 	if modulePath == "" {
@@ -53,11 +53,11 @@ func (a *PackageBoundaryAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Find
 	idx := loadProjectIndex(ctx.Sources, modulePath)
 	violations := checkBoundaries(idx.graph, modulePath)
 
-	for _, v := range violations {
+	for _, violation := range violations {
 		findings = append(findings, reporter.At(
 			".",
 			0,
-			v,
+			violation,
 			"invert the dependency or move the import to the correct layer",
 		))
 	}
@@ -74,14 +74,14 @@ func NewImportCycleAnalyzer() *ImportCycleAnalyzer {
 	}
 }
 
-func (a *ImportCycleAnalyzer) ID() string          { return "import-cycle" }
-func (a *ImportCycleAnalyzer) Stage() core.StageID { return core.StageArch }
+func (analyzer *ImportCycleAnalyzer) ID() string          { return "import-cycle" }
+func (analyzer *ImportCycleAnalyzer) Stage() core.StageID { return core.StageArch }
 
-func (a *ImportCycleAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+func (analyzer *ImportCycleAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}
-	reporter := a.reporter.Resolved(ctx)
+	reporter := analyzer.reporter.Resolved(ctx)
 
 	modulePath, findings := resolveModulePathOrFindings(reporter, ctx.ProjectDir)
 	if modulePath == "" {
@@ -92,14 +92,14 @@ func (a *ImportCycleAnalyzer) Analyze(ctx *core.AnalysisContext) []core.Finding 
 	cycles := findCycles(idx.graph)
 
 	for _, cycle := range cycles {
-		var b strings.Builder
-		for hop, p := range cycle {
+		var builder strings.Builder
+		for hop, pkg := range cycle {
 			if hop > 0 {
-				b.WriteString(" → ")
+				builder.WriteString(" → ")
 			}
-			b.WriteString(stripModule(p, modulePath))
+			builder.WriteString(stripModule(pkg, modulePath))
 		}
-		path := b.String()
+		path := builder.String()
 		findings = append(findings, reporter.At(
 			".",
 			0,

@@ -34,20 +34,20 @@ func TestInjectRuleSummaries(t *testing.T) {
 
 	injectRuleSummaries(findings, idx)
 
-	check := func(t *testing.T, i int, wantRuleID string, wantSummary bool) {
+	check := func(t *testing.T, findingIdx int, wantRuleID string, wantSummary bool) {
 		t.Helper()
-		f := findings[i]
-		if f.RuleID != wantRuleID {
-			t.Errorf("finding %d: got RuleID=%q, want %q", i, f.RuleID, wantRuleID)
+		finding := findings[findingIdx]
+		if finding.RuleID != wantRuleID {
+			t.Errorf("finding %d: got RuleID=%q, want %q", findingIdx, finding.RuleID, wantRuleID)
 		}
-		hasSummary := f.RuleSummary != ""
+		hasSummary := finding.RuleSummary != ""
 		if hasSummary != wantSummary {
 			t.Errorf(
 				"finding %d: hasSummary=%v, want %v (summary length %d)",
-				i,
+				findingIdx,
 				hasSummary,
 				wantSummary,
-				len(f.RuleSummary),
+				len(finding.RuleSummary),
 			)
 		}
 	}
@@ -128,12 +128,12 @@ func TestInjectRuleSummaries_AlreadyHasSummary(t *testing.T) {
 func TestRuleInjectionAnalyzer_Stage(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer(nil)
-	if a.Stage() != core.StageRuleInjection {
-		t.Fatalf("expected StageRuleInjection, got %d", a.Stage())
+	analyzer := NewAnalyzer(nil)
+	if analyzer.Stage() != core.StageRuleInjection {
+		t.Fatalf("expected StageRuleInjection, got %d", analyzer.Stage())
 	}
-	if a.ID() != "rule-injection" {
-		t.Fatalf("expected ID rule-injection, got %q", a.ID())
+	if analyzer.ID() != "rule-injection" {
+		t.Fatalf("expected ID rule-injection, got %q", analyzer.ID())
 	}
 }
 
@@ -145,14 +145,14 @@ func TestAnalyzer_Summaries(t *testing.T) {
 		t.Fatalf("load knowledge: %v", err)
 	}
 
-	a := NewAnalyzer(idx)
+	analyzer := NewAnalyzer(idx)
 	ctx := &core.AnalysisContext{
 		Findings: []core.Finding{
 			{AnalyzerID: "naming", Severity: core.SeverityWarning, Message: "bad name"},
 		},
 	}
 
-	findings := a.Analyze(ctx)
+	findings := analyzer.Analyze(ctx)
 	if len(findings) != 0 {
 		t.Fatalf("expected empty return (mutates context), got %d findings", len(findings))
 	}

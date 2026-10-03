@@ -36,26 +36,29 @@ func NewAnalyzer(catalog *emoji.Catalog) *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string { return AnalyzerID }
+func (analyzer *Analyzer) ID() string { return AnalyzerID }
 
-func (a *Analyzer) Stage() core.StageID { return core.StageStatic }
+func (analyzer *Analyzer) Stage() core.StageID { return core.StageStatic }
 
-func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	if ctx.CommitMsg == "" {
 		return nil
 	}
 
 	msg := commitmsg.Parse(ctx.CommitMsg)
-	windowCfg := a.windowCfg.merge(ctx.Params(a.ID()))
+	windowCfg := analyzer.windowCfg.merge(ctx.Params(analyzer.ID()))
 
 	findings := make([]core.Finding, 0, typicalFindingCapacity)
-	findings = append(findings, Validate(msg, a.ruleCfg, a.ruleReporters.resolved(ctx))...)
+	findings = append(
+		findings,
+		Validate(msg, analyzer.ruleCfg, analyzer.ruleReporters.resolved(ctx))...,
+	)
 	findings = append(findings, EmojiCheck{
 		Message:   msg,
-		Catalog:   a.catalog,
+		Catalog:   analyzer.catalog,
 		History:   historySubjects(ctx.GitHistory),
 		Config:    windowCfg,
-		Reporters: a.emojiReporters.resolved(ctx),
+		Reporters: analyzer.emojiReporters.resolved(ctx),
 	}.ValidateEmoji()...)
 
 	return findings

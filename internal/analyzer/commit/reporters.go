@@ -42,22 +42,22 @@ func defaultRuleReporters() ruleReporters {
 	}
 }
 
-func (rr ruleReporters) resolved(ctx *core.AnalysisContext) ruleReporters {
-	rr.initial = rr.initial.Resolved(ctx)
-	rr.merge = rr.merge.Resolved(ctx)
-	rr.emojiRequired = rr.emojiRequired.Resolved(ctx)
-	rr.emojiCount = rr.emojiCount.Resolved(ctx)
-	rr.typeRequired = rr.typeRequired.Resolved(ctx)
-	rr.typeEnum = rr.typeEnum.Resolved(ctx)
-	rr.scopeCharset = rr.scopeCharset.Resolved(ctx)
-	rr.descRequired = rr.descRequired.Resolved(ctx)
-	rr.descLength = rr.descLength.Resolved(ctx)
-	rr.descCapitalize = rr.descCapitalize.Resolved(ctx)
-	rr.descNoPeriod = rr.descNoPeriod.Resolved(ctx)
-	rr.bodyLength = rr.bodyLength.Resolved(ctx)
-	rr.bodyTotalLength = rr.bodyTotalLength.Resolved(ctx)
-	rr.noCoauthor = rr.noCoauthor.Resolved(ctx)
-	return rr
+func (reporters ruleReporters) resolved(ctx *core.AnalysisContext) ruleReporters {
+	reporters.initial = reporters.initial.Resolved(ctx)
+	reporters.merge = reporters.merge.Resolved(ctx)
+	reporters.emojiRequired = reporters.emojiRequired.Resolved(ctx)
+	reporters.emojiCount = reporters.emojiCount.Resolved(ctx)
+	reporters.typeRequired = reporters.typeRequired.Resolved(ctx)
+	reporters.typeEnum = reporters.typeEnum.Resolved(ctx)
+	reporters.scopeCharset = reporters.scopeCharset.Resolved(ctx)
+	reporters.descRequired = reporters.descRequired.Resolved(ctx)
+	reporters.descLength = reporters.descLength.Resolved(ctx)
+	reporters.descCapitalize = reporters.descCapitalize.Resolved(ctx)
+	reporters.descNoPeriod = reporters.descNoPeriod.Resolved(ctx)
+	reporters.bodyLength = reporters.bodyLength.Resolved(ctx)
+	reporters.bodyTotalLength = reporters.bodyTotalLength.Resolved(ctx)
+	reporters.noCoauthor = reporters.noCoauthor.Resolved(ctx)
+	return reporters
 }
 
 type emojiReporters struct {
@@ -78,10 +78,10 @@ func defaultEmojiReporters() emojiReporters {
 	}
 }
 
-func (er emojiReporters) resolved(ctx *core.AnalysisContext) emojiReporters {
-	er.prohibited = er.prohibited.Resolved(ctx)
-	er.catalog = er.catalog.Resolved(ctx)
-	er.repeat = er.repeat.Resolved(ctx)
-	er.softRepeat = er.softRepeat.Resolved(ctx)
-	return er
+func (reporters emojiReporters) resolved(ctx *core.AnalysisContext) emojiReporters {
+	reporters.prohibited = reporters.prohibited.Resolved(ctx)
+	reporters.catalog = reporters.catalog.Resolved(ctx)
+	reporters.repeat = reporters.repeat.Resolved(ctx)
+	reporters.softRepeat = reporters.softRepeat.Resolved(ctx)
+	return reporters
 }

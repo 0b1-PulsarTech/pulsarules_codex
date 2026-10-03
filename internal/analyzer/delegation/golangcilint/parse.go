@@ -35,15 +35,15 @@ type lintPos struct {
 	Line     int    `json:"Line"`
 }
 
-func (r *Runner) parseOutput(result execx.Result, cmdErr error) []core.Finding {
-	if failure := r.exitFailure(result, cmdErr); failure != nil {
+func (runner *Runner) parseOutput(result execx.Result, cmdErr error) []core.Finding {
+	if failure := runner.exitFailure(result, cmdErr); failure != nil {
 		return failure
 	}
 
 	var parsed lintReport
 	if parseErr := json.Unmarshal(extractJSON([]byte(result.Stdout)), &parsed); parseErr != nil {
 		return []core.Finding{
-			r.failure.New(
+			runner.failure.New(
 				fmt.Sprintf("failed to parse golangci-lint output: %s", parseErr),
 			),
 		}
@@ -53,12 +53,12 @@ func (r *Runner) parseOutput(result execx.Result, cmdErr error) []core.Finding {
 	// A stale cache is the environment's problem, not the code's, so it
 	// warns instead of failing the gate the way a real lint finding does.
 	if escaped > 0 {
-		findings = append(findings, r.escapedWarning(escaped))
+		findings = append(findings, runner.escapedWarning(escaped))
 	}
 	return findings
 }
 
-func (r *Runner) exitFailure(result execx.Result, cmdErr error) []core.Finding {
+func (runner *Runner) exitFailure(result execx.Result, cmdErr error) []core.Finding {
 	if cmdErr == nil {
 		return nil
 	}
@@ -67,19 +67,19 @@ func (r *Runner) exitFailure(result execx.Result, cmdErr error) []core.Finding {
 		// A non-ExitError means the command never produced stdout to parse;
 		// report the real cause, not a JSON parse failure on empty output.
 		return []core.Finding{
-			r.failure.New(fmt.Sprintf("golangci-lint failed: %s", cmdErr)),
+			runner.failure.New(fmt.Sprintf("golangci-lint failed: %s", cmdErr)),
 		}
 	}
 	if isLintExit(exitErr.ExitCode()) {
 		return nil
 	}
 	if unavailable(result.Stderr) {
-		return []core.Finding{r.warning.New(
+		return []core.Finding{runner.warning.New(
 			"golangci-lint was busy elsewhere; its checks did not run",
 		)}
 	}
 	return []core.Finding{
-		r.failure.New(fmt.Sprintf("golangci-lint failed: %s", result.Stderr)),
+		runner.failure.New(fmt.Sprintf("golangci-lint failed: %s", result.Stderr)),
 	}
 }
 
@@ -105,11 +105,11 @@ func issueFindings(issues []lintIssue) (findings []core.Finding, escaped int) {
 	return findings, escaped
 }
 
-func (r *Runner) escapedWarning(escaped int) core.Finding {
-	return r.warning.NewWithSuggestion(
+func (runner *Runner) escapedWarning(escaped int) core.Finding {
+	return runner.warning.NewWithSuggestion(
 		fmt.Sprintf("dropped %d finding(s) naming files outside the analysed project", escaped),
-		"run `golangci-lint cache clean`; a stale cache reports paths from a directory that is "+
-			"gone",
+		"run `golangci-lint cache clean`; a stale cache reports paths from "+
+			"a directory that is gone",
 	)
 }
 
