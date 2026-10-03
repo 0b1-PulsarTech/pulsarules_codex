@@ -2,19 +2,24 @@ package install
 
 import (
 	"fmt"
-	"os"
+	"io"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/target"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 )
 
-func printReport(report target.Report) {
+func printReport(stdout, stderr io.Writer, report target.Report) {
 	for _, note := range report.Notes {
-		_, _ = fmt.Println(note)
+		_, _ = fmt.Fprintln(stdout, escape.Line(note))
 	}
 	for _, warning := range report.Warnings {
-		_, _ = fmt.Fprintln(os.Stderr, warning)
+		_, _ = fmt.Fprintln(stderr, escape.Line(warning))
 	}
+}
+
+func printWarning(out io.Writer, label string, err error) {
+	_, _ = fmt.Fprintf(out, "warning: %s: %s\n", label, escape.Line(err.Error()))
 }
 
 func printDependencyPulls(pulled []output.DependencyPull) {
