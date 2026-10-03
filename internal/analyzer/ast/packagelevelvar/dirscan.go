@@ -22,11 +22,15 @@ type dirInfo struct {
 }
 
 type dirScan struct {
-	dirs map[pkgKey]dirInfo
+	dirs     map[pkgKey]dirInfo
+	assigned map[pkgKey]map[string]bool
 }
 
 func scanDirs(ctx *core.AnalysisContext) dirScan {
-	scan := dirScan{dirs: make(map[pkgKey]dirInfo)}
+	scan := dirScan{
+		dirs:     make(map[pkgKey]dirInfo),
+		assigned: make(map[pkgKey]map[string]bool),
+	}
 	dirs := dirsWithVars(ctx)
 	if len(dirs) == 0 || ctx.Sources == nil {
 		return scan
@@ -39,8 +43,9 @@ func scanDirs(ctx *core.AnalysisContext) dirScan {
 			return true
 		}
 		src, ok := ctx.Sources.Read(file)
+		wantMain := isTestFile(file) && bytes.Contains(src, []byte("func TestMain("))
 		wantDecl := bytes.Contains(src, []byte("type ")) || bytes.Contains(src, []byte("func "))
-		if !ok || !wantDecl {
+		if !ok || !wantMain && !wantDecl {
 			return true
 		}
 		parsed, err := parser.ParseFile(fset, file, src, parser.SkipObjectResolution)
@@ -48,6 +53,9 @@ func scanDirs(ctx *core.AnalysisContext) dirScan {
 			return true
 		}
 		scan.collectDecls(dir, parsed)
+		if wantMain {
+			scan.collectMain(dir, parsed)
+		}
 		return true
 	})
 	return scan
@@ -72,6 +80,18 @@ func (scan dirScan) collectDecls(dir string, file *ast.File) {
 			if isErrReturning(typed) {
 				names.errFuncs[typed.Name.Name] = true
 			}
+		}
+	}
+}
+
+func (scan dirScan) collectMain(dir string, file *ast.File) {
+	key := pkgKey{dir: dir, pkg: file.Name.Name}
+	if scan.assigned[key] == nil {
+		scan.assigned[key] = make(map[string]bool)
+	}
+	for _, decl := range file.Decls {
+		if fn, isFunc := decl.(*ast.FuncDecl); isFunc && isTestMain(fn) {
+			collectAssigned(fn.Body, scan.assigned[key])
 		}
 	}
 }

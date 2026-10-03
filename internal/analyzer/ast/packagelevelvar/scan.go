@@ -14,6 +14,7 @@ type fileScan struct {
 	file      *ast.File
 	reporter  core.Reporter
 	reported  map[site]bool
+	assigned  map[string]bool
 	imports   map[string]bool
 	types     map[string]bool
 	errFuncs  map[string]bool
@@ -103,7 +104,7 @@ func (scan fileScan) isNameExempt(vs *ast.ValueSpec, idx int) bool {
 	name := vs.Names[idx].Name
 	switch {
 	case name != "_":
-		return false
+		return scan.assigned[name]
 	case len(vs.Values) == len(vs.Names):
 		return scan.isConversionOrComposite(vs.Values[idx])
 	}

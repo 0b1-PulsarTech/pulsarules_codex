@@ -46,8 +46,9 @@ each analyzer's own id.
 - Params: none.
 - Exemptions: sentinel errors (`errors.New` and `fmt.Errorf` values, typed `Err*` sentinels (a
   composite literal of an `*Err`/`*Error` type, or an `Err`-named constructor call), re-exported
-  `pkg.Err*` sentinels `var ErrX = pkg.ErrY`), `//go:embed` variables and `var _ I = T{}`
-  assertions. A name already reported by `single-use-declaration` is not reported twice.
+  `pkg.Err*` sentinels `var ErrX = pkg.ErrY`), `//go:embed` variables, `var _ I = T{}` assertions,
+  and test variables assigned in `TestMain`. A name already reported by `single-use-declaration`
+  is not reported twice.
 - Skipped: directories Go ignores (leading `.` or `_`, `testdata`).
 
 ## package-file-count
