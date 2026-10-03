@@ -303,6 +303,43 @@ func TestAnalyze_SkipsNonTestFiles(t *testing.T) {
 	}
 }
 
+func TestAnalyze_GeneratedTestFiles(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name      string
+		generated bool
+		want      int
+	}{
+		{name: "a hand-written test file is checked", generated: false, want: 1},
+		{name: "a generated test file is skipped", generated: true, want: 0},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			cache := astcache.New()
+			src := []byte("package p\n\nimport \"testing\"\n\n" +
+				"// TestFoo checks the happy path.\nfunc TestFoo(t *testing.T) {}\n")
+			if _, err := cache.Parse("p_test.go", src); err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			ctx := &pass.Context{
+				ASTCache: cache,
+				ChangedFiles: []pass.FileChange{{
+					Path:      "p_test.go",
+					Extension: ".go",
+					IsTest:    true,
+					Generated: testCase.generated,
+				}},
+			}
+			if got := NewAnalyzer().Analyze(ctx); len(got) != testCase.want {
+				t.Errorf("findings = %+v, want %d", got, testCase.want)
+			}
+		})
+	}
+}
+
 func TestAnalyze_NoASTCache(t *testing.T) {
 	t.Parallel()
 

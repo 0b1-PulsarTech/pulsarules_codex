@@ -28,7 +28,7 @@ func (a *Analyzer) reporter() pass.Reporter {
 func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	reporter := pass.ResolveReporter(a.reporter(), ctx)
 	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
-		if !fc.IsTest {
+		if !fc.IsTest || fc.Generated {
 			return nil
 		}
 		return checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
