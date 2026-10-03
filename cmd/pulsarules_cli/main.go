@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -45,6 +44,6 @@ func die(err error) {
 	if exitErr, ok := errors.AsType[*cli.ExitError](err); ok {
 		os.Exit(exitErr.Code)
 	}
-	_, _ = fmt.Fprintln(os.Stderr, "pulsarules_cli:", err)
+	cli.ReportError(os.Stderr, err)
 	os.Exit(1)
 }

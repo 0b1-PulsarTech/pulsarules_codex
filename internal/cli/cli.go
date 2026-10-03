@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -10,6 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/uninstall"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 )
 
 type ExitError struct {
@@ -57,13 +59,21 @@ func Run(inj remy.Injector, opts *cliopts.Options) error {
 }
 
 func HandleBootstrapErr(command string, err error) int {
+	return handleBootstrapErr(os.Stderr, command, err)
+}
+
+func handleBootstrapErr(w io.Writer, command string, err error) int {
 	if command == "hook" {
-		_, _ = fmt.Fprintln(os.Stderr, "pulsarules_cli: hook:", err)
+		_, _ = fmt.Fprintln(w, "pulsarules_cli: hook:", escape.Line(err.Error()))
 		// A hook invocation must never block the caller's turn.
 		return 0
 	}
-	_, _ = fmt.Fprintln(os.Stderr, "pulsarules_cli:", err)
+	ReportError(w, err)
 	return 1
+}
+
+func ReportError(w io.Writer, err error) {
+	_, _ = fmt.Fprintln(w, "pulsarules_cli:", escape.Line(err.Error()))
 }
 
 func BootstrapOptions(opts *cliopts.Options) bootstrap.Options {
