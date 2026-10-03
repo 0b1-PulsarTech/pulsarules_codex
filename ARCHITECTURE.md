@@ -147,18 +147,20 @@ Three scopes (`scope.go`) control which analyzers run and what context is built:
 exactly that), even though it skips the wider `SourceProvider`/AST-cache work that `ScopeFull` and
 `ScopeChanged` do.
 
-### Stages and the analyzerSpecs table
+### Stages and the analyzer table
 
 `StageRunner` (`pipeline.go`) holds analyzers grouped by `core.StageID` and runs them in stage order
 (`StageContext` through `StageOutput`), skipping an analyzer that is disabled in `AnalysisConfig`.
-`specs.go`'s `analyzerSpecs` is the single ordered list of every analyzer the binary registers, each
-entry pairing an `analyzerBuilder` with the scopes it runs under (`staticScopes` =
-Full+Commit+Changed for static/AST/commit/rule-injection/output work that stays useful with only a
-commit message or only changed files; `archScopes` = Full+Changed for the architecture analyzers,
-which need a source set; `delegationScopes` = Full only, since only a full run pays the cost of
-spawning golangci-lint). Adding an analyzer is one entry in this table. `registerForScope` builds
-the `core.LanguageRegistry` (via `langspec.RegisterAll`, the one data-driven registration for every
-language) once and registers only the specs whose scopes contain the requested scope.
+`internal/analysis` owns the single ordered table of every analyzer the binary registers (`specs()`,
+concatenated from `coreSpecs`, `commitSpecs`, `astSpecs`, `pipelineSpecs` in run order). Each entry
+declares its id, a builder, and a `Gate`: `GateStatic` (every scope;
+static/AST/commit/rule-injection/output work that stays useful with only a commit message or only
+changed files), `GateArch` (architecture analyzers, which need a source set) or `GateFullOnly`
+(golangci-lint and branch-name, which only a full run pays for). `boot.go`'s `gatesFor(scope)` maps
+a scope to its gates (`ScopeCommit` = static; `ScopeChanged` = static + arch; `ScopeFull` = all
+three), and `registerForScope` builds the `core.LanguageRegistry` (via `langspec.RegisterAll`, the
+one data-driven registration for every language) once and registers `Analyzers(..., gates)`. Adding
+an analyzer is one entry in the table.
 
 ### internal/analyzer/** families
 
@@ -187,8 +189,7 @@ files. `core.InPlaceAnalyzer` marks the second contract - an analyzer that rewri
   (Conventional Commit types, the gitflow lines, plus a project's own `extra_types`). Gated to
   `ScopeFull` - the pre-push run - since a branch name is not a property of a staged change.
 - `delegation/golangcilint` - shells out to an external tool and translates its output into
-  `core.Finding`s; gated to `delegationScopes` (`ScopeFull`) since spawning a process is only worth
-  the cost on a full run.
+  `core.Finding`s; gated to `GateFullOnly` since spawning a process is only worth the cost on a full run.
 - `core/astcache` - a per-invocation cache of parsed Go ASTs, populated once in `Session.Load` so
   analyzers call `Get(path)` instead of each re-parsing the same file.
 - `langspec` - the single data-driven `Language` handler and the spec table behind it (go, clike,
@@ -298,7 +299,7 @@ The governance pipeline (see above) adds its own package set:
 
 | Package                          | Responsibility                                                                                      |
 |----------------------------------|-----------------------------------------------------------------------------------------------------|
-| `internal/analysis`               | `analysis.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`registerForScope`), `specs.go` (`analyzerSpecs`), `runner.go` (`toAnalysisConfig`), `output.go`, `format.go`, `history.go` |
+| `internal/analysis`               | `analysis.go` (`Session`: Discover/Load/Analyze), `scope.go` (the 3 scopes), `pipeline.go` (`StageRunner`), `boot.go` (`registerForScope`, `gatesFor`), `spec.go` (`Gate`, `Analyzers`), `specs*.go` (the analyzer table), `runner.go` (`toAnalysisConfig`), `output.go`, `format.go`, `history.go` |
 | `internal/analyzer/core`          | `Analyzer`/`InPlaceAnalyzer`/`Language` interfaces, `AnalysisContext`, `Finding`, `Reporter.Resolved`, `EachChangedFile`, `LanguageRegistry`, `core/astcache` |
 | `internal/analyzer/static/*`      | `filesize`, `textmarkers`, `topoffile`, `bigcomment` - text/structure checks                        |
 | `internal/analyzer/ast/*`         | `complexity`, `controlflow`, `shadowing`, `imports`, `naming` - `go/ast`-based checks                |

@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
@@ -79,5 +80,62 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 				want.line,
 			)
 		}
+	}
+}
+
+func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
+	t.Parallel()
+
+	static := []string{
+		"file-size", "text-markers", "typographic-markers", "import-groups", "naming",
+		"top-of-file", "big-comment", "simplification-path", "commit-lint",
+		"commit-move-purity", "control-flow", "shadowing", "complexity", "named-returns",
+		"vacuous-doc", "test-comment", "single-use-declaration", "time-discipline",
+		"context-discipline", "pprof-labels",
+	}
+	tail := []string{"rule-injection", "output"}
+	arch := []string{"arch-boundary", "import-cycle"}
+
+	testCases := []struct {
+		name  string
+		scope Scope
+		want  []string
+	}{
+		{
+			name:  "full",
+			scope: ScopeFull,
+			want: slices.Concat(
+				static,
+				[]string{"branch-name"},
+				arch,
+				[]string{"golangci-lint"},
+				tail,
+			),
+		},
+		{
+			name:  "commit",
+			scope: ScopeCommit,
+			want:  slices.Concat(static, tail),
+		},
+		{
+			name:  "changed",
+			scope: ScopeChanged,
+			want:  slices.Concat(static, arch, tail),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			langs := core.NewLanguageRegistry()
+			built := Analyzers(nil, langs, nil, gatesFor(testCase.scope))
+			got := make([]string, len(built))
+			for i, a := range built {
+				got[i] = a.ID()
+			}
+			if !slices.Equal(got, testCase.want) {
+				t.Fatalf("ids = %v, want %v", got, testCase.want)
+			}
+		})
 	}
 }

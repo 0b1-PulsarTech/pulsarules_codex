@@ -7,8 +7,9 @@ import (
 )
 
 func RuleAnalyzersCheck(idx *knowledge.Index) []string {
-	known := make(map[string]bool, len(analyzerSpecs()))
-	for _, id := range RegisteredAnalyzerIDs() {
+	ids := IDs()
+	known := make(map[string]bool, len(ids))
+	for _, id := range ids {
 		known[id] = true
 	}
 
