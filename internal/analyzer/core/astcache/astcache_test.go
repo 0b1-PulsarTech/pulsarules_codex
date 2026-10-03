@@ -31,15 +31,35 @@ func TestParseAndCache(t *testing.T) {
 	}
 }
 
-func TestParseErrorOnBrokenFile(t *testing.T) {
+func TestParseErrorCachedAcrossRepeatedParses(t *testing.T) {
 	t.Parallel()
 
 	c := New()
 	src := []byte("package main\n\nfunc broken(\n")
 
-	_, err := c.Parse("broken.go", src)
-	if err == nil {
-		t.Fatal("expected parse error for broken code")
+	var first error
+	for call := range 3 {
+		f, err := c.Parse("broken.go", src)
+		if err == nil {
+			t.Fatalf("call %d: expected parse error for broken code", call)
+		}
+		if f != nil {
+			t.Fatalf("call %d: parsed file = %v, want nil", call, f)
+		}
+		if call == 0 {
+			first = err
+		} else if err.Error() != first.Error() {
+			t.Errorf("call %d: error = %v, want %v", call, err, first)
+		}
+	}
+
+	files := 0
+	c.FileSet().Iterate(func(*token.File) bool {
+		files++
+		return true
+	})
+	if files != 1 {
+		t.Errorf("FileSet holds %d files after 3 parses, want 1", files)
 	}
 }
 
