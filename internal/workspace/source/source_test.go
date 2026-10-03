@@ -1,4 +1,4 @@
-package pass
+package source
 
 import (
 	"os"

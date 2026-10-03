@@ -7,6 +7,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 func TestTopOfFile_UnlistedAndFixtures(t *testing.T) {
@@ -63,8 +64,11 @@ func analyzeSource(t *testing.T, file, src string, config *pass.AnalysisConfig) 
 	langs := pass.NewLanguageRegistry()
 	language.RegisterAll(langs)
 	return NewAnalyzer(langs).Analyze(&pass.Context{
-		ProjectDir:   dir,
-		Sources:      pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ProjectDir: dir,
+		Sources: source.NewSourceProvider(
+			dir,
+			source.NewSkipSet(source.DefaultSkipDirs()),
+		),
 		Config:       config,
 		ChangedFiles: []pass.FileChange{{Path: file, Extension: filepath.Ext(file)}},
 	})

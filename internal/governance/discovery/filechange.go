@@ -6,11 +6,12 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
-func WalkAllFiles(sources pass.SourceProvider) []pass.FileChange {
+func WalkAllFiles(provider source.SourceProvider) []pass.FileChange {
 	var files []pass.FileChange
-	sources.Walk(func(path, ext string) bool {
+	provider.Walk(func(path, ext string) bool {
 		files = append(files, pass.FileChange{
 			Path:      path,
 			Extension: ext,
@@ -44,12 +45,12 @@ func ToCoreRenames(renames []vcs.Rename) []pass.Rename {
 	return out
 }
 
-func MarkGenerated(files []pass.FileChange, sources pass.SourceProvider) {
-	if sources == nil {
+func MarkGenerated(files []pass.FileChange, provider source.SourceProvider) {
+	if provider == nil {
 		return
 	}
 	for i := range files {
-		src, ok := sources.Read(files[i].Path)
+		src, ok := provider.Read(files[i].Path)
 		if !ok {
 			continue
 		}

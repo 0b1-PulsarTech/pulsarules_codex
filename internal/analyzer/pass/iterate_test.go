@@ -1,6 +1,10 @@
 package pass
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
+)
 
 type fakeSourceProvider struct {
 	contents map[string][]byte
@@ -13,7 +17,7 @@ func (p fakeSourceProvider) Read(path string) ([]byte, bool) {
 
 func (p fakeSourceProvider) Walk(func(path string, ext string) bool) {}
 
-var _ SourceProvider = fakeSourceProvider{}
+var _ source.SourceProvider = fakeSourceProvider{}
 
 type eachChangedFileTestCase struct {
 	name        string

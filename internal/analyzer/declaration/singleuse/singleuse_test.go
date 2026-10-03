@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 func buildCtx(t *testing.T, files map[string]string, changed []string) *pass.Context {
@@ -31,7 +32,7 @@ func buildCtx(t *testing.T, files map[string]string, changed []string) *pass.Con
 
 	return &pass.Context{
 		ASTCache:     cache,
-		Sources:      pass.NewFSSourceProvider(mapFS, "", pass.SkipSet{}),
+		Sources:      source.NewFSSourceProvider(mapFS, "", source.SkipSet{}),
 		ChangedFiles: changedFiles,
 	}
 }
@@ -273,7 +274,7 @@ func TestAnalyze_NoContext(t *testing.T) {
 		{
 			name: "no AST cache",
 			ctx: &pass.Context{
-				Sources: pass.NewFSSourceProvider(fstest.MapFS{}, "", pass.SkipSet{}),
+				Sources: source.NewFSSourceProvider(fstest.MapFS{}, "", source.SkipSet{}),
 			},
 		},
 		{name: "no sources", ctx: &pass.Context{ASTCache: astcache.New()}},

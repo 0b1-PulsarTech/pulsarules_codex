@@ -6,6 +6,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 type splitTestCase struct {
@@ -119,7 +120,10 @@ func TestSplitGenerated_UnlistedFiles(t *testing.T) {
 
 	ctx := &pass.Context{
 		ChangedFiles: nil,
-		Sources:      pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		Sources: source.NewSourceProvider(
+			dir,
+			source.NewSkipSet(source.DefaultSkipDirs()),
+		),
 	}
 	findings := []pass.Finding{
 		{AnalyzerID: "golangci-lint", File: "gen.go"},

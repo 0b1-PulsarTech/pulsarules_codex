@@ -9,6 +9,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 type scanCase struct {
@@ -121,9 +122,12 @@ func TestAnalyzeUsesCachedGoAST(t *testing.T) {
 	langs := pass.NewLanguageRegistry()
 	langs.Register(language.Lookup("go"))
 	got := NewAnalyzer(langs).Analyze(&pass.Context{
-		ProjectDir:   dir,
-		ASTCache:     cache,
-		Sources:      pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ProjectDir: dir,
+		ASTCache:   cache,
+		Sources: source.NewSourceProvider(
+			dir,
+			source.NewSkipSet(source.DefaultSkipDirs()),
+		),
 		ChangedFiles: []pass.FileChange{{Path: "a.go", Extension: ".go"}},
 	})
 	if len(got) != 1 || got[0].Line != 3 {
@@ -160,7 +164,9 @@ func TestAnalyze(t *testing.T) {
 			}
 			got := NewAnalyzer(langs).Analyze(&pass.Context{
 				ProjectDir: dir,
-				Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+				Sources: source.NewSourceProvider(
+					dir, source.NewSkipSet(source.DefaultSkipDirs()),
+				),
 				ChangedFiles: []pass.FileChange{
 					{Path: testCase.file, Extension: filepath.Ext(testCase.file)},
 				},

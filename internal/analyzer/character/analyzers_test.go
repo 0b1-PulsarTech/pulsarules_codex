@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 type markerCase struct {
@@ -63,7 +64,9 @@ func TestAnalyzers(t *testing.T) {
 			}
 			ctx := &pass.Context{
 				ProjectDir: dir,
-				Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+				Sources: source.NewSourceProvider(
+					dir, source.NewSkipSet(source.DefaultSkipDirs()),
+				),
 				ChangedFiles: []pass.FileChange{
 					{Path: testCase.rel, Extension: filepath.Ext(testCase.rel)},
 				},
@@ -183,8 +186,11 @@ func markdownContext(t *testing.T, body string) *pass.Context {
 		t.Fatalf("seed: %v", err)
 	}
 	return &pass.Context{
-		ProjectDir:   dir,
-		Sources:      pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ProjectDir: dir,
+		Sources: source.NewSourceProvider(
+			dir,
+			source.NewSkipSet(source.DefaultSkipDirs()),
+		),
 		ChangedFiles: []pass.FileChange{{Path: "a.md", Extension: ".md"}},
 	}
 }
@@ -225,8 +231,11 @@ func TestTypographic_MarkdownCodeSkipped(t *testing.T) {
 				t.Fatalf("seed: %v", err)
 			}
 			ctx := &pass.Context{
-				ProjectDir:   dir,
-				Sources:      pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+				ProjectDir: dir,
+				Sources: source.NewSourceProvider(
+					dir,
+					source.NewSkipSet(source.DefaultSkipDirs()),
+				),
 				ChangedFiles: []pass.FileChange{{Path: name, Extension: testCase.ext}},
 			}
 			if got := NewTypographicAnalyzer().Analyze(ctx); len(got) != testCase.want {

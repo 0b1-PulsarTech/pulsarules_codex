@@ -3,11 +3,12 @@ package governance
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 func populateASTCache(
 	changedFiles []pass.FileChange,
-	sources pass.SourceProvider,
+	provider source.SourceProvider,
 ) *astcache.Cache {
 	if len(changedFiles) == 0 {
 		return nil
@@ -18,7 +19,7 @@ func populateASTCache(
 		if fc.Extension != ".go" {
 			continue
 		}
-		src, ok := sources.Read(fc.Path)
+		src, ok := provider.Read(fc.Path)
 		if !ok {
 			continue
 		}

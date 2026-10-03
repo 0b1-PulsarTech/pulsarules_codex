@@ -8,10 +8,10 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible/cleaner"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 type mode uint8
@@ -39,7 +39,7 @@ func sweep(out io.Writer, root string, how mode) error {
 	var acted, remaining int
 
 	var walkErr error
-	pass.NewSourceProvider(root, pass.NewSkipSet(pass.DefaultSkipDirs())).
+	source.NewSourceProvider(root, source.NewSkipSet(source.DefaultSkipDirs())).
 		Walk(func(rel, _ string) bool {
 			// Walk yields a path relative to root; Abs would anchor it to the working directory.
 			found, err := inspectOrClean(cleaner, filepath.Join(root, rel), how)

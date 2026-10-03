@@ -7,6 +7,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 func testLangs() *pass.LanguageRegistry {
@@ -61,7 +62,7 @@ func TestAnalyze(t *testing.T) {
 		"  void f() {}\n"+
 		"}\n")
 
-	srcs := pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs()))
+	srcs := source.NewSourceProvider(dir, source.NewSkipSet(source.DefaultSkipDirs()))
 	langs := testLangs()
 
 	testCases := []struct {
@@ -131,8 +132,11 @@ func TestAnalyze_UnknownLanguageSkipped(t *testing.T) {
 
 	a := NewAnalyzer(testLangs())
 	got := a.Analyze(&pass.Context{
-		ProjectDir:   dir,
-		Sources:      pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ProjectDir: dir,
+		Sources: source.NewSourceProvider(
+			dir,
+			source.NewSkipSet(source.DefaultSkipDirs()),
+		),
 		ChangedFiles: []pass.FileChange{{Path: "notes.json", Extension: ".json"}},
 	})
 	if got != nil {
@@ -146,8 +150,11 @@ func TestAnalyze_NonexistentFileSkipped(t *testing.T) {
 	dir := t.TempDir()
 	a := NewAnalyzer(testLangs())
 	got := a.Analyze(&pass.Context{
-		ProjectDir:   dir,
-		Sources:      pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ProjectDir: dir,
+		Sources: source.NewSourceProvider(
+			dir,
+			source.NewSkipSet(source.DefaultSkipDirs()),
+		),
 		ChangedFiles: []pass.FileChange{{Path: "gone.go", Extension: ".go"}},
 	})
 	if got != nil {
@@ -173,8 +180,11 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 
 	a := NewAnalyzer(testLangs())
 	got := a.Analyze(&pass.Context{
-		ProjectDir:   dir,
-		Sources:      pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+		ProjectDir: dir,
+		Sources: source.NewSourceProvider(
+			dir,
+			source.NewSkipSet(source.DefaultSkipDirs()),
+		),
 		ChangedFiles: []pass.FileChange{{Path: "testdata/no_label.go", Extension: ".go"}},
 	})
 	if got != nil {

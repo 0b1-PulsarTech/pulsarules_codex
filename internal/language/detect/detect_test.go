@@ -129,7 +129,10 @@ func writeMarker(tb testing.TB, root, rel string) {
 func TestDetect_UnreadableRoot(t *testing.T) {
 	t.Parallel()
 
-	got, err := scan(filepath.Join(t.TempDir(), "no-such-dir"), DefaultMaxDepth)
+	got, err := scan(
+		filepath.Join(t.TempDir(), "no-such-dir"),
+		DefaultMaxDepth,
+	)
 	if err == nil {
 		t.Fatalf("Detect on a missing root returned no error, set = %v", got.Strings())
 	}

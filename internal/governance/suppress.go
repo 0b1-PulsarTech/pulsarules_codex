@@ -3,6 +3,7 @@ package governance
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 type Result struct {
@@ -30,13 +31,13 @@ func splitGenerated(ctx *pass.Context, findings []pass.Finding) Result {
 	return Result{Findings: kept, SuppressedGenerated: suppressed}
 }
 
-func isGeneratedFile(path string, known map[string]bool, sources pass.SourceProvider) bool {
+func isGeneratedFile(path string, known map[string]bool, provider source.SourceProvider) bool {
 	if generated, ok := known[path]; ok {
 		return generated
 	}
 	generated := false
-	if sources != nil {
-		if src, found := sources.Read(path); found {
+	if provider != nil {
+		if src, found := provider.Read(path); found {
 			generated = lexer.IsGeneratedSource(src)
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -20,7 +21,7 @@ type Session struct {
 	commitMsg   string
 	index       *knowledge.Index
 	cfgAnalysis *pass.AnalysisConfig
-	skips       pass.SkipSet
+	skips       source.SkipSet
 }
 
 func NewSession(
@@ -38,12 +39,12 @@ func NewSession(
 		commitMsg:   commitMsg,
 		index:       index,
 		cfgAnalysis: toAnalysisConfig(cfg),
-		skips:       pass.NewSkipSet(pass.DefaultSkipDirs()),
+		skips:       source.NewSkipSet(source.DefaultSkipDirs()),
 	}
 }
 
 type Request struct {
-	Sources       pass.SourceProvider
+	Sources       source.SourceProvider
 	ChangedFiles  []pass.FileChange
 	GitHistory    []pass.GitCommitEntry
 	StagedRenames []pass.Rename
@@ -74,7 +75,7 @@ func (s *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Requ
 		d.StagedRenames = discovery.ToCoreRenames(renames)
 	}
 
-	d.Sources = pass.NewSourceProvider(s.repo.Root(), s.skips)
+	d.Sources = source.NewSourceProvider(s.repo.Root(), s.skips)
 
 	if files == FileSetAll {
 		d.ChangedFiles = discovery.WalkAllFiles(d.Sources)

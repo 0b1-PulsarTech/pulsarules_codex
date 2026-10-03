@@ -8,6 +8,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 type directiveCase struct {
@@ -272,7 +273,9 @@ func TestScanFile_DirectiveLines(t *testing.T) {
 			langs.Register(language.Lookup(testCase.lang))
 			findings := NewAnalyzer(langs).Analyze(&pass.Context{
 				ProjectDir: dir,
-				Sources:    pass.NewSourceProvider(dir, pass.NewSkipSet(pass.DefaultSkipDirs())),
+				Sources: source.NewSourceProvider(
+					dir, source.NewSkipSet(source.DefaultSkipDirs()),
+				),
 				ChangedFiles: []pass.FileChange{
 					{Path: testCase.file, Extension: filepath.Ext(testCase.file)},
 				},
