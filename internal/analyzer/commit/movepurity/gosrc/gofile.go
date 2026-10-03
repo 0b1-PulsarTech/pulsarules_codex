@@ -32,6 +32,8 @@ type (
 		keys       map[int]bool
 		examples   [][2]int
 		TopLevel   map[string]bool
+		Loads      bool
+		Embeds     []string
 		IsIgnored  bool
 	}
 )
@@ -51,10 +53,12 @@ func Parse(src string) (File, error) {
 		docEnd:     -1,
 		IsIgnored:  hasIgnoreConstraint(file),
 		TopLevel:   map[string]bool{},
+		Embeds:     embedPatterns(file),
 		Imports:    importSpecs(file),
 	}
 	topLevelNames(file, out.TopLevel)
 	out.examples = exampleBodies(file, tokFile)
+	out.Loads = loadsAtInit(file, out.TopLevel)
 	out.indexNames(file, tokFile)
 	if file.Doc != nil {
 		out.docStart, out.docEnd = tokFile.Offset(file.Doc.Pos()), tokFile.Offset(file.Doc.End())
