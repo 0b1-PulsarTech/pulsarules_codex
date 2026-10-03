@@ -57,6 +57,13 @@ each analyzer's own id.
 - Params: `max_results` (default 3).
 - Remedy: return a named result of an anonymous struct, or a named struct type when reused.
 
+## ungrouped-interfaces
+
+- Rule: `effective-go`.
+- Flags: a file declaring 2 or more interfaces where some are outside the main `type ( ... )` block.
+- Params: none.
+- Remedy: move all interfaces in the file into one `type ( ... )` block.
+
 ## package-level-var
 
 - Rule: `code-smells` (global state).

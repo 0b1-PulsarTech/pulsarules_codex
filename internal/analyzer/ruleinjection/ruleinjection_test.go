@@ -183,6 +183,7 @@ func TestLookupRule(t *testing.T) {
 		{"doc-comment", "effective-go"},
 		{"body-header-comment", "effective-go"},
 		{"too-many-results", "effective-go"},
+		{"ungrouped-interfaces", "effective-go"},
 		{"variadic-index", "flag-arguments"},
 		{"package-level-var", "code-smells"},
 		{"package-file-count", "code-placement-go"},
