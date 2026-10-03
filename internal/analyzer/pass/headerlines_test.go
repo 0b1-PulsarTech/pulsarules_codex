@@ -288,6 +288,36 @@ func TestIsContentStartLine(t *testing.T) {
 	}
 }
 
+func TestIsMachineReadCommentLine(t *testing.T) {
+	t.Parallel()
+
+	testCases := []headerTestCase{
+		{name: "header directive", line: "//go:build linux", want: true},
+		{name: "goverter spaced", line: "// goverter:map A B", want: true},
+		{name: "goverter glued", line: "//goverter:converter", want: true},
+		{name: "pulsarules glued marker", line: "//pulsarules:process-lifetime", want: true},
+		{name: "pulsarules spaced marker", line: "// pulsarules:process-lifetime", want: true},
+		{name: "pulsarules prose after the colon", line: "// pulsarules: one", want: false},
+		{name: "pulsarules bare colon", line: "//pulsarules:", want: false},
+		{name: "dart ignore spaced", line: "// ignore: avoid_print", want: true},
+		{name: "dart ignore glued", line: "//ignore: avoid_print", want: true},
+		{name: "prose", line: "// a helper", want: false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := IsMachineReadCommentLine(testCase.line); got != testCase.want {
+				t.Fatalf(
+					"IsMachineReadCommentLine(%q) = %v, want %v",
+					testCase.line,
+					got,
+					testCase.want,
+				)
+			}
+		})
+	}
+}
+
 func TestIsDirectiveHeaderLine_Goverter(t *testing.T) {
 	t.Parallel()
 

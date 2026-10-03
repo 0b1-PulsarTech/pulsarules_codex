@@ -23,6 +23,10 @@ func directiveHeaderPrefixes() []string {
 	}
 }
 
+func machineReadCommentPrefixes() []string {
+	return []string{"// goverter:", "//goverter:", "// ignore:", "//ignore:"}
+}
+
 func migrationMarkerPrefixes() []string {
 	return []string{"-- +goose ", "-- migrate:", "-- +migrate "}
 }
@@ -43,6 +47,12 @@ func IsDirectiveHeaderLine(line string) bool {
 	return IsContentStartLine(trimmed) || hasAnyPrefix(trimmed, directiveHeaderPrefixes()) ||
 		isNolintDirective(trimmed) || isGlobalDirective(trimmed) ||
 		isDartFormatDirective(trimmed) || isAtlasDirective(trimmed)
+}
+
+func IsMachineReadCommentLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return IsDirectiveHeaderLine(trimmed) || hasAnyPrefix(trimmed, machineReadCommentPrefixes()) ||
+		isPulsarulesMarker(trimmed)
 }
 
 func IsContentStartLine(line string) bool {
@@ -139,4 +149,13 @@ func sqlcBody(trimmed string) (string, bool) {
 		return "", false
 	}
 	return strings.CutSuffix(block, " */")
+}
+
+func isPulsarulesMarker(trimmed string) bool {
+	body, ok := strings.CutPrefix(trimmed, "//")
+	if !ok {
+		return false
+	}
+	token, ok := strings.CutPrefix(strings.TrimSpace(body), "pulsarules:")
+	return ok && token != "" && token[0] != ' ' && token[0] != '\t'
 }
