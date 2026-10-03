@@ -90,7 +90,7 @@ func newTargetContext(
 	}
 	selection.Languages = languages
 	ids, pulled := selection.Resolve(deps.idx)
-	printDependencyPulls(pulled)
+	printDependencyPulls(os.Stdout, pulled)
 	var routerFilter []string
 	// Filter the rendered router to what's actually installed, unless it is
 	// everything anyway (--all) or router-only (nothing to filter against).

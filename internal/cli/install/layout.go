@@ -3,6 +3,7 @@ package install
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -29,11 +30,21 @@ func promptLayout(idx *knowledge.Index) string {
 	if len(idx.Profiles) == 0 {
 		return ""
 	}
-	_, _ = fmt.Println("Available layout profiles (press Enter to skip):")
-	for _, profile := range idx.Profiles {
-		_, _ = fmt.Printf("  %s [%s] - %s\n", profile.ID, profile.Axis, profile.Description)
-	}
+	printProfiles(os.Stdout, idx.Profiles)
 	_, _ = fmt.Print("layout> ")
 	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
 	return strings.TrimSpace(line)
+}
+
+func printProfiles(out io.Writer, profiles []knowledge.Profile) {
+	_, _ = fmt.Fprintln(out, "Available layout profiles (press Enter to skip):")
+	for _, profile := range profiles {
+		_, _ = fmt.Fprintf(
+			out,
+			"  %s [%s] - %s\n",
+			profile.ID,
+			profile.Axis,
+			profile.Description,
+		)
+	}
 }
