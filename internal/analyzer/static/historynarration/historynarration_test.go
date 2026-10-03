@@ -53,6 +53,33 @@ func TestScanFileUnparsableGo(t *testing.T) {
 	}
 }
 
+func TestScanFileUnparsableGoFallback(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		source string
+		expect int
+	}{
+		{"raw string hides a comment", "x := `// used to be`\nfunc (", 0},
+		{"real comment after a raw string", "x := `a` // used to be\nfunc (", 1},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			syntax := langspec.Lookup("go").CommentSyntax()
+			fc := core.FileChange{Path: "f.go", Extension: ".go"}
+			got := scanFile(
+				[]byte(testCase.source), fc, syntax, NewAnalyzer(nil).reporter(), parsedGo{},
+			)
+			if len(got) != testCase.expect {
+				t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
+			}
+		})
+	}
+}
+
 func TestScanFileSplitPhraseLine(t *testing.T) {
 	t.Parallel()
 

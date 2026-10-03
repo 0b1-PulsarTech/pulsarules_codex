@@ -8,12 +8,14 @@ import (
 
 type scanner struct {
 	syntax   core.CommentSyntax
+	rules    rules
 	closer   string
+	rawOpen  bool
 	segments []segment
 }
 
-func scanSegments(src []byte, syntax core.CommentSyntax) []segment {
-	sc := &scanner{syntax: syntax}
+func scanSegments(src []byte, syntax core.CommentSyntax, ext string) []segment {
+	sc := &scanner{syntax: syntax, rules: rulesFor(syntax, ext)}
 	for index, line := range strings.Split(string(src), "\n") {
 		sc.scanLine(index+1, line)
 	}
@@ -46,7 +48,30 @@ func (sc *scanner) step(num int, line string, pos int) (next int, done bool) {
 		sc.closer = ""
 		return next, false
 	}
+	if sc.rawOpen {
+		return sc.rawStep(line, pos)
+	}
+	if skip := sc.rules.quoteLen(line, pos); skip > 0 {
+		return pos + skip, false
+	}
+	if line[pos] == '`' && sc.rules.backtick {
+		sc.rawOpen = true
+		return pos + 1, false
+	}
 	return sc.openComment(num, line, pos)
+}
+
+func (sc *scanner) rawStep(line string, pos int) (next int, done bool) {
+	for ; pos < len(line); pos++ {
+		switch {
+		case line[pos] == '\\' && sc.rules.backslash:
+			pos++
+		case line[pos] == '`':
+			sc.rawOpen = false
+			return pos + 1, false
+		}
+	}
+	return len(line), true
 }
 
 func (sc *scanner) openComment(num int, line string, pos int) (next int, done bool) {

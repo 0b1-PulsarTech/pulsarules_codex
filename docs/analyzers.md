@@ -32,7 +32,8 @@ each analyzer's own id.
 - Flags: comment text such as "was replaced by", "used to be", "the old code", "previously we",
   "no longer needed", "it/this/we/they/never used to ...".
 - Params: `extensions` (default: the source extensions known to the language registry).
-- Exemptions: text inside Go string literals is not scanned; the passive "is used to" ("the helper
-  is used to build x") is not history and is not flagged.
-- Known limits: "the only tool ever used to call x" is flagged; it cannot be told apart from "nobody
-  ever used to call this".
+- Exemptions: text inside string literals is not scanned; the passive "is used to" ("the helper is
+  used to build x") is not history and is not flagged.
+- Known limits: multi-line strings, Lua `[[ ]]`, Postgres `E''`, Dart nested interpolation quotes,
+  nested template-literal quotes, Swift `#""`, and C++ `R"()"` can be misread. "the only tool ever
+  used to call x" is flagged; it cannot be told apart from "nobody ever used to call this".

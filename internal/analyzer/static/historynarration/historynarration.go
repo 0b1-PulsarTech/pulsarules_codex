@@ -64,7 +64,7 @@ func commentBlocks(
 			return blocks(segments)
 		}
 	}
-	return blocks(scanSegments(src, syntax))
+	return blocks(scanSegments(src, syntax, fc.Extension))
 }
 
 func scanFile(
