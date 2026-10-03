@@ -24,6 +24,7 @@ func TestParseSkillSelection(t *testing.T) {
 		{name: "range", input: "7-9", total: 9, want: []int{7, 8, 9}},
 		{name: "mixed list and range", input: "1,4,7-9", total: 9, want: []int{1, 4, 7, 8, 9}},
 		{name: "deduplicates overlapping picks", input: "1,1,1-2", total: 5, want: []int{1, 2}},
+		{name: "skips a blank token", input: "1,,2", total: 5, want: []int{1, 2}},
 		{name: "tolerates spaces", input: " 1 , 4 , 7 - 9 ", total: 9, want: []int{1, 4, 7, 8, 9}},
 		{name: "zero is out of range", input: "0", total: 5, wantErr: true},
 		{name: "index above total is out of range", input: "6", total: 5, wantErr: true},

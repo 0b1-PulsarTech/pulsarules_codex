@@ -80,11 +80,7 @@ func parseSkillSelection(input string, total int) ([]int, error) {
 		return nil, nil
 	}
 	if strings.EqualFold(input, "a") {
-		all := make([]int, total)
-		for slot := range all {
-			all[slot] = slot + 1
-		}
-		return all, nil
+		return allChoices(total), nil
 	}
 
 	seen := make(map[int]bool)
@@ -94,22 +90,43 @@ func parseSkillSelection(input string, total int) ([]int, error) {
 		if token == "" {
 			continue
 		}
-		start, end, parseErr := parseSelectionRange(token)
+		start, end, parseErr := parseToken(token, total)
 		if parseErr != nil {
 			return nil, parseErr
 		}
-		if start < 1 || end > total || start > end {
-			return nil, fmt.Errorf("selection %q out of range 1-%d", token, total)
-		}
-		for choice := start; choice <= end; choice++ {
-			if !seen[choice] {
-				seen[choice] = true
-				indices = append(indices, choice)
-			}
-		}
+		indices = addRange(seen, indices, start, end)
 	}
 	slices.Sort(indices)
 	return indices, nil
+}
+
+func allChoices(total int) []int {
+	all := make([]int, total)
+	for slot := range all {
+		all[slot] = slot + 1
+	}
+	return all
+}
+
+func parseToken(token string, total int) (start, end int, err error) {
+	start, end, err = parseSelectionRange(token)
+	if err != nil {
+		return 0, 0, err
+	}
+	if start < 1 || end > total || start > end {
+		return 0, 0, fmt.Errorf("selection %q out of range 1-%d", token, total)
+	}
+	return start, end, nil
+}
+
+func addRange(seen map[int]bool, indices []int, start, end int) []int {
+	for choice := start; choice <= end; choice++ {
+		if !seen[choice] {
+			seen[choice] = true
+			indices = append(indices, choice)
+		}
+	}
+	return indices
 }
 
 func splitCSV(value string) []string {
