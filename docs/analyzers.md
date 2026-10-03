@@ -147,3 +147,30 @@ passed; the Go AST analyzers documented here (`test-comment`, `doc-comment`, `bo
 - Known limits: the directive edge forms listed under `top-of-file` apply here too. A `max_lines` at
   or below 0 (only a Go caller building its own `GovernanceConfig` can set it; no flag or config
   file does) falls back to the default 3 rather than disabling the check.
+
+## commit-move-purity
+
+- Rule: `commits`.
+- Flags: a staged rename below `min_similarity`, a rename that carries an edit beyond its package
+  clause and import fixups, renames mixed with unrelated edits in one commit, a byte-identical move
+  that changes build inclusion (build-ignored path, root `vendor/`, `_test` or GOOS/GOARCH suffix,
+  extension), a cross-directory move where a name resolves differently or load-time work changes
+  package, an edit that drops the last import of a directory that keeps load-time work, and a move
+  that strands or picks up a compiled non-Go file.
+- Params: `min_similarity` (default 90).
+- Exemptions: a pure package split (moved files with only package clause and import fixups) passes;
+  any file may change a comment's `old.X` to `new.X` for an exported name the move carried, when the
+  comment follows the import declarations; excepted are directives, comments inside `Example`
+  functions, and `// want` or `ERROR` assertion comments, as test tools check them; a file staying
+  in the old directory may qualify `X` as `new.X` in code; `errors.New` initialisers are inert;
+  `_test.go` files may carry load-time work when their whole directory moves in one commit.
+- Known limits: the analyzer reads syntax only, with no type checking.
+  - Accepted as pure: renaming a `//go:embed`-matched asset; a same-directory rename that changes
+    `init` order; renaming `go.mod`; moving a referenced exported var whose initialiser calls a
+    function; a moved file's plain import used only in a function body whose init stops running;
+    a dependant unlinking a directory whose staying files only import a package with init; an
+    initialiser that panics only for some dynamic types; a nested module's `vendor/`.
+  - Over-flagged: a `//go:build ignore` owner still counts for a name takeover; a moved `_test.go`
+    with any load-time initialiser outside a whole-directory move; `var _ = g.F[int]`;
+    `var _ = g.MyInt(3)`; a constant identifier as a divisor or shift count; any compiled non-Go
+    file (`.s`, `.c`, `.h`, `.syso`) in either directory.
