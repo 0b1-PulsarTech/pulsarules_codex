@@ -18,6 +18,8 @@ type Repository interface {
 	StagedRenames(minScore int) ([]Rename, error)
 	StagedDiff(path string) (string, error)
 	StagedRenameDiff(oldPath, newPath string, minScore int) (string, error)
+	BlobReader
+	TreeReader
 }
 
 type repository struct {
