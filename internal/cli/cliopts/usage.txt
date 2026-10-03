@@ -33,8 +33,12 @@ overrides which rules a skill composes; --interactive prompts for it when unset.
 
 --preset selects an analyzer configuration preset for the governance subcommand
 (recommended|strict|minimal). recommended keeps all analyzers with standard
-thresholds; strict pins max_lines=180, max_complexity=10; minimal disables AST,
-architecture, and delegated tool analyzers, keeping only static checks.
+thresholds; strict tightens the complexity analyzer (max_complexity 15 to 10,
+max_func_lines 80 to 50, max_params 5 to 4) and states file-size's
+max_lines=180, already its default; minimal disables the architecture and
+golangci-lint analyzers, most AST checks, the style checks and
+history-narration, keeping import-groups, naming, time-discipline, pprof-labels
+and the other static checks.
 
 --scope limits the governance analysis to a subset of analyzers (full = all;
 changed = static-gate (static, AST, commit) and architecture analyzers, skipping
