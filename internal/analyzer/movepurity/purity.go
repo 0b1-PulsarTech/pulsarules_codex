@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/movepurity/gosrc"
 )
 
 type entry struct {
@@ -26,6 +27,11 @@ type verdict int
 const (
 	verdictPure verdict = iota
 	verdictEdited
+	verdictUnsafe
+	verdictClauseOnly
+	verdictInclusion
+	verdictUnlinksLoad
+	verdictStrands
 )
 
 func (moves *moveContext) renameVerdict(rename core.Rename) verdict {
@@ -33,10 +39,36 @@ func (moves *moveContext) renameVerdict(rename core.Rename) verdict {
 	if !ok || oldEntry.mode != newEntry.mode {
 		return verdictEdited
 	}
-	if oldEntry.id == newEntry.id {
-		return verdictPure
+	isSame := oldEntry.id == newEntry.id
+	if !gosrc.SameInclusion(rename.OldPath, rename.NewPath) {
+		if isSame {
+			return verdictInclusion
+		}
+		return verdictEdited
+	}
+	if isSame {
+		return moves.identicalVerdict(rename)
 	}
 	return moves.isGoEdit(fileEdit{oldPath: rename.OldPath, newPath: rename.NewPath, isMove: true})
+}
+
+func (moves *moveContext) identicalVerdict(rename core.Rename) verdict {
+	isGo := path.Ext(rename.OldPath) == ".go" && path.Ext(rename.NewPath) == ".go"
+	switch {
+	case path.Dir(rename.OldPath) == path.Dir(rename.NewPath),
+		gosrc.IsBuildIgnored(rename.OldPath) && gosrc.IsBuildIgnored(rename.NewPath):
+		return verdictPure
+	case !isGo && !gosrc.IsCompiled(rename.OldPath):
+		return verdictPure
+	case isGo:
+		got := moves.isGoEdit(fileEdit{
+			oldPath: rename.OldPath, newPath: rename.NewPath, isMove: true, isSame: true,
+		})
+		if got == verdictPure || got == verdictStrands {
+			return got
+		}
+	}
+	return verdictUnsafe
 }
 
 func (moves *moveContext) importChangeVerdict(changedPath string) verdict {
@@ -81,6 +113,34 @@ func mixedChangesetFinding(reporter core.Reporter, renameCount, editCount int) c
 			renameCount, editCount,
 		),
 		"unstage the unrelated edits, commit the rename(s) alone, then stage and commit the edits",
+	)
+}
+
+func unlinksLoadFinding(reporter core.Reporter, file, target string) core.Finding {
+	return reporter.At(
+		file,
+		0,
+		fmt.Sprintf(
+			"edit of %s drops the last import of %s, whose init/load-time work stops running",
+			file, target,
+		),
+		fmt.Sprintf(
+			"keep a blank import of %s in that file, or move the load-time work first", target,
+		),
+	)
+}
+
+func strandsCompiledFinding(reporter core.Reporter, rename core.Rename, file string) core.Finding {
+	return reporter.At(
+		rename.NewPath,
+		0,
+		fmt.Sprintf(
+			"move of %s -> %s strands or picks up a compiled non-Go file (%s) in %s; "+
+				"move it with the package or remove it first",
+			rename.OldPath, rename.NewPath, path.Base(file), path.Dir(file),
+		),
+		"commit the compiled file move together with the package, or remove it first, "+
+			"then commit this move with only its package clause and import fixups",
 	)
 }
 

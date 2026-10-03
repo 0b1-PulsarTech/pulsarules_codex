@@ -18,6 +18,8 @@ type moveContext struct {
 	dirNames map[string]dirPackages
 	pkgNames map[moduleKey]string
 	modules  map[moduleKey]gosrc.Module
+	unlinked map[string]string
+	stranded map[string]string
 	renames  []core.Rename
 	infos    []gosrc.MoveInfo
 }
@@ -32,6 +34,8 @@ func newMoveContext(reader gitReader, renames []core.Rename) *moveContext {
 		dirNames: map[string]dirPackages{},
 		pkgNames: map[moduleKey]string{},
 		modules:  map[moduleKey]gosrc.Module{},
+		unlinked: map[string]string{},
+		stranded: map[string]string{},
 		renames:  renames,
 	}
 	for _, rename := range renames {

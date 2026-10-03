@@ -225,6 +225,10 @@ func roleSrc(variant string) string {
 	return "package routing\n\nfunc Role() string {\n\treturn \"" + variant + "\"\n}\n"
 }
 
+func takeoverRoleSrc() string {
+	return strings.Replace(roleSrc("a"), "package routing", "package takeover", 1)
+}
+
 func helperFiles() map[string]string {
 	return map[string]string{
 		"routing/helper.go": "package routing\n\nfunc Helper() int { return 1 }\n",
@@ -285,6 +289,44 @@ func repoRenameCases() []repoCase {
 			wantFindings: 0,
 		},
 		{
+			name: "identical init file moved across directories",
+			head: map[string]string{
+				"routing/i.go":    "package routing\n\nfunc init() {}\n",
+				"routing/stay.go": "package routing\n",
+			},
+			staged: map[string]string{
+				"routing/takeover/i.go": "package routing\n\nfunc init() {}\n",
+				"routing/stay.go":       "package routing\n",
+			},
+			renames:      scored("routing/i.go", "routing/takeover/i.go", 100),
+			wantFindings: 1,
+			wantContains: "byte-identical but not behaviour-neutral: in routing/takeover a name",
+		},
+		{
+			name: "package clause only change of a file with init across directories",
+			head: map[string]string{
+				"routing/i.go":    "package routing\n\nfunc init() {}\n",
+				"routing/stay.go": "package routing\n",
+			},
+			staged: map[string]string{
+				"routing/takeover/i.go": "package takeover\n\nfunc init() {}\n",
+				"routing/stay.go":       "package routing\n",
+			},
+			renames:      scored("routing/i.go", "routing/takeover/i.go", 95),
+			wantFindings: 1,
+			wantContains: "differs only by mechanical package/import " +
+				"fixups but is not behaviour-neutral: in routing/takeover a name",
+		},
+		{
+			name:         "identical blob that changes how the build includes it",
+			head:         map[string]string{"routing/x.go": "package routing\n"},
+			staged:       map[string]string{"routing/x_test.go": "package routing\n"},
+			renames:      scored("routing/x.go", "routing/x_test.go", 100),
+			wantFindings: 1,
+			wantContains: "changes how the build includes " +
+				"the file (build-ignored path, root vendor/, _test suffix",
+		},
+		{
 			name:         "no declaration of Helper anywhere",
 			head:         map[string]string{"routing/i.go": useOld},
 			staged:       map[string]string{"routing/takeover/i.go": useNew},
@@ -293,12 +335,9 @@ func repoRenameCases() []repoCase {
 			wantContains: "carries an edit",
 		},
 		{
-			name: "package clause only below the threshold",
-			head: map[string]string{"routing/m.go": roleSrc("a")},
-			staged: map[string]string{
-				"routing/takeover/m.go": "package takeover\n\nfunc Role() string {\n" +
-					"\treturn \"a\"\n}\n",
-			},
+			name:         "package clause only below the threshold",
+			head:         map[string]string{"routing/m.go": roleSrc("a")},
+			staged:       map[string]string{"routing/takeover/m.go": takeoverRoleSrc()},
 			renames:      scored("routing/m.go", "routing/takeover/m.go", 69),
 			wantFindings: 0,
 		},
@@ -371,6 +410,14 @@ func TestAnalyzer_Analyze_ScorePaths(t *testing.T) {
 			changed:      []core.FileChange{{Path: "use/u.go", Staged: true}},
 			wantFindings: 1,
 			wantContains: "mixes 1 rename(s) with 1 edit(s)",
+		},
+		{
+			name:         "identical file moved while an assembly file stays behind",
+			head:         map[string]string{"r/a.go": "package r\n", "r/add_amd64.s": "T\n"},
+			staged:       map[string]string{"r/t/a.go": "package r\n", "r/add_amd64.s": "T\n"},
+			renames:      scored("r/a.go", "r/t/a.go", 100),
+			wantFindings: 1,
+			wantContains: "strands or picks up a compiled non-Go file (add_amd64.s) in r;",
 		},
 	}
 	runRepoCases(t, testCases)

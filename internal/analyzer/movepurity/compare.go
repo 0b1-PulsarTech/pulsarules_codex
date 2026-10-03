@@ -11,6 +11,7 @@ type fileEdit struct {
 	oldPath string
 	newPath string
 	isMove  bool
+	isSame  bool
 }
 
 func (moves *moveContext) goEquivalent(oldSrc, newSrc string, edit fileEdit) verdict {
@@ -19,6 +20,16 @@ func (moves *moveContext) goEquivalent(oldSrc, newSrc string, edit fileEdit) ver
 	if oldErr != nil || newErr != nil || !moves.sameShape(oldFile, newFile, edit) ||
 		!moves.sameBodies(oldFile, newFile, edit) {
 		return verdictEdited
+	}
+	isRelocation := edit.isMove && path.Dir(edit.oldPath) != path.Dir(edit.newPath)
+	if isRelocation {
+		if got := moves.relocationVerdict(oldFile, newFile, edit); got != verdictPure {
+			return got
+		}
+	}
+	if target := moves.unlinkedImport(oldFile, newFile); target != "" {
+		moves.unlinked[edit.newPath] = target
+		return verdictUnlinksLoad
 	}
 	return verdictPure
 }
@@ -32,6 +43,9 @@ func (moves *moveContext) sameBodies(oldFile, newFile gosrc.File, edit fileEdit)
 	}
 	rules := moves.qualRules(oldFile, newFile, &scope, edit)
 	bind := moves.newBinding(oldFile, newFile, scope)
+	if edit.isMove && oldDir != newDir {
+		bind.Captures = moves.captureSets(oldFile, newFile, edit)
+	}
 	return scope.Allowed(oldFile.Imports, newFile.Imports) &&
 		gosrc.BodiesEquivalent(oldFile, newFile, rules, bind)
 }
@@ -43,7 +57,8 @@ func (moves *moveContext) sameShape(oldFile, newFile gosrc.File, edit fileEdit) 
 	if !gosrc.PreambleMatches(oldFile, newFile) || !slices.Equal(oldFile.Header, newFile.Header) {
 		return false
 	}
-	return !edit.isMove || moves.packageAllowed(oldFile, newFile, edit)
+	// An R100 move can leave several package clauses in one directory mid-series.
+	return !edit.isMove || edit.isSame || moves.packageAllowed(oldFile, newFile, edit)
 }
 
 func (moves *moveContext) qualRules(

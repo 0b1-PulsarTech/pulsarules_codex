@@ -47,7 +47,11 @@ func (a *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 			findings = append(findings, finding)
 		}
 	}
-	if edits := unrelatedStagedEdits(moves, ctx.ChangedFiles, ctx.StagedRenames); len(edits) > 0 {
+	edits, unlinks := unrelatedStagedEdits(moves, ctx.ChangedFiles, ctx.StagedRenames)
+	for _, unlink := range unlinks {
+		findings = append(findings, unlinksLoadFinding(reporter, unlink, moves.unlinked[unlink]))
+	}
+	if len(edits) > 0 {
 		findings = append(
 			findings,
 			mixedChangesetFinding(reporter, len(ctx.StagedRenames), len(edits)),
@@ -69,18 +73,41 @@ func renameFinding(
 	switch got := moves.renameVerdict(rename); {
 	case got == verdictPure:
 		return core.Finding{}, false
+	case got == verdictClauseOnly:
+		return relocationUnsafeFinding(
+			reporter,
+			rename,
+			"differs only by mechanical package/import fixups but is",
+		), true
+	case got == verdictStrands:
+		return strandsCompiledFinding(reporter, rename, moves.stranded[rename.NewPath]), true
 	case isLow:
 		return notPureMoveFinding(reporter, rename), true
 	default:
-		return renameCarriesEditFinding(reporter, rename), true
+		return editFinding(moves, reporter, rename, got), true
 	}
+}
+
+func editFinding(
+	moves *moveContext, reporter core.Reporter, rename core.Rename, got verdict,
+) core.Finding {
+	switch got {
+	case verdictUnsafe:
+		return relocationUnsafeFinding(reporter, rename, "is byte-identical but")
+	case verdictInclusion:
+		return inclusionChangeFinding(reporter, rename)
+	case verdictUnlinksLoad:
+		return unlinksLoadFinding(reporter, rename.NewPath, moves.unlinked[rename.NewPath])
+	}
+	// A failed git read lands here too: reporting beats a silent false negative.
+	return renameCarriesEditFinding(reporter, rename)
 }
 
 func unrelatedStagedEdits(
 	moves *moveContext,
 	changes []core.FileChange,
 	renames []core.Rename,
-) []core.FileChange {
+) (edits []core.FileChange, unlinks []string) {
 	// Git status keys a rename by its new path, so both sides of a pair are skipped.
 	inRename := make(map[string]bool, len(renames)*2)
 	for _, rename := range renames {
@@ -88,7 +115,6 @@ func unrelatedStagedEdits(
 		inRename[rename.NewPath] = true
 	}
 
-	var edits []core.FileChange
 	for _, change := range changes {
 		changed := change.Path
 		if !change.Staged || inRename[changed] {
@@ -98,9 +124,13 @@ func unrelatedStagedEdits(
 		if moves != nil {
 			got = moves.importChangeVerdict(changed)
 		}
-		if got != verdictPure {
+		switch got {
+		case verdictPure:
+		case verdictUnlinksLoad:
+			unlinks = append(unlinks, changed)
+		default:
 			edits = append(edits, change)
 		}
 	}
-	return edits
+	return edits, unlinks
 }
