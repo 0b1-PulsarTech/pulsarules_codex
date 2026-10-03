@@ -148,21 +148,12 @@ func TestInstall_ExistingBackupNextSlot(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	gitDir := filepath.Join(dir, ".git", "hooks")
-	if err := os.MkdirAll(gitDir, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-
 	preCommit := filepath.Join(dir, ".git", "hooks", "pre-commit")
 	current := "#!/bin/sh\nnpx lint-staged --current\n"
-	if err := os.WriteFile(preCommit, []byte(current), 0o755); err != nil {
-		t.Fatalf("seed foreign hook: %v", err)
-	}
+	seedFile(t, preCommit, current, 0o755)
 	priorBackup := preCommit + marker.BackupSuffix
 	priorContent := "#!/bin/sh\nnpx lint-staged --even-older\n"
-	if err := os.WriteFile(priorBackup, []byte(priorContent), 0o600); err != nil {
-		t.Fatalf("seed prior backup: %v", err)
-	}
+	seedFile(t, priorBackup, priorContent, 0o600)
 
 	backedUp, err := Install(dir, []string{"pre-commit"}, Options{})
 	if err != nil {
@@ -173,19 +164,38 @@ func TestInstall_ExistingBackupNextSlot(t *testing.T) {
 	if len(backedUp) != 1 || backedUp[0] != wantMsg {
 		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
 	}
-	got, readErr := os.ReadFile(priorBackup) //nolint:gosec // test fixture.
-	if readErr != nil {
-		t.Fatalf("read prior backup: %v", readErr)
+	assertContent(t, priorBackup, priorContent)
+	assertContent(t, newBackup, current)
+}
+
+func seedFile(tb testing.TB, path, content string, mode os.FileMode) {
+	tb.Helper()
+
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		tb.Fatalf("mkdir %q: %v", filepath.Dir(path), err)
 	}
-	if string(got) != priorContent {
-		t.Errorf("prior backup content = %q, want %q (clobbered)", got, priorContent)
+	if err := os.WriteFile(path, []byte(content), mode); err != nil {
+		tb.Fatalf("seed %q: %v", path, err)
 	}
-	got, readErr = os.ReadFile(newBackup) //nolint:gosec // test fixture.
-	if readErr != nil {
-		t.Fatalf("read new backup: %v", readErr)
+}
+
+func assertContent(tb testing.TB, path, want string) {
+	tb.Helper()
+
+	got, err := os.ReadFile(path) //nolint:gosec // test fixture.
+	if err != nil {
+		tb.Fatalf("read %q: %v", path, err)
 	}
-	if string(got) != current {
-		t.Errorf("new backup content = %q, want %q", got, current)
+	if string(got) != want {
+		tb.Errorf("%q content = %q, want %q", path, got, want)
+	}
+}
+
+func assertMissing(tb testing.TB, path string) {
+	tb.Helper()
+
+	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
+		tb.Errorf("expected %q to be absent, stat err = %v", path, err)
 	}
 }
 
@@ -195,8 +205,7 @@ func TestUninstall_FingerprintedHooks(
 	t.Parallel()
 
 	dir := t.TempDir()
-	gitDir := filepath.Join(dir, ".git")
-	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
 		t.Fatalf("mkdir .git: %v", err)
 	}
 	if _, err := Install(dir, []string{"commit-msg", "pre-commit"}, Options{}); err != nil {
@@ -206,9 +215,7 @@ func TestUninstall_FingerprintedHooks(
 		t.Fatalf("InstallBinary: %v", err)
 	}
 	foreign := filepath.Join(dir, ".git", "hooks", "pre-push")
-	if err := os.WriteFile(foreign, []byte("#!/bin/sh\necho mine\n"), 0o700); err != nil {
-		t.Fatalf("seed foreign hook: %v", err)
-	}
+	seedFile(t, foreign, "#!/bin/sh\necho mine\n", 0o700)
 
 	removed, _, _, err := Uninstall(dir)
 	if err != nil {
@@ -216,20 +223,12 @@ func TestUninstall_FingerprintedHooks(
 	}
 	wantRemoved := []string{"commit-msg", "pre-commit"}
 	for _, name := range wantRemoved {
-		if _, statErr := os.Stat(
-			filepath.Join(dir, ".git", "hooks", name),
-		); !errors.Is(statErr, fs.ErrNotExist) {
-			t.Errorf("expected %q to be removed, stat err = %v", name, statErr)
-		}
+		assertMissing(t, filepath.Join(dir, ".git", "hooks", name))
 	}
 	if len(removed) != len(wantRemoved) {
 		t.Errorf("removed = %v, want 2 hooks", removed)
 	}
-	if _, statErr := os.Stat(
-		filepath.Join(dir, ".git", "hooks", "pulsarules_cli"),
-	); !errors.Is(statErr, fs.ErrNotExist) {
-		t.Errorf("expected installer binary to be removed, stat err = %v", statErr)
-	}
+	assertMissing(t, filepath.Join(dir, ".git", "hooks", "pulsarules_cli"))
 	if _, statErr := os.Stat(foreign); statErr != nil {
 		t.Errorf("expected foreign pre-push hook to survive, stat err = %v", statErr)
 	}
@@ -250,15 +249,9 @@ func TestUninstall_RestoresBackup(
 	t.Parallel()
 
 	dir := t.TempDir()
-	gitDir := filepath.Join(dir, ".git", "hooks")
-	if err := os.MkdirAll(gitDir, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
 	preCommit := filepath.Join(dir, ".git", "hooks", "pre-commit")
 	foreign := "#!/bin/sh\nnpx lint-staged\n"
-	if err := os.WriteFile(preCommit, []byte(foreign), 0o755); err != nil {
-		t.Fatalf("seed foreign hook: %v", err)
-	}
+	seedFile(t, preCommit, foreign, 0o755)
 	if _, err := Install(dir, []string{"pre-commit"}, Options{}); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
@@ -274,19 +267,8 @@ func TestUninstall_RestoresBackup(
 	if len(restored) != 1 || restored[0] != wantMsg {
 		t.Fatalf("restored = %v, want [%q]", restored, wantMsg)
 	}
-
-	got, readErr := os.ReadFile(preCommit) //nolint:gosec // test fixture.
-	if readErr != nil {
-		t.Fatalf("read restored hook: %v", readErr)
-	}
-	if string(got) != foreign {
-		t.Errorf("restored content = %q, want %q", got, foreign)
-	}
-	if _, statErr := os.Stat(
-		preCommit + marker.BackupSuffix,
-	); !errors.Is(statErr, fs.ErrNotExist) {
-		t.Errorf("expected backup slot to be gone after restore, stat err = %v", statErr)
-	}
+	assertContent(t, preCommit, foreign)
+	assertMissing(t, preCommit+marker.BackupSuffix)
 }
 
 func TestHookNames(t *testing.T) {
