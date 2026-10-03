@@ -2,7 +2,10 @@ package install
 
 import (
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func TestParseSkillSelection(t *testing.T) {
@@ -48,6 +51,46 @@ func TestParseSkillSelection(t *testing.T) {
 			}
 			if !slices.Equal(got, testCase.want) {
 				t.Errorf("got %v, want %v", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestPrintSkillCatalog(t *testing.T) {
+	t.Parallel()
+
+	const header = "Select skills to install (mandatory skills are always included):\n"
+	testCases := []struct {
+		name    string
+		catalog []knowledge.Skill
+		want    string
+	}{
+		{
+			name: "benign skills are byte-identical",
+			catalog: []knowledge.Skill{
+				{ID: "go-style", Description: "Style. More.", AlwaysLoad: true},
+				{ID: "commits", Description: "Commit."},
+			},
+			want: header +
+				"   1. [x] go-style - Style. (mandatory, locked)\n" +
+				"   2. [ ] commits - Commit.\n",
+		},
+		{
+			name: "forged id and description stay on one line",
+			catalog: []knowledge.Skill{
+				{ID: "a\n[ERROR] id", Description: "b\n[ERROR] desc"},
+			},
+			want: header + `   1. [ ] a\n[ERROR] id - b\n[ERROR] desc` + "\n",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			var out strings.Builder
+			printSkillCatalog(&out, testCase.catalog)
+			if out.String() != testCase.want {
+				t.Errorf("output = %q, want %q", out.String(), testCase.want)
 			}
 		})
 	}

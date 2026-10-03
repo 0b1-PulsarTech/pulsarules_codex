@@ -12,6 +12,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -71,7 +72,11 @@ func writeSkills(writer io.Writer, idx *knowledge.Index) {
 }
 
 func writeRow(writer io.Writer, cells ...string) {
-	_, _ = fmt.Fprintln(writer, strings.Join(cells, "\t"))
+	escaped := make([]string, len(cells))
+	for pos, cell := range cells {
+		escaped[pos] = printable.Line(cell)
+	}
+	_, _ = fmt.Fprintln(writer, strings.Join(escaped, "\t"))
 }
 
 func joinOrDash(items []string) string {

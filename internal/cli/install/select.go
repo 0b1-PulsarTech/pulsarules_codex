@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/selection"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -48,8 +49,8 @@ func printSkillCatalog(out io.Writer, catalog []knowledge.Skill) {
 			"  %2d. [%s] %s - %s%s\n",
 			pos+1,
 			mark,
-			skill.ID,
-			knowledge.FirstSentence(skill.Description),
+			printable.Line(skill.ID),
+			printable.Line(knowledge.FirstSentence(skill.Description)),
 			note,
 		)
 	}

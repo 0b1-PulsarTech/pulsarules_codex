@@ -27,8 +27,8 @@ func printDependencyPulls(out io.Writer, pulled []selection.DependencyPull) {
 		_, _ = fmt.Fprintf(
 			out,
 			"pulled in by dependency: %s (required by %s)\n",
-			dep.Skill,
-			dep.RequiredBy,
+			printable.Line(dep.Skill),
+			printable.Line(dep.RequiredBy),
 		)
 	}
 }
