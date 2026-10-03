@@ -228,7 +228,7 @@ files) instead of a hardcoded per-extension map, so a new skill trigger routes w
 `SessionTracker` (`session.go`) writes per-session marker files under the OS temp dir, keyed by
 event and session ID (an ID that is not a plain token is hashed first), so `OncePerSession` and
 content-hashed `FirstEmission` deduplicate repeat emissions within one session; `Cleanup` scans and
-removes them at `session-end`. The `checklist` subpackage's `TypedChecklist` and `checks.go`'s
+removes them at `session-end`. The `checklist` subpackage's `Typed` and `checks.go`'s
 `RunGovernanceCheck` are what the `stop` handler calls into the governance pipeline through: the
 latter opens a `Session` at `analysis.ScopeChanged` and formats findings with `analysis.StyleHook`.
 `drift.go` runs once per session at `session-start`: it compares `knowledge.Fingerprint()` (the

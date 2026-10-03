@@ -1,47 +1,59 @@
 package checklist
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-func TestTypedChecklist(t *testing.T) {
+func TestTyped(t *testing.T) {
 	t.Parallel()
 
-	t.Run("go and sql", func(t *testing.T) {
-		t.Parallel()
-		status := vcs.Status{Changes: []vcs.Change{
-			{Path: "main.go", Extension: ".go"},
-			{Path: "schema.sql", Extension: ".sql"},
-		}}
-		got := TypedChecklist(status)
-		if !strings.Contains(got, "gofmt") {
-			t.Fatalf("expected gofmt bullet, got: %s", got)
-		}
-		if !strings.Contains(got, "migrations reversible") {
-			t.Fatalf("expected sql bullet, got: %s", got)
-		}
-	})
-
-	t.Run("empty status produces empty checklist", func(t *testing.T) {
-		t.Parallel()
-		got := TypedChecklist(vcs.Status{})
-		if got != "" {
-			t.Fatalf("expected empty, got: %s", got)
-		}
-	})
-
-	t.Run("no duplicate bullets", func(t *testing.T) {
-		t.Parallel()
-		status := vcs.Status{Changes: []vcs.Change{
-			{Path: "a.go", Extension: ".go"},
-			{Path: "b.go", Extension: ".go"},
-		}}
-		got := TypedChecklist(status)
-		if strings.Count(got, "gofmt") != 1 {
-			t.Fatalf("expected 1 gofmt bullet, got: %s", got)
-		}
-	})
+	testCases := []struct {
+		name    string
+		changes []vcs.Change
+		expect  string
+	}{
+		{name: "empty status produces empty checklist"},
+		{
+			name: "go and sql in fixed order",
+			changes: []vcs.Change{
+				{Path: "schema.sql", Extension: ".sql"},
+				{Path: "main.go", Extension: ".go"},
+			},
+			expect: "  - gofmt -l clean; go vet ./... and go test -race ./... green\n" +
+				"  - no package docstrings; no doc comments on unexported symbols\n" +
+				"  - migrations reversible and reviewed; no raw SQL in handlers",
+		},
+		{
+			name: "two files of one extension list its bullets once",
+			changes: []vcs.Change{
+				{Path: "a.md", Extension: ".md"},
+				{Path: "b.md", Extension: ".md"},
+			},
+			expect: "  - every Markdown file ends with a trailing newline",
+		},
+		{
+			name: "yaml then md",
+			changes: []vcs.Change{
+				{Path: "README.md", Extension: ".md"},
+				{Path: "skills.yaml", Extension: ".yaml"},
+			},
+			expect: "  - validate passes: go run ./cmd/pulsarules_cli validate\n" +
+				"  - every Markdown file ends with a trailing newline",
+		},
+		{
+			name:    "unknown extension has no bullets",
+			changes: []vcs.Change{{Path: "main.rs", Extension: ".rs"}},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := Typed(vcs.Status{Changes: testCase.changes})
+			if got != testCase.expect {
+				t.Fatalf("Typed() = %q, want %q", got, testCase.expect)
+			}
+		})
+	}
 }
