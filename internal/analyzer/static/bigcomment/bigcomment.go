@@ -63,11 +63,14 @@ func scanFile(
 	for line := range strings.SplitSeq(string(src), "\n") {
 		lineNum++
 		if scanner.IsCommentLine(line) {
+			if core.IsDirectiveHeaderLine(line) {
+				continue
+			}
 			if blockLines == 0 {
 				blockStart = lineNum
 				// A simplification block states the ceiling and an upgrade path, which no
 				// 3-line cap holds.
-				exempt = core.IsExemptHeaderLine(line) || core.IsSimplificationMarker(line)
+				exempt = core.IsGeneratedMarkerLine(line) || core.IsSimplificationMarker(line)
 			}
 			blockLines++
 			continue
