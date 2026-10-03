@@ -17,20 +17,20 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return "naming" }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string          { return "naming" }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	reporter := pass.ResolveReporter(a.reporter, ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
-		return a.checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+		return analyzer.checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
 	})
 }
 
-func (a *Analyzer) checkFile(
+func (analyzer *Analyzer) checkFile(
 	fset *token.FileSet,
 	fc pass.FileChange,
-	f *ast.File,
+	file *ast.File,
 	reporter pass.Reporter,
 ) []pass.Finding {
 	var findings []pass.Finding
@@ -38,7 +38,7 @@ func (a *Analyzer) checkFile(
 	// file (siblings, and the types names are built from), which no single
 	// identifier can answer for itself.
 	checker := fileChecker{
-		index: newFileIndex(f),
+		index: newFileIndex(file),
 		emit: func(pos token.Pos, msg, suggestion string) {
 			findings = append(
 				findings,
@@ -47,15 +47,15 @@ func (a *Analyzer) checkFile(
 		},
 	}
 
-	ast.Inspect(f, func(n ast.Node) bool {
-		switch v := n.(type) {
+	ast.Inspect(file, func(node ast.Node) bool {
+		switch typed := node.(type) {
 		case *ast.FuncDecl:
-			checker.funcDecl(v)
+			checker.funcDecl(typed)
 		case *ast.GenDecl:
-			checker.genDecl(v)
+			checker.genDecl(typed)
 		case *ast.AssignStmt:
-			if v.Tok == token.DEFINE {
-				for _, lhs := range v.Lhs {
+			if typed.Tok == token.DEFINE {
+				for _, lhs := range typed.Lhs {
 					if id, ok := lhs.(*ast.Ident); ok && id.Name != "_" {
 						checker.check(id.Name, id.NamePos)
 					}

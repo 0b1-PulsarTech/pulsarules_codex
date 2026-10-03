@@ -5,12 +5,12 @@ import "testing"
 func TestShadowing_SwitchSelectClauseBlock(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	for _, testCase := range clauseTestCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			runCheckFile(t, a, testCase)
+			runCheckFile(t, analyzer, testCase)
 		})
 	}
 }
@@ -104,12 +104,12 @@ func clauseGuardCases() []checkFileTestCase {
 func TestShadowing_ClosuresKnownGap(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	for _, testCase := range closureTestCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			runCheckFile(t, a, testCase)
+			runCheckFile(t, analyzer, testCase)
 		})
 	}
 }
@@ -203,7 +203,7 @@ func closureConcurrentCases() []checkFileTestCase {
 func TestReuseReportedOncePerName(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 	testCase := checkFileTestCase{
 		name: "a named result reused twice reports once",
 		source: "package foo\n" +
@@ -217,5 +217,5 @@ func TestReuseReportedOncePerName(t *testing.T) {
 		expect:    0,
 		wantReuse: 1,
 	}
-	runCheckFile(t, a, testCase)
+	runCheckFile(t, analyzer, testCase)
 }

@@ -1,5 +1,7 @@
 package shadowing
 
+import "go/types"
+
 const (
 	originVariable  = "variable"
 	originSignature = "signature"
@@ -16,9 +18,8 @@ type scopeStack struct {
 
 func newScopeStack() *scopeStack {
 	scopes := &scopeStack{}
-	// Outermost builtins scope.
+	// stack[0] is the universe scope; lookup answers it from types.Universe instead.
 	scopes.push()
-	scopes.stack[0] = builtins()
 	return scopes
 }
 
@@ -51,8 +52,12 @@ func (scopes *scopeStack) declareAs(name, origin string) {
 }
 
 func (scopes *scopeStack) lookup(name string) (string, bool) {
-	// Every scope but the innermost is checked; builtins in stack[0] count.
-	for idx := 0; idx < len(scopes.stack)-1; idx++ {
+	const originBuiltin = "builtin"
+	if types.Universe.Lookup(name) != nil {
+		return originBuiltin, true
+	}
+	// Every scope but the innermost is checked.
+	for idx := 1; idx < len(scopes.stack)-1; idx++ {
 		for _, entry := range scopes.stack[idx] {
 			if entry.name == name {
 				return entry.origin, true
@@ -73,29 +78,4 @@ func (scopes *scopeStack) declaredHere(name string) (string, bool) {
 		}
 	}
 	return "", false
-}
-
-func builtins() []scopeEntry {
-	const originBuiltin = "builtin"
-	names := []string{
-		"true", "false", "nil",
-		"int", "int8", "int16", "int32", "int64",
-		"uint", "uint8", "uint16", "uint32", "uint64",
-		"uintptr", "float32", "float64",
-		"complex64", "complex128",
-		"string", "bool", "byte", "rune",
-		"error",
-		"any", "comparable",
-		"make", "new", "len", "cap", "append",
-		"copy", "delete", "close",
-		"panic", "recover",
-		"print", "println",
-		"real", "imag", "complex",
-		"iota",
-	}
-	entries := make([]scopeEntry, len(names))
-	for idx, name := range names {
-		entries[idx] = scopeEntry{name: name, origin: originBuiltin}
-	}
-	return entries
 }

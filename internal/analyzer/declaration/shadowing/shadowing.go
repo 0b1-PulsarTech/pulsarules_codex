@@ -21,16 +21,16 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return "shadowing" }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string          { return "shadowing" }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	reps := fileReporters{
-		shadow: pass.ResolveReporter(a.shadowReporter, ctx),
-		reuse:  pass.ResolveReporter(a.reuseReporter, ctx),
+		shadow: pass.ResolveReporter(analyzer.shadowReporter, ctx),
+		reuse:  pass.ResolveReporter(analyzer.reuseReporter, ctx),
 	}
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
-		return a.checkFile(ctx.ASTCache.FileSet(), fc, f, reps)
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+		return analyzer.checkFile(ctx.ASTCache.FileSet(), fc, file, reps)
 	})
 }
 
@@ -78,14 +78,14 @@ func (reps fileReporters) forFunc(
 	}
 }
 
-func (a *Analyzer) checkFile(
-	fset *token.FileSet, fc pass.FileChange, f *ast.File, reps fileReporters,
+func (analyzer *Analyzer) checkFile(
+	fset *token.FileSet, fc pass.FileChange, file *ast.File, reps fileReporters,
 ) []pass.Finding {
 	var findings []pass.Finding
 	// simplification: function literals are not walked; doing so mostly finds
 	// `if err := f(); err != nil` in closures, not worth reporting yet. Upgrade
 	// path: walk FuncLit bodies in walkStmt.
-	for _, decl := range f.Decls {
+	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Body == nil {
 			continue
@@ -104,7 +104,7 @@ func (a *Analyzer) checkFile(
 		// walkStmts runs the body here instead of pushing a block of its own.
 		scopes.push()
 		declareFields(scopes, fn.Recv, fn.Type.Params, fn.Type.Results)
-		a.walkStmts(fn.Body.List, scopes, report)
+		analyzer.walkStmts(fn.Body.List, scopes, report)
 	}
 
 	return findings

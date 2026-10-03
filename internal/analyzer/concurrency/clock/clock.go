@@ -17,31 +17,31 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return "time-discipline" }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string          { return "time-discipline" }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	reporter := pass.ResolveReporter(a.reporter, ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
-		return checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+		return checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
 	})
 }
 
 func checkFile(
-	fset *token.FileSet, fc pass.FileChange, f *ast.File, reporter pass.Reporter,
+	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter pass.Reporter,
 ) []pass.Finding {
 	var findings []pass.Finding
 
-	bubbles := synctestBubbles(f)
-	ast.Inspect(f, func(n ast.Node) bool {
-		switch node := n.(type) {
+	bubbles := synctestBubbles(file)
+	ast.Inspect(file, func(node ast.Node) bool {
+		switch typed := node.(type) {
 		case *ast.CallExpr:
 			// A sleep in a synctest bubble advances the fake clock, so flagging it
 			// would ask the author to replace correct code.
-			if isTimeSleepCall(node) && !insideBubble(bubbles, node.Pos()) {
+			if isTimeSleepCall(typed) && !insideBubble(bubbles, typed.Pos()) {
 				findings = append(findings, reporter.At(
 					fc.Path,
-					fset.Position(node.Pos()).Line,
+					fset.Position(typed.Pos()).Line,
 					"time.Sleep call; pace production code on a ticker/context.Done "+
 						"and drive test timing with testing/synctest, never a real sleep",
 					"replace with a ticker/context wait (production) or synctest.Test (tests)",
@@ -50,7 +50,7 @@ func checkFile(
 		case *ast.StructType:
 			// Interface method signatures are also *ast.Field nodes; walking
 			// only *ast.StructType excludes an interface's Now() method.
-			for _, field := range node.Fields.List {
+			for _, field := range typed.Fields.List {
 				name, ok := clockSeamFieldName(field)
 				if !ok {
 					continue

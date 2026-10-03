@@ -1,8 +1,10 @@
 package shadowing
 
 import (
+	"go/types"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -13,7 +15,7 @@ import (
 func TestAnalyze(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	testCases := []struct {
 		name   string
@@ -35,7 +37,7 @@ func TestAnalyze(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := a.Analyze(testCase.ctx)
+			got := analyzer.Analyze(testCase.ctx)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d", len(got), testCase.expect)
 			}
@@ -46,12 +48,12 @@ func TestAnalyze(t *testing.T) {
 func TestCheckFile(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	for _, testCase := range checkFileTestCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			runCheckFile(t, a, testCase)
+			runCheckFile(t, analyzer, testCase)
 		})
 	}
 }
@@ -223,7 +225,7 @@ func checkFileCasesExtra() []checkFileTestCase {
 func TestCheckFileMessage(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	testCases := []struct {
 		name   string
@@ -256,7 +258,7 @@ func TestCheckFileMessage(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := analyzeMessage(t, a, testCase.source)
+			got := analyzeMessage(t, analyzer, testCase.source)
 			if got != testCase.want {
 				t.Fatalf("message = %q, want %q", got, testCase.want)
 			}
@@ -264,7 +266,29 @@ func TestCheckFileMessage(t *testing.T) {
 	}
 }
 
-func analyzeMessage(t *testing.T, a *Analyzer, source string) string {
+func TestCheckFileUniverse(t *testing.T) {
+	t.Parallel()
+
+	analyzer := NewAnalyzer()
+	for _, want := range []string{"min", "max", "clear"} {
+		if !slices.Contains(types.Universe.Names(), want) {
+			t.Fatalf("types.Universe lacks %q", want)
+		}
+	}
+	for _, name := range types.Universe.Names() {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			source := "package foo\nfunc f() {\n\t" + name + " := 1\n\t_ = " + name + "\n}\n"
+			want := `"` + name + `" shadows an outer builtin`
+			if got := analyzeMessage(t, analyzer, source); got != want {
+				t.Fatalf("message = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+func analyzeMessage(t *testing.T, analyzer *Analyzer, source string) string {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -274,15 +298,15 @@ func analyzeMessage(t *testing.T, a *Analyzer, source string) string {
 	}
 
 	cache := astcache.New()
-	f, err := cache.Parse(path, []byte(source))
+	file, err := cache.Parse(path, []byte(source))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	fc := pass.FileChange{Path: "foo.go", Extension: ".go"}
-	got := a.checkFile(
-		cache.FileSet(), fc, f,
-		fileReporters{shadow: a.shadowReporter, reuse: a.reuseReporter},
+	got := analyzer.checkFile(
+		cache.FileSet(), fc, file,
+		fileReporters{shadow: analyzer.shadowReporter, reuse: analyzer.reuseReporter},
 	)
 	if len(got) != 1 {
 		t.Fatalf("got %d findings, want 1: %v", len(got), got)
@@ -290,10 +314,10 @@ func analyzeMessage(t *testing.T, a *Analyzer, source string) string {
 	return got[0].Message
 }
 
-func runCheckFile(t *testing.T, a *Analyzer, testCase checkFileTestCase) {
+func runCheckFile(t *testing.T, analyzer *Analyzer, testCase checkFileTestCase) {
 	t.Helper()
 
-	shadows, reuses := countByRule(t, a, testCase.source)
+	shadows, reuses := countByRule(t, analyzer, testCase.source)
 	if shadows != testCase.expect {
 		t.Errorf("got %d shadowing findings, want %d", shadows, testCase.expect)
 	}
@@ -302,7 +326,7 @@ func runCheckFile(t *testing.T, a *Analyzer, testCase checkFileTestCase) {
 	}
 }
 
-func countByRule(t *testing.T, a *Analyzer, source string) (shadows, reuses int) {
+func countByRule(t *testing.T, analyzer *Analyzer, source string) (shadows, reuses int) {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -316,15 +340,15 @@ func countByRule(t *testing.T, a *Analyzer, source string) (shadows, reuses int)
 	}
 
 	cache := astcache.New()
-	f, err := cache.Parse(path, src)
+	file, err := cache.Parse(path, src)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	fc := pass.FileChange{Path: "foo.go", Extension: ".go"}
-	findings := a.checkFile(
-		cache.FileSet(), fc, f,
-		fileReporters{shadow: a.shadowReporter, reuse: a.reuseReporter},
+	findings := analyzer.checkFile(
+		cache.FileSet(), fc, file,
+		fileReporters{shadow: analyzer.shadowReporter, reuse: analyzer.reuseReporter},
 	)
 	for _, finding := range findings {
 		switch finding.AnalyzerID {

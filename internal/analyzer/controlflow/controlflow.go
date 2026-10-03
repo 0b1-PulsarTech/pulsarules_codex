@@ -21,20 +21,20 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return "control-flow" }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string          { return "control-flow" }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	reporter := pass.ResolveReporter(a.reporter, ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
-		return a.checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+		return analyzer.checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
 	})
 }
 
-func (a *Analyzer) checkFile(
+func (analyzer *Analyzer) checkFile(
 	fset *token.FileSet,
 	fc pass.FileChange,
-	f *ast.File,
+	file *ast.File,
 	reporter pass.Reporter,
 ) []pass.Finding {
 	var findings []pass.Finding
@@ -46,18 +46,18 @@ func (a *Analyzer) checkFile(
 		)
 	}
 
-	for _, decl := range f.Decls {
+	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok {
 			continue
 		}
-		a.walkBlock(fn.Body, 0, emit)
+		analyzer.walkBlock(fn.Body, 0, emit)
 	}
 
 	return findings
 }
 
-func (a *Analyzer) walkBlock(
+func (analyzer *Analyzer) walkBlock(
 	block *ast.BlockStmt,
 	depth int,
 	emit func(token.Pos, string, string),
@@ -66,74 +66,74 @@ func (a *Analyzer) walkBlock(
 		return
 	}
 
-	if depth > a.maxNesting {
+	if depth > analyzer.maxNesting {
 		emit(
 			block.Lbrace,
-			fmt.Sprintf("nesting depth %d exceeds max %d", depth, a.maxNesting),
+			fmt.Sprintf("nesting depth %d exceeds max %d", depth, analyzer.maxNesting),
 			"extract inner logic into helper functions",
 		)
 	}
 
 	for _, stmt := range block.List {
-		switch s := stmt.(type) {
+		switch typed := stmt.(type) {
 		case *ast.IfStmt:
-			a.walkIf(s, depth, emit)
+			analyzer.walkIf(typed, depth, emit)
 		case *ast.ForStmt:
-			a.walkBlock(s.Body, depth+1, emit)
+			analyzer.walkBlock(typed.Body, depth+1, emit)
 		case *ast.RangeStmt:
-			a.walkBlock(s.Body, depth+1, emit)
+			analyzer.walkBlock(typed.Body, depth+1, emit)
 		case *ast.SwitchStmt:
-			a.walkBlock(s.Body, depth+1, emit)
+			analyzer.walkBlock(typed.Body, depth+1, emit)
 		case *ast.TypeSwitchStmt:
-			a.walkBlock(s.Body, depth+1, emit)
+			analyzer.walkBlock(typed.Body, depth+1, emit)
 		case *ast.SelectStmt:
-			a.walkBlock(s.Body, depth+1, emit)
+			analyzer.walkBlock(typed.Body, depth+1, emit)
 		case *ast.BlockStmt:
-			a.walkBlock(s, depth+1, emit)
+			analyzer.walkBlock(typed, depth+1, emit)
 		}
 	}
 }
 
-func (a *Analyzer) walkIf(
-	s *ast.IfStmt,
+func (analyzer *Analyzer) walkIf(
+	ifStmt *ast.IfStmt,
 	depth int,
 	emit func(token.Pos, string, string),
 ) {
-	if s.Body != nil {
-		a.walkBlock(s.Body, depth+1, emit)
+	if ifStmt.Body != nil {
+		analyzer.walkBlock(ifStmt.Body, depth+1, emit)
 	}
 
-	el, ok := s.Else.(*ast.BlockStmt)
+	el, ok := ifStmt.Else.(*ast.BlockStmt)
 	if !ok {
-		if elseif, ok := s.Else.(*ast.IfStmt); ok {
-			a.walkIf(elseif, depth, emit)
+		if elseif, ok := ifStmt.Else.(*ast.IfStmt); ok {
+			analyzer.walkIf(elseif, depth, emit)
 		}
 		return
 	}
 
-	a.checkElseBlock(el, emit)
+	analyzer.checkElseBlock(el, emit)
 
-	a.walkBlock(el, depth+1, emit)
+	analyzer.walkBlock(el, depth+1, emit)
 }
 
-func (a *Analyzer) checkElseBlock(
+func (analyzer *Analyzer) checkElseBlock(
 	block *ast.BlockStmt,
 	emit func(token.Pos, string, string),
 ) {
 	for _, stmt := range block.List {
-		switch s := stmt.(type) {
+		switch typed := stmt.(type) {
 		case *ast.ReturnStmt:
 			emit(
-				s.Return,
+				typed.Return,
 				"else block contains return; use early return instead",
 				"remove else and return directly",
 			)
 			return
 		case *ast.ExprStmt:
-			if call, ok := s.X.(*ast.CallExpr); ok {
+			if call, ok := typed.X.(*ast.CallExpr); ok {
 				if ident, ok := call.Fun.(*ast.Ident); ok && ident.Name == "panic" {
 					emit(
-						s.Pos(),
+						typed.Pos(),
 						"else block contains panic; panic directly instead",
 						"remove else and panic directly",
 					)
@@ -142,15 +142,15 @@ func (a *Analyzer) checkElseBlock(
 			}
 		case *ast.ForStmt, *ast.RangeStmt:
 			emit(
-				s.Pos(),
+				typed.Pos(),
 				"else block contains loop; restructure to avoid else",
 				"move loop out of else or invert the condition",
 			)
 			return
 		case *ast.BranchStmt:
 			emit(
-				s.Pos(),
-				fmt.Sprintf("else block contains %s statement", s.Tok),
+				typed.Pos(),
+				fmt.Sprintf("else block contains %s statement", typed.Tok),
 				"restructure to avoid branch inside else",
 			)
 			return

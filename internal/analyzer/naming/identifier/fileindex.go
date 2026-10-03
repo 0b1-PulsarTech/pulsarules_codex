@@ -11,19 +11,19 @@ type fileIndex struct {
 	typeDerived map[token.Pos]bool
 }
 
-func newFileIndex(f *ast.File) *fileIndex {
+func newFileIndex(file *ast.File) *fileIndex {
 	idx := &fileIndex{
 		declared:    make(map[string]bool),
 		typeDerived: make(map[token.Pos]bool),
 	}
-	ast.Inspect(f, func(n ast.Node) bool {
-		switch v := n.(type) {
+	ast.Inspect(file, func(node ast.Node) bool {
+		switch typed := node.(type) {
 		case *ast.FuncDecl:
-			idx.addFuncDecl(v)
+			idx.addFuncDecl(typed)
 		case *ast.GenDecl:
-			idx.addGenDecl(v)
+			idx.addGenDecl(typed)
 		case *ast.AssignStmt:
-			idx.addAssign(v)
+			idx.addAssign(typed)
 		}
 		return true
 	})

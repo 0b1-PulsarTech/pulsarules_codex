@@ -19,13 +19,13 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (a *Analyzer) ID() string          { return "named-returns" }
-func (a *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string          { return "named-returns" }
+func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
 
-func (a *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
-	reporter := pass.ResolveReporter(a.reporter, ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, f *ast.File) []pass.Finding {
-		return checkFile(ctx.ASTCache.FileSet(), fc, f, reporter)
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+		return checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
 	})
 }
 

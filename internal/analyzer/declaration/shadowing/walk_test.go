@@ -5,12 +5,12 @@ import "testing"
 func TestShadowing_ShortDeclSignatureNames(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	for _, testCase := range functionBlockTestCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			runCheckFile(t, a, testCase)
+			runCheckFile(t, analyzer, testCase)
 		})
 	}
 }
@@ -139,7 +139,7 @@ func functionBlockShadowCases() []checkFileTestCase {
 func TestReuseMessage(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 	source := "package foo\n" +
 		"func f(ctx int) {\n" +
 		"	ctx, span := start(ctx)\n" +
@@ -148,7 +148,7 @@ func TestReuseMessage(t *testing.T) {
 		"func start(c int) (int, int) { return c, 0 }\n"
 
 	want := `"ctx" is reassigned by := in the block that declares it`
-	if got := analyzeMessage(t, a, source); got != want {
+	if got := analyzeMessage(t, analyzer, source); got != want {
 		t.Fatalf("message = %q, want %q", got, want)
 	}
 }

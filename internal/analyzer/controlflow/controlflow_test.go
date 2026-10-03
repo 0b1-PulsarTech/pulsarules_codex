@@ -12,7 +12,7 @@ import (
 func TestAnalyze(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	testCases := []struct {
 		name   string
@@ -34,7 +34,7 @@ func TestAnalyze(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := a.Analyze(testCase.ctx)
+			got := analyzer.Analyze(testCase.ctx)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d", len(got), testCase.expect)
 			}
@@ -45,7 +45,7 @@ func TestAnalyze(t *testing.T) {
 func TestCheckFile(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	testCases := []struct {
 		name   string
@@ -118,12 +118,12 @@ func TestCheckFile(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			runCheckFile(t, a, testCase.source, testCase.expect)
+			runCheckFile(t, analyzer, testCase.source, testCase.expect)
 		})
 	}
 }
 
-func runCheckFile(t *testing.T, a *Analyzer, source string, expect int) {
+func runCheckFile(t *testing.T, analyzer *Analyzer, source string, expect int) {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -137,13 +137,13 @@ func runCheckFile(t *testing.T, a *Analyzer, source string, expect int) {
 	}
 
 	cache := astcache.New()
-	f, err := cache.Parse(path, src)
+	file, err := cache.Parse(path, src)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	fc := pass.FileChange{Path: "foo.go", Extension: ".go"}
-	got := a.checkFile(cache.FileSet(), fc, f, a.reporter)
+	got := analyzer.checkFile(cache.FileSet(), fc, file, analyzer.reporter)
 	if len(got) != expect {
 		t.Fatalf("got %d findings, want %d: %v", len(got), expect, got)
 	}

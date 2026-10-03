@@ -12,7 +12,7 @@ import (
 func TestAnalyze(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 
 	testCases := []struct {
 		name   string
@@ -34,7 +34,7 @@ func TestAnalyze(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := a.Analyze(testCase.ctx)
+			got := analyzer.Analyze(testCase.ctx)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d", len(got), testCase.expect)
 			}
@@ -96,7 +96,7 @@ func checkFileCases() []checkFileTestCase {
 func TestCheckFile(t *testing.T) {
 	t.Parallel()
 
-	a := NewAnalyzer()
+	analyzer := NewAnalyzer()
 	const modPath = "github.com/0b1-PulsarTech/pulsarules_codex"
 
 	for _, testCase := range checkFileCases() {
@@ -113,13 +113,13 @@ func TestCheckFile(t *testing.T) {
 			}
 
 			cache := astcache.New()
-			f, err := cache.Parse(path, src)
+			file, err := cache.Parse(path, src)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			fc := pass.FileChange{Path: "foo.go", Extension: ".go"}
-			got := a.checkFile(cache.FileSet(), modPath, fc, f, a.reporter)
+			got := analyzer.checkFile(cache.FileSet(), modPath, fc, file, analyzer.reporter)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d", len(got), testCase.expect)
 			}
