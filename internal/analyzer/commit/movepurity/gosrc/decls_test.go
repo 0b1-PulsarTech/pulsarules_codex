@@ -85,6 +85,10 @@ func TestPackageClause(t *testing.T) {
 	}{
 		{"plain", "package p\n\nfunc F() {}\n", "p", false},
 		{"ignored", "//go:build ignore\n\npackage p\n", "p", true},
+		{"negated ignore", "//go:build !ignore\n\npackage p\n", "p", false},
+		{"ignore with other tag", "//go:build ignore && linux\n\npackage p\n", "p", true},
+		{"plus build ignore", "// +build ignore\n\npackage p\n", "p", true},
+		{"unrelated tag", "//go:build linux\n\npackage p\n", "p", false},
 		{"doc comment only", "// Package p does x.\npackage p\n", "p", false},
 		{"no clause", "func F() {}\n", "", false},
 		{"empty", "", "", false},
