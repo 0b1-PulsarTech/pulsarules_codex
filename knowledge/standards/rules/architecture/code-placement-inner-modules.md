@@ -11,6 +11,7 @@ linters:
 analyzers:
     - arch-boundary
     - import-cycle
+    - package-file-count
 ---
 
 # Code placement - single repo with inner modules
@@ -51,6 +52,10 @@ inner-modules form rather than relying on it being composed alongside.
    `internal/domain/{entities,usecases/<feature>/,interop/}`, `internal/infra/...`,
    `internal/transport/...`. Name each `<feature>` for its business capability, not a framework or
    technical layer (see [[code-placement]]).
+7. Keep a Go package small: past 10 non-test `.go` files, split it by responsibility into
+   subdirectories (`package-file-count`, default 10 in code; not counted: generated files, an ent
+   schema directory, `//go:build ignore` files, files named `_*` or `.*`, minority-package files,
+   and directories Go ignores).
 {{end}}
 
 {{define "forbidden"}}

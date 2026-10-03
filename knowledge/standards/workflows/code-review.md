@@ -55,11 +55,12 @@ composes_patterns:
    libs importing apps, non-API code under `internal/`; source dependencies point inward (no
    infra/transport/driver/framework import in the domain). (rules: [[code-placement]],
    [[dependency-rule]])
-2. **Stop signs:** no global mutable state; no `init()`/package-load side effects; no `panic`
-   outside `main`; no raw SQL in handlers/use cases; no generated row types returned from
-   repositories; no direct cross-module calls (use facades); no transport imports in domain; no
-   silent error swallowing. (rules: [[startup]], [[dependency-injection]], [[database]],
-   [[interop]], [[transport]], [[errors]])
+2. **Stop signs:** no package-level var outside the exempt set (see [[code-smells]]); no
+   `init()`/package-load side effects; no `panic` outside `main`; no raw SQL in handlers/use
+   cases; no generated row types returned from repositories; no direct cross-module calls (use
+   facades); no transport imports in domain; no silent error swallowing.
+   (rules: [[startup]], [[dependency-injection]], [[database]], [[interop]], [[transport]],
+   [[errors]])
 3. **Style:** formatter run; three-group imports; no doc comments (see [[comments]]); correct
    acronym casing; `any` not `interface{}`; consumer-declared small interfaces. (rule:
    [[effective-go]], [[naming]], [[imports]], [[types]])
