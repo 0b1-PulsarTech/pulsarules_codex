@@ -212,3 +212,21 @@ func TestAutoCleanEdited_EscapesTheReportedPath(t *testing.T) {
 		})
 	}
 }
+
+func TestAutoCleanEdited_UnreadableFile(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root reads any file")
+	}
+	root := t.TempDir()
+	path := filepath.Join(root, "a.md")
+	if err := os.WriteFile(path, []byte("a\u200Bb\n"), 0o000); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	disp, _ := dispatchCapture(Deps{ProjectDir: root})
+	if notice := disp.autoCleanEdited(path); notice != "" {
+		t.Errorf("notice = %q, want none", notice)
+	}
+}
