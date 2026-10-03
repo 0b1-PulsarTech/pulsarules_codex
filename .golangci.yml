@@ -36,6 +36,8 @@ linters:
     - nilerr
     - bodyclose
     - sqlclosecheck
+    # dupl and goconst stay off: goconst flags emoji and theme data tables, and dupl finds
+    # nothing at its default threshold. gochecknoglobals stays off: package-level-var covers it.
   settings:
     # ST1020-ST1022 demand a doc comment that opens with the symbol name, which contradicts
     # the doc-comment analyzer banning doc comments. Spell out the default exclusions: a bare
