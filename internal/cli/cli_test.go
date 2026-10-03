@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -165,6 +166,42 @@ func TestHandleBootstrapErr(t *testing.T) {
 					got,
 					testCase.want,
 				)
+			}
+		})
+	}
+}
+
+func TestErrorPrinters_StaySingleLine(t *testing.T) {
+	t.Parallel()
+
+	forged := fmt.Errorf("open %s: %w", "a\n[ERROR] forged", os.ErrNotExist)
+	testCases := []struct {
+		name  string
+		label string
+		print func(out io.Writer)
+	}{
+		{"report error", "pulsarules_cli:", func(out io.Writer) { ReportError(out, forged) }},
+		{
+			"bootstrap hook",
+			"pulsarules_cli: hook:",
+			func(out io.Writer) { handleBootstrapErr(out, "hook", forged) },
+		},
+		{
+			"bootstrap other",
+			"pulsarules_cli:",
+			func(out io.Writer) { handleBootstrapErr(out, "clean", forged) },
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			var out strings.Builder
+			testCase.print(&out)
+			text := strings.TrimSuffix(out.String(), "\n")
+			if strings.Contains(text, "\n") || !strings.Contains(text, `a\n[ERROR] forged`) ||
+				!strings.HasPrefix(text, testCase.label+" ") {
+				t.Errorf("output = %q, want one escaped line", out.String())
 			}
 		})
 	}
