@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -47,10 +48,14 @@ func discoverPackages(projectDir, modulePath string) map[string]*pkgImports {
 			return nil //nolint:nilerr // one malformed file must not halt discovery of the rest.
 		}
 
-		if _, exists := pkgMap[pkgImport]; !exists {
-			pkgMap[pkgImport] = &pkgImports{
-				Dir:     filepath.Dir(path),
-				Imports: imports,
+		pkg, exists := pkgMap[pkgImport]
+		if !exists {
+			pkg = &pkgImports{Dir: filepath.Dir(path)}
+			pkgMap[pkgImport] = pkg
+		}
+		for _, imp := range imports {
+			if !slices.Contains(pkg.Imports, imp) {
+				pkg.Imports = append(pkg.Imports, imp)
 			}
 		}
 		return nil
