@@ -20,7 +20,6 @@ linters:
     - nakedret
     - modernize
     - predeclared
-    - godoclint
     - forbidigo
 analyzers:
     - file-size

@@ -8,7 +8,6 @@ tags:
 linters:
     - stylecheck
     - revive
-    - godoclint
 analyzers:
     - naming
     - loop-var-i
