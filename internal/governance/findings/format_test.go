@@ -121,6 +121,69 @@ func TestFormatFindings(t *testing.T) {
 	}
 }
 
+func TestFormatFindings_Escapes(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		findings []pass.Finding
+		style    FindingStyle
+		want     string
+	}{
+		{
+			name: "a newline in the file is quoted, not rendered",
+			findings: []pass.Finding{{
+				AnalyzerID: "file-size", Severity: pass.SeverityWarning, Message: "m",
+				File: "a\n  [error] x: y.go", Line: 2,
+			}},
+			style: StyleHook,
+			want:  "  [warning] file-size: m (\"a\\n  [error] x: y.go\":2)\n",
+		},
+		{
+			name: "a newline in a file without a line is quoted",
+			findings: []pass.Finding{{
+				AnalyzerID: "file-size", Severity: pass.SeverityWarning, Message: "m",
+				File: "a\n  [error] x: y.go",
+			}},
+			style: StyleHook,
+			want:  "  [warning] file-size: m (\"a\\n  [error] x: y.go\")\n",
+		},
+		{
+			name: "a newline in the analyzer id is escaped",
+			findings: []pass.Finding{
+				{
+					AnalyzerID: "golangci-lint/x\n  [error] y",
+					Severity:   pass.SeverityWarning,
+					Message:    "m",
+				},
+			},
+			style: StyleHook,
+			want:  "  [warning] golangci-lint/x\\n  [error] y: m\n",
+		},
+		{
+			name: "a newline in message and suggestion is escaped",
+			findings: []pass.Finding{{
+				AnalyzerID: "move", Severity: pass.SeverityError,
+				Message:    "rename a\n  [error] forged: x",
+				Suggestion: "do\r\nthis",
+			}},
+			style: StyleHook,
+			want: "  [error] move: rename a\\n  [error] forged: x\n" +
+				"    \u2192 do\\r\\nthis\n",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := FormatFindings(testCase.findings, testCase.style, "")
+			if got != testCase.want {
+				t.Fatalf("FormatFindings() =\n%q\nwant\n%q", got, testCase.want)
+			}
+		})
+	}
+}
+
 func TestFormatFindingsRendersEveryFinding(t *testing.T) {
 	t.Parallel()
 

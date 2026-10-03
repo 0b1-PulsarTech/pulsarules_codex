@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -56,8 +57,8 @@ func writeFinding(out *strings.Builder, finding pass.Finding, form layout) {
 		"%s[%s] %s: %s",
 		form.indent,
 		label,
-		finding.AnalyzerID,
-		finding.Message,
+		printable.Line(finding.AnalyzerID),
+		printable.Line(finding.Message),
 	)
 	if loc := location(finding); loc != "" {
 		out.WriteString(" (" + loc + ")")
@@ -65,7 +66,7 @@ func writeFinding(out *strings.Builder, finding pass.Finding, form layout) {
 	out.WriteByte('\n')
 
 	if finding.Suggestion != "" {
-		out.WriteString(form.arrow + "\u2192 " + finding.Suggestion + "\n")
+		out.WriteString(form.arrow + "\u2192 " + printable.Line(finding.Suggestion) + "\n")
 	}
 	if form.withRule {
 		// The full summary is a ~400 char paragraph that drowns the finding.
@@ -80,9 +81,9 @@ func location(finding pass.Finding) string {
 		return ""
 	}
 	if finding.Line > 0 {
-		return fmt.Sprintf("%s:%d", finding.File, finding.Line)
+		return fmt.Sprintf("%s:%d", printable.Path(finding.File), finding.Line)
 	}
-	return finding.File
+	return printable.Path(finding.File)
 }
 
 func severityLabel(severity pass.Severity) string {
