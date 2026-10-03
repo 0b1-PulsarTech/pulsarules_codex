@@ -38,3 +38,17 @@ each analyzer's own id.
   nested template-literal quotes, scss `//` inside `<style>`, Swift `#""`, and C++ `R"()"` can be
   misread. "the only tool ever used to call x" is flagged; it cannot be told apart from
   "nobody ever used to call this".
+
+## package-file-count
+
+- Rule: `code-placement-go`.
+- Flags: a package directory with more than `max_files` non-test `.go` files, anchored on a changed
+  file of that package.
+- Params: `max_files` (default 10), `exempt` (path patterns; `dir/**` exempts a whole tree), plus
+  `extensions`.
+- Exemptions: generated files, ent schema directories (a strict majority of files embedding
+  `ent.Schema`), files excluded by a `//go:build ignore` or `// +build ignore` constraint, files whose
+  name starts with `_` or `.`, files of the minority package in a directory, and directories Go
+  ignores.
+- Known limits: `/* */` and `//go:build` on one line; `+build` followed by `/* */`; the OR
+  form (space-separated terms) of ignore expressions; two `//go:build` lines.
