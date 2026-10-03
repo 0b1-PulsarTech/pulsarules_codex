@@ -149,17 +149,18 @@ func importNames(file *ast.File) map[string]bool {
 	return names
 }
 
-func (scan fileScan) isImportedSel(sel *ast.SelectorExpr) bool {
-	ident, ok := sel.X.(*ast.Ident)
-	return ok && scan.imports[ident.Name]
-}
-
-func unparen(expr ast.Expr) ast.Expr {
-	for {
-		paren, ok := expr.(*ast.ParenExpr)
-		if !ok {
-			return expr
+func importName(file *ast.File, importPath string) string {
+	for _, spec := range file.Imports {
+		got, err := strconv.Unquote(spec.Path.Value)
+		if err != nil || got != importPath {
+			continue
 		}
-		expr = paren.X
+		if spec.Name == nil {
+			return path.Base(importPath)
+		}
+		if spec.Name.Name != "_" && spec.Name.Name != "." {
+			return spec.Name.Name
+		}
 	}
+	return ""
 }

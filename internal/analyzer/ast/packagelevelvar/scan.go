@@ -9,14 +9,17 @@ import (
 )
 
 type fileScan struct {
-	fset     *token.FileSet
-	path     string
-	file     *ast.File
-	reporter core.Reporter
-	reported map[site]bool
-	imports  map[string]bool
-	types    map[string]bool
-	embeds   []*ast.CommentGroup
+	fset      *token.FileSet
+	path      string
+	file      *ast.File
+	reporter  core.Reporter
+	reported  map[site]bool
+	imports   map[string]bool
+	types     map[string]bool
+	errFuncs  map[string]bool
+	errorsPkg string
+	fmtPkg    string
+	embeds    []*ast.CommentGroup
 }
 
 func (scan fileScan) run() []core.Finding {
@@ -57,7 +60,7 @@ func (scan fileScan) nameFindings(vs *ast.ValueSpec) []core.Finding {
 	var findings []core.Finding
 	blankReported := false
 	for idx, name := range vs.Names {
-		if scan.isNameExempt(vs, idx) {
+		if scan.isSpecExempt(vs, idx) || scan.isNameExempt(vs, idx) {
 			continue
 		}
 		isBlank := name.Name == "_"

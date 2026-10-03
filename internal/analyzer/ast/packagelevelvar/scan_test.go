@@ -27,6 +27,28 @@ func blankReportCases() []levelVarCase {
 			want: []string{"a.go:5:package-level var v"},
 		},
 		{
+			name: "blank side effect beside a sentinel flags only the blank",
+			files: map[string]string{
+				"a.go": "package p\n\nimport \"errors\"\n\nfunc register() int { return 0 }\n\n" +
+					"var _, ErrA = register(), errors.New(\"a\")\n",
+			},
+			want: []string{"a.go:7:package-level var _"},
+		},
+		{
+			name: "blank assertion beside a sentinel exempt",
+			files: map[string]string{
+				"a.go": "package p\n\nimport \"errors\"\n\ntype T struct{}\n\n" +
+					"var _, ErrA = (*T)(nil), errors.New(\"a\")\n",
+			},
+		},
+		{
+			name: "second blank assertion beside a sentinel exempt",
+			files: map[string]string{
+				"a.go": "package p\n\nimport \"errors\"\n\ntype T struct{}\n\n" +
+					"var ErrA, _ = errors.New(\"a\"), (*T)(nil)\n",
+			},
+		},
+		{
 			name: "blank plain call flagged",
 			files: map[string]string{
 				"a.go": "package p\n\nfunc registerDriver() int { return 0 }\n\n" +

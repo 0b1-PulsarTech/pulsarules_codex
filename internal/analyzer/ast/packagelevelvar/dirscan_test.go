@@ -20,6 +20,30 @@ func TestAnalyzeDirScan(t *testing.T) {
 			want:  []string{"pkg/a.go:3:package-level var _"},
 		},
 		{
+			name:  "Err constructor declared in an unchanged sibling exempt",
+			files: map[string]string{"pkg/a.go": "package p\n\nvar ErrX = newErr(\"x\")\n"},
+			extra: map[string]string{
+				"pkg/b.go": "package p\n\nfunc newErr(s string) error { return nil }\n",
+			},
+		},
+		{
+			name:  "Err constructor returning a non error in a sibling flagged",
+			files: map[string]string{"pkg/a.go": "package p\n\nvar ErrX = newErr(\"x\")\n"},
+			extra: map[string]string{
+				"pkg/b.go": "package p\n\nfunc newErr(s string) int { return 0 }\n",
+			},
+			want: []string{"pkg/a.go:3:package-level var ErrX"},
+		},
+		{
+			name:  "Err constructor method in a sibling does not count",
+			files: map[string]string{"pkg/a.go": "package p\n\nvar ErrX = newErr(\"x\")\n"},
+			extra: map[string]string{
+				"pkg/b.go": "package p\n\ntype s struct{}\n\n" +
+					"func (s) newErr(string) error { return nil }\n",
+			},
+			want: []string{"pkg/a.go:3:package-level var ErrX"},
+		},
+		{
 			name: "type in an external test package does not exempt",
 			files: map[string]string{
 				"pkg/a.go": "package p\n\nfunc load(x int) int { return x }\n\n" +

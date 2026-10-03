@@ -35,14 +35,17 @@ func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 		}
 		siblings := dirScans.dirs[pkgKey{dir: dir, pkg: file.Name.Name}]
 		scan := fileScan{
-			fset:     ctx.ASTCache.FileSet(),
-			path:     fc.Path,
-			file:     file,
-			reporter: reporter,
-			reported: reported,
-			imports:  importNames(file),
-			types:    siblings.types,
-			embeds:   embedGroups(file),
+			fset:      ctx.ASTCache.FileSet(),
+			path:      fc.Path,
+			file:      file,
+			reporter:  reporter,
+			reported:  reported,
+			errorsPkg: importName(file, "errors"),
+			fmtPkg:    importName(file, "fmt"),
+			imports:   importNames(file),
+			types:     siblings.types,
+			errFuncs:  siblings.errFuncs,
+			embeds:    embedGroups(file),
 		}
 		return scan.run()
 	})

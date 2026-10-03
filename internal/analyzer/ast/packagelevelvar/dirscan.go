@@ -17,7 +17,8 @@ type pkgKey struct {
 }
 
 type dirInfo struct {
-	types map[string]bool
+	types    map[string]bool
+	errFuncs map[string]bool
 }
 
 type dirScan struct {
@@ -38,7 +39,7 @@ func scanDirs(ctx *core.AnalysisContext) dirScan {
 			return true
 		}
 		src, ok := ctx.Sources.Read(file)
-		wantDecl := bytes.Contains(src, []byte("type "))
+		wantDecl := bytes.Contains(src, []byte("type ")) || bytes.Contains(src, []byte("func "))
 		if !ok || !wantDecl {
 			return true
 		}
@@ -56,17 +57,20 @@ func (scan dirScan) collectDecls(dir string, file *ast.File) {
 	key := pkgKey{dir: dir, pkg: file.Name.Name}
 	names, seen := scan.dirs[key]
 	if !seen {
-		names = dirInfo{types: make(map[string]bool)}
+		names = dirInfo{types: make(map[string]bool), errFuncs: make(map[string]bool)}
 		scan.dirs[key] = names
 	}
 	for _, decl := range file.Decls {
-		gen, isGen := decl.(*ast.GenDecl)
-		if !isGen {
-			continue
-		}
-		for _, spec := range gen.Specs {
-			if ts, isType := spec.(*ast.TypeSpec); isType {
-				names.types[ts.Name.Name] = true
+		switch typed := decl.(type) {
+		case *ast.GenDecl:
+			for _, spec := range typed.Specs {
+				if ts, isType := spec.(*ast.TypeSpec); isType {
+					names.types[ts.Name.Name] = true
+				}
+			}
+		case *ast.FuncDecl:
+			if isErrReturning(typed) {
+				names.errFuncs[typed.Name.Name] = true
 			}
 		}
 	}
