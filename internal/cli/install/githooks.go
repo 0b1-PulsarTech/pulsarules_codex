@@ -2,7 +2,6 @@ package install
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"slices"
 	"strings"
@@ -49,16 +48,14 @@ func validateGitHooks(hooks []string) error {
 
 func installPostTargets(
 	opts *version.Options,
-	projectDir string,
-	templates fs.FS,
-	hookReg *install.Registry,
-	gitHooks []string,
+	cfg installConfig,
+	deps installCollaborators,
 ) error {
 	if !opts.NoGitHooks {
-		rpt, hookErr := hookReg.Install("git", install.Context{
-			Dir:                 projectDir,
-			Templates:           templates,
-			GitHooks:            gitHooks,
+		rpt, hookErr := deps.hooks.Install("git", install.Context{
+			Dir:                 cfg.absBase,
+			Templates:           deps.templates,
+			GitHooks:            cfg.gitHooks,
 			TypographicSeverity: opts.TypographicSeverity,
 			BranchExtraTypes:    opts.BranchExtraTypes,
 		})
@@ -69,7 +66,7 @@ func installPostTargets(
 	}
 
 	// The binary is copied even with --no-git-hooks.
-	binaryErr := githook.InstallBinary(projectDir)
+	binaryErr := githook.InstallBinary(cfg.absBase)
 	if binaryErr != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "warning: binary: %v\n", binaryErr)
 	} else {
