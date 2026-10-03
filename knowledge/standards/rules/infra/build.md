@@ -86,6 +86,8 @@ Applies to: build, tooling, and code generation.
    defer-inside-a-loop clause in `[[safety]]`. It cannot be forced: `-E` enables a linter but its
    settings come from the target's own config, and `defer` is not in revive's defaults, so forcing
    revive would list a guard that catches nothing. Enable it locally to get that clause enforced.
+   If revive is enabled, disable its `exported` and `package-comments` rules; likewise staticcheck
+   ST1000 and ST1020-ST1022: they demand the doc comments [[comments]] forbids.
 {{end}}
 
 {{define "forbidden"}}

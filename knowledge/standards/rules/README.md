@@ -55,14 +55,15 @@ multi-language variants.
 
 ## `style/` - how code looks and reads
 
-| Rule                                         | Topic                                          |
-|----------------------------------------------|-------------------------------------------------|
-| [effective-go.md](style/effective-go.md)     | Effective Go subset we enforce                 |
-| [naming.md](style/naming.md)                 | Go naming for packages, types, files           |
-| [imports.md](style/imports.md)               | Three-group import layout + aliasing           |
-| [types.md](style/types.md)                   | Named structs and small consumer interfaces    |
-| [minimalism.md](style/minimalism.md)         | Function-scope decision ladder                 |
-| [flag-arguments.md](style/flag-arguments.md) | No flag/output args; small arity               |
+| Rule                                         | Topic                                                          |
+|----------------------------------------------|----------------------------------------------------------------|
+| [effective-go.md](style/effective-go.md)     | Effective Go subset we enforce                                 |
+| [comments.md](style/comments.md)             | Why-only own-line comments; no docstrings, banners, or history |
+| [naming.md](style/naming.md)                 | Go naming for packages, types, files                           |
+| [imports.md](style/imports.md)               | Three-group import layout + aliasing                           |
+| [types.md](style/types.md)                   | Named structs and small consumer interfaces                    |
+| [minimalism.md](style/minimalism.md)         | Function-scope decision ladder                                 |
+| [flag-arguments.md](style/flag-arguments.md) | No flag/output args; small arity                               |
 
 ## `architecture/` - where code lives and how layers connect
 

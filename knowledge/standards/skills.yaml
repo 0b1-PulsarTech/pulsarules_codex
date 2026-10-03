@@ -219,7 +219,7 @@ skills:
       - writing an import block or aliasing a proto package
       - choosing struct vs map at a boundary
       - declaring an interface
-      - writing doc comments for exported symbols
+      - writing or deleting a comment
     always_load: true
     order: 10
     languages:
@@ -233,6 +233,7 @@ skills:
       - named-returns
       - safety
       - minimalism-go
+      - comments
     compose_patterns:
       - iterator-seq
   - id: git-history
@@ -576,12 +577,14 @@ skills:
       - writing an import block
       - choosing between Object? and dynamic at a JSON/JS-interop boundary
       - modeling a closed set of variants (a domain-error hierarchy, a result type)
+      - writing or deleting a comment
     always_load: true
     order: 11
     languages:
       - dart
     compose_rules:
       - dart-style
+      - comments
   - id: dart-testing
     name: Dart testing
     description: One _test.dart per source file, colocated by mirroring the lib/src path; table-driven cases named testCases/testCase (never tt); package:test, never package:flutter_test; cover the success path and every failure variant a unit can produce.

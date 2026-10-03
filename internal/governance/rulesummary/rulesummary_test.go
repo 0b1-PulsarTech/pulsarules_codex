@@ -177,9 +177,10 @@ func TestLookupRule(t *testing.T) {
 		analyzerID string
 		wantRuleID string
 	}{
-		{"top-of-file", "effective-go"},
-		{"big-comment", "effective-go"},
-		{"history-narration", "effective-go"},
+		{"top-of-file", "comments"},
+		{"big-comment", "comments"},
+		{"history-narration", "comments"},
+		{"test-comment", "comments"},
 		{"doc-comment", "effective-go"},
 		{"body-header-comment", "effective-go"},
 		{"too-many-results", "effective-go"},
