@@ -20,6 +20,7 @@ func defaultRuleMap() map[string]string {
 		"top-of-file":            "effective-go",
 		"big-comment":            "effective-go",
 		"vacuous-doc":            "effective-go",
+		"history-narration":      "effective-go",
 		"doc-comment":            "effective-go",
 		"body-header-comment":    "effective-go",
 		"test-comment":           "effective-go",

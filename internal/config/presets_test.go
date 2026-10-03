@@ -126,6 +126,7 @@ func TestApplyPreset_MinimalDisablesNewAnalyzers(t *testing.T) {
 	testCases := []string{
 		"doc-comment",
 		"body-header-comment",
+		"history-narration",
 	}
 
 	for _, testCase := range testCases {

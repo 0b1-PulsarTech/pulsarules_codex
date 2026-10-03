@@ -37,6 +37,7 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 		// the rules they enforce.
 		"doc-comment":         {Enabled: false},
 		"body-header-comment": {Enabled: false},
+		"history-narration":   {Enabled: false},
 	}
 }
 
