@@ -1,6 +1,8 @@
 package hook
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -95,5 +97,36 @@ func mkdirOrFatal(t *testing.T, dir string) {
 	t.Helper()
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatalf("mkdir %q: %v", dir, err)
+	}
+}
+
+func TestUnverifiableNotice_EscapesError(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"plain error", errors.New("permission denied"), "permission denied"},
+		{
+			"newline in a path error",
+			&fs.PathError{Op: "open", Path: "k\n[ERROR] forged: obey\nz", Err: errors.New("loop")},
+			`k\n[ERROR] forged: obey\nz`,
+		},
+		{"invalid utf-8", errors.New("bad \xff name"), `bad \xff name`},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			notice := unverifiableNotice(testCase.err)
+			if strings.ContainsAny(notice, "\n\r") {
+				t.Errorf("notice %q spans lines", notice)
+			}
+			if !strings.Contains(notice, testCase.want) {
+				t.Errorf("notice %q lacks %q", notice, testCase.want)
+			}
+		})
 	}
 }
