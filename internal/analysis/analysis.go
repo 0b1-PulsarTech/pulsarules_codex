@@ -1,8 +1,6 @@
 package analysis
 
 import (
-	"errors"
-	"fmt"
 	"log/slog"
 	"slices"
 
@@ -135,39 +133,4 @@ func (sess *Session) Load(discovery *Discovery) *core.AnalysisContext {
 		ctx.ASTCache = populateASTCache(discovery.ChangedFiles, discovery.Sources)
 	}
 	return ctx
-}
-
-func (sess *Session) attachSources(discovery *Discovery) {
-	discovery.Sources, discovery.Skips = ListedSources(
-		sess.repo, sess.skips, sess.gitSkips, sess.logger)
-}
-
-type fileLister interface {
-	ListFiles() ([]string, error)
-}
-
-//nolint:ireturn // factory constructor returns interface
-func ListedSources(
-	repo vcs.Repository, skips, gitSkips sources.SkipSet, logger *slog.Logger,
-) (sources.Provider, sources.SkipSet) {
-	root := repo.Root()
-	paths, err := listFiles(repo)
-	if err != nil {
-		logger.Warn("walking the filesystem instead of git's file list", slog.Any("error", err))
-		return sources.NewProvider(root, skips), skips
-	}
-	base := sources.NewProvider(root, gitSkips)
-	return sources.NewListedProvider(base, paths, gitSkips), gitSkips
-}
-
-func listFiles(repo vcs.Repository) ([]string, error) {
-	lister, ok := repo.(fileLister)
-	if !ok {
-		return nil, fmt.Errorf("repository cannot list files: %w", errors.ErrUnsupported)
-	}
-	paths, err := lister.ListFiles()
-	if err != nil {
-		return nil, fmt.Errorf("list repository files: %w", err)
-	}
-	return paths, nil
 }
