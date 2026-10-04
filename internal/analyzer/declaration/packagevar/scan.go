@@ -21,6 +21,7 @@ type fileScan struct {
 	errorsPkg string
 	fmtPkg    string
 	embeds    []*ast.CommentGroup
+	enums     map[string]bool
 }
 
 func (scan fileScan) run() []pass.Finding {
@@ -104,7 +105,7 @@ func (scan fileScan) isNameExempt(vs *ast.ValueSpec, idx int) bool {
 	name := vs.Names[idx].Name
 	switch {
 	case name != "_":
-		return scan.assigned[name]
+		return scan.assigned[name] || scan.enums[name]
 	case len(vs.Values) == len(vs.Names):
 		return scan.isConversionOrComposite(vs.Values[idx])
 	}

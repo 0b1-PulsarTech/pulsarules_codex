@@ -1,11 +1,14 @@
 package packagevar
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestAnalyzeDirScan(t *testing.T) {
 	t.Parallel()
 
-	runCases(t, []levelVarCase{
+	runCases(t, slices.Concat(enumScopeCases(), []levelVarCase{
 		{
 			name: "conversion to a type declared in an unchanged sibling exempt",
 			files: map[string]string{
@@ -58,5 +61,52 @@ func TestAnalyzeDirScan(t *testing.T) {
 			extra: map[string]string{"pkg/b.go": "package p\n\ntype handler func(\n"},
 			want:  []string{"pkg/a.go:3:package-level var _"},
 		},
-	})
+	}))
+}
+
+func enumScopeCases() []levelVarCase {
+	const enumScopeSrc = "package p\n\nimport \"x/permission\"\n\nvar (\n" +
+		"\tPermView = permission.New(keyView)\n\tPermManage = permission.New(keyManage)\n)\n"
+
+	return []levelVarCase{
+		{
+			name: "consts of the analysed file exempt",
+			files: map[string]string{
+				"pkg/a.go": enumScopeSrc + "\nconst keyView, keyManage = \"v\", \"m\"\n",
+			},
+		},
+		{
+			name: "const inside a function body does not count",
+			files: map[string]string{
+				"pkg/a.go": enumScopeSrc +
+					"\nfunc f() {\n\tconst keyView, keyManage = \"v\", \"m\"\n}\n",
+			},
+			want: []string{
+				"pkg/a.go:6:package-level var PermView",
+				"pkg/a.go:7:package-level var PermManage",
+			},
+		},
+		{
+			name:  "consts only in an external test package do not count",
+			files: map[string]string{"pkg/a.go": enumScopeSrc},
+			extra: map[string]string{
+				"pkg/a_x_test.go": "package p_test\n\nconst keyView, keyManage = \"v\", \"m\"\n",
+			},
+			want: []string{
+				"pkg/a.go:6:package-level var PermView",
+				"pkg/a.go:7:package-level var PermManage",
+			},
+		},
+		{
+			name:  "consts in another package of the same dir do not count",
+			files: map[string]string{"pkg/a.go": enumScopeSrc},
+			extra: map[string]string{
+				"pkg/b.go": "package q\n\nconst keyView, keyManage = \"v\", \"m\"\n",
+			},
+			want: []string{
+				"pkg/a.go:6:package-level var PermView",
+				"pkg/a.go:7:package-level var PermManage",
+			},
+		},
+	}
 }

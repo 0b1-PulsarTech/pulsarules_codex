@@ -19,6 +19,7 @@ type pkgKey struct {
 type dirInfo struct {
 	types    map[string]bool
 	errFuncs map[string]bool
+	consts   map[string]bool
 }
 
 type dirScan struct {
@@ -43,9 +44,8 @@ func scanDirs(ctx *pass.Context) dirScan {
 			return true
 		}
 		src, ok := ctx.Sources.Read(file)
-		wantMain := isTestFile(file) && bytes.Contains(src, []byte("func TestMain("))
-		wantDecl := bytes.Contains(src, []byte("type ")) || bytes.Contains(src, []byte("func "))
-		if !ok || !wantMain && !wantDecl {
+		wantMain := hasTestMain(file, src)
+		if !ok || !wantMain && !hasDecls(src) {
 			return true
 		}
 		parsed, err := parser.ParseFile(fset, file, src, parser.SkipObjectResolution)
@@ -65,20 +65,36 @@ func (scan dirScan) collectDecls(dir string, file *ast.File) {
 	key := pkgKey{dir: dir, pkg: file.Name.Name}
 	names, seen := scan.dirs[key]
 	if !seen {
-		names = dirInfo{types: make(map[string]bool), errFuncs: make(map[string]bool)}
+		names = dirInfo{
+			types:    make(map[string]bool),
+			errFuncs: make(map[string]bool),
+			consts:   make(map[string]bool),
+		}
 		scan.dirs[key] = names
 	}
 	for _, decl := range file.Decls {
 		switch typed := decl.(type) {
 		case *ast.GenDecl:
-			for _, spec := range typed.Specs {
-				if ts, isType := spec.(*ast.TypeSpec); isType {
-					names.types[ts.Name.Name] = true
-				}
-			}
+			collectGen(names, typed)
 		case *ast.FuncDecl:
 			if isErrReturning(typed) {
 				names.errFuncs[typed.Name.Name] = true
+			}
+		}
+	}
+}
+
+func collectGen(names dirInfo, gen *ast.GenDecl) {
+	for _, spec := range gen.Specs {
+		switch typed := spec.(type) {
+		case *ast.TypeSpec:
+			names.types[typed.Name.Name] = true
+		case *ast.ValueSpec:
+			if gen.Tok != token.CONST {
+				continue
+			}
+			for _, name := range typed.Names {
+				names.consts[name.Name] = true
 			}
 		}
 	}
@@ -106,4 +122,17 @@ func dirsWithVars(ctx *pass.Context) map[string]bool {
 		}
 	}
 	return dirs
+}
+
+func hasDecls(src []byte) bool {
+	for _, marker := range []string{"type ", "func ", "const"} {
+		if bytes.Contains(src, []byte(marker)) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasTestMain(file string, src []byte) bool {
+	return isTestFile(file) && bytes.Contains(src, []byte("func TestMain("))
 }
