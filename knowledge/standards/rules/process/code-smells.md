@@ -63,8 +63,9 @@ Applies to: spotting and clearing structural debt. This rule is the trigger list
    `*Err`/`*Error` type, or an `Err`-named constructor call), re-exported `pkg.Err*` sentinels
    `var ErrX = pkg.ErrY`), `//go:embed` variables, compile-time assertions `var _ I = T{}`, test
    variables assigned in `TestMain`, and an enum group (a parenthesised `var ( ... )` of two or more
-   constant-argument calls to one callee, plus the one-name definition var that is their receiver).
-   Every other package-level var becomes a constructor-built value, a field, or a parameter.
+   constant-argument calls to one callee, plus the one-name definition var that is their receiver; a
+   single `X = recv.M(<constants>)` on a constant definition var counts too). Every other
+   package-level var becomes a constructor-built value, a field, or a parameter.
 5. Review-only smells (feature envy, repeated switch, primitive obsession) still count - name them in
    review even though no linter fires.
 6. After the local fixes land, zoom out one level: sweep every file and function the change touched
@@ -77,7 +78,9 @@ Applies to: spotting and clearing structural debt. This rule is the trigger list
 - "Fixing" a duplicated/repeated-switch smell by copying the patch into every site.
 - A package-level `var`, mutable or not, that is not a sentinel error (or re-export), an embed, an
   assertion, a `TestMain` test var, or an enum group (a `var ( ... )` of two or more
-  constant-argument calls to one callee, plus the one-name definition var that is their receiver).
+  constant-argument calls to one callee, plus the one-name definition var that is their receiver),
+  or an enum handle (`X = recv.M(<constants>)` where `recv` is a same-file `pkg.F(<constants>)`
+  var).
 - Mixing a behavior change into a refactor commit.
 - A "refactor" with no tests green between steps.
 - Stopping at the first fixed spot while sibling files/functions the change touched keep the old
@@ -87,7 +90,7 @@ Applies to: spotting and clearing structural debt. This rule is the trigger list
 {{define "validation"}}
 - [ ] Smell-linter failures (`funlen`/`cyclop`/`nestif`/`dupl`/`goconst`) cleared, not suppressed.
 - [ ] No package-level `var` outside the exempt set (sentinel error, `//go:embed`, `var _ I = T{}`,
-  `TestMain` test var, enum group of constant-argument calls).
+  `TestMain` test var, enum group or enum handle of constant-argument calls).
 - [ ] The catalog's remedy applied (Strategy/Registry, named struct, domain type, extraction).
 - [ ] The refactor landed before the feature, in its own commit.
 - [ ] One hat per edit; no refactor mixed with a behavior change.

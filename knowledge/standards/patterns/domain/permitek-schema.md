@@ -14,8 +14,8 @@ dependencies:
 # Per-module permission schema
 
 > A zero-size phantom marker type with a stable `ID()`; an append-only `DefineModule` schema; typed
-> `Permission[M]` handles minted via the schema's `Perm`, injected or declared as an enum group;
-> checks at the call site via the `access` gate; a registry built at boot and injected; one
+> `Permission[M]` handles minted via the schema's `Perm`, injected or declared as package-level enum
+> handles; checks at the call site via the `access` gate; a registry built at boot and injected; one
 > marshal format for the DB column and the JWT claim. Reflection-free; caps a module at 64
 > permissions.
 
@@ -54,13 +54,12 @@ The id derives from the name: renaming `"thing"` changes it and invalidates stor
 folding to one 16-bit id make `Register` fail with `ErrDuplicateModule`.
 
 Build `Perms` once at the composition root from `Schema()` and inject it where a permission is
-named. A package-level `var Schema = permits.DefineModule[moduleMod](nameView, nameManage)` with a
-`var ( PermView = Schema.Perm(nameView) ... )` block is also allowed as an enum group, not global
-state, when all of these hold: `Schema` and the handle block are in the same file, the block is
-parenthesised with at least two entries that all call `Schema.Perm` with constant arguments
-(literals or `const` of the package), and `Schema` is built only from constants. A module with a
-single permission, or with unparenthesised handles, is still reported: use `Schema()` and `Perms`.
-The Registry is never package-level.
+named. A package-level `var Schema = permits.DefineModule[moduleMod](nameView, nameManage)` with
+`PermView = Schema.Perm(nameView)` handles is also allowed as an enum, not global state, when
+`Schema` and the handles are in the same file, `Schema` is built only from constants (literals or
+`const` of the package), and every handle calls `Schema.Perm` with constant arguments. The handles
+may sit in a `var ( ... )` block or stand alone, so a single-permission module passes too. The
+Registry is never package-level.
 
 Enforce at the call site with the `permitek/access` gate; the use case stays pure (no permission
 check inside it). The principal is injected for identity/audit, not as the authz decision:

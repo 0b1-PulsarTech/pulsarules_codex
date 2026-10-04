@@ -35,6 +35,7 @@ func enumNames(file *ast.File, imports, consts map[string]bool) map[string]bool 
 	for _, gen := range groups {
 		scan.exemptGroup(gen, exempt)
 	}
+	scan.exemptHandles(exempt)
 	return exempt
 }
 

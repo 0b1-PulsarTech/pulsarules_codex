@@ -120,11 +120,19 @@ variable, field or interface method are reported.
   `recv` is any package-level var of the same file, of any shape) and every argument constant (a
   literal, a `const` of the same package, or a paren/unary/binary expression over those). Every
   name in it is exempt, and so is the shared `recv` when it is a one-name `pkg.F(<constants>)` var.
+- Exemptions (enum handle): a one-name var `X = recv.M(<constants>)` (or `recv.M[T](...)`), in or
+  out of a block, where `recv` is a one-name var of the same file initialised by
+  `pkg.F(<constants>)` or `pkg.F[T](<constants>)`. Both `X` and `recv` are exempt, so a
+  single-permission module passes. The call needs at least one argument; a `_` handle, a multi-name
+  spec, or a paren-wrapped value is not a handle.
 - Skipped: directories Go ignores (leading `.` or `_`, `testdata`).
 - Known limits: the enum group is structural, so two constant-argument calls to one function, such
-  as two `regexp.MustCompile("x")`, are exempt too. A `recv` declared in another file is not
-  recognised. The package name of an import is taken from the last element of its path, so
-  `x/permitek/v2` or `gopkg.in/yaml.v3` imports are not recognised as packages.
+  as two `regexp.MustCompile("x")`, are exempt too, and so is a constant-argument call on a var
+  built from constants (`var client = pkg.New("x")` with `var resp = client.Get("y")`). A `recv`
+  declared in another file is not recognised; a handle of a handle is reported. A generic index
+  (`recv.M[X]`, `pkg.F[X]`) is not checked, so a non-constant index is accepted. The package name of
+  an import is taken from the last element of its path, so `x/permitek/v2` or `gopkg.in/yaml.v3`
+  imports are not recognised as packages.
 
 ## package-file-count
 
