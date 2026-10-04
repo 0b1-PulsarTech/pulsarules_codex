@@ -1,0 +1,99 @@
+package syntax
+
+import "context"
+
+type Language string
+
+const (
+	LangGo         Language = "go"
+	LangDart       Language = "dart"
+	LangTypeScript Language = "typescript"
+	LangJavaScript Language = "javascript"
+	LangSvelte     Language = "svelte"
+)
+
+type FunctionKind string
+
+const (
+	FuncFunction FunctionKind = "function"
+	FuncMethod   FunctionKind = "method"
+)
+
+type NameKind string
+
+const (
+	NameFunction      NameKind = "function"
+	NameMethod        NameKind = "method"
+	NameType          NameKind = "type"
+	NameConstant      NameKind = "constant"
+	NameVariable      NameKind = "variable"
+	NameField         NameKind = "field"
+	NameTypeParam     NameKind = "type parameter"
+	NamePackage       NameKind = "package"
+	NameLabel         NameKind = "label"
+	NameReceiver      NameKind = "receiver"
+	NameLoopVariable  NameKind = "loop variable"
+	NameParameter     NameKind = "parameter"
+	NameResult        NameKind = "result"
+	NameSwitchBinding NameKind = "type switch binding"
+	NameImportAlias   NameKind = "import alias"
+)
+
+type DocKind string
+
+const (
+	DocFunction DocKind = "function"
+	DocType     DocKind = "type"
+	DocMethod   DocKind = "method"
+)
+
+type File struct {
+	Path, ParseError string
+	Language         Language
+	Functions        []Function
+	Blocks           []Block
+	Imports          []Import
+	ImportGroups     []string
+	Names            []Name
+	DocSites         []DocSite
+}
+
+type Function struct {
+	Name                     string
+	Kind                     FunctionKind
+	Line, BodyStart, BodyEnd int
+	Params                   int
+	Complexity               int
+}
+
+type Block struct{ Line, Depth int }
+
+type Import struct {
+	Literal     string
+	Line, Group int
+}
+
+type Name struct {
+	Name             string
+	Kind             NameKind
+	Line             int
+	Exported, Exempt bool
+}
+
+type DocSite struct {
+	Symbol                 string
+	Kind                   DocKind
+	Line                   int
+	Exempt, MixedDirective bool
+}
+
+type Source struct {
+	Path   string
+	IsTest bool
+}
+
+type Provider interface {
+	Language() Language
+	Handles(ext string) bool
+	Summarize(ctx context.Context, corpus Corpus) (map[string]*File, error)
+}
