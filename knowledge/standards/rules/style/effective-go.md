@@ -117,7 +117,9 @@ newest stable the module pins (source repos use `go 1.27`).
     (`ungrouped-interfaces`), so the file's contracts read as one list.
 20. No package-level var outside the exempt set: sentinel errors and re-exported `pkg.Err*`
     sentinels (`var ErrX = pkg.ErrY`), `//go:embed`, `var _ I = (*T)(nil)` / `T{}` assertions,
-    TestMain-assigned test vars (`package-level-var`; policy: [[code-smells]]).
+    TestMain-assigned test vars, and enum groups: a `var ( ... )` of two or more constant-argument
+    calls to one callee, plus the constant definition var they are called on (`package-level-var`;
+    policy: [[code-smells]]).
 {{end}}
 
 {{define "forbidden"}}
