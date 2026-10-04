@@ -115,7 +115,16 @@ variable, field or interface method are reported.
   `pkg.Err*` sentinels `var ErrX = pkg.ErrY`), `//go:embed` variables, `var _ I = T{}` assertions,
   and test variables assigned in `TestMain`. A name already reported by `single-use-declaration`
   is not reported twice.
+- Exemptions (enum group): a parenthesised `var ( ... )` of at least two specs, each one non-blank
+  name with one call value, all callees textually identical (`pkg.F`, `pkg.F[T]`, or `recv.M` where
+  `recv` is any package-level var of the same file, of any shape) and every argument constant (a
+  literal, a `const` of the same package, or a paren/unary/binary expression over those). Every
+  name in it is exempt, and so is the shared `recv` when it is a one-name `pkg.F(<constants>)` var.
 - Skipped: directories Go ignores (leading `.` or `_`, `testdata`).
+- Known limits: the enum group is structural, so two constant-argument calls to one function, such
+  as two `regexp.MustCompile("x")`, are exempt too. A `recv` declared in another file is not
+  recognised. The package name of an import is taken from the last element of its path, so
+  `x/permitek/v2` or `gopkg.in/yaml.v3` imports are not recognised as packages.
 
 ## package-file-count
 

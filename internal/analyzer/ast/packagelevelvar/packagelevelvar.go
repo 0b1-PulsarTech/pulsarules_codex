@@ -34,6 +34,7 @@ func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 			return nil
 		}
 		siblings := dirScans.dirs[pkgKey{dir: dir, pkg: file.Name.Name}]
+		imports := importNames(file)
 		scan := fileScan{
 			fset:      ctx.ASTCache.FileSet(),
 			path:      fc.Path,
@@ -42,10 +43,11 @@ func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 			reported:  reported,
 			errorsPkg: importName(file, "errors"),
 			fmtPkg:    importName(file, "fmt"),
-			imports:   importNames(file),
+			imports:   imports,
 			types:     siblings.types,
 			errFuncs:  siblings.errFuncs,
 			embeds:    embedGroups(file),
+			enums:     enumNames(file, imports, siblings.consts),
 		}
 		if isTestFile(fc.Path) {
 			scan.assigned = dirScans.assigned[pkgKey{dir: dir, pkg: file.Name.Name}]
