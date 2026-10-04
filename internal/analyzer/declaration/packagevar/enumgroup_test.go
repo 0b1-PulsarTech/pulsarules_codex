@@ -403,7 +403,7 @@ func enumOperandCases() []levelVarCase {
 		dynamicArgCase("paren around a non constant argument", "(dynamic)"),
 		dynamicArgCase("unary on a non constant argument", "-dynamic"),
 		{
-			name: "constant schema beside an invalid group is reported",
+			name: "constant handle in an invalid group exempts the schema",
 			files: map[string]string{"a.go": enumSrc(
 				enumConsts+"var dynamic = 1\n",
 				"var Schema = permission.Define(keyView)\n",
@@ -414,8 +414,6 @@ func enumOperandCases() []levelVarCase {
 			)},
 			want: []string{
 				"a.go:15:package-level var dynamic",
-				"a.go:17:package-level var Schema",
-				"a.go:20:package-level var PermView",
 				"a.go:21:package-level var PermManage",
 			},
 		},
