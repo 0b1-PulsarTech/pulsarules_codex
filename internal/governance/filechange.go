@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -83,6 +84,14 @@ func populateASTCache(changedFiles []pass.FileChange, provider source.Provider) 
 		}
 	}
 	return cache
+}
+
+func changedSources(files []pass.FileChange) []syntax.Source {
+	sources := make([]syntax.Source, len(files))
+	for idx, file := range files {
+		sources[idx] = syntax.Source{Path: file.Path, IsTest: file.IsTest}
+	}
+	return sources
 }
 
 func (sess *Session) stagedRenames() []pass.Rename {

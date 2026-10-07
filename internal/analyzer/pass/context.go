@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"iter"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/testfile"
@@ -36,6 +37,7 @@ type Context struct {
 	Config        *AnalysisConfig
 	TestPolicy    testfile.Classifier
 	ASTCache      *astcache.Cache
+	Syntax        *syntax.Cache
 	Sources       source.Provider
 	Skips         source.SkipSet
 	Findings      []Finding

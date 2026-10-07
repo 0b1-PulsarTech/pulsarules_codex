@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 )
@@ -138,6 +140,31 @@ func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
 			}
 			if !slices.Equal(got, testCase.want) {
 				t.Fatalf("ids = %v, want %v", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestDefaultProviders(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name      string
+		wantLangs []syntax.Language
+	}{
+		{name: "go is registered", wantLangs: []syntax.Language{syntax.LangGo}},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := defaultProviders(astcache.New())
+			langs := make([]syntax.Language, 0, len(got))
+			for _, provider := range got {
+				langs = append(langs, provider.Language())
+			}
+			if !slices.Equal(langs, testCase.wantLangs) {
+				t.Fatalf("defaultProviders() languages = %v, want %v", langs, testCase.wantLangs)
 			}
 		})
 	}

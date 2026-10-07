@@ -6,11 +6,13 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
@@ -121,6 +123,40 @@ func TestMarkGenerated_AtlasMigrationDir(t *testing.T) {
 			markGenerated(files, newTestProvider(atlasFixture(t)))
 			if files[0].Generated != testCase.want {
 				t.Errorf("Generated = %v, want %v", files[0].Generated, testCase.want)
+			}
+		})
+	}
+}
+
+func TestChangedSources(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		files []pass.FileChange
+		want  []syntax.Source
+	}{
+		{name: "no files", want: []syntax.Source{}},
+		{
+			name: "test flag is carried and order kept",
+			files: []pass.FileChange{
+				{Path: "b.go", IsTest: true, Staged: true},
+				{Path: "a.go"},
+				{Path: "c.go"},
+			},
+			want: []syntax.Source{
+				{Path: "b.go", IsTest: true},
+				{Path: "a.go"},
+				{Path: "c.go"},
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := changedSources(testCase.files); !slices.Equal(got, testCase.want) {
+				t.Fatalf("changedSources() = %v, want %v", got, testCase.want)
 			}
 		})
 	}
