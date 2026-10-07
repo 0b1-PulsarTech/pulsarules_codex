@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 )
 
 const analyzerID = "package-level-var"
@@ -30,7 +31,7 @@ func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	dirScans := scanDirs(ctx)
 	return core.RunPerGoFile(ctx, func(fc core.FileChange, file *ast.File) []core.Finding {
 		dir := dirOf(fc.Path)
-		if fc.Generated || isNonPackageDir(dir) {
+		if fc.Generated || sources.IsNonPackageDir(dir) {
 			return nil
 		}
 		siblings := dirScans.dirs[pkgKey{dir: dir, pkg: file.Name.Name}]
@@ -77,16 +78,3 @@ func alreadyReported(ctx *core.AnalysisContext) map[site]bool {
 func isTestFile(file string) bool { return strings.HasSuffix(file, "_test.go") }
 
 func dirOf(file string) string { return path.Dir(filepath.ToSlash(file)) }
-
-func isNonPackageDir(dir string) bool {
-	if dir == "." {
-		return false
-	}
-	for segment := range strings.SplitSeq(dir, "/") {
-		if strings.HasPrefix(segment, ".") || strings.HasPrefix(segment, "_") ||
-			segment == "testdata" {
-			return true
-		}
-	}
-	return false
-}

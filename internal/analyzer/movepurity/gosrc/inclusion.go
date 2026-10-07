@@ -3,6 +3,8 @@ package gosrc
 import (
 	"path"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 )
 
 type inclusion struct {
@@ -21,7 +23,7 @@ func IsCompiled(file string) bool { return isToolchainExt(path.Ext(file)) }
 
 func IsBuildIgnored(file string) bool {
 	// A vendor dir stays compiled: a nested module's own vendor/ is its dependency tree.
-	return isHidden(path.Base(file)) || isIgnoredDir(path.Dir(file))
+	return sources.IsHiddenName(path.Base(file)) || sources.IsNonPackageDir(path.Dir(file))
 }
 
 func inclusionOf(file string) inclusion {
@@ -39,22 +41,6 @@ func inclusionOf(file string) inclusion {
 		// The root vendor/ switches the go command to -mod=vendor.
 		vendored: strings.HasPrefix(file, "vendor/"),
 	}
-}
-
-func isIgnoredDir(dir string) bool {
-	if dir == "." {
-		return false
-	}
-	for elem := range strings.SplitSeq(dir, "/") {
-		if elem == "testdata" || isHidden(elem) {
-			return true
-		}
-	}
-	return false
-}
-
-func isHidden(name string) bool {
-	return strings.HasPrefix(name, "_") || strings.HasPrefix(name, ".")
 }
 
 func platformTags(base string) string {

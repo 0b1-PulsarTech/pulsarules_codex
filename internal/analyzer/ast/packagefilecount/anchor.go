@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
 )
 
 type anchor struct {
@@ -67,7 +68,7 @@ func changedAnchors(
 	set := newDirAnchors()
 	for _, fc := range ctx.ChangedFiles {
 		file := filepath.ToSlash(fc.Path)
-		if !eligible(fc) || isNonPackageDir(path.Dir(file)) {
+		if !eligible(fc) || sources.IsNonPackageDir(path.Dir(file)) {
 			continue
 		}
 		src, ok := ctx.Sources.Read(file)
