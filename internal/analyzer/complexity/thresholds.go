@@ -31,9 +31,16 @@ func (th thresholds) maxFuncLinesFor(fc pass.FileChange) int {
 func (th thresholds) checkFile(fc pass.FileChange, file *syntax.File) []pass.Finding {
 	findings := make([]pass.Finding, 0, len(file.Functions))
 	for _, fn := range file.Functions {
-		findings = append(findings, th.checkFunction(fc, fn)...)
+		findings = append(findings, th.checkTopLevel(fc, fn)...)
 	}
 	return findings
+}
+
+func (th thresholds) checkTopLevel(fc pass.FileChange, fn syntax.Function) []pass.Finding {
+	if fn.Nested {
+		return nil
+	}
+	return th.checkFunction(fc, fn)
 }
 
 func (th thresholds) checkFunction(fc pass.FileChange, fn syntax.Function) []pass.Finding {
@@ -52,7 +59,8 @@ func (th thresholds) checkFunction(fc pass.FileChange, fn syntax.Function) []pas
 
 	funcLines := fn.BodyEnd - fn.BodyStart + 1
 	maxFuncLines := th.maxFuncLinesFor(fc)
-	if funcLines > maxFuncLines {
+	// A test container wraps a whole file's cases, so its span says nothing about size.
+	if funcLines > maxFuncLines && !fn.TestContainer {
 		findings = append(findings, th.warnReporter.At(
 			fc.Path,
 			fn.Line,

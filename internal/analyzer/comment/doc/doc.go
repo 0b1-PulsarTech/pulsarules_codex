@@ -53,7 +53,7 @@ func hintFor(site syntax.DocSite) string {
 		return "delete the prose lines, keep the directive lines"
 	}
 	switch site.Kind {
-	case syntax.DocFunction:
+	case syntax.DocFunction, syntax.DocConstructor:
 		return "delete it; keep a non-obvious why on the line it explains inside the body, " +
 			"never as a multi-line block at the top of the body"
 	case syntax.DocMethod:

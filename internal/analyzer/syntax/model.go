@@ -15,36 +15,43 @@ const (
 type FunctionKind string
 
 const (
-	FuncFunction FunctionKind = "function"
-	FuncMethod   FunctionKind = "method"
+	FuncFunction    FunctionKind = "function"
+	FuncMethod      FunctionKind = "method"
+	FuncConstructor FunctionKind = "constructor"
+	FuncAccessor    FunctionKind = "accessor"
+	FuncClosure     FunctionKind = "closure"
 )
 
 type NameKind string
 
 const (
-	NameFunction      NameKind = "function"
-	NameMethod        NameKind = "method"
-	NameType          NameKind = "type"
-	NameConstant      NameKind = "constant"
-	NameVariable      NameKind = "variable"
-	NameField         NameKind = "field"
-	NameTypeParam     NameKind = "type parameter"
-	NamePackage       NameKind = "package"
-	NameLabel         NameKind = "label"
-	NameReceiver      NameKind = "receiver"
-	NameLoopVariable  NameKind = "loop variable"
-	NameParameter     NameKind = "parameter"
-	NameResult        NameKind = "result"
-	NameSwitchBinding NameKind = "type switch binding"
-	NameImportAlias   NameKind = "import alias"
+	NameFunction       NameKind = "function"
+	NameMethod         NameKind = "method"
+	NameType           NameKind = "type"
+	NameConstant       NameKind = "constant"
+	NameVariable       NameKind = "variable"
+	NameField          NameKind = "field"
+	NameTypeParam      NameKind = "type parameter"
+	NamePackage        NameKind = "package"
+	NameLabel          NameKind = "label"
+	NameReceiver       NameKind = "receiver"
+	NameLoopVariable   NameKind = "loop variable"
+	NameParameter      NameKind = "parameter"
+	NameResult         NameKind = "result"
+	NameSwitchBinding  NameKind = "type switch binding"
+	NameImportAlias    NameKind = "import alias"
+	NameCatchParameter NameKind = "catch parameter"
 )
 
 type DocKind string
 
 const (
-	DocFunction DocKind = "function"
-	DocType     DocKind = "type"
-	DocMethod   DocKind = "method"
+	DocFunction    DocKind = "function"
+	DocType        DocKind = "type"
+	DocMethod      DocKind = "method"
+	DocConstructor DocKind = "constructor"
+	DocField       DocKind = "field"
+	DocVariable    DocKind = "variable"
 )
 
 type File struct {
@@ -62,8 +69,9 @@ type Function struct {
 	Name                     string
 	Kind                     FunctionKind
 	Line, BodyStart, BodyEnd int
-	Params                   int
+	Params, NamedParams      int
 	Complexity               int
+	TestContainer, Nested    bool
 }
 
 type Block struct{ Line, Depth int }

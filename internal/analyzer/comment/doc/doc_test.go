@@ -380,8 +380,19 @@ func TestHintFor(t *testing.T) {
 		want string
 	}{
 		{"function", syntax.DocSite{Kind: syntax.DocFunction}, "inside the body"},
+		{"constructor", syntax.DocSite{Kind: syntax.DocConstructor}, "inside the body"},
 		{"method", syntax.DocSite{Kind: syntax.DocMethod}, "method name and signature"},
 		{"type", syntax.DocSite{Kind: syntax.DocType}, "type name and fields"},
+		{
+			"field",
+			syntax.DocSite{Kind: syntax.DocField},
+			"delete it; the name carries the meaning",
+		},
+		{
+			"variable",
+			syntax.DocSite{Kind: syntax.DocVariable},
+			"delete it; the name carries the meaning",
+		},
 		{"unknown kind", syntax.DocSite{Kind: "other"}, "the name carries the meaning"},
 		{
 			"mixed directive wins",
