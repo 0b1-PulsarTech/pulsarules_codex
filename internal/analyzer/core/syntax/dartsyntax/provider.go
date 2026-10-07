@@ -29,14 +29,7 @@ func (provider *Provider) Summarize(
 	if len(requests) == 0 {
 		return map[string]*syntax.File{}, nil
 	}
-	const runTimeout = 30 * time.Second
-	exe, err := provider.prepare(ctx)
-	if err != nil {
-		return nil, err
-	}
-	runCtx, cancelRun := context.WithTimeout(ctx, runTimeout)
-	defer cancelRun()
-	return runHelper(runCtx, exe, "", requests)
+	return summarizeWith(ctx, requests, provider.prepare)
 }
 
 func (provider *Provider) prepare(ctx context.Context) (string, error) {
