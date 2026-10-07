@@ -8,9 +8,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/testpolicy"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
@@ -119,6 +121,72 @@ func TestMarkGenerated_AtlasMigrationDir(t *testing.T) {
 			markGenerated(files, newTestProvider(atlasFixture(t)))
 			if files[0].Generated != testCase.want {
 				t.Errorf("Generated = %v, want %v", files[0].Generated, testCase.want)
+			}
+		})
+	}
+}
+
+func TestWalkAllFilesSetsIsTest(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		path string
+		want bool
+	}{
+		{"go test suffix", "a_test.go", true},
+		{"go source", "a.go", false},
+		{"go helper under tests dir", "tests/internal/boot.go", false},
+		{"mjs under test dir", "web/test/ajustes.mjs", true},
+		{"dart helper under test dir", "packages/x/test/helper.dart", true},
+		{"ts name with test prefix only", "src/test_utils.ts", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			files := fstest.MapFS{testCase.path: &fstest.MapFile{}}
+			provider := sources.NewFSProvider(files, "", sources.SkipSet{})
+			got := walkAllFiles(provider, testpolicy.Defaults())
+			if len(got) != 1 || got[0].Path != testCase.path || got[0].IsTest != testCase.want {
+				t.Fatalf("walked %+v, want %q with IsTest %v", got, testCase.path, testCase.want)
+			}
+		})
+	}
+}
+
+func TestChangesToFileChangesSetsIsTest(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		change vcs.Change
+		want   core.FileChange
+	}{
+		{
+			name:   "go test suffix",
+			change: vcs.Change{Path: "a_test.go", Extension: ".go", Staged: true},
+			want: core.FileChange{
+				Path: "a_test.go", Extension: ".go", IsTest: true, Staged: true,
+			},
+		},
+		{
+			name:   "mjs under test dir",
+			change: vcs.Change{Path: "web/test/a.mjs", Extension: ".mjs"},
+			want:   core.FileChange{Path: "web/test/a.mjs", Extension: ".mjs", IsTest: true},
+		},
+		{
+			name:   "go helper under tests dir",
+			change: vcs.Change{Path: "tests/boot.go", Extension: ".go"},
+			want:   core.FileChange{Path: "tests/boot.go", Extension: ".go"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := changesToFileChanges([]vcs.Change{testCase.change}, testpolicy.Defaults())
+			if len(got) != 1 || got[0] != testCase.want {
+				t.Fatalf("got %+v, want %+v", got, testCase.want)
 			}
 		})
 	}

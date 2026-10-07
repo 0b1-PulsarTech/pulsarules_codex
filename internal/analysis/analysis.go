@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/testpolicy"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -81,7 +82,7 @@ func (sess *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *D
 
 	if files == FileSetAll {
 		sess.attachSources(discovery)
-		discovery.ChangedFiles = walkAllFiles(discovery.Sources)
+		discovery.ChangedFiles = walkAllFiles(discovery.Sources, testpolicy.Defaults())
 		return discovery
 	}
 
@@ -108,7 +109,7 @@ func (sess *Session) changedFiles(scope Scope, status *vcs.Status) []core.FileCh
 			return !change.Staged
 		})
 	}
-	return changesToFileChanges(changes)
+	return changesToFileChanges(changes, testpolicy.Defaults())
 }
 
 func (sess *Session) Load(discovery *Discovery) *core.AnalysisContext {
@@ -126,6 +127,7 @@ func (sess *Session) Load(discovery *Discovery) *core.AnalysisContext {
 		GitHistory:    discovery.GitHistory,
 		StagedRenames: discovery.StagedRenames,
 		Skips:         discovery.Skips,
+		TestPolicy:    testpolicy.Defaults(),
 	}
 
 	if len(discovery.ChangedFiles) > 0 && discovery.Sources != nil {

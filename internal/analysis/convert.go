@@ -2,35 +2,37 @@ package analysis
 
 import (
 	"log/slog"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/testpolicy"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-func walkAllFiles(provider sources.Provider) []core.FileChange {
+func walkAllFiles(provider sources.Provider, policy testpolicy.Policy) []core.FileChange {
 	var files []core.FileChange
 	provider.Walk(func(path, ext string) bool {
 		files = append(files, core.FileChange{
 			Path:      path,
 			Extension: ext,
-			IsTest:    strings.HasSuffix(path, "_test.go"),
+			IsTest:    policy.IsTest(path),
 		})
 		return true
 	})
 	return files
 }
 
-func changesToFileChanges(changes []vcs.Change) []core.FileChange {
+func changesToFileChanges(
+	changes []vcs.Change, policy testpolicy.Policy,
+) []core.FileChange {
 	files := make([]core.FileChange, len(changes))
 	for idx, change := range changes {
 		files[idx] = core.FileChange{
 			Path:      change.Path,
 			Extension: change.Extension,
-			IsTest:    change.IsTest,
+			IsTest:    policy.IsTest(change.Path),
 			Staged:    change.Staged,
 		}
 	}

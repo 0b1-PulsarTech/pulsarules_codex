@@ -104,7 +104,6 @@ func TestParseStatus_Variants(t *testing.T) {
 					Staging:   'A',
 					Worktree:  ' ',
 					Extension: ".go",
-					IsTest:    true,
 					Staged:    true,
 				},
 				{Path: "Y.GO", Staging: 'M', Worktree: ' ', Extension: ".go", Staged: true},
