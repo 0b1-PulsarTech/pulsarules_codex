@@ -1,12 +1,15 @@
 package imports
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax/gosyntax"
 )
 
 func TestAnalyze(t *testing.T) {
@@ -102,24 +105,21 @@ func TestCheckFile(t *testing.T) {
 	for _, testCase := range checkFileCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			dir := t.TempDir()
-			path := filepath.Join(dir, "foo.go")
-			if err := os.WriteFile(path, []byte(testCase.source), 0o644); err != nil {
-				t.Fatal(err)
-			}
-			src, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			projectDir := t.TempDir()
+			writeSource(t, filepath.Join(projectDir, "go.mod"), "module "+modPath+"\n")
+			path := filepath.Join(projectDir, "foo.go")
+			writeSource(t, path, testCase.source)
 			cache := astcache.New()
-			file, err := cache.Parse(path, src)
-			if err != nil {
+			if _, err := cache.Parse(path, []byte(testCase.source)); err != nil {
 				t.Fatal(err)
+			}
+			summary, ok := summaries(cache, projectDir, path).Get(path)
+			if !ok {
+				t.Fatal("no summary")
 			}
 
 			fc := core.FileChange{Path: "foo.go", Extension: ".go"}
-			got := analyzer.checkFile(cache.FileSet(), modPath, fc, file, analyzer.reporter)
+			got := checkFile(fc, summary, analyzer.reporter)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d", len(got), testCase.expect)
 			}
@@ -147,6 +147,7 @@ func TestAnalyze_ForeignModule(t *testing.T) {
 	got := NewAnalyzer().Analyze(&core.AnalysisContext{
 		ProjectDir:   projectDir,
 		ASTCache:     cache,
+		Syntax:       summaries(cache, projectDir, path),
 		ChangedFiles: []core.FileChange{{Path: path, Extension: ".go"}},
 	})
 	if len(got) == 0 {
@@ -155,9 +156,73 @@ func TestAnalyze_ForeignModule(t *testing.T) {
 	}
 }
 
+func summaries(cache *astcache.Cache, projectDir, path string) *syntax.Cache {
+	read := func(string) ([]byte, bool) { return nil, true }
+	return syntax.NewCache(
+		context.Background(),
+		[]syntax.Provider{gosyntax.New(cache)},
+		syntax.Corpus{Root: projectDir, Sources: []syntax.Source{{Path: path}}, Read: read},
+	)
+}
+
 func writeSource(tb testing.TB, path, body string) {
 	tb.Helper()
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		tb.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func TestCheckFile_SummaryFromAnyLanguage(t *testing.T) {
+	t.Parallel()
+
+	groups := []string{"stdlib", "external", "example.com/app"}
+	testCases := []struct {
+		name           string
+		file           syntax.File
+		wantMessage    string
+		wantSuggestion string
+	}{
+		{
+			name: "out of order import",
+			file: syntax.File{ImportGroups: groups, Imports: []syntax.Import{
+				{Literal: `"a.com/x"`, Line: 3, Group: 1},
+				{Literal: `"fmt"`, Line: 4, Group: 0},
+			}},
+			wantMessage:    `import "fmt" out of order (stdlib → external → example.com/app)`,
+			wantSuggestion: "reorder imports to follow: stdlib, external, this module",
+		},
+		{
+			name: "ordered imports",
+			file: syntax.File{ImportGroups: groups, Imports: []syntax.Import{
+				{Literal: `"fmt"`, Line: 3, Group: 0},
+				{Literal: `"a.com/x"`, Line: 4, Group: 1},
+			}},
+		},
+		{
+			name: "no group names stays silent",
+			file: syntax.File{Imports: []syntax.Import{
+				{Literal: `"a"`, Group: 1}, {Literal: `"b"`, Group: 0},
+			}},
+		},
+		{name: "no imports", file: syntax.File{ImportGroups: groups}},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := checkFile(
+				core.FileChange{Path: "a.go"}, &testCase.file, NewAnalyzer().reporter,
+			)
+			if testCase.wantMessage == "" {
+				if len(got) != 0 {
+					t.Fatalf("findings = %+v, want none", got)
+				}
+				return
+			}
+			if len(got) != 1 || got[0].Message != testCase.wantMessage ||
+				got[0].Suggestion != testCase.wantSuggestion {
+				t.Fatalf("findings = %+v", got)
+			}
+		})
 	}
 }
