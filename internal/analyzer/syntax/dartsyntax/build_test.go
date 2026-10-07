@@ -325,6 +325,26 @@ func TestEnsureHelperAlternatingSDKs(t *testing.T) {
 	}
 }
 
+func TestEnsureHelperAlternatingHashes(t *testing.T) {
+	dart := writeFakeDart(t)
+	base := t.TempDir()
+	compiles := filepath.Join(t.TempDir(), "compiles.log")
+	t.Setenv("FAKE_COMPILES", compiles)
+	rival := filepath.Join(cacheRoot(base), keyPrefix("9.9.9")+"0123456789abcdef")
+	seedEntry(t, cacheRoot(base), seed{name: filepath.Base(rival), file: exeName()})
+	for round := range 3 {
+		if _, err := ensureHelper(context.Background(), base, dart); err != nil {
+			t.Fatalf("round %d: %v", round, err)
+		}
+		if !exeExists(rival) {
+			t.Fatalf("round %d pruned the rival helper that is still in use", round)
+		}
+	}
+	if got := readLines(compiles); len(got) != 1 {
+		t.Errorf("compiles = %q, want the current helper built once", got)
+	}
+}
+
 func TestTail(t *testing.T) {
 	t.Parallel()
 	long := strings.Repeat("x", 500) + "end"
