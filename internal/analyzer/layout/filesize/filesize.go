@@ -31,7 +31,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	return pass.EachChangedFile(ctx, eligible, func(
 		fc pass.FileChange, src []byte,
 	) []pass.Finding {
-		limit := limits.forFile(fc.Path)
+		limit := limits.forFile(fc)
 		lines := countLines(src)
 		if lines <= limit {
 			return nil
@@ -64,8 +64,8 @@ func newLineLimits(maxLines int) lineLimits {
 	}
 }
 
-func (limits lineLimits) forFile(path string) int {
-	if pass.IsTestPath(path) {
+func (limits lineLimits) forFile(fc pass.FileChange) int {
+	if fc.IsTest {
 		return limits.test
 	}
 	return limits.production

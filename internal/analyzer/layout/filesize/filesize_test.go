@@ -60,77 +60,46 @@ func TestLineLimits(t *testing.T) {
 	testCases := []struct {
 		name     string
 		maxLines int
-		path     string
+		isTest   bool
 		want     int
 	}{
-		{name: "production keeps the configured max", maxLines: 180, path: "foo.go", want: 180},
-		{name: "test file gets 2.6x the max", maxLines: 180, path: "foo_test.go", want: 468},
-		{name: "allowance follows a lowered max", maxLines: 100, path: "foo_test.go", want: 260},
-		{
-			name:     "allowance rounds instead of truncating",
-			maxLines: 75,
-			path:     "foo_test.go",
-			want:     195,
-		},
-		{name: "a raw zero limit stays zero", maxLines: 0, path: "foo_test.go", want: 0},
-		{
-			name:     "a non-go test path gets the allowance too",
-			maxLines: 180,
-			path:     "foo.spec.ts",
-			want:     468,
-		},
+		{name: "production keeps the configured max", maxLines: 180, want: 180},
+		{name: "test file gets 2.6x the max", maxLines: 180, isTest: true, want: 468},
+		{name: "allowance follows a lowered max", maxLines: 100, isTest: true, want: 260},
+		{name: "allowance rounds instead of truncating", maxLines: 75, isTest: true, want: 195},
+		{name: "a raw zero limit stays zero", maxLines: 0, isTest: true, want: 0},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := newLineLimits(testCase.maxLines).forFile(testCase.path)
+			change := pass.FileChange{Path: "foo.go", IsTest: testCase.isTest}
+			got := newLineLimits(testCase.maxLines).forFile(change)
 			if got != testCase.want {
-				t.Errorf("limit for maxLines=%d path=%q = %d, want %d",
-					testCase.maxLines, testCase.path, got, testCase.want)
+				t.Errorf("limit for maxLines=%d isTest=%v = %d, want %d",
+					testCase.maxLines, testCase.isTest, got, testCase.want)
 			}
 		})
 	}
 }
 
-func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
-	t.Parallel()
+type allowanceCase struct {
+	name   string
+	change pass.FileChange
+	expect int
+}
+
+func runAllowanceCases(t *testing.T, files map[string]int, testCases []allowanceCase) {
+	t.Helper()
 
 	dir := t.TempDir()
-	write := func(name string, lines int) {
-		t.Helper()
+	for name, lines := range files {
 		body := "package foo\n" + strings.Repeat("// filler\n", lines-1)
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), disk.File); err != nil {
 			t.Fatalf("write %s: %v", name, err)
 		}
 	}
-	write("big.go", 300)
-	write("big_test.go", 300)
-	write("huge_test.go", 500)
-
 	analyzer := NewAnalyzer()
 	srcs := source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs()))
-
-	testCases := []struct {
-		name   string
-		change pass.FileChange
-		expect int
-	}{
-		{
-			name:   "300-line production file breaks the 180 limit",
-			change: pass.FileChange{Path: "big.go", Extension: ".go"},
-			expect: 1,
-		},
-		{
-			name:   "the same 300 lines are fine in a test file",
-			change: pass.FileChange{Path: "big_test.go", Extension: ".go", IsTest: true},
-			expect: 0,
-		},
-		{
-			name:   "a test file still fails past 468 lines",
-			change: pass.FileChange{Path: "huge_test.go", Extension: ".go", IsTest: true},
-			expect: 1,
-		},
-	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
@@ -144,6 +113,46 @@ func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAnalyze_TestFilesGetTheWiderAllowance(t *testing.T) {
+	t.Parallel()
+
+	runAllowanceCases(t, map[string]int{"big.go": 300, "big_test.go": 300, "huge_test.go": 500},
+		[]allowanceCase{
+			{
+				name:   "300-line production file breaks the 180 limit",
+				change: pass.FileChange{Path: "big.go", Extension: ".go"},
+				expect: 1,
+			},
+			{
+				name:   "the same 300 lines are fine in a test file",
+				change: pass.FileChange{Path: "big_test.go", Extension: ".go", IsTest: true},
+				expect: 0,
+			},
+			{
+				name:   "a test file still fails past 468 lines",
+				change: pass.FileChange{Path: "huge_test.go", Extension: ".go", IsTest: true},
+				expect: 1,
+			},
+		})
+}
+
+func TestAnalyze_MjsTestFlagDecidesTheCap(t *testing.T) {
+	t.Parallel()
+
+	runAllowanceCases(t, map[string]int{"x.mjs": 300}, []allowanceCase{
+		{
+			name:   "a 300-line mjs flagged as a test is under the test cap",
+			change: pass.FileChange{Path: "x.mjs", Extension: ".mjs", IsTest: true},
+			expect: 0,
+		},
+		{
+			name:   "the same mjs not flagged as a test breaks the 180 limit",
+			change: pass.FileChange{Path: "x.mjs", Extension: ".mjs"},
+			expect: 1,
+		},
+	})
 }
 
 func TestAnalyze_SkipsTestdata(t *testing.T) {
