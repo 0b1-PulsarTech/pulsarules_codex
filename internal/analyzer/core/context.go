@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/testpolicy"
 )
 
@@ -36,6 +37,7 @@ type AnalysisContext struct {
 	Config        *AnalysisConfig
 	TestPolicy    testpolicy.Policy
 	ASTCache      *astcache.Cache
+	Syntax        *syntax.Cache
 	Sources       sources.Provider
 	Skips         sources.SkipSet
 	Findings      []Finding

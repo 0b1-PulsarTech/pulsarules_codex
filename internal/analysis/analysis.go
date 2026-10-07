@@ -1,11 +1,13 @@
 package analysis
 
 import (
+	"context"
 	"log/slog"
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/testpolicy"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -27,6 +29,7 @@ type Session struct {
 	skips       sources.SkipSet
 	gitSkips    sources.SkipSet
 	logger      *slog.Logger
+	providers   providerFactory
 }
 
 func NewSession(
@@ -47,6 +50,7 @@ func NewSession(
 		skips:       sources.NewSkipSet(sources.DefaultSkipDirs()),
 		gitSkips:    sources.NewSkipSet(sources.GitSkipDirs()),
 		logger:      slog.Default(),
+		providers:   defaultProviders,
 	}
 }
 
@@ -133,6 +137,15 @@ func (sess *Session) Load(discovery *Discovery) *core.AnalysisContext {
 	if len(discovery.ChangedFiles) > 0 && discovery.Sources != nil {
 		markGenerated(ctx.ChangedFiles, discovery.Sources)
 		ctx.ASTCache = populateASTCache(discovery.ChangedFiles, discovery.Sources)
+		ctx.Syntax = syntax.NewCache(
+			context.Background(),
+			sess.providers(ctx.ASTCache),
+			syntax.Corpus{
+				Root:    root,
+				Sources: changedSources(ctx.ChangedFiles),
+				Read:    discovery.Sources.Read,
+			},
+		)
 	}
 	return ctx
 }

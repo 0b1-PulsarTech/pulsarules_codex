@@ -7,6 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/lexical"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/testpolicy"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
@@ -83,6 +84,14 @@ func populateASTCache(changedFiles []core.FileChange, provider sources.Provider)
 		}
 	}
 	return cache
+}
+
+func changedSources(files []core.FileChange) []syntax.Source {
+	sources := make([]syntax.Source, len(files))
+	for idx, file := range files {
+		sources[idx] = syntax.Source{Path: file.Path, IsTest: file.IsTest}
+	}
+	return sources
 }
 
 func (sess *Session) stagedRenames() []core.Rename {
