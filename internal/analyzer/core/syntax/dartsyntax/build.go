@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
@@ -104,6 +106,10 @@ func pubGet(ctx context.Context, tool toolchain) error {
 	return errors.Join(offlineErr, onlineErr)
 }
 
+func dartArgs(args []string) []string {
+	return append([]string{"--suppress-analytics"}, args...)
+}
+
 type toolchain struct {
 	dir  string
 	dart string
@@ -116,4 +122,31 @@ func runStep(ctx context.Context, tool toolchain, step string, args ...string) e
 		return stepError(ctx, step, result, err)
 	}
 	return nil
+}
+
+func stepError(ctx context.Context, step string, result execx.Result, err error) error {
+	if execErr, ok := errors.AsType[*execx.Error](err); ok {
+		err = execErr.Err
+	}
+	if ctx.Err() != nil && !errors.Is(err, ctx.Err()) {
+		err = fmt.Errorf("%w: %w", ctx.Err(), err)
+	}
+	output := tail([]byte(result.Stderr + "\n" + result.Stdout))
+	if output == "" {
+		return fmt.Errorf("dart %s: %w", step, err)
+	}
+	return fmt.Errorf("dart %s: %w: %s", step, err, output)
+}
+
+func tail(output []byte) string {
+	const maxChars = 400
+	text := strings.TrimSpace(string(output))
+	if len(text) <= maxChars {
+		return text
+	}
+	start := len(text) - maxChars
+	for start < len(text) && !utf8.RuneStart(text[start]) {
+		start++
+	}
+	return text[start:]
 }
