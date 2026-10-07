@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/testfile"
 )
 
 type FileChange struct {
@@ -33,6 +34,7 @@ type Context struct {
 	CommitMsg     string
 	GitHistory    []GitCommitEntry
 	Config        *AnalysisConfig
+	TestPolicy    testfile.Classifier
 	ASTCache      *astcache.Cache
 	Sources       source.Provider
 	Skips         source.SkipSet

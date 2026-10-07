@@ -38,7 +38,6 @@ func newChange(entry, oldPath string) Change {
 		Path:      path,
 		OldPath:   oldPath,
 		Extension: strings.ToLower(filepath.Ext(path)),
-		IsTest:    strings.HasSuffix(path, "_test.go"),
 		Staging:   staging,
 		Worktree:  worktree,
 		Staged:    staging != ' ' && staging != '?',

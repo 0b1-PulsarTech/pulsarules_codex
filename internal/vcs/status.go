@@ -12,7 +12,6 @@ type Change struct {
 	Path      string
 	OldPath   string
 	Extension string
-	IsTest    bool
 	Staging   byte
 	Worktree  byte
 	Staged    bool

@@ -2,35 +2,37 @@ package governance
 
 import (
 	"log/slog"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/testfile"
 )
 
-func walkAllFiles(provider source.Provider) []pass.FileChange {
+func walkAllFiles(provider source.Provider, policy testfile.Classifier) []pass.FileChange {
 	var files []pass.FileChange
 	provider.Walk(func(path, ext string) bool {
 		files = append(files, pass.FileChange{
 			Path:      path,
 			Extension: ext,
-			IsTest:    strings.HasSuffix(path, "_test.go"),
+			IsTest:    policy.IsTest(path),
 		})
 		return true
 	})
 	return files
 }
 
-func changesToFileChanges(changes []vcs.Change) []pass.FileChange {
+func changesToFileChanges(
+	changes []vcs.Change, policy testfile.Classifier,
+) []pass.FileChange {
 	files := make([]pass.FileChange, len(changes))
 	for idx, change := range changes {
 		files[idx] = pass.FileChange{
 			Path:      change.Path,
 			Extension: change.Extension,
-			IsTest:    change.IsTest,
+			IsTest:    policy.IsTest(change.Path),
 			Staged:    change.Staged,
 		}
 	}
