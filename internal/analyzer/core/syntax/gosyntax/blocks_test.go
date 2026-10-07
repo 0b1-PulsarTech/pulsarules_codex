@@ -1,6 +1,7 @@
 package gosyntax
 
 import (
+	"go/ast"
 	"slices"
 	"testing"
 
@@ -61,6 +62,45 @@ func TestBlocks(t *testing.T) {
 			got := summarizeSource(t, testCase.body, plainSource(), "").Blocks
 			if !slices.Equal(got, testCase.want) {
 				t.Fatalf("Blocks = %+v, want %+v", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestWalkFileElseVisitor(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		body string
+		want int
+	}{
+		{
+			name: "plain else",
+			body: "package x\n\nfunc run(ok bool) {\n\tif ok {\n\t} else {\n\t}\n}\n",
+			want: 1,
+		},
+		{
+			name: "else if only",
+			body: "package x\n\nfunc run(ok bool) {\n\tif ok {\n\t} else if !ok {\n\t}\n}\n",
+			want: 0,
+		},
+		{
+			name: "else in a case body",
+			body: "package x\n\nfunc run(ok bool) {\n" +
+				"\tswitch {\n\tcase ok:\n\t\tif ok {\n\t\t} else {\n\t\t}\n\t}\n}\n",
+			want: 0,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, file := parseSource(t, testCase.body)
+			got := 0
+			WalkFile(file, Visitor{Else: func(*ast.BlockStmt) { got++ }})
+			if got != testCase.want {
+				t.Fatalf("else visits = %d, want %d", got, testCase.want)
 			}
 		})
 	}
