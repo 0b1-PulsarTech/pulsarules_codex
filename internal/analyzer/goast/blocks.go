@@ -4,6 +4,7 @@ import "go/ast"
 
 type Visitor struct {
 	Block func(block *ast.BlockStmt, depth int)
+	Else  func(block *ast.BlockStmt)
 }
 
 func WalkFile(file *ast.File, visitor Visitor) {
@@ -54,6 +55,9 @@ func walkIf(ifStmt *ast.IfStmt, depth int, visitor Visitor) {
 			walkIf(elseIf, depth, visitor)
 		}
 		return
+	}
+	if visitor.Else != nil {
+		visitor.Else(elseBlock)
 	}
 	walkBlock(elseBlock, depth+1, visitor)
 }

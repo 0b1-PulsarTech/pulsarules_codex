@@ -4,9 +4,34 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-func (analyzer *Analyzer) checkElseBlock(
+func checkElses(
+	fset *token.FileSet,
+	fc pass.FileChange,
+	file *ast.File,
+	reporter pass.Reporter,
+) map[int][]pass.Finding {
+	findings := map[int][]pass.Finding{}
+	blockIdx := 0
+	emit := func(pos token.Pos, msg, suggestion string) {
+		findings[blockIdx] = append(
+			findings[blockIdx],
+			reporter.At(fc.Path, fset.Position(pos).Line, msg, suggestion),
+		)
+	}
+	// An else finding fires just before its block is entered, so blockIdx is that block's index.
+	goast.WalkFile(file, goast.Visitor{
+		Block: func(*ast.BlockStmt, int) { blockIdx++ },
+		Else:  func(block *ast.BlockStmt) { checkElseBlock(block, emit) },
+	})
+	return findings
+}
+
+func checkElseBlock(
 	block *ast.BlockStmt,
 	emit func(token.Pos, string, string),
 ) {
