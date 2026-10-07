@@ -303,6 +303,25 @@ func summaryCases() []summaryCase {
 			fn:   syntax.Function{Name: "tbl", BodyStart: 1, BodyEnd: 100},
 			test: true,
 		},
+		{
+			name: "nested function is skipped",
+			fn:   syntax.Function{Name: "lit", BodyStart: 1, BodyEnd: 200, Nested: true},
+		},
+		{
+			name: "test container skips only the length",
+			fn:   syntax.Function{Name: "main", BodyStart: 1, BodyEnd: 200, TestContainer: true},
+		},
+		{
+			name: "test container keeps complexity and params",
+			fn: syntax.Function{
+				Name: "main", BodyStart: 1, BodyEnd: 200, TestContainer: true,
+				Params: 6, Complexity: 16,
+			},
+			want: []string{
+				"main has cyclomatic complexity 16, max 15",
+				"main has 6 parameters, max 5",
+			},
+		},
 	}
 }
 

@@ -30,7 +30,7 @@ func (th thresholds) checkChanged(ctx *core.AnalysisContext, fc core.FileChange)
 	}
 	var findings []core.Finding
 	for idx, fn := range neutral {
-		findings = append(findings, th.checkFunction(fc, fn)...)
+		findings = append(findings, th.checkTopLevel(fc, fn)...)
 		findings = append(findings, th.checkGoFunc(fset, fc, decls[idx])...)
 	}
 	return findings
