@@ -1,11 +1,14 @@
 package singleletter
 
 import (
+	"context"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 )
 
@@ -19,16 +22,34 @@ func defaultSettings() settings {
 	return settings{reporter: NewAnalyzer().reporter()}
 }
 
-func assertMessages(t *testing.T, source string, cfg settings, want []string) {
+func summaries(cache *astcache.Cache) *syntax.Cache {
+	read := func(string) ([]byte, bool) { return nil, true }
+	return syntax.NewCache(
+		context.Background(),
+		[]syntax.Provider{gosyntax.New(cache)},
+		syntax.Corpus{Sources: []syntax.Source{{Path: "pkg.go"}}, Read: read},
+	)
+}
+
+func summarize(t *testing.T, source string) *syntax.File {
 	t.Helper()
 
 	cache := astcache.New()
-	file, err := cache.Parse("pkg.go", []byte(source))
-	if err != nil {
+	if _, err := cache.Parse("pkg.go", []byte(source)); err != nil {
 		t.Fatalf("parse: %v", err)
 	}
+	file, ok := summaries(cache).Get("pkg.go")
+	if !ok {
+		t.Fatal("no summary")
+	}
+	return file
+}
+
+func assertMessages(t *testing.T, source string, cfg settings, want []string) {
+	t.Helper()
+
 	fc := pass.FileChange{Path: "pkg.go", Extension: ".go"}
-	got := checkFile(cache.FileSet(), fc, file, cfg)
+	got := checkFile(fc, summarize(t, source), cfg)
 	if len(got) != len(want) {
 		t.Fatalf("findings = %+v, want %q", got, want)
 	}
@@ -64,6 +85,7 @@ func TestAnalyze(t *testing.T) {
 			}
 			ctx := &pass.Context{
 				ASTCache:     cache,
+				Syntax:       summaries(cache),
 				ChangedFiles: []pass.FileChange{testCase.change},
 			}
 			got := NewAnalyzer().Analyze(ctx)
@@ -89,13 +111,8 @@ func TestAnalyzerIdentity(t *testing.T) {
 func TestFindingHint(t *testing.T) {
 	t.Parallel()
 
-	cache := astcache.New()
-	file, err := cache.Parse("pkg.go", []byte("package pkg\n\nvar x int\n"))
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
 	fc := pass.FileChange{Path: "pkg.go", Extension: ".go"}
-	got := checkFile(cache.FileSet(), fc, file, defaultSettings())
+	got := checkFile(fc, summarize(t, "package pkg\n\nvar x int\n"), defaultSettings())
 	if len(got) != 1 || got[0].Line != 3 ||
 		!strings.Contains(got[0].Suggestion, "what it is or holds; a short abbreviation") {
 		t.Fatalf("findings = %+v", got)
@@ -136,6 +153,7 @@ func TestAnalyzeExportedOnly(t *testing.T) {
 			}
 			ctx := &pass.Context{
 				ASTCache:     cache,
+				Syntax:       summaries(cache),
 				ChangedFiles: []pass.FileChange{{Path: "pkg.go", Extension: ".go"}},
 				Config: &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
 					"single-letter-name": {Enabled: true, Params: testCase.params},

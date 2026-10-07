@@ -2,10 +2,12 @@ package singleletter
 
 import (
 	"fmt"
-	"go/ast"
-	"go/token"
+	"unicode"
+	"unicode/utf8"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/syntaxfiles"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
 type Analyzer struct{}
@@ -26,11 +28,11 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 		reporter:     pass.ResolveReporter(analyzer.reporter(), ctx),
 		exportedOnly: ctx.Params(analyzer.ID()).Bool("exported_only", false),
 	}
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+	return syntaxfiles.Each(ctx, func(fc pass.FileChange, file *syntax.File) []pass.Finding {
 		if fc.Generated {
 			return nil
 		}
-		return checkFile(ctx.ASTCache.FileSet(), fc, file, cfg)
+		return checkFile(fc, file, cfg)
 	})
 }
 
@@ -39,22 +41,27 @@ type settings struct {
 	exportedOnly bool
 }
 
-func checkFile(
-	fset *token.FileSet, fc pass.FileChange, file *ast.File, cfg settings,
-) []pass.Finding {
-	scan := newCollector(testingNames(file))
-	scan.exportedOnly = cfg.exportedOnly
-	scan.add(file.Name, kindPackage)
-	ast.Inspect(file, scan.visit)
-	findings := make([]pass.Finding, 0, len(scan.sites))
-	for _, found := range scan.sites {
+func checkFile(fc pass.FileChange, file *syntax.File, cfg settings) []pass.Finding {
+	findings := make([]pass.Finding, 0, len(file.Names))
+	for _, name := range file.Names {
+		if name.Exempt || !isSingleLetter(name.Name) || (cfg.exportedOnly && !name.Exported) {
+			continue
+		}
 		findings = append(findings, cfg.reporter.At(
 			fc.Path,
-			fset.Position(found.ident.Pos()).Line,
-			fmt.Sprintf("%s %q is a single letter", found.kind, found.ident.Name),
+			name.Line,
+			fmt.Sprintf("%s %q is a single letter", name.Kind, name.Name),
 			"name it after what it is or holds; a short abbreviation such as srv, row "+
 				"or idx is fine, one letter is not",
 		))
 	}
 	return findings
+}
+
+func isSingleLetter(name string) bool {
+	if utf8.RuneCountInString(name) != 1 {
+		return false
+	}
+	letter, _ := utf8.DecodeRuneInString(name)
+	return unicode.IsLetter(letter)
 }
