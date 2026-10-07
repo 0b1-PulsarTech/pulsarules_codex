@@ -10,6 +10,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/testfile"
 )
 
 const plainSource = "package p\n"
@@ -39,16 +40,20 @@ func buildCtx(
 	for path, src := range files {
 		mapFS[path] = &fstest.MapFile{Data: []byte(src)}
 	}
+	policy := testfile.Defaults()
 	changedFiles := make([]pass.FileChange, 0, len(changed))
 	for _, path := range changed {
 		changedFiles = append(
 			changedFiles,
-			pass.FileChange{Path: path, Extension: filepath.Ext(path)},
+			pass.FileChange{
+				Path: path, Extension: filepath.Ext(path), IsTest: policy.IsTest(path),
+			},
 		)
 	}
 	ctx := &pass.Context{
 		Sources:      source.NewFSProvider(mapFS, "", source.SkipSet{}),
 		ChangedFiles: changedFiles,
+		TestPolicy:   policy,
 	}
 	if params != nil {
 		ctx.Config = &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
