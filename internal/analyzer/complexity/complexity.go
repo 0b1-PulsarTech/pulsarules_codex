@@ -1,10 +1,6 @@
 package complexity
 
-import (
-	"go/ast"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-)
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 
 type Analyzer struct {
 	maxComplexity int
@@ -35,9 +31,11 @@ func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	th := analyzer.resolveThresholds(ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
-		return th.checkFile(ctx.ASTCache.FileSet(), fc, file)
-	})
+	findings := make([]pass.Finding, 0, len(ctx.ChangedFiles))
+	for _, fc := range ctx.ChangedFiles {
+		findings = append(findings, th.checkChanged(ctx, fc)...)
+	}
+	return findings
 }
 
 func (analyzer *Analyzer) resolveThresholds(ctx *pass.Context) thresholds {

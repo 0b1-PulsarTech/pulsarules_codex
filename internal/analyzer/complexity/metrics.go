@@ -46,45 +46,7 @@ func checkFlagArguments(
 	return findings
 }
 
-func cyclomaticComplexity(fn *ast.FuncDecl) int {
-	score := 1
-	ast.Inspect(fn, func(node ast.Node) bool {
-		switch typed := node.(type) {
-		case *ast.IfStmt:
-			score++
-		case *ast.ForStmt:
-			score++
-		case *ast.RangeStmt:
-			score++
-		case *ast.CaseClause:
-			if typed.List != nil {
-				score++
-			}
-		case *ast.CommClause:
-			score++
-		case *ast.BinaryExpr:
-			if typed.Op == token.LAND || typed.Op == token.LOR {
-				score++
-			}
-		}
-		return true
-	})
-	return score
-}
-
 func isBoolType(expr ast.Expr) bool {
 	id, ok := expr.(*ast.Ident)
 	return ok && id.Name == "bool"
-}
-
-func countParams(fl *ast.FieldList) int {
-	count := 0
-	for _, field := range fl.List {
-		if len(field.Names) > 0 {
-			count += len(field.Names)
-		} else {
-			count++
-		}
-	}
-	return count
 }
