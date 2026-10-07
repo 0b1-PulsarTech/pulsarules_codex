@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
 )
 
 type anchor struct {
@@ -67,7 +68,7 @@ func changedAnchors(
 	set := newDirAnchors()
 	for _, fc := range ctx.ChangedFiles {
 		file := filepath.ToSlash(fc.Path)
-		if !eligible(fc) || isNonPackageDir(path.Dir(file)) {
+		if !eligible(fc) || gomod.IsPackageDir(path.Dir(file)) {
 			continue
 		}
 		src, ok := ctx.Sources.Read(file)

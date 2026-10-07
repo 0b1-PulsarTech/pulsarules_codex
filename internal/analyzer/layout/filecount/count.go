@@ -3,32 +3,15 @@ package filecount
 import (
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
 )
 
 type dirCount struct {
 	files       int
 	isEntSchema bool
-}
-
-func isNonPackageDir(dir string) bool {
-	if dir == "." {
-		return false
-	}
-	for segment := range strings.SplitSeq(dir, "/") {
-		if strings.HasPrefix(segment, ".") || strings.HasPrefix(segment, "_") ||
-			segment == "testdata" {
-			return true
-		}
-	}
-	return false
-}
-
-func isIgnoredBase(base string) bool {
-	return strings.HasPrefix(base, "_") || strings.HasPrefix(base, ".")
 }
 
 func countByDir(
@@ -41,7 +24,7 @@ func countByDir(
 		file = filepath.ToSlash(file)
 		dir := path.Dir(file)
 		if !wanted[dir] || !eligible(pass.FileChange{Path: file, Extension: ext}) ||
-			ctx.TestPolicy.IsTest(file) || isIgnoredBase(path.Base(file)) {
+			ctx.TestPolicy.IsTest(file) || gomod.IsHiddenName(path.Base(file)) {
 			return true
 		}
 		src, ok := ctx.Sources.Read(file)

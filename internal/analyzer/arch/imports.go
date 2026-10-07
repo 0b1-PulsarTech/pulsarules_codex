@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
@@ -57,8 +58,7 @@ func discoverPackages(provider source.Provider, modulePath string) map[string]*p
 func inSkippedDir(file string) bool {
 	segments := strings.Split(filepath.ToSlash(file), "/")
 	for _, segment := range segments[:len(segments)-1] {
-		hidden := strings.HasPrefix(segment, ".") || strings.HasPrefix(segment, "_")
-		if hidden || segment == "vendor" || segment == "node_modules" {
+		if gomod.IsHiddenName(segment) || segment == "vendor" || segment == "node_modules" {
 			return true
 		}
 	}
