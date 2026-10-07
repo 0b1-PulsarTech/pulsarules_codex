@@ -1,10 +1,13 @@
 package doc
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 )
 
@@ -17,17 +20,12 @@ func TestCheckFile(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cache := astcache.New()
-			file, err := cache.Parse(testCase.path, []byte(testCase.source))
-			if err != nil {
-				t.Fatalf("parse: %v", err)
-			}
-			fc := pass.FileChange{
-				Path:      testCase.path,
-				Extension: ".go",
-				IsTest:    testCase.path == "p_test.go",
-			}
-			got := checkFile(cache.FileSet(), fc, file, NewAnalyzer().reporter())
+			isTest := testCase.path == "p_test.go"
+			fc := pass.FileChange{Path: testCase.path, Extension: ".go", IsTest: isTest}
+			file := summarize(
+				t, syntax.Source{Path: testCase.path, IsTest: isTest}, testCase.source,
+			)
+			got := checkFile(fc, file, NewAnalyzer().reporter())
 			if len(got) != testCase.expect {
 				t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
 			}
@@ -61,13 +59,9 @@ func TestCheckFileHints(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cache := astcache.New()
-			file, err := cache.Parse("p.go", []byte(testCase.source))
-			if err != nil {
-				t.Fatalf("parse: %v", err)
-			}
 			fc := pass.FileChange{Path: "p.go", Extension: ".go"}
-			got := checkFile(cache.FileSet(), fc, file, NewAnalyzer().reporter())
+			file := summarize(t, syntax.Source{Path: "p.go"}, testCase.source)
+			got := checkFile(fc, file, NewAnalyzer().reporter())
 			if len(got) == 0 {
 				t.Fatal("no finding")
 			}
@@ -77,6 +71,29 @@ func TestCheckFileHints(t *testing.T) {
 			}
 		})
 	}
+}
+
+func summaries(cache *astcache.Cache, source syntax.Source) *syntax.Cache {
+	read := func(string) ([]byte, bool) { return nil, true }
+	return syntax.NewCache(
+		context.Background(),
+		[]syntax.Provider{gosyntax.New(cache)},
+		syntax.Corpus{Sources: []syntax.Source{source}, Read: read},
+	)
+}
+
+func summarize(t *testing.T, source syntax.Source, content string) *syntax.File {
+	t.Helper()
+
+	cache := astcache.New()
+	if _, err := cache.Parse(source.Path, []byte(content)); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	file, ok := summaries(cache, source).Get(source.Path)
+	if !ok {
+		t.Fatalf("no summary for %s", source.Path)
+	}
+	return file
 }
 
 func TestAnalyze(t *testing.T) {
@@ -101,6 +118,7 @@ func TestAnalyze(t *testing.T) {
 			}
 			ctx := &pass.Context{
 				ASTCache: cache,
+				Syntax:   summaries(cache, syntax.Source{Path: "p.go"}),
 				ChangedFiles: []pass.FileChange{
 					{Path: "p.go", Extension: ".go", Generated: testCase.generated},
 				},
@@ -121,6 +139,52 @@ func TestAnalyzerIdentity(t *testing.T) {
 	}
 	if got := analyzer.Analyze(&pass.Context{}); len(got) != 0 {
 		t.Fatalf("findings without an AST cache = %+v", got)
+	}
+}
+
+func TestCheckFileMessages(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		source     string
+		wantSymbol string
+		wantHint   string
+	}{
+		{
+			"type group is labelled as a group",
+			"package p\n\n// group doc\ntype (\n\tA int\n\tB int\n)\n",
+			"type group carries a doc comment",
+			"type name and fields",
+		},
+		{
+			"single type uses its own name",
+			"package p\n\n// S is a thing.\ntype S struct{}\n",
+			"S carries a doc comment",
+			"type name and fields",
+		},
+		{
+			"interface method is qualified",
+			"package p\n\ntype I interface {\n\t// M does.\n\tM()\n}\n",
+			"I.M carries a doc comment",
+			"method name and signature",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			fc := pass.FileChange{Path: "p.go", Extension: ".go"}
+			file := summarize(t, syntax.Source{Path: "p.go"}, testCase.source)
+			got := checkFile(fc, file, NewAnalyzer().reporter())
+			if len(got) == 0 {
+				t.Fatal("no finding")
+			}
+			if got[0].Message != testCase.wantSymbol ||
+				!strings.Contains(got[0].Suggestion, testCase.wantHint) {
+				t.Fatalf("finding = %+v", got[0])
+			}
+		})
 	}
 }
 
@@ -290,56 +354,6 @@ func exemptionToolDirectiveCases() []checkFileCase {
 	}
 }
 
-func TestCheckFileMessages(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name       string
-		source     string
-		wantSymbol string
-		wantHint   string
-	}{
-		{
-			"type group is labelled as a group",
-			"package p\n\n// group doc\ntype (\n\tA int\n\tB int\n)\n",
-			"type group carries a doc comment",
-			"type name and fields",
-		},
-		{
-			"single type uses its own name",
-			"package p\n\n// S is a thing.\ntype S struct{}\n",
-			"S carries a doc comment",
-			"type name and fields",
-		},
-		{
-			"interface method is qualified",
-			"package p\n\ntype I interface {\n\t// M does.\n\tM()\n}\n",
-			"I.M carries a doc comment",
-			"method name and signature",
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			cache := astcache.New()
-			file, err := cache.Parse("p.go", []byte(testCase.source))
-			if err != nil {
-				t.Fatalf("parse: %v", err)
-			}
-			fc := pass.FileChange{Path: "p.go", Extension: ".go"}
-			got := checkFile(cache.FileSet(), fc, file, NewAnalyzer().reporter())
-			if len(got) == 0 {
-				t.Fatal("no finding")
-			}
-			if got[0].Message != testCase.wantSymbol ||
-				!strings.Contains(got[0].Suggestion, testCase.wantHint) {
-				t.Fatalf("finding = %+v", got[0])
-			}
-		})
-	}
-}
-
 func deprecatedCases() []checkFileCase {
 	return []checkFileCase{
 		{
@@ -354,5 +368,34 @@ func deprecatedCases() []checkFileCase {
 			"package p\n\n// Deprecated: use G,\n// because a\n// and b.\nfunc F() {}\n",
 			0,
 		},
+	}
+}
+
+func TestHintFor(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		site syntax.DocSite
+		want string
+	}{
+		{"function", syntax.DocSite{Kind: syntax.DocFunction}, "inside the body"},
+		{"method", syntax.DocSite{Kind: syntax.DocMethod}, "method name and signature"},
+		{"type", syntax.DocSite{Kind: syntax.DocType}, "type name and fields"},
+		{"unknown kind", syntax.DocSite{Kind: "other"}, "the name carries the meaning"},
+		{
+			"mixed directive wins",
+			syntax.DocSite{Kind: syntax.DocType, MixedDirective: true},
+			"keep the directive lines",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := hintFor(testCase.site); !strings.Contains(got, testCase.want) {
+				t.Fatalf("hintFor = %q, want it to contain %q", got, testCase.want)
+			}
+		})
 	}
 }
