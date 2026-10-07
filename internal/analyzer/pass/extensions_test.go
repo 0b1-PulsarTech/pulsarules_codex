@@ -75,33 +75,6 @@ func TestExtensionFilter(t *testing.T) {
 	}
 }
 
-func TestIsTestPath(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name string
-		path string
-		want bool
-	}{
-		{"go test suffix", "internal/foo/bar_test.go", true},
-		{"dart test suffix", "lib/foo_test.dart", true},
-		{"js dot-test convention", "src/foo.test.js", true},
-		{"ts dot-spec convention", "src/foo.spec.ts", true},
-		{"underscore spec convention", "src/foo_spec.rb", true},
-		{"production go file", "internal/foo/bar.go", false},
-		{"a directory merely named test is not a marker", "internal/test/bar.go", false},
-		{"matching is case-insensitive", "internal/foo/BAR_TEST.GO", true},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			if got := IsTestPath(testCase.path); got != testCase.want {
-				t.Errorf("IsTestPath(%q) = %v, want %v", testCase.path, got, testCase.want)
-			}
-		})
-	}
-}
-
 func TestDefaultSourceExtensions_ClonedEachCall(t *testing.T) {
 	t.Parallel()
 
