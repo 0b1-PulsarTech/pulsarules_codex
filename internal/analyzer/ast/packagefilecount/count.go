@@ -14,13 +14,6 @@ type dirCount struct {
 	isEntSchema bool
 }
 
-func isTestFile(file, ext string) bool {
-	if ext == ".go" {
-		return strings.HasSuffix(file, "_test.go")
-	}
-	return core.IsTestPath(file)
-}
-
 func isNonPackageDir(dir string) bool {
 	if dir == "." {
 		return false
@@ -48,7 +41,7 @@ func countByDir(
 		file = filepath.ToSlash(file)
 		dir := path.Dir(file)
 		if !wanted[dir] || !eligible(core.FileChange{Path: file, Extension: ext}) ||
-			isTestFile(file, ext) || isIgnoredBase(path.Base(file)) {
+			ctx.TestPolicy.IsTest(file) || isIgnoredBase(path.Base(file)) {
 			return true
 		}
 		src, ok := ctx.Sources.Read(file)

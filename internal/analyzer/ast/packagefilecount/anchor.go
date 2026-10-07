@@ -36,7 +36,7 @@ func (set *dirAnchors) add(fc core.FileChange, file string, src []byte) {
 	}
 	switch {
 	case fc.Generated || lexical.IsGeneratedSource(src):
-	case isTestFile(file, fc.Extension):
+	case fc.IsTest:
 		if set.fallback[dir] == "" {
 			set.fallback[dir] = file
 		}
