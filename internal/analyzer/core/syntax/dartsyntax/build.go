@@ -36,6 +36,7 @@ func ensureHelper(ctx context.Context, base, dart string) (string, error) {
 	dir := cacheDir(base, version, hash)
 	exe := filepath.Join(dir, exeName())
 	if exeExists(dir) {
+		touchExe(dir)
 		return exe, nil
 	}
 	if recent := recentFailure(dir); recent != nil {
@@ -45,7 +46,7 @@ func ensureHelper(ctx context.Context, base, dart string) (string, error) {
 		return "", rememberFailure(ctx, dir, buildErr)
 	}
 	// Tidying is hygiene; a leftover file must not fail a good build.
-	_ = clearFailure(dir)
+	_ = errors.Join(clearFailure(dir), pruneCache(dir))
 	return exe, nil
 }
 
