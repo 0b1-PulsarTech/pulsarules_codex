@@ -44,6 +44,9 @@ func loadSession(t *testing.T, name, body string, install func(*Session)) (
 	gitInitRepo(t, dir)
 	if name != "" {
 		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
 		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 			t.Fatalf("write: %v", err)
 		}
@@ -101,6 +104,38 @@ func TestSession_Load_BuildsSyntaxCache(t *testing.T) {
 			}
 			if len(recorder.sources) != len(testCase.wantParsed) {
 				t.Fatalf("provider sources = %v, want %v", recorder.sources, testCase.wantParsed)
+			}
+		})
+	}
+}
+
+func TestSession_Load_DropsSkippedFiles(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		file string
+		want bool
+	}{
+		{name: "testdata file dropped from AST and syntax only", file: "pkg/testdata/x.go"},
+		{name: "vendor file dropped from AST and syntax only", file: "vendor/m/x.go"},
+		{name: "ordinary file kept", file: "pkg/x.go", want: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, ctx := loadSession(t, testCase.file, "package x\n", func(sess *Session) {
+				sess.providers = func(*astcache.Cache) []syntax.Provider { return nil }
+			})
+			if len(ctx.ChangedFiles) != 1 || ctx.ChangedFiles[0].Path != testCase.file {
+				t.Fatalf("ChangedFiles = %v, want unfiltered %s", ctx.ChangedFiles, testCase.file)
+			}
+			if got := ctx.ASTCache != nil; got != testCase.want {
+				t.Fatalf("ASTCache non-nil = %v, want %v", got, testCase.want)
+			}
+			if got := ctx.Syntax != nil; got != testCase.want {
+				t.Fatalf("Syntax non-nil = %v, want %v", got, testCase.want)
 			}
 		})
 	}

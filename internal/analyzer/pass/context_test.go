@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 func newChangedGoASTsCache(t *testing.T) *astcache.Cache {
@@ -38,8 +39,9 @@ func TestAnalysisContext_ChangedGoASTs_Skips(t *testing.T) {
 	cache := newChangedGoASTsCache(t)
 
 	testCases := []struct {
-		name string
-		fc   FileChange
+		name  string
+		fc    FileChange
+		parse bool
 	}{
 		{
 			name: "non-go file skipped",
@@ -49,14 +51,32 @@ func TestAnalysisContext_ChangedGoASTs_Skips(t *testing.T) {
 			name: "path absent from cache skipped",
 			fc:   FileChange{Path: "missing.go", Extension: ".go"},
 		},
+		{
+			name:  "testdata dir skipped",
+			fc:    FileChange{Path: "pkg/testdata/x.go", Extension: ".go"},
+			parse: true,
+		},
+		{
+			name:  "vendor dir skipped",
+			fc:    FileChange{Path: "vendor/mod/y.go", Extension: ".go"},
+			parse: true,
+		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
+			cache := cache
+			if testCase.parse {
+				cache = newChangedGoASTsCache(t)
+				if _, err := cache.Parse(testCase.fc.Path, []byte("package x\n")); err != nil {
+					t.Fatalf("parse %s: %v", testCase.fc.Path, err)
+				}
+			}
 			ctx := &Context{
 				ASTCache:     cache,
+				Skips:        source.NewSkipSet([]string{"testdata", "vendor"}),
 				ChangedFiles: []FileChange{testCase.fc},
 			}
 			for range ctx.ChangedGoASTs() {

@@ -5,14 +5,27 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
+
+func goldenScope(changedPaths []string) (*vcs.Status, FileSet) {
+	if len(changedPaths) == 0 {
+		return nil, FileSetAll
+	}
+	var changes []vcs.Change
+	for _, path := range changedPaths {
+		changes = append(changes, vcs.Change{Path: path, Extension: filepath.Ext(path)})
+	}
+	return &vcs.Status{Changes: changes}, FileSetChanged
+}
 
 func TestGolden(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name string
-		dir  string
+		name         string
+		dir          string
+		changedPaths []string
 	}{
 		{name: "clean package produces no findings", dir: "clean"},
 		{name: "single violation pinned to its file and line", dir: "violation"},
@@ -24,6 +37,11 @@ func TestGolden(t *testing.T) {
 		{
 			name: "markdown reaches the static analyzers, not just Go",
 			dir:  "markers",
+		},
+		{
+			name:         "files under a skipped dir are not analyzed",
+			dir:          "skipped-dir",
+			changedPaths: []string{"pkg/testdata/clock.go", "pkg/clock.go"},
 		},
 	}
 
@@ -41,7 +59,8 @@ func TestGolden(t *testing.T) {
 
 			cfg := config.Defaults()
 			cfg.ApplyPreset()
-			result := NewSession(repo, "", nil, cfg).Analyze(ScopeChanged, nil, FileSetAll)
+			status, files := goldenScope(testCase.changedPaths)
+			result := NewSession(repo, "", nil, cfg).Analyze(ScopeChanged, status, files)
 
 			assertFindings(t, testCase.dir, result.Findings, want.Findings)
 			if result.SuppressedGenerated != want.SuppressedGenerated {
@@ -58,7 +77,7 @@ func TestGolden(t *testing.T) {
 			includeCfg.ApplyPreset()
 			includeCfg.IncludeGenerated = true
 			withGenerated := NewSession(repo, "", nil, includeCfg).
-				Analyze(ScopeChanged, nil, FileSetAll)
+				Analyze(ScopeChanged, status, files)
 			assertFindings(t, testCase.dir+"/include-generated",
 				withGenerated.Findings, want.IncludeGeneratedFindings)
 		})

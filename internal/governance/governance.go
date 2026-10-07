@@ -122,6 +122,10 @@ func (sess *Session) Load(discovery *Request) *pass.Context {
 		root = sess.repo.Root()
 	}
 
+	analyzable := slices.DeleteFunc(
+		slices.Clone(discovery.ChangedFiles),
+		func(file pass.FileChange) bool { return discovery.Skips.SkipsPath(file.Path) },
+	)
 	ctx := &pass.Context{
 		ProjectDir:    root,
 		CommitMsg:     sess.commitMsg,
@@ -134,15 +138,15 @@ func (sess *Session) Load(discovery *Request) *pass.Context {
 		TestPolicy:    testfile.Defaults(),
 	}
 
-	if len(discovery.ChangedFiles) > 0 && discovery.Sources != nil {
+	if len(analyzable) > 0 && discovery.Sources != nil {
 		markGenerated(ctx.ChangedFiles, discovery.Sources)
-		ctx.ASTCache = populateASTCache(discovery.ChangedFiles, discovery.Sources)
+		ctx.ASTCache = populateASTCache(analyzable, discovery.Sources)
 		ctx.Syntax = syntax.NewCache(
 			context.Background(),
 			sess.providers(ctx.ASTCache),
 			syntax.Corpus{
 				Root:    root,
-				Sources: changedSources(ctx.ChangedFiles),
+				Sources: changedSources(analyzable),
 				Read:    discovery.Sources.Read,
 			},
 		)

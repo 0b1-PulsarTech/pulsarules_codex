@@ -105,6 +105,18 @@ func analyzeCases() []movePurityCase {
 			wantSubstring: "mixes 1 rename(s) with 1 edit(s)",
 		},
 		{
+			name: "unrelated staged edit under testdata still mixes",
+			ctx: &pass.Context{
+				StagedRenames: []pass.Rename{{OldPath: "old.go", NewPath: "new.go", Score: 100}},
+				ChangedFiles: []pass.FileChange{
+					{Path: "new.go", Staged: true},
+					{Path: "pkg/testdata/x.go", Staged: true},
+				},
+			},
+			wantFindings:  1,
+			wantSubstring: "mixes 1 rename(s) with 1 edit(s)",
+		},
+		{
 			name: "unstaged changes elsewhere do not count as mixed",
 			ctx: &pass.Context{
 				StagedRenames: []pass.Rename{{OldPath: "old.go", NewPath: "new.go", Score: 100}},
