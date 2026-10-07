@@ -152,7 +152,10 @@ func TestDefaultProviders(t *testing.T) {
 		name      string
 		wantLangs []syntax.Language
 	}{
-		{name: "go is registered", wantLangs: []syntax.Language{syntax.LangGo}},
+		{
+			name:      "go and dart are registered",
+			wantLangs: []syntax.Language{syntax.LangGo, syntax.LangDart},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
