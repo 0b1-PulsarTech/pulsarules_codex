@@ -1,7 +1,6 @@
 package core
 
 import (
-	"slices"
 	"strings"
 )
 
@@ -42,15 +41,4 @@ func normalizeExtension(ext string) string {
 		return trimmed
 	}
 	return "." + trimmed
-}
-
-func IsTestPath(path string) bool {
-	name := strings.ToLower(path)
-	if idx := strings.LastIndex(name, "/"); idx >= 0 {
-		name = name[idx+1:]
-	}
-	markers := []string{"_test.", ".test.", "_spec.", ".spec."}
-	return slices.ContainsFunc(markers, func(marker string) bool {
-		return strings.Contains(name, marker)
-	})
 }
