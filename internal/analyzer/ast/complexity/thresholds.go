@@ -7,6 +7,7 @@ import (
 	"math"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax"
 )
 
 type thresholds struct {
@@ -27,78 +28,81 @@ func (th thresholds) maxFuncLinesFor(fc core.FileChange) int {
 	return th.maxFuncLines
 }
 
-func (th thresholds) checkFile(
-	fset *token.FileSet,
-	fc core.FileChange,
-	file *ast.File,
-) []core.Finding {
-	if fset == nil {
-		return nil
+func (th thresholds) checkFile(fc core.FileChange, file *syntax.File) []core.Finding {
+	findings := make([]core.Finding, 0, len(file.Functions))
+	for _, fn := range file.Functions {
+		findings = append(findings, th.checkFunction(fc, fn)...)
 	}
-	var findings []core.Finding
-
-	for _, decl := range file.Decls {
-		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Body == nil {
-			continue
-		}
-		findings = append(findings, th.checkFuncDecl(fset, fc, fn)...)
-	}
-
 	return findings
 }
 
-func (th thresholds) checkFuncDecl(
-	fset *token.FileSet,
-	fc core.FileChange,
-	fn *ast.FuncDecl,
-) []core.Finding {
+func (th thresholds) checkFunction(fc core.FileChange, fn syntax.Function) []core.Finding {
 	var findings []core.Finding
-	comp := cyclomaticComplexity(fn)
-	if comp > th.maxComplexity {
+	if fn.Complexity > th.maxComplexity {
 		findings = append(findings, th.warnReporter.At(
 			fc.Path,
-			fset.Position(fn.Pos()).Line,
+			fn.Line,
 			fmt.Sprintf(
 				"%s has cyclomatic complexity %d, max %d",
-				fn.Name.Name, comp, th.maxComplexity,
+				fn.Name, fn.Complexity, th.maxComplexity,
 			),
 			"extract conditionals into helper functions or simplify logic",
 		))
 	}
 
-	startLine := fset.Position(fn.Body.Lbrace).Line
-	endLine := fset.Position(fn.Body.Rbrace).Line
-	funcLines := endLine - startLine + 1
+	funcLines := fn.BodyEnd - fn.BodyStart + 1
 	maxFuncLines := th.maxFuncLinesFor(fc)
 	if funcLines > maxFuncLines {
 		findings = append(findings, th.warnReporter.At(
 			fc.Path,
-			fset.Position(fn.Pos()).Line,
-			fmt.Sprintf(
-				"%s is %d lines, max %d",
-				fn.Name.Name, funcLines, maxFuncLines,
-			),
+			fn.Line,
+			fmt.Sprintf("%s is %d lines, max %d", fn.Name, funcLines, maxFuncLines),
 			"extract helper functions to reduce size",
 		))
 	}
 
-	if fn.Type.Params != nil {
-		paramCount := countParams(fn.Type.Params)
-		if paramCount > th.maxParams {
-			findings = append(findings, th.warnReporter.At(
-				fc.Path,
-				fset.Position(fn.Pos()).Line,
-				fmt.Sprintf(
-					"%s has %d parameters, max %d",
-					fn.Name.Name, paramCount, th.maxParams,
-				),
-				"use a parameter struct or split the function",
-			))
+	if fn.Params > th.maxParams {
+		findings = append(findings, th.warnReporter.At(
+			fc.Path,
+			fn.Line,
+			fmt.Sprintf("%s has %d parameters, max %d", fn.Name, fn.Params, th.maxParams),
+			"use a parameter struct or split the function",
+		))
+	}
+	return findings
+}
+
+func (th thresholds) checkGoFile(
+	fset *token.FileSet,
+	fc core.FileChange,
+	file *ast.File,
+) []core.Finding {
+	decls := bodyDecls(file)
+	findings := make([]core.Finding, 0, len(decls))
+	for _, fn := range decls {
+		findings = append(findings, th.checkGoFunc(fset, fc, fn)...)
+	}
+	return findings
+}
+
+func (th thresholds) checkGoFunc(
+	fset *token.FileSet,
+	fc core.FileChange,
+	fn *ast.FuncDecl,
+) []core.Finding {
+	if fset == nil {
+		return nil
+	}
+	findings := checkFlagArguments(fset, fc, fn, th.warnReporter)
+	return append(findings, findMagicNumbers(fset, fc, fn, th.infoReporter)...)
+}
+
+func bodyDecls(file *ast.File) []*ast.FuncDecl {
+	var decls []*ast.FuncDecl
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
+			decls = append(decls, fn)
 		}
 	}
-
-	findings = append(findings, checkFlagArguments(fset, fc, fn, th.warnReporter)...)
-	findings = append(findings, findMagicNumbers(fset, fc, fn, th.infoReporter)...)
-	return findings
+	return decls
 }

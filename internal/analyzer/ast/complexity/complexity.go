@@ -1,8 +1,6 @@
 package complexity
 
 import (
-	"go/ast"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
@@ -35,9 +33,11 @@ func (analyzer *Analyzer) Stage() core.StageID { return core.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	th := analyzer.resolveThresholds(ctx)
-	return core.RunPerGoFile(ctx, func(fc core.FileChange, file *ast.File) []core.Finding {
-		return th.checkFile(ctx.ASTCache.FileSet(), fc, file)
-	})
+	findings := make([]core.Finding, 0, len(ctx.ChangedFiles))
+	for _, fc := range ctx.ChangedFiles {
+		findings = append(findings, th.checkChanged(ctx, fc)...)
+	}
+	return findings
 }
 
 func (analyzer *Analyzer) resolveThresholds(ctx *core.AnalysisContext) thresholds {

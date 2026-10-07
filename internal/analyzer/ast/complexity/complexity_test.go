@@ -1,14 +1,18 @@
 package complexity
 
 import (
+	"context"
 	"go/ast"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax/gosyntax"
 )
 
 func TestAnalyze(t *testing.T) {
@@ -48,19 +52,11 @@ func TestAnalyze_HonoursConfiguredThresholds(t *testing.T) {
 	t.Parallel()
 
 	analyzer := NewAnalyzer()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "foo.go")
-	src := []byte("package foo\nfunc f() {\n\tx := 1\n\t_ = x\n}\n")
-	if err := os.WriteFile(path, src, 0o644); err != nil {
-		t.Fatalf("write source: %v", err)
-	}
-	cache := astcache.New()
-	if _, err := cache.Parse(path, src); err != nil {
-		t.Fatalf("parse source: %v", err)
-	}
+	cache, path := fourLineFixture(t)
 
 	ctx := &core.AnalysisContext{
 		ASTCache:     cache,
+		Syntax:       summaries(cache, path),
 		ChangedFiles: []core.FileChange{{Path: path, Extension: ".go"}},
 	}
 	if got := len(analyzer.Analyze(ctx)); got != 0 {
@@ -80,16 +76,7 @@ func TestAnalyze_HonoursConfiguredSeverity(t *testing.T) {
 	t.Parallel()
 
 	analyzer := NewAnalyzer()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "foo.go")
-	src := []byte("package foo\nfunc f() {\n\tx := 1\n\t_ = x\n}\n")
-	if err := os.WriteFile(path, src, 0o644); err != nil {
-		t.Fatalf("write source: %v", err)
-	}
-	cache := astcache.New()
-	if _, err := cache.Parse(path, src); err != nil {
-		t.Fatalf("parse source: %v", err)
-	}
+	cache, path := fourLineFixture(t)
 	changedFiles := []core.FileChange{{Path: path, Extension: ".go"}}
 
 	testCases := []struct {
@@ -119,6 +106,7 @@ func TestAnalyze_HonoursConfiguredSeverity(t *testing.T) {
 			t.Parallel()
 			got := analyzer.Analyze(&core.AnalysisContext{
 				ASTCache:     cache,
+				Syntax:       summaries(cache, path),
 				ChangedFiles: changedFiles,
 				Config:       testCase.config,
 			})
@@ -130,6 +118,21 @@ func TestAnalyze_HonoursConfiguredSeverity(t *testing.T) {
 			}
 		})
 	}
+}
+
+func fourLineFixture(t *testing.T) (*astcache.Cache, string) {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "foo.go")
+	src := []byte("package foo\nfunc f() {\n\tx := 1\n\t_ = x\n}\n")
+	if err := os.WriteFile(path, src, 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	cache := astcache.New()
+	if _, err := cache.Parse(path, src); err != nil {
+		t.Fatalf("parse source: %v", err)
+	}
+	return cache, path
 }
 
 func hasFuncLinesFinding(findings []core.Finding) bool {
@@ -157,8 +160,11 @@ func TestCheckFile(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			cache, file := parseSourceFile(t, testCase.source)
-			fc := core.FileChange{Path: "foo.go", Extension: ".go", IsTest: testCase.test}
-			got := th.checkFile(cache.FileSet(), fc, file)
+			fc := core.FileChange{Path: "foo.go", Extension: ".go"}
+			path := cache.FileSet().Position(file.Pos()).Filename
+			summary := summaries(cache, path)
+			neutral, _ := summary.Get(path)
+			got := append(th.checkFile(fc, neutral), th.checkGoFile(cache.FileSet(), fc, file)...)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d: %v", len(got), testCase.expect, got)
 			}
@@ -170,7 +176,6 @@ type checkFileTestCase struct {
 	name   string
 	source string
 	expect int
-	test   bool
 }
 
 func checkFileTestCases() []checkFileTestCase {
@@ -226,17 +231,6 @@ func checkFileCasesThresholds() []checkFileTestCase {
 				"}\n",
 			expect: 1,
 		},
-		{
-			name:   "long func in a production file",
-			source: "package foo\nfunc tbl() {\n" + strings.Repeat("\tprintln()\n", 98) + "}\n",
-			expect: 1,
-		},
-		{
-			name:   "test file relaxes only the length",
-			source: "package foo\nfunc tbl() {\n" + strings.Repeat("\tprintln()\n", 98) + "}\n",
-			test:   true,
-			expect: 0,
-		},
 	}
 }
 
@@ -254,78 +248,13 @@ func checkFileCasesFlagArgs() []checkFileTestCase {
 	}
 }
 
-func TestCyclomaticComplexity(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name   string
-		source string
-		want   int
-	}{
-		{
-			name:   "no branches",
-			source: "package foo\nfunc f() { _ = 1 }\n",
-			want:   1,
-		},
-		{
-			name:   "one if",
-			source: "package foo\nfunc f() { if true {} }\n",
-			want:   2,
-		},
-		{
-			name:   "for loop",
-			source: "package foo\nfunc f() { for i := 0; i < 10; i++ {} }\n",
-			want:   2,
-		},
-		{
-			name:   "range loop",
-			source: "package foo\nfunc f() { for range []int{} {} }\n",
-			want:   2,
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			_, file := parseSourceFile(t, testCase.source)
-			fn, ok := file.Decls[0].(*ast.FuncDecl)
-			if !ok {
-				t.Fatalf("Decls[0] = %T, want *ast.FuncDecl", file.Decls[0])
-			}
-			got := cyclomaticComplexity(fn)
-			if got != testCase.want {
-				t.Fatalf("got complexity %d, want %d", got, testCase.want)
-			}
-		})
-	}
-}
-
-func TestCountParams(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name   string
-		source string
-		want   int
-	}{
-		{"no params", "package foo\nfunc f() {}\n", 0},
-		{"one param", "package foo\nfunc f(x int) {}\n", 1},
-		{"two params", "package foo\nfunc f(x, y int) {}\n", 2},
-		{"two groups", "package foo\nfunc f(x int, y string) {}\n", 2},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			_, file := parseSourceFile(t, testCase.source)
-			fn, ok := file.Decls[0].(*ast.FuncDecl)
-			if !ok {
-				t.Fatalf("Decls[0] = %T, want *ast.FuncDecl", file.Decls[0])
-			}
-			got := countParams(fn.Type.Params)
-			if got != testCase.want {
-				t.Fatalf("got %d params, want %d", got, testCase.want)
-			}
-		})
-	}
+func summaries(cache *astcache.Cache, path string) *syntax.Cache {
+	read := func(string) ([]byte, bool) { return nil, true }
+	return syntax.NewCache(
+		context.Background(),
+		[]syntax.Provider{gosyntax.New(cache)},
+		syntax.Corpus{Sources: []syntax.Source{{Path: path}}, Read: read},
+	)
 }
 
 func parseSourceFile(t *testing.T, source string) (*astcache.Cache, *ast.File) {
@@ -346,4 +275,61 @@ func parseSourceFile(t *testing.T, source string) (*astcache.Cache, *ast.File) {
 		t.Fatal(err)
 	}
 	return cache, file
+}
+
+type summaryCase struct {
+	name string
+	fn   syntax.Function
+	test bool
+	want []string
+}
+
+func summaryCases() []summaryCase {
+	return []summaryCase{
+		{name: "within limits", fn: syntax.Function{Name: "ok", BodyStart: 1, BodyEnd: 5}},
+		{
+			name: "every threshold breached",
+			fn: syntax.Function{
+				Name: "big", Line: 3, BodyStart: 3, BodyEnd: 100, Params: 6, Complexity: 16,
+			},
+			want: []string{
+				"big has cyclomatic complexity 16, max 15",
+				"big is 98 lines, max 80",
+				"big has 6 parameters, max 5",
+			},
+		},
+		{
+			name: "test file relaxes only the length",
+			fn:   syntax.Function{Name: "tbl", BodyStart: 1, BodyEnd: 100},
+			test: true,
+		},
+	}
+}
+
+func TestCheckFile_SummaryFromAnyLanguage(t *testing.T) {
+	t.Parallel()
+
+	analyzer := NewAnalyzer()
+	th := thresholds{
+		maxComplexity: defaultMaxComplexity,
+		maxFuncLines:  defaultMaxFuncLines,
+		maxParams:     defaultMaxParams,
+		warnReporter:  analyzer.warnReporter,
+		infoReporter:  analyzer.infoReporter,
+	}
+	for _, testCase := range summaryCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			fc := core.FileChange{Path: "a.dart", IsTest: testCase.test}
+			got := th.checkFile(fc, &syntax.File{Functions: []syntax.Function{testCase.fn}})
+			messages := make([]string, 0, len(got))
+			for _, finding := range got {
+				messages = append(messages, finding.Message)
+			}
+			if !slices.Equal(messages, testCase.want) {
+				t.Fatalf("messages = %q, want %q", messages, testCase.want)
+			}
+		})
+	}
 }
