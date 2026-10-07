@@ -1,0 +1,6 @@
+name: pulsarules_dart_summary
+publish_to: none
+environment:
+  sdk: ^3.11.0
+dependencies:
+  analyzer: '>=14.3.0 <15.0.0'
