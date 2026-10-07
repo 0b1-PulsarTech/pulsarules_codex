@@ -289,3 +289,70 @@ func exemptionToolDirectiveCases() []checkFileCase {
 		},
 	}
 }
+
+func TestCheckFileMessages(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		source     string
+		wantSymbol string
+		wantHint   string
+	}{
+		{
+			"type group is labelled as a group",
+			"package p\n\n// group doc\ntype (\n\tA int\n\tB int\n)\n",
+			"type group carries a doc comment",
+			"type name and fields",
+		},
+		{
+			"single type uses its own name",
+			"package p\n\n// S is a thing.\ntype S struct{}\n",
+			"S carries a doc comment",
+			"type name and fields",
+		},
+		{
+			"interface method is qualified",
+			"package p\n\ntype I interface {\n\t// M does.\n\tM()\n}\n",
+			"I.M carries a doc comment",
+			"method name and signature",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			cache := astcache.New()
+			file, err := cache.Parse("p.go", []byte(testCase.source))
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			fc := pass.FileChange{Path: "p.go", Extension: ".go"}
+			got := checkFile(cache.FileSet(), fc, file, NewAnalyzer().reporter())
+			if len(got) == 0 {
+				t.Fatal("no finding")
+			}
+			if got[0].Message != testCase.wantSymbol ||
+				!strings.Contains(got[0].Suggestion, testCase.wantHint) {
+				t.Fatalf("finding = %+v", got[0])
+			}
+		})
+	}
+}
+
+func deprecatedCases() []checkFileCase {
+	return []checkFileCase{
+		{
+			"deprecated plus four lines is flagged",
+			"p.go",
+			"package p\n\n// Deprecated: use G.\n// a\n// b\n// c\nfunc F() {}\n",
+			1,
+		},
+		{
+			"deprecated spanning three lines is exempt",
+			"p.go",
+			"package p\n\n// Deprecated: use G,\n// because a\n// and b.\nfunc F() {}\n",
+			0,
+		},
+	}
+}
