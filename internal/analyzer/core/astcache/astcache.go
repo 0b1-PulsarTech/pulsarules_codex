@@ -56,3 +56,9 @@ func (cache *Cache) Get(path string) *ast.File {
 	defer cache.mu.RUnlock()
 	return cache.file[path]
 }
+
+func (cache *Cache) Err(path string) error {
+	cache.mu.RLock()
+	defer cache.mu.RUnlock()
+	return cache.err[path]
+}

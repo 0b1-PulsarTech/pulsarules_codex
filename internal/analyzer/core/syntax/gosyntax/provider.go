@@ -63,6 +63,9 @@ func (provider *Provider) parseError(path string, read func(string) ([]byte, boo
 	if _, ok := read(path); !ok {
 		return "file is not readable"
 	}
+	if err := provider.cache.Err(path); err != nil {
+		return err.Error()
+	}
 	return "file has no syntax tree"
 }
 
