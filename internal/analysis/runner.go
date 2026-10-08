@@ -28,8 +28,18 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *core.AnalysisConfig {
 		IncludeGenerated: cfg.IncludeGenerated,
 		TestGlobs:        cfg.TestGlobs,
 		Overrides:        slices.Concat(severityOverrides(cfg.Severities), cfg.Overrides),
-		Delegated:        cfg.Delegated,
+		Delegated:        enabledDelegated(cfg.Delegated, cfg.Analyzers),
 	}
+}
+
+func enabledDelegated(
+	entries []core.DelegatedCommand, analyzers map[string]config.AnalyzerConfig,
+) []core.DelegatedCommand {
+	// Dropped here: the analyzers under internal/analyzer/ may not read Analyzers directly.
+	return slices.DeleteFunc(slices.Clone(entries), func(entry core.DelegatedCommand) bool {
+		listed, found := analyzers[entry.ID]
+		return found && !listed.Enabled
+	})
 }
 
 func severityOverrides(severities map[string]string) []core.Override {
