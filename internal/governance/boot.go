@@ -36,7 +36,7 @@ func maxGateFor(scope Scope) []registry.Gate {
 		// The pre-commit and commit-msg hooks run it, so only the fast static gate may.
 		return []registry.Gate{registry.GateStatic}
 	case ScopeChanged:
-		// golangci-lint needs the whole project; branch-name guards a push.
+		// golangci-lint and delegated commands need the whole project; branch-name guards a push.
 		return []registry.Gate{registry.GateStatic, registry.GateArch}
 	default:
 		return []registry.Gate{registry.GateStatic, registry.GateArch, registry.GateFullOnly}

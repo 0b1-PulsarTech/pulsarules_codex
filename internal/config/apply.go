@@ -20,6 +20,15 @@ func (file *File) ApplyTo(govCfg *GovernanceConfig) error {
 	for _, override := range file.Overrides {
 		govCfg.Overrides = append(govCfg.Overrides, toCoreOverride(override))
 	}
+	for _, entry := range file.Delegated {
+		govCfg.Delegated = append(govCfg.Delegated, pass.DelegatedCommand{
+			ID:     entry.ID,
+			Dir:    entry.Dir,
+			Format: entry.Format,
+			Rule:   entry.Rule,
+			Run:    slices.Clone(entry.Run),
+		})
+	}
 	return govCfg.checkOverrides(file)
 }
 

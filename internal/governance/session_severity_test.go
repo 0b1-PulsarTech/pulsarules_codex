@@ -66,7 +66,7 @@ func TestToAnalysisConfigProjectFields(t *testing.T) {
 		setup func(cfg *config.GovernanceConfig)
 		check func(t *testing.T, cfg *config.GovernanceConfig, got *pass.AnalysisConfig)
 	}{
-		{"tests", setTests, checkTests},
+		{"tests and delegated", setTestsAndDelegated, checkTestsAndDelegated},
 		{"severity rules precede file rules", setSeverityRules, checkSeverityRules},
 		{"no project file", func(*config.GovernanceConfig) {}, checkNoProjectFields},
 	}
@@ -80,14 +80,18 @@ func TestToAnalysisConfigProjectFields(t *testing.T) {
 	}
 }
 
-func setTests(cfg *config.GovernanceConfig) {
+func setTestsAndDelegated(cfg *config.GovernanceConfig) {
 	cfg.TestGlobs = []string{"web/test/**"}
+	cfg.Delegated = []pass.DelegatedCommand{{ID: "dart-analyze", Run: []string{"dart"}}}
 }
 
-func checkTests(t *testing.T, cfg *config.GovernanceConfig, got *pass.AnalysisConfig) {
+func checkTestsAndDelegated(t *testing.T, cfg *config.GovernanceConfig, got *pass.AnalysisConfig) {
 	t.Helper()
 	if !reflect.DeepEqual(got.TestGlobs, cfg.TestGlobs) {
 		t.Errorf("TestGlobs = %v", got.TestGlobs)
+	}
+	if !reflect.DeepEqual(got.Delegated, cfg.Delegated) {
+		t.Errorf("Delegated = %v", got.Delegated)
 	}
 }
 
@@ -111,7 +115,7 @@ func checkSeverityRules(t *testing.T, _ *config.GovernanceConfig, got *pass.Anal
 
 func checkNoProjectFields(t *testing.T, _ *config.GovernanceConfig, got *pass.AnalysisConfig) {
 	t.Helper()
-	if len(got.Overrides) != 0 || len(got.TestGlobs) != 0 {
+	if len(got.Overrides) != 0 || len(got.TestGlobs) != 0 || len(got.Delegated) != 0 {
 		t.Fatalf("project fields set without a project file: %+v", got)
 	}
 }

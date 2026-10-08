@@ -28,6 +28,7 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *pass.AnalysisConfig {
 		IncludeGenerated: cfg.IncludeGenerated,
 		TestGlobs:        cfg.TestGlobs,
 		Overrides:        slices.Concat(severityOverrides(cfg.Severities), cfg.Overrides),
+		Delegated:        cfg.Delegated,
 	}
 }
 

@@ -44,10 +44,10 @@ fields, locals included.
 
 --scope limits the governance analysis to a subset of analyzers (full = all;
 changed = static-gate (static, AST, commit) and architecture analyzers, skipping
-the full-only analyzers (golangci-lint, branch-name); commit = static-gate
-analyzers over files with a staged change; a partially staged file is read from
-disk, unstaged hunks included). Use --scope commit in pre-commit hooks for fast
-checks.
+the full-only analyzers (golangci-lint, branch-name, delegated commands);
+commit = static-gate analyzers over files with a staged change; a partially
+staged file is read from disk, unstaged hunks included). Use --scope commit in
+pre-commit hooks for fast checks.
 
 Flags must come before a positional argument: parsing stops at the first one, so
 `pulsarules_cli list --root DIR rules` honors --root and `list rules --root DIR`
