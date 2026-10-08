@@ -155,7 +155,6 @@ func starTail(glob string) int {
 }
 
 func clipValue(value string) string {
-	const maxClipBytes = 80
 	if len(value) <= maxClipBytes {
 		return value
 	}

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -90,6 +91,76 @@ func TestFieldPathInterns(t *testing.T) {
 	}
 	if root.key("[1]") == root.item(1) {
 		t.Fatal("a key spelled like an index shares its node")
+	}
+}
+
+func parseWork(t *testing.T, content string) (walked, problems, nodes int) {
+	t.Helper()
+	parsed, err := Decode(Name, []byte(content))
+	if err != nil {
+		t.Fatalf("decode() = %v", err)
+	}
+	if parsed.file != nil {
+		parsed.file.check(testRules(), parsed.top, parsed.problems)
+	}
+	root, err := readDocument(Name, []byte(content))
+	if err != nil {
+		t.Fatalf("readDocument() = %v", err)
+	}
+	return parsed.problems.walked, parsed.problems.total, distinctNodes(root)
+}
+
+func overridesOf(count int, entry func() string) string {
+	return "version: 1\noverrides:\n" + strings.Repeat("  - "+entry()+"\n", count)
+}
+
+type linearCase struct {
+	name    string
+	base    int
+	content func(items int) string
+}
+
+func TestParseStaysLinearInProblems(t *testing.T) {
+	t.Parallel()
+
+	const stepsPerNode = 4
+	for _, testCase := range linearCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			for _, items := range []int{testCase.base, 4 * testCase.base} {
+				walked, problems, nodes := parseWork(t, testCase.content(items))
+				if work := walked + problems; work > stepsPerNode*nodes {
+					t.Errorf("%d items: %d walked steps for %d yaml nodes, want a linear walk",
+						items, work, nodes)
+				}
+				if walked < problems {
+					t.Errorf("%d items: %d walked steps for %d problems, want the walk counted",
+						items, walked, problems)
+				}
+			}
+		})
+	}
+}
+
+func linearCases() []linearCase {
+	return []linearCase{
+		{"keys in one mapping", 64, func(items int) string {
+			keys := make([]string, items)
+			for idx := range keys {
+				keys[idx] = fmt.Sprintf("x%d: {}", idx)
+			}
+			return overridesOf(50, func() string {
+				return "analyzers: {" + strings.Join(keys, ", ") + "}"
+			})
+		}},
+		{"unknown params keys", 64, func(items int) string {
+			keys := make([]string, items)
+			for idx := range keys {
+				keys[idx] = fmt.Sprintf("k%d: 1", idx)
+			}
+			head := "version: 1\nanalyzers:\n  file-size:\n    params: {"
+			return head + strings.Join(keys, ", ") + "}\n"
+		}},
 	}
 }
 

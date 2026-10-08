@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 func decoderTextCases() []parseCase {
@@ -75,6 +77,11 @@ func decoderStructureCases() []parseCase {
 			"merge of nested lists",
 			"version: 1\nanalyzers:\n  file-size: {<<: [[[{enabled: true}]]]}\n",
 			[]string{head + "3: analyzers.file-size.<<: want a mapping or a list of mappings"},
+		},
+		{
+			"merge fan-out under the node budget",
+			mergeBomb(4),
+			[]string{head + "4: aliases expand into too many nodes"},
 		},
 	}
 }
@@ -267,7 +274,7 @@ func TestLeftover(t *testing.T) {
 	for _, testCase := range leftoverCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := leftover(Name, testCase.err)
+			got := leftover(Name, &yaml.Node{}, testCase.err)
 			if got.Error() != testCase.want {
 				t.Fatalf("leftover() = %q, want %q", got, testCase.want)
 			}
@@ -400,5 +407,44 @@ func TestCollectorCapsBytes(t *testing.T) {
 	want := fmt.Sprintf("... and %d more problems", count-len(col.stored))
 	if parts[len(parts)-1] != want {
 		t.Fatalf("tail = %q, want %q", parts[len(parts)-1], want)
+	}
+}
+
+func parseText(text string, _ int) string { return clipParseText(text) }
+
+func TestClip(t *testing.T) {
+	t.Parallel()
+
+	long := strings.Repeat("x", 100)
+	const bs, acc, ctl = `\`, "\u00e9", "\x01"
+	testCases := []struct {
+		name  string
+		clip  func(string, int) string
+		text  string
+		limit int
+		want  string
+	}{
+		{"tail fits", printable.Clip, "abc", 3, "abc"},
+		{"tail cut", printable.Clip, "abcdefg", 3, "...efg"},
+		{"tail never splits a rune", printable.Clip, "ab" + acc + acc + "x", 3, "..." + acc + "x"},
+		{"tail escapes the kept part", printable.Clip, "a" + ctl + ctl + ctl, 8, `...\x01\x01`},
+		{
+			"tail literal backslash",
+			printable.Clip,
+			"xxxx" + bs + acc + "ab",
+			5,
+			"..." + bs + acc + "ab",
+		},
+		{"parse short", parseText, "line 3: bad", 0, "line 3: bad"},
+		{"parse line", parseText, "line 1: " + long, 0, "line 1: " + long[:80] + "..."},
+		{"parse word", parseText, "line x: " + long, 0, "line x: " + long[:72] + "..."},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := testCase.clip(testCase.text, testCase.limit); got != testCase.want {
+				t.Fatalf("got %q, want %q", got, testCase.want)
+			}
+		})
 	}
 }

@@ -16,6 +16,11 @@ const (
 
 const (
 	MaxFileBytes      = 256 << 10
+	maxScalarBytes    = 1024
+	maxDepth          = 64
+	maxExpandedNodes  = 100_000
+	MaxMapKeys        = 256
+	MaxSeqItems       = 1024
 	MaxGlobBytes      = 256
 	MaxGlobStars      = 4
 	MaxTotalGlobs     = 256
@@ -24,6 +29,7 @@ const (
 	MaxStarTextBytes  = 2048
 	maxReported       = 20
 	maxReportedBytes  = 3072
+	maxClipBytes      = 80
 )
 
 type Rules struct {
@@ -105,6 +111,9 @@ func Decode(path string, content []byte) (Document, error) {
 	if err != nil {
 		return Document{}, err
 	}
+	if err = checkExpansion(path, root); err != nil {
+		return Document{}, err
+	}
 	value, top := root.Content[0], newRoot()
 	parsed := Document{problems: &Problems{path: path}, top: top}
 	walkSchema(parsed.problems, value, top)
@@ -118,7 +127,7 @@ func Decode(path string, content []byte) (Document, error) {
 		return parsed, nil
 	}
 	if parsed.problems.total == 0 {
-		return Document{}, leftover(path, err)
+		return Document{}, leftover(path, root, err)
 	}
 	// The walk already reported the same mismatches in terms of the file, not Go types.
 	if _, isType := errors.AsType[*yaml.TypeError](err); isType {
