@@ -77,7 +77,7 @@ func loadPrivate(
 	}
 	if err != nil {
 		// Anything else may hide a private file that should apply, so the gates must not run.
-		return nil, fmt.Errorf("locate private config: %w", err)
+		return nil, &reworded{text: "locate private config: " + withoutRoot(err, root), cause: err}
 	}
 	path := filepath.Join(gitDir, privateFileName)
 	return loadOptional(path, displayName(root, path), rules)
