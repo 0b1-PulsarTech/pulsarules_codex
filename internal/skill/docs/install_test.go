@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
@@ -235,4 +236,40 @@ func TestInstallDocs_WriteFailureBackups(t *testing.T) {
 	wantBackup := ownedfile.BackupMessage(docPath, docPath+ownedfile.BackupSuffix)
 	assertIDs(t, "backedUp", result.BackedUp, wantBackup)
 	assertIDs(t, "installed", result.Installed)
+}
+
+func TestInstall_RouterFilter(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		routerFilter []string
+		wantListed   bool
+	}{
+		{name: "no filter lists every skill", wantListed: true},
+		{name: "filter drops uninstalled skills", routerFilter: []string{"go-style"}},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			idx, rnd := loadFixture(t)
+			dest := t.TempDir()
+			request := InstallRequest{
+				IDs:          []string{"project-router"},
+				RouterFilter: testCase.routerFilter,
+			}
+			if _, err := Install(idx, rnd, dest, request); err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+			body, err := os.ReadFile(filepath.Join(dest, "project-router", "SKILL.md"))
+			if err != nil {
+				t.Fatalf("read router: %v", err)
+			}
+			listed := strings.Contains(string(body), "database-persistence")
+			if listed != testCase.wantListed {
+				t.Errorf("lists database-persistence = %v, want %v", listed, testCase.wantListed)
+			}
+		})
+	}
 }
