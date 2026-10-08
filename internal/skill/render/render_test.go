@@ -22,42 +22,40 @@ func loadRenderer(t *testing.T) (*knowledge.Index, *Renderer) {
 	return idx, rnd
 }
 
+func assertSkillBody(t *testing.T, idx *knowledge.Index, skill knowledge.Skill, body string) {
+	t.Helper()
+
+	if !strings.HasPrefix(body, "---\nname: "+skill.ID+"\n") {
+		t.Errorf("%q: missing frontmatter name", skill.ID)
+	}
+	if skill.ID == "project-router" {
+		return
+	}
+	has, normErr := HasNormativeSection(idx, skill)
+	if normErr != nil {
+		t.Errorf("%q: HasNormativeSection: %v", skill.ID, normErr)
+	} else if !has {
+		t.Errorf(
+			"%q: rendered skill carries no composed must/forbidden/validation section",
+			skill.ID,
+		)
+	}
+	if strings.Contains(body, "Apply every applicable rule") {
+		t.Errorf("%q: rendered skill still carries the generic checklist footer", skill.ID)
+	}
+}
+
 func TestRenderSkill_NormativeSection(t *testing.T) {
 	t.Parallel()
 
-	idx, templates, err := knowledge.Load("")
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	rnd, err := NewRenderer(templates)
-	if err != nil {
-		t.Fatalf("NewRenderer: %v", err)
-	}
-
+	idx, rnd := loadRenderer(t)
 	for _, skill := range idx.Skills {
 		body, renderErr := rnd.RenderSkill(idx, skill, nil)
 		if renderErr != nil {
 			t.Errorf("render %q: %v", skill.ID, renderErr)
 			continue
 		}
-		if !strings.HasPrefix(body, "---\nname: "+skill.ID+"\n") {
-			t.Errorf("%q: missing frontmatter name", skill.ID)
-		}
-		if skill.ID == "project-router" {
-			continue
-		}
-		has, normErr := HasNormativeSection(idx, skill)
-		if normErr != nil {
-			t.Errorf("%q: HasNormativeSection: %v", skill.ID, normErr)
-		} else if !has {
-			t.Errorf(
-				"%q: rendered skill carries no composed must/forbidden/validation section",
-				skill.ID,
-			)
-		}
-		if strings.Contains(body, "Apply every applicable rule") {
-			t.Errorf("%q: rendered skill still carries the generic checklist footer", skill.ID)
-		}
+		assertSkillBody(t, idx, skill, body)
 	}
 
 	router, err := rnd.RenderRouter(idx, nil)
@@ -150,33 +148,31 @@ func TestRender_UnknownComposition(t *testing.T) {
 	}
 }
 
+func assertCursorBody(t *testing.T, skill knowledge.Skill, body string) {
+	t.Helper()
+
+	if !strings.HasPrefix(body, "---\ndescription: ") {
+		t.Errorf("%q: missing Cursor frontmatter description", skill.ID)
+	}
+	if !strings.Contains(body, "alwaysApply: false") {
+		t.Errorf("%q: expected alwaysApply: false, got:\n%s", skill.ID, body)
+	}
+	if strings.HasPrefix(body, "---\nname: ") {
+		t.Errorf("%q: cursor rule still carries SKILL.md's name field", skill.ID)
+	}
+}
+
 func TestRenderSkillCursor_AllSkills(t *testing.T) {
 	t.Parallel()
 
-	idx, templates, err := knowledge.Load("")
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	rnd, err := NewRenderer(templates)
-	if err != nil {
-		t.Fatalf("NewRenderer: %v", err)
-	}
-
+	idx, rnd := loadRenderer(t)
 	for _, skill := range idx.Skills {
 		body, renderErr := rnd.RenderSkillCursor(idx, skill, nil)
 		if renderErr != nil {
 			t.Errorf("render cursor %q: %v", skill.ID, renderErr)
 			continue
 		}
-		if !strings.HasPrefix(body, "---\ndescription: ") {
-			t.Errorf("%q: missing Cursor frontmatter description", skill.ID)
-		}
-		if !strings.Contains(body, "alwaysApply: false") {
-			t.Errorf("%q: expected alwaysApply: false, got:\n%s", skill.ID, body)
-		}
-		if strings.HasPrefix(body, "---\nname: ") {
-			t.Errorf("%q: cursor rule still carries SKILL.md's name field", skill.ID)
-		}
+		assertCursorBody(t, skill, body)
 	}
 
 	router, err := rnd.RenderCursorRouter(idx, nil)
