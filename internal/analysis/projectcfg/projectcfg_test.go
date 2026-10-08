@@ -149,7 +149,7 @@ func loadWithin(t *testing.T, root, explicit string) loadResult {
 	const deadline = 5 * time.Second
 	done := make(chan loadResult, 1)
 	go func() {
-		file, err := Load(root, explicit)
+		file, err := Load(root, explicit, "")
 		done <- loadResult{file: file, err: err}
 	}()
 	ctx, cancel := context.WithTimeout(t.Context(), deadline)

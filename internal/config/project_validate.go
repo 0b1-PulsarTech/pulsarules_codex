@@ -74,7 +74,7 @@ func (val *validator) checkHeader(file *ProjectFile) {
 }
 
 func (val *validator) checkAnalyzer(field *fieldPath, id string) {
-	known := slices.Contains(val.rules.AnalyzerIDs, id)
+	known := val.rules.AnyAnalyzer || slices.Contains(val.rules.AnalyzerIDs, id)
 	if !known && !val.delegated[id] {
 		val.fail(field, "unknown analyzer")
 	}

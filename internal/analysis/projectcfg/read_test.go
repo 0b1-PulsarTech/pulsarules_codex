@@ -261,6 +261,23 @@ func TestRefused(t *testing.T) {
 	}
 }
 
+func TestLoadRefusesAPrivateFileThatIsNotRegular(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct{ name, kind string }{
+		{"a directory", "dir"},
+		{"a named pipe", "fifo"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			setup := layout{git: true, privateKind: testCase.kind}
+			result := loadWithin(t, setup.build(t), "")
+			assertErrorHas(t, result.err, []string{private + "read config: not a regular file"})
+		})
+	}
+}
+
 func closedHandle(path string) (*os.File, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -276,11 +293,8 @@ func TestReadFaultsNameTheStepNotThePath(t *testing.T) {
 	dir := t.TempDir()
 	readable := filepath.Join(dir, "readable.yaml")
 	locked := filepath.Join(dir, "locked.yaml")
-	for _, path := range []string{readable, locked} {
-		if err := os.WriteFile(path, []byte("version: 1\n"), 0o600); err != nil {
-			t.Fatalf("write %s: %v", path, err)
-		}
-	}
+	write(t, readable, "version: 1\n")
+	write(t, locked, "version: 1\n")
 	if err := os.Chmod(locked, 0); err != nil {
 		t.Fatalf("chmod: %v", err)
 	}

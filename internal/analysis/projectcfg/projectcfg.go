@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"path/filepath"
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis/registry"
@@ -28,27 +27,27 @@ func Rules() config.Rules {
 	}
 }
 
-func Load(root, explicit string) (*config.ProjectFile, error) {
+func Load(root, explicit, presetFlag string) (*config.ProjectFile, error) {
 	if explicit != "" {
-		return loadFile(explicit, explicit)
+		return loadFile(explicit, explicit, Rules())
 	}
 	if root == "" {
 		return nil, nil
 	}
-	return loadOptional(filepath.Join(root, config.ProjectFileName), config.ProjectFileName)
+	return loadLayers(root, vcs.CommonDir, presetFlag)
 }
 
-func loadFile(path, display string) (*config.ProjectFile, error) {
+func loadFile(path, display string, rules config.Rules) (*config.ProjectFile, error) {
 	content, err := readBounded(path)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", display, err)
 	}
 	// Parse errors already lead with the file and field path.
-	return config.Parse(display, content, Rules())
+	return config.Parse(display, content, rules)
 }
 
-func loadOptional(path, display string) (*config.ProjectFile, error) {
-	file, err := loadFile(path, display)
+func loadOptional(path, display string, rules config.Rules) (*config.ProjectFile, error) {
+	file, err := loadFile(path, display, rules)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
@@ -85,7 +84,7 @@ func ForRepo(repo vcs.Repository) (*config.GovernanceConfig, []core.Finding) {
 }
 
 func ForRoot(root string) (*config.GovernanceConfig, []core.Finding) {
-	file, err := Load(root, "")
+	file, err := Load(root, "", "")
 	if err == nil {
 		var cfg *config.GovernanceConfig
 		if cfg, err = Build(file, ""); err == nil {

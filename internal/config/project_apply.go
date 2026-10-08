@@ -29,10 +29,10 @@ func (govCfg *GovernanceConfig) ApplyProject(file *ProjectFile) error {
 			Run:    slices.Clone(entry.Run),
 		})
 	}
-	return govCfg.checkOverrides(file)
+	return govCfg.CheckOverrides(file)
 }
 
-func (govCfg *GovernanceConfig) checkOverrides(file *ProjectFile) error {
+func (govCfg *GovernanceConfig) CheckOverrides(file *ProjectFile) error {
 	problems := &collector{path: file.Path}
 	listed := newRoot().key("overrides")
 	for idx, override := range file.Overrides {
