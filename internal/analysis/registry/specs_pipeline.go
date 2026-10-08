@@ -10,6 +10,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/branchname"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ruleinjection"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -61,4 +62,8 @@ func delegationSpecs() []analyzerSpec {
 			gate: GateFullOnly,
 		},
 	}
+}
+
+func DelegatedFormats() []string {
+	return command.Formats()
 }
