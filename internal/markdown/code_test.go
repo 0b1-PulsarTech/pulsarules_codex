@@ -77,7 +77,7 @@ func runRegionCases(t *testing.T, testCases []regionCase) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			code := codeRegions(testCase.src)
+			code := CodeRegions(testCase.src)
 			for offset, char := range []byte(testCase.src) {
 				if problem := misread(code, offset, char); problem != "" {
 					t.Errorf("offset %d: %s", offset, problem)
