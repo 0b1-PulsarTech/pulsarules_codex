@@ -21,7 +21,7 @@ func Check(text string) string {
 	if reason := CheckSize(text); reason != "" {
 		return reason
 	}
-	// A cheap early-out only.
+	// A cheap early-out only; the parser child's memory and time bounds are the safety line.
 	if reason := checkGauges(text); reason != "" {
 		return reason
 	}

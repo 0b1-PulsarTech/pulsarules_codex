@@ -6,7 +6,7 @@ import (
 )
 
 func checkGauges(text string) string {
-	// Unguarded, the worst 32000-bracket shape peaks at 133 MiB.
+	// Unguarded, the worst 32000-bracket shape peaks at 133 MiB, under the 256 MiB ceiling.
 	if openers := countOpeners(text); openers > MaxOpeners {
 		return fmt.Sprintf("skipped: %d brackets is over the %d parse limit", openers, MaxOpeners)
 	}

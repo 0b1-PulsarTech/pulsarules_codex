@@ -1,0 +1,23 @@
+file testdata/legacy.js language=javascript error=""
+fn walk kind=function line=9 body=9-21 params=2 named=0 cx=6 test=false nested=false
+fn helper kind=closure line=23 body=23-23 params=1 named=0 cx=2 test=false nested=false
+fn closure kind=closure line=25 body=25-29 params=0 named=0 cx=1 test=false nested=false
+fn closure kind=closure line=26 body=26-28 params=0 named=0 cx=1 test=false nested=true
+fn closure kind=closure line=27 body=27-27 params=0 named=0 cx=1 test=false nested=true
+block line=11 depth=1
+block line=12 depth=2
+block line=14 depth=2
+block line=18 depth=1
+import "fs" line=2 group=1
+import "./utils.js" line=3 group=2
+groups ["node:" "package" "relative"]
+name path kind=constant line=1 exported=false exempt=false
+name fs kind=import alias line=2 exported=false exempt=false
+name utils kind=import alias line=3 exported=false exempt=false
+name walk kind=function line=9 exported=false exempt=false
+name root kind=parameter line=9 exported=false exempt=false
+name visit kind=parameter line=9 exported=false exempt=false
+name entries kind=variable line=10 exported=false exempt=false
+name index kind=loop variable line=11 exported=false exempt=false
+name value kind=parameter line=23 exported=false exempt=false
+doc walk kind=function line=5 exempt=false mixed=false

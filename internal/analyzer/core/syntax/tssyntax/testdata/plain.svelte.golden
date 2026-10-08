@@ -1,0 +1,7 @@
+file testdata/plain.svelte language=svelte error=""
+fn closure kind=closure line=6 body=6-8 params=0 named=0 cx=1 test=false nested=false
+fn toggle kind=function line=10 body=10-12 params=0 named=0 cx=2 test=false nested=false
+import "svelte" line=3 group=1
+groups ["node:" "package" "relative"]
+name ready kind=variable line=5 exported=false exempt=false
+name toggle kind=function line=10 exported=false exempt=false

@@ -1,0 +1,1 @@
+const a = 1, s = ''; const y = a</'/.test(s); x = async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=0))))))))))))))))))));
