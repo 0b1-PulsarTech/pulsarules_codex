@@ -74,3 +74,38 @@ func TestDefaultsIsTestOther(t *testing.T) {
 	}
 	assertIsTest(t, testCases)
 }
+
+func TestNew(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		globs   []string
+		path    string
+		want    bool
+		wantErr bool
+	}{
+		{"glob adds a match", []string{"fixtures/**"}, "fixtures/a/b.go", true, false},
+		{"glob with no match leaves file", []string{"fixtures/**"}, "src/b.go", false, false},
+		{"glob does not hide the defaults", []string{"fixtures/**"}, "a_test.go", true, false},
+		{"glob applies to every language", []string{"e2e/**/*.dart"}, "e2e/x/a.dart", true, false},
+		{"no globs", nil, "src/b.go", false, false},
+		{"empty glob is rejected", []string{""}, "", false, true},
+		{"malformed glob is rejected", []string{"a/[b"}, "", false, true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			policy, err := New(testCase.globs)
+			if (err != nil) != testCase.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, testCase.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			if got := policy.IsTest(testCase.path); got != testCase.want {
+				t.Errorf("IsTest(%q) = %v, want %v", testCase.path, got, testCase.want)
+			}
+		})
+	}
+}

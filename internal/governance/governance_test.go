@@ -88,7 +88,7 @@ func skipFixture(t *testing.T) string {
 	dir := t.TempDir()
 	body := "package demo\n\n// bad note \u2014 trips typographic-markers\n"
 	for _, name := range []string{
-		"main.go", "target/x.go", "build/y.go", "vendor/v.go", "ignored.go",
+		"main.go", "target/x.go", "build/y.go", "thirdparty/z.go", "vendor/v.go", "ignored.go",
 	} {
 		writeFileAtDir(t, dir, name, body)
 	}
@@ -114,11 +114,11 @@ type skipDirsCase struct {
 func skipDirsGitModeCases() []skipDirsCase {
 	return []skipDirsCase{
 		{
-			name: "listed repo sees target and build, still skips vendor",
+			name: "listed repo sees target and build but honours the configured skip",
 			repo: func(root string) vcs.Repository { return &goldenRepo{root: root} },
 			want: map[string]bool{
 				"main.go": true, "target/x.go": true, "build/y.go": true,
-				"vendor/v.go": false, "ignored.go": true,
+				"thirdparty/z.go": false, "vendor/v.go": false, "ignored.go": true,
 			},
 		},
 		{
@@ -134,7 +134,7 @@ func skipDirsGitModeCases() []skipDirsCase {
 			repo: func(root string) vcs.Repository { return noListRepo{&goldenRepo{root: root}} },
 			want: map[string]bool{
 				"main.go": true, "target/x.go": false, "build/y.go": false,
-				"vendor/v.go": false, "ignored.go": true,
+				"thirdparty/z.go": false, "vendor/v.go": false, "ignored.go": true,
 			},
 		},
 		{
@@ -144,7 +144,7 @@ func skipDirsGitModeCases() []skipDirsCase {
 			},
 			want: map[string]bool{
 				"main.go": true, "target/x.go": false, "build/y.go": false,
-				"vendor/v.go": false, "ignored.go": true,
+				"thirdparty/z.go": false, "vendor/v.go": false, "ignored.go": true,
 			},
 		},
 	}
@@ -159,6 +159,7 @@ func TestSession_SkipDirs_GitModeKeepsGenericNames(t *testing.T) {
 			t.Parallel()
 			cfg := config.Defaults()
 			cfg.ApplyPreset()
+			cfg.SkipDirs = []string{"thirdparty"}
 
 			seen := reportedFiles(NewSession(testCase.repo(skipFixture(t)), "", nil, cfg))
 			for file, want := range testCase.want {

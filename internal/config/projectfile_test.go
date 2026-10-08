@@ -1,4 +1,4 @@
-package projectfile
+package config
 
 import (
 	"reflect"
@@ -6,6 +6,21 @@ import (
 	"strings"
 	"testing"
 )
+
+const fullProjectYAML = `version: 1
+preset: strict
+include_generated: true
+skip_dirs: [fixtures]
+tests: ["web/test/**"]
+analyzers:
+  big-comment: {params: {max_lines: 1}}
+  doc-comment: {enabled: false, severity: error}
+overrides:
+  - files: ["web/test/**"]
+    analyzers: {single-letter-name: {enabled: false}, file-size: {severity: warning}}
+delegated:
+  - {id: dart-analyze, dir: ., run: [dart, analyze], format: dart-analyze-json, rule: dart-style}
+`
 
 func decodeFile(content []byte) (*File, error) {
 	parsed, err := Decode(Name, content)
@@ -20,21 +35,6 @@ func decodeFile(content []byte) (*File, error) {
 
 func TestDecodeFile(t *testing.T) {
 	t.Parallel()
-
-	const fullProjectYAML = `version: 1
-preset: strict
-include_generated: true
-skip_dirs: [fixtures]
-tests: ["web/test/**"]
-analyzers:
-  big-comment: {params: {max_lines: 1}}
-  doc-comment: {enabled: false, severity: error}
-overrides:
-  - files: ["web/test/**"]
-    analyzers: {single-letter-name: {enabled: false}, file-size: {severity: warning}}
-delegated:
-  - {id: dart-analyze, dir: ., run: [dart, analyze], format: dart-analyze-json, rule: dart-style}
-`
 
 	disabled := false
 	included := true

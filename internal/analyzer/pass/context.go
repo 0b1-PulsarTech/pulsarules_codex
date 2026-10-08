@@ -82,6 +82,7 @@ func RunPerGoFile(
 type AnalysisConfig struct {
 	Analyzers        map[string]AnalyzerConfig
 	IncludeGenerated bool
+	TestGlobs        []string
 }
 
 type AnalyzerConfig struct {

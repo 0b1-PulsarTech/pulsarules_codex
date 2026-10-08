@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"slices"
+	"sync"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
@@ -30,6 +31,9 @@ type Session struct {
 	gitSkips    source.SkipSet
 	logger      *slog.Logger
 	providers   providerFactory
+	policyOnce  sync.Once
+	policy      testfile.Classifier
+	policyErr   error
 }
 
 func NewSession(
@@ -47,8 +51,8 @@ func NewSession(
 		commitMsg:   commitMsg,
 		index:       index,
 		cfgAnalysis: toAnalysisConfig(cfg),
-		skips:       source.NewSkipSet(source.DefaultSkipDirs()),
-		gitSkips:    source.NewSkipSet(source.GitSkipDirs()),
+		skips:       source.NewSkipSet(append(source.DefaultSkipDirs(), cfg.SkipDirs...)),
+		gitSkips:    source.NewSkipSet(append(source.GitSkipDirs(), cfg.SkipDirs...)),
 		logger:      slog.Default(),
 		providers:   defaultProviders,
 	}
@@ -70,7 +74,7 @@ func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Res
 	sr.registerForScope(sess.index, sess.repo, scope)
 	findings := sr.RunStages(ctx)
 
-	if sess.cfgAnalysis != nil && sess.cfgAnalysis.IncludeGenerated {
+	if sess.cfgAnalysis.IncludeGenerated {
 		return Result{Findings: findings}
 	}
 	return splitGenerated(ctx, findings)
@@ -86,7 +90,7 @@ func (sess *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *R
 
 	if files == FileSetAll {
 		sess.attachSources(discovery)
-		discovery.ChangedFiles = walkAllFiles(discovery.Sources, testfile.Defaults())
+		discovery.ChangedFiles = walkAllFiles(discovery.Sources, sess.testPolicy())
 		return discovery
 	}
 
@@ -113,7 +117,7 @@ func (sess *Session) changedFiles(scope Scope, status *vcs.Status) []pass.FileCh
 			return !change.Staged
 		})
 	}
-	return changesToFileChanges(changes, testfile.Defaults())
+	return changesToFileChanges(changes, sess.testPolicy())
 }
 
 func (sess *Session) Load(discovery *Request) *pass.Context {
@@ -135,7 +139,10 @@ func (sess *Session) Load(discovery *Request) *pass.Context {
 		GitHistory:    discovery.GitHistory,
 		StagedRenames: discovery.StagedRenames,
 		Skips:         discovery.Skips,
-		TestPolicy:    testfile.Defaults(),
+		TestPolicy:    sess.testPolicy(),
+	}
+	if sess.policyErr != nil {
+		ctx.Findings = append(ctx.Findings, configFinding(sess.policyErr))
 	}
 
 	if len(analyzable) > 0 && discovery.Sources != nil {
@@ -152,4 +159,16 @@ func (sess *Session) Load(discovery *Request) *pass.Context {
 		)
 	}
 	return ctx
+}
+
+func (sess *Session) testPolicy() testfile.Classifier {
+	sess.policyOnce.Do(func() {
+		policy, err := testfile.New(sess.cfgAnalysis.TestGlobs)
+		if err != nil {
+			sess.policyErr = err
+			policy = testfile.Defaults()
+		}
+		sess.policy = policy
+	})
+	return sess.policy
 }

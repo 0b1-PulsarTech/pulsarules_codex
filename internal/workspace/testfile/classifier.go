@@ -1,25 +1,45 @@
 package testfile
 
 import (
+	"fmt"
 	"path"
 	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
 type Classifier struct {
 	rules    map[syntax.Language]rule
 	fallback rule
+	globs    []glob.Pattern
 }
 
 func Defaults() Classifier {
 	return Classifier{rules: languageRules(), fallback: fallbackRule()}
 }
 
+func New(globs []string) (Classifier, error) {
+	policy := Defaults()
+	for _, globItem := range globs {
+		pattern, err := glob.Compile(globItem)
+		if err != nil {
+			return Classifier{}, fmt.Errorf("test glob: %w", err)
+		}
+		policy.globs = append(policy.globs, pattern)
+	}
+	return policy, nil
+}
+
 func (policy Classifier) IsTest(file string) bool {
 	slashed := filepath.ToSlash(file)
+	if slices.ContainsFunc(policy.globs, func(pattern glob.Pattern) bool {
+		return pattern.Match(slashed)
+	}) {
+		return true
+	}
 	return policy.ruleFor(path.Ext(slashed)).matches(slashed)
 }
 

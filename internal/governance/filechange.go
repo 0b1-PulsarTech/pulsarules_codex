@@ -3,6 +3,7 @@ package governance
 import (
 	"log/slog"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
@@ -92,6 +93,12 @@ func changedSources(files []pass.FileChange) []syntax.Source {
 		sources[idx] = syntax.Source{Path: file.Path, IsTest: file.IsTest}
 	}
 	return sources
+}
+
+func configFinding(err error) finding.Finding {
+	return finding.NewReporter("config", finding.SeverityError, finding.CatProject).At(
+		".pulsarules.yaml", 0, err.Error(), "fix the test globs",
+	)
 }
 
 func (sess *Session) stagedRenames() []pass.Rename {

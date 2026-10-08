@@ -36,6 +36,7 @@ type policyCase struct {
 	name    string
 	files   map[string]string
 	changed []string
+	globs   []string
 	want    []string
 }
 
@@ -66,6 +67,19 @@ func policyCases() []policyCase {
 			changed: []string{"web/src/f00.ts"},
 			want:    tsFlagged,
 		},
+		{
+			name:    "test glob removes matching files from the count",
+			files:   numberedTS("web/src", 11),
+			changed: []string{"web/src/f00.ts"},
+			globs:   []string{"web/src/f10.ts"},
+		},
+		{
+			name:    "test glob with no match leaves the count",
+			files:   numberedTS("web/src", 11),
+			changed: []string{"web/src/f00.ts"},
+			globs:   []string{"other/**"},
+			want:    tsFlagged,
+		},
 	}
 }
 
@@ -77,7 +91,11 @@ func TestAnalyzeTestPolicy(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := buildCtx(t, testCase.files, testCase.changed, tsParams)
-			ctx.TestPolicy = testfile.Defaults()
+			policy, err := testfile.New(testCase.globs)
+			if err != nil {
+				t.Fatalf("testfile.New: %v", err)
+			}
+			ctx.TestPolicy = policy
 			findings := NewAnalyzer().Analyze(ctx)
 			got := make([]string, 0, len(findings))
 			for _, finding := range findings {

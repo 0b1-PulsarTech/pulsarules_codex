@@ -1,4 +1,4 @@
-package projectfile
+package config
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
@@ -68,9 +67,9 @@ func (val *validator) checkHeader(file *File) {
 	case file.Version != SupportedVersion:
 		val.fail(version, "unsupported %d (want %d)", file.Version, SupportedVersion)
 	}
-	if file.Preset != "" && !config.ValidPreset(file.Preset) {
+	if file.Preset != "" && !ValidPreset(file.Preset) {
 		val.fail(val.root.key("preset"), "unknown preset %q (want %s)",
-			clipValue(file.Preset), strings.Join(config.Presets(), "|"))
+			clipValue(file.Preset), strings.Join(Presets(), "|"))
 	}
 }
 

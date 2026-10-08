@@ -4,8 +4,11 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -307,5 +310,138 @@ func TestSession_PackageLevelVarState(t *testing.T) {
 				t.Errorf("package-level-var lines = %v, want %v", got, testCase.wantPackageVarLine)
 			}
 		})
+	}
+}
+
+func writeTestPolicyRepo(t *testing.T) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	for _, name := range []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"} {
+		writeFileAtDir(t, dir, "src/"+name+".ts", "export {};\n")
+	}
+	writeFileAtDir(t, dir, "src/big.ts", strings.Repeat("export {};\n", 300))
+	return dir
+}
+
+type policyRun struct {
+	globs   []string
+	fileSet FileSet
+	status  *vcs.Status
+}
+
+func analyzeTestPolicyRepo(
+	t *testing.T, dir string, run policyRun,
+) ([]finding.Finding, []pass.FileChange) {
+	t.Helper()
+
+	cfg := config.Defaults()
+	cfg.ApplyPreset()
+	cfg.Analyzers["package-file-count"] = config.AnalyzerConfig{
+		Enabled: true, Params: map[string]any{"extensions": []string{".ts"}},
+	}
+	sess := NewSession(&goldenRepo{root: dir}, "", nil, cfg)
+	sess.cfgAnalysis.TestGlobs = run.globs
+	changed := sess.Discover(ScopeChanged, run.status, run.fileSet).ChangedFiles
+	return sess.Analyze(ScopeChanged, run.status, run.fileSet).Findings, changed
+}
+
+type testGlobCase struct {
+	name         string
+	globs        []string
+	fileSet      FileSet
+	status       *vcs.Status
+	wantTest     bool
+	wantFileSize bool
+	wantCount    bool
+}
+
+func testGlobCases() []testGlobCase {
+	bigStatus := vcs.Status{Changes: []vcs.Change{{Path: "src/big.ts", Extension: ".ts"}}}
+	return []testGlobCase{
+		{
+			name:         "no glob leaves big.ts a source",
+			fileSet:      FileSetAll,
+			wantFileSize: true,
+			wantCount:    true,
+		},
+		{
+			name:     "glob makes big.ts a test",
+			globs:    []string{"src/big.ts"},
+			fileSet:  FileSetAll,
+			wantTest: true,
+		},
+		{
+			name:         "status path without glob leaves big.ts a source",
+			fileSet:      FileSetChanged,
+			status:       &bigStatus,
+			wantFileSize: true,
+			wantCount:    true,
+		},
+		{
+			name:     "status path with glob makes big.ts a test",
+			globs:    []string{"src/big.ts"},
+			fileSet:  FileSetChanged,
+			status:   &bigStatus,
+			wantTest: true,
+		},
+	}
+}
+
+func TestSession_TestGlobsReachEveryTestConsumer(t *testing.T) {
+	t.Parallel()
+
+	for _, testCase := range testGlobCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			run := policyRun{
+				globs: testCase.globs, fileSet: testCase.fileSet, status: testCase.status,
+			}
+			findings, changed := analyzeTestPolicyRepo(t, writeTestPolicyRepo(t), run)
+			gotTest := slices.ContainsFunc(changed, func(file pass.FileChange) bool {
+				return file.Path == "src/big.ts" && file.IsTest
+			})
+			gotSize, gotCount := false, false
+			for _, finding := range findings {
+				gotSize = gotSize ||
+					finding.AnalyzerID == "file-size" && finding.File == "src/big.ts"
+				gotCount = gotCount || finding.AnalyzerID == "package-file-count"
+			}
+			if gotTest != testCase.wantTest || gotSize != testCase.wantFileSize ||
+				gotCount != testCase.wantCount {
+				t.Fatalf("IsTest, file-size, package-file-count = %v, %v, %v; want %v, %v, %v",
+					gotTest, gotSize, gotCount,
+					testCase.wantTest, testCase.wantFileSize, testCase.wantCount)
+			}
+		})
+	}
+}
+
+func TestSession_InvalidTestGlob(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeFileAtDir(t, dir, "web/test/a.mjs", "export {};\n")
+	findings, changed := analyzeTestPolicyRepo(
+		t, dir, policyRun{globs: []string{"a/[b"}, fileSet: FileSetAll},
+	)
+
+	var configErrors []finding.Finding
+	for _, finding := range findings {
+		if finding.AnalyzerID == "config" {
+			configErrors = append(configErrors, finding)
+		}
+	}
+	if len(configErrors) != 1 {
+		t.Fatalf("config findings = %+v, want exactly one", configErrors)
+	}
+	got := configErrors[0]
+	if got.Severity != finding.SeverityError || got.File != ".pulsarules.yaml" ||
+		!strings.Contains(got.Message, `"a/[b"`) {
+		t.Fatalf("config finding = %+v", got)
+	}
+	if len(changed) != 1 || !changed[0].IsTest {
+		t.Fatalf("defaults must still classify web/test/a.mjs as a test, got %+v", changed)
 	}
 }
