@@ -1,10 +1,13 @@
 package host
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/docs"
 )
 
 func TestInstallSkillsAndWorkflows_Backups(t *testing.T) {
@@ -57,5 +60,63 @@ func TestInstallSkillsAndWorkflows_Backups(t *testing.T) {
 			wantBackup := ownedfile.BackupMessage(foreign, foreign+ownedfile.BackupSuffix)
 			assertNote(t, report.Warnings, wantBackup)
 		})
+	}
+}
+
+func TestRemoveDocs_ReportsRestoredAndOrphaned(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		docName string
+		remove  func(dest string, report *Report) error
+	}{
+		{name: "skills", docName: "SKILL.md", remove: removeSkills},
+		{name: "workflows", docName: "WORKFLOW.md", remove: removeWorkflows},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dest := t.TempDir()
+			dir := filepath.Join(dest, "security")
+			docPath := filepath.Join(dir, testCase.docName)
+			seedFile(t, docPath, "# my own notes, no marker\n")
+			body := "# body\n" + ownedfile.Marker + "\n"
+			if _, err := docs.Write(dir, testCase.docName, body); err != nil {
+				t.Fatalf("WriteDoc: %v", err)
+			}
+			seedFile(t, docPath+ownedfile.BackupSuffix+".2", "older\n")
+
+			var report Report
+			if err := testCase.remove(dest, &report); err != nil {
+				t.Fatalf("remove: %v", err)
+			}
+			assertNote(t, report.Notes, ownedfile.RestoreMessage(docPath))
+			assertNote(t, report.Warnings, docPath+ownedfile.BackupSuffix+".2")
+		})
+	}
+}
+
+func TestInstallSkills_PassesRouterFilterToRouter(t *testing.T) {
+	t.Parallel()
+
+	dest := t.TempDir()
+	ctx := newTestContext(t, t.TempDir(), []string{"project-router"})
+	ctx.RouterFilter = []string{"go-style"}
+
+	var report Report
+	if err := installSkills(ctx, dest, &report); err != nil {
+		t.Fatalf("installSkills: %v", err)
+	}
+	body, err := os.ReadFile(filepath.Join(dest, "project-router", "SKILL.md"))
+	if err != nil {
+		t.Fatalf("read router: %v", err)
+	}
+	if strings.Contains(string(body), "database-persistence") {
+		t.Error("router lists database-persistence, want it dropped by the filter")
+	}
+	if !strings.Contains(string(body), "go-style") {
+		t.Error("router lacks go-style, want the filtered-in skill listed")
 	}
 }
