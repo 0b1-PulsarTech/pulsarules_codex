@@ -7,6 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/branch"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/concurrency/clock"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/concurrency/loopexit"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -61,4 +62,8 @@ func delegationSpecs() []analyzerSpec {
 			gate: GateFullOnly,
 		},
 	}
+}
+
+func DelegatedFormats() []string {
+	return command.Formats()
 }

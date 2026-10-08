@@ -58,3 +58,11 @@ func TestIDs_NoDuplicates(t *testing.T) {
 		seen[id] = true
 	}
 }
+
+func TestDelegatedFormats(t *testing.T) {
+	t.Parallel()
+
+	if !slices.Contains(DelegatedFormats(), "dart-analyze-json") {
+		t.Fatalf("DelegatedFormats() = %v, want dart-analyze-json", DelegatedFormats())
+	}
+}
