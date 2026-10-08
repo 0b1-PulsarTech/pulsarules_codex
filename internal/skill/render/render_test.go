@@ -361,7 +361,7 @@ func TestClausesSurviveComposition(t *testing.T) {
 	for _, testCase := range testCases {
 		total += len(testCase.want)
 	}
-	const guardedFloor = 45
+	const guardedFloor = 47
 	if total < guardedFloor {
 		t.Fatalf("guarded clauses = %d, want at least %d (MUST, NEVER, MANDATORY or a leading No)",
 			total, guardedFloor)

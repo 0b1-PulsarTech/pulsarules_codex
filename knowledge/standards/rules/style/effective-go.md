@@ -22,9 +22,6 @@ linters:
     - predeclared
     - forbidigo
 analyzers:
-    - file-size
-    - text-markers
-    - typographic-markers
     - doc-comment
     - body-header-comment
     - too-many-results
@@ -69,53 +66,31 @@ newest stable the module pins (source repos use `go 1.27`).
 6. Use `any`, never `interface{}`.
 7. Add a compile-time `var _ Iface = (*impl)(nil)` assertion to any file whose type implements an interface.
 8. No naked returns in long functions; no shadowing of `err`/`ctx`/predeclared identifiers in inner scopes.
-9. Keep one concept per file (~180 lines, ~468 for a `_test.go`); split before a file grows past that.
-10. Drop explicit generic type parameters wherever Go infers them from an argument: write
-    `fuegoport.GET(reg, "/me", h.GetMe)`, not
-    `fuegoport.GET[struct{}, OperatorResponse](reg, "/me", h.GetMe)`. Spell type params only where
-    inference cannot (no value of the type appears in the call).
-11. No AI text marker in `.go` or `.md`. Two classes, and they are handled differently. Typographic
-    punctuation - em dash U+2014, en dash, ellipsis U+2026, curly quotes - is reported and never
-    rewritten, because inside a Go string literal it is data; replace it with its ASCII form by
-    hand. In markdown the fence is machine-readable, so a fenced block or an inline code span is
-    skipped outright - the character there is content being shown, not prose style. Invisible
-    carriers - zero-width characters, bidi controls, soft hyphens, exotic spaces - are removed by
-    `pulsarules_cli clean --write`, and only the ones no neighbouring context can justify. A marker
-    that a test needs as data is written as a Go escape (`\u2014`), never as the character, so the
-    fixture never trips the check that validates it.
-12. How hard a marker lands depends on its class. An invisible carrier no neighbouring context can
-    justify blocks: the bidi controls among them are the Trojan Source vector (CVE-2021-42574),
-    where the diff a reviewer reads is not the code the compiler sees. One that may be
-    load-bearing - a joiner between emoji, a byte order mark - only advises, because this check
-    cannot judge it. Typographic punctuation blocks by default; a project that treats ASCII
-    punctuation as house style rather than a defect lowers it through the analyzer's `severity`
-    param (`error`, `warning`, `info`), which `--typographic-severity` bakes into the generated
-    hooks at install time.
-13. No AI provenance key in a markdown frontmatter block (`generator`, `ai_generated`, `claude`,
-    `synthid`, `c2pa`, ...). Prose that merely names a vendor is not provenance and is not flagged.
-14. No `regexp` for simple string work (prefix/suffix/contains/split/trim/case): use the `strings`
+9. Drop explicit generic type parameters wherever Go infers them from an argument: write
+    `fuegoport.GET(reg, "/me", h.GetMe)`, not `fuegoport.GET[struct{}, OperatorResponse](reg, "/me", h.GetMe)`.
+    Spell type params only where inference cannot (no value of the type appears in the call).
+10. No `regexp` for simple string work (prefix/suffix/contains/split/trim/case): use the `strings`
     stdlib or a small generic `[T ~string]` helper shared in a `pkg/strutils`-style package. Reserve
     `regexp` for genuinely pattern-based matching.
-15. Model an optional value with its zero value (`0`, `""`, `false`, a nil slice/map), never a
+11. Model an optional value with its zero value (`0`, `""`, `false`, a nil slice/map), never a
     pointer. Reach for `*T` only when a caller must distinguish "never set" from "set to the zero
     value" and that distinction changes behaviour - a partial-update payload, a tri-state flag.
     Optionality alone does not earn a pointer: it costs every reader a nil check, every writer an
     allocation, and turns a missing value into a panic instead of a harmless default.
-16. The nil-slice zero value is right in general and wrong on a REST `Output` DTO: `encoding/json`
+12. The nil-slice zero value is right in general and wrong on a REST `Output` DTO: `encoding/json`
     serialises a nil slice as `null`, not `[]`, surprising a consumer expecting an array. A DTO
     field crossing a JSON boundary initialises its slice fields explicitly (`[]T{}` or a mapped
     result), even when the general zero-value principle above would otherwise leave it nil.
-17. Set a promoted field directly in a keyed struct literal - `Outer{ID: 7}`, not
+13. Set a promoted field directly in a keyed struct literal - `Outer{ID: 7}`, not
     `Outer{Base: Base{ID: 7}}` (Go 1.27). A literal may not name both a promoted field and the
     embedded field that promotes it, and the form does not reach through a pointer-embedded type,
     which still needs the embedded value spelled out.
-18. A function returns at most 3 results (`too-many-results`; it also flags func types, interface
+14. A function returns at most 3 results (`too-many-results`; it also flags func types, interface
     methods and func literals). Past that, return a named result of an anonymous struct, or a named
-    struct type when reused, so call sites read by field name and a new value is not a signature
-    break.
-19. Two or more interfaces declared in one file go in a single `type ( ... )` block
+    struct type when reused, so call sites read by field name and a new value is not a signature break.
+15. Two or more interfaces declared in one file go in a single `type ( ... )` block
     (`ungrouped-interfaces`), so the file's contracts read as one list.
-20. No package-level var outside the exempt set: sentinel errors and re-exported `pkg.Err*`
+16. No package-level var outside the exempt set: sentinel errors and re-exported `pkg.Err*`
     sentinels (`var ErrX = pkg.ErrY`), `//go:embed`, `var _ I = (*T)(nil)` / `T{}` assertions,
     TestMain-assigned test vars, and enum groups: a `var ( ... )` of two or more constant-argument
     calls to one callee, plus the constant definition var they are called on, and enum handles:
@@ -134,8 +109,6 @@ newest stable the module pins (source repos use `go 1.27`).
 - Re-implementing what the stdlib already does (`slices.Equal`, `min`/`max`, `iter.Seq`).
 - Shadowing an outer `err`/`ctx` with `:=` in an inner scope (govet `shadow`).
 - Spelling out generic type parameters the compiler can infer from an argument.
-- An AI text marker in `.go` or `.md`: typographic punctuation, an invisible carrier, an exotic
-  space, or an AI provenance key in a markdown frontmatter block.
 - `regexp` for simple string work the `strings` stdlib or a generic `[T ~string]` helper covers.
 - `*T` for an optional field or parameter whose zero value already means "absent".
 - A nil slice field left unset on a REST `Output` DTO, serialising as `null` instead of `[]`.
@@ -150,9 +123,7 @@ newest stable the module pins (source repos use `go 1.27`).
 - [ ] Interface-implementing types carry `var _ Iface = (*impl)(nil)`.
 - [ ] No `err`/`ctx`/predeclared shadowing.
 - [ ] Optional values carry the zero value, not `*T`, unless "unset" must differ from zero.
-- [ ] Inferable generic type params omitted; no AI text marker in `.go` or `.md`; no `regexp` for
-  simple string work (use `strings`/a generic `[T ~string]` helper).
-- [ ] A blocking marker finding was fixed, not silenced; any `severity` the project lowered is a
-  deliberate house-style choice, never a way past a bidi control.
+- [ ] Inferable generic type params omitted; no `regexp` for simple string work (use `strings`/a
+  generic `[T ~string]` helper).
 - [ ] Output DTO slice fields crossing a JSON boundary are initialised explicitly, not left nil.
 {{end}}

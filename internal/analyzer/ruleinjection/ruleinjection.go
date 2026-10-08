@@ -11,10 +11,10 @@ import (
 func defaultRuleMap() map[string]string {
 	// A new analyzer goes here by exact ID; sub-ID tools also need a lookupRule prefix.
 	rules := map[string]string{
-		"file-size":              "effective-go",
-		"text-markers":           "effective-go",
-		"typographic-markers":    "effective-go",
-		"ai-frontmatter":         "effective-go",
+		"file-size":              "source-files",
+		"text-markers":           "source-files",
+		"typographic-markers":    "source-files",
+		"ai-frontmatter":         "source-files",
 		"import-groups":          "imports",
 		"naming":                 "naming",
 		"top-of-file":            "comments",
