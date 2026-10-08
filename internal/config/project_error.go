@@ -53,8 +53,12 @@ func clipParseText(text string) string {
 	return prefix + clipValue(strings.TrimPrefix(text, prefix))
 }
 
-func leftover(path string, err error) error {
+func leftover(path string, root *yaml.Node, err error) error {
 	text := plainText(err)
+	if strings.Contains(text, "excessive aliasing") {
+		line := firstAliasLine(root)
+		return fmt.Errorf("%s: line %d: aliases expand into too many nodes", path, line)
+	}
 	for _, leaked := range []string{"cannot", "!!", "yaml:", "config.", "[]", "map["} {
 		if strings.Contains(text, leaked) {
 			return fmt.Errorf("%s: %sinvalid value", path, linePrefix(text))

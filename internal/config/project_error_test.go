@@ -76,6 +76,11 @@ func decoderStructureCases() []parseCase {
 			"version: 1\nanalyzers:\n  file-size: {<<: [[[{enabled: true}]]]}\n",
 			[]string{head + "3: analyzers.file-size.<<: want a mapping or a list of mappings"},
 		},
+		{
+			"merge fan-out under the node budget",
+			mergeBomb(4),
+			[]string{head + "4: aliases expand into too many nodes"},
+		},
 	}
 }
 
@@ -267,7 +272,7 @@ func TestLeftover(t *testing.T) {
 	for _, testCase := range leftoverCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := leftover(ProjectFileName, testCase.err)
+			got := leftover(ProjectFileName, &yaml.Node{}, testCase.err)
 			if got.Error() != testCase.want {
 				t.Fatalf("leftover() = %q, want %q", got, testCase.want)
 			}
