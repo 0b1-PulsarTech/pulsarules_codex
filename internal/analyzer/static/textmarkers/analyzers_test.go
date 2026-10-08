@@ -228,15 +228,15 @@ func markdownContext(t *testing.T, body string) *core.AnalysisContext {
 	}
 }
 
-func TestTypographic_MarkdownCodeSkipped(t *testing.T) {
-	t.Parallel()
+type proseCase struct {
+	name string
+	ext  string
+	body string
+	want int
+}
 
-	testCases := []struct {
-		name string
-		ext  string
-		body string
-		want int
-	}{
+func proseCases() []proseCase {
+	return []proseCase{
 		{name: "markdown prose is reported", ext: ".md", body: "a \u2014 b\n", want: 1},
 		{name: "markdown fence is skipped", ext: ".md", body: "```\na \u2014 b\n```\n"},
 		{name: "markdown inline span is skipped", ext: ".md", body: "see `a \u2014 b`\n"},
@@ -247,32 +247,198 @@ func TestTypographic_MarkdownCodeSkipped(t *testing.T) {
 			want: 1,
 		},
 		{
+			name: "a nested list item is prose, not indented code",
+			ext:  ".md",
+			body: "- item\n\n    - nested \u2014 prose\n",
+			want: 1,
+		},
+		{
+			name: "an ordered list continuation is prose",
+			ext:  ".md",
+			body: "1. Step\n\n    Prose \u2014 continued\n",
+			want: 1,
+		},
+		{
+			name: "a quoted fence line inside a fence does not hide what follows it",
+			ext:  ".md",
+			body: "```markdown\n> ```go\n> x\n> ```\ncode \u2014 B\n```\n",
+			want: 1,
+		},
+		{
 			name: "go source keeps reporting",
 			ext:  ".go",
 			body: "package x\n\nvar s = \"a \u2014 b\"\n",
 			want: 1,
 		},
 	}
+}
+
+func TestTypographic_MarkdownCodeSkipped(t *testing.T) {
+	t.Parallel()
+
+	for _, testCase := range proseCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := fileContext(t, "a"+testCase.ext, testCase.body)
+			if got := NewTypographicAnalyzer().Analyze(ctx); len(got) != testCase.want {
+				t.Errorf("findings = %+v, want %d", got, testCase.want)
+			}
+		})
+	}
+}
+
+func fileContext(t *testing.T, rel, body string) *core.AnalysisContext {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, rel), []byte(body), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	return &core.AnalysisContext{
+		ProjectDir:   dir,
+		Sources:      sources.NewProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
+		ChangedFiles: []core.FileChange{{Path: rel, Extension: filepath.Ext(rel)}},
+	}
+}
+
+type hintCase struct {
+	name string
+	rel  string
+	body string
+	hint string
+	typo bool
+	sev  core.Severity
+}
+
+func inLiteral(name, rel, body, escape string) hintCase {
+	return hintCase{
+		name: name,
+		rel:  rel,
+		body: body,
+		hint: "write it as the escape " + escape,
+		sev:  core.SeverityError,
+	}
+}
+
+func inLiteralWarn(name, rel, body, escape string) hintCase {
+	testCase := inLiteral(name, rel, body, escape)
+	testCase.sev = core.SeverityWarning
+	return testCase
+}
+
+func outside(name, rel, body, hint string) hintCase {
+	return hintCase{name: name, rel: rel, body: body, hint: hint, sev: core.SeverityError}
+}
+
+func outsideWarn(name, rel, body, hint string) hintCase {
+	testCase := outside(name, rel, body, hint)
+	testCase.sev = core.SeverityWarning
+	return testCase
+}
+
+func typographic(name, rel, body, hint string) hintCase {
+	return hintCase{
+		name: name,
+		rel:  rel,
+		body: body,
+		hint: hint,
+		typo: true,
+		sev:  core.SeverityError,
+	}
+}
+
+func carrierHintCases() []hintCase {
+	const (
+		cleanHint = "run `pulsarules_cli clean --write`, which removes this class"
+		byHand    = "remove it by hand"
+		judgeHint = "it may be load-bearing here; judge it, then remove it by hand"
+		codeHint  = "it may be literal data in code here; judge it, then remove it by hand"
+	)
+	return []hintCase{
+		inLiteral("go string", "a.go", "var a = \"x\u00A0y\"\n", "\\u00A0"),
+		inLiteral("go rune", "a.go", "var a = '\u00A0'\n", "\\u00A0"),
+		inLiteralWarn("go astral", "a.go", "var a = \"\U000E0001\"\n", "\\U000E0001"),
+		outside("go comment", "a.go", "// x\u00A0y\n", cleanHint),
+		inLiteral("dart string", "a.dart", "var a = 'x\u00A0y';\n", "\\u00A0"),
+		inLiteralWarn("dart astral", "a.dart", "var a = '\U000E0001';\n", "\\u{E0001}"),
+		outside("dart comment", "a.dart", "// x\u00A0y\n", byHand),
+		outside("dart interpolation code", "a.dart", "var a = '${b\u00A0c}';\n", byHand),
+		outsideWarn("dart contextual outside", "a.dart", "// x\U000E0001y\n", judgeHint),
+		inLiteral("mjs string", "a.mjs", "const NBSP = '\u00A0';\n", "\\u00A0"),
+		outside("mjs comment", "a.mjs", "// x\u00A0y\n", byHand),
+		inLiteral("ts template text", "a.ts", "const a = `x\u00A0${b}`;\n", "\\u00A0"),
+		outside("ts template code", "a.ts", "const a = `x${b\u00A0c}`;\n", byHand),
+		inLiteral(
+			"svelte script",
+			"a.svelte",
+			"<script>let a = '\u00A0';</script>\n",
+			"\\u00A0"),
+		outside("markdown prose", "a.md", "a\u00A0b\n", cleanHint),
+		outside(
+			"markdown fence", "a.md", "```go\nvar a = \"R$\u00A010\"\n```\n", codeHint),
+		outside("markdown tilde fence", "a.md", "~~~\nx\u200By\n~~~\n", codeHint),
+		outside("markdown inline code", "a.md", "see `R$\u00A010` here\n", codeHint),
+		outside("markdown unclosed fence", "a.md", "```\nx\u200By\n", codeHint),
+		outside("markdown prose beside code", "a.md", "`x` a\u00A0b\n", cleanHint),
+		outside("markdown indented code", "a.md", "p\n\n    x\u00A0y\n", codeHint),
+		outsideWarn("markdown fence contextual", "a.md", "```\n\U000E0001\n```\n", judgeHint),
+	}
+}
+
+func typographicHintCases() []hintCase {
+	const asciiHint = "replace it with the ASCII form by hand"
+	return []hintCase{
+		typographic(
+			"dart ellipsis string",
+			"a.dart",
+			"var a = 'wait\u2026';\n",
+			"write it as the escape \\u2026",
+		),
+		typographic(
+			"mjs dash string",
+			"a.mjs",
+			"const a = \"a\u2014b\";\n",
+			"write it as the escape \\u2014",
+		),
+		typographic(
+			"go quote string",
+			"a.go",
+			"var a = \"\u201Cq\u201D\"\n",
+			"write it as the escape \\u201C",
+		),
+		typographic("ts comment", "a.ts", "// wait\u2026\n", asciiHint),
+		typographic("markdown prose", "a.md", "wait\u2026\n", asciiHint),
+		typographic(
+			"markdown indented code", "a.md", "p\n\n    wait\u2026\n",
+			"it may be shown code here; judge it, then "+asciiHint,
+		),
+	}
+}
+
+func TestHintInsideAndOutsideLiterals(t *testing.T) {
+	t.Parallel()
+	runHintCases(t, append(carrierHintCases(), typographicHintCases()...))
+}
+
+func runHintCases(t *testing.T, testCases []hintCase) {
+	t.Helper()
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			dir := t.TempDir()
-			name := "a" + testCase.ext
-			path := filepath.Join(dir, name)
-			if err := os.WriteFile(path, []byte(testCase.body), 0o600); err != nil {
-				t.Fatalf("seed: %v", err)
+			ctx := fileContext(t, testCase.rel, testCase.body)
+			got := NewTextAnalyzer().Analyze(ctx)
+			if testCase.typo {
+				got = NewTypographicAnalyzer().Analyze(ctx)
 			}
-			ctx := &core.AnalysisContext{
-				ProjectDir: dir,
-				Sources: sources.NewProvider(
-					dir,
-					sources.NewSkipSet(sources.DefaultSkipDirs()),
-				),
-				ChangedFiles: []core.FileChange{{Path: name, Extension: testCase.ext}},
+			if len(got) == 0 {
+				t.Fatal("no finding")
 			}
-			if got := NewTypographicAnalyzer().Analyze(ctx); len(got) != testCase.want {
-				t.Errorf("findings = %+v, want %d", got, testCase.want)
+			if got[0].Suggestion != testCase.hint {
+				t.Errorf("hint = %q, want %q", got[0].Suggestion, testCase.hint)
+			}
+			if got[0].Severity != testCase.sev {
+				t.Errorf("severity = %v, want %v", got[0].Severity, testCase.sev)
 			}
 		})
 	}

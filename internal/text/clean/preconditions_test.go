@@ -115,6 +115,28 @@ func TestRead_RefusesWithoutRoot(t *testing.T) {
 	}
 }
 
+func TestHandles(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		ext  string
+		want bool
+	}{
+		{".go", true},
+		{".GO", true},
+		{".md", true},
+		{".dart", false},
+		{".mjs", false},
+		{".ts", false},
+		{"", false},
+	}
+	for _, testCase := range testCases {
+		if got := Handles(testCase.ext); got != testCase.want {
+			t.Errorf("Handles(%q) = %v, want %v", testCase.ext, got, testCase.want)
+		}
+	}
+}
+
 func TestIsFixture_RelativeRoot(t *testing.T) {
 	t.Parallel()
 

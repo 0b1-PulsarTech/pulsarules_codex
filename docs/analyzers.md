@@ -176,6 +176,18 @@ variable, field or interface method are reported.
 - Known limits: a `max_lines` at or below 0 falls back to the default 180 rather than disabling the
   check.
 
+## text-markers and clean
+
+- Analyzers: `text-markers` (invisible and no-break characters) and `typographic-markers` (em dash,
+  curly quotes, ...).
+- Hints depend on where the character is. Inside a string literal (Go, Dart, JavaScript, TypeScript,
+  Svelte/Vue script): "write it as the escape \u00A0". Outside a literal in `.go` and `.md`: run
+  `pulsarules_cli clean --write`. Other extensions: remove it by hand. In a markdown fenced block a
+  no-break space is still an ERROR but with "it may be literal data in code here; judge it, then
+  remove it by hand". A typographic em dash in `.md` is reported to be replaced by hand.
+- `clean --write` edits only `.go` and `.md`, removes only removable carriers, and never rewrites
+  inside a string literal or text that may be code.
+
 ## big-comment
 
 - Rule: `comments`.
