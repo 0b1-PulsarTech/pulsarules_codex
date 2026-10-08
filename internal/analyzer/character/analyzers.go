@@ -50,13 +50,10 @@ func (analyzer *TextAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		contextual:  pass.ResolveReporter(analyzer.reporters.contextual, ctx),
 		frontmatter: pass.ResolveReporter(analyzer.reporters.frontmatter, ctx),
 	}
-	return eachMarkedFile(
-		ctx,
-		analyzer.ID(),
-		func(fc pass.FileChange, src string) []finding.Finding {
-			return checkCarriers(fc, src, reporters)
-		},
-	)
+	eligible := pass.ExtensionFilter(ctx, analyzer.ID(), markedExtensions())
+	return eachMarkedFile(ctx, eligible, func(fc pass.FileChange, src string) []finding.Finding {
+		return checkCarriers(fc, src, reporters)
+	})
 }
 
 func checkCarriers(fc pass.FileChange, src string, reporters textReporters) []finding.Finding {
@@ -109,13 +106,10 @@ func (analyzer *TypographicAnalyzer) Stage() finding.StageID { return finding.St
 
 func (analyzer *TypographicAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	return eachMarkedFile(
-		ctx,
-		analyzer.ID(),
-		func(fc pass.FileChange, src string) []finding.Finding {
-			return checkTypographic(fc, src, reporter)
-		},
-	)
+	eligible := pass.ExtensionFilter(ctx, analyzer.ID(), markedExtensions())
+	return eachMarkedFile(ctx, eligible, func(fc pass.FileChange, src string) []finding.Finding {
+		return checkTypographic(fc, src, reporter)
+	})
 }
 
 func checkTypographic(fc pass.FileChange, src string, reporter finding.Reporter) []finding.Finding {

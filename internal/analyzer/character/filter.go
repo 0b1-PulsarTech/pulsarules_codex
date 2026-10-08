@@ -7,14 +7,18 @@ import (
 
 func eachMarkedFile(
 	ctx *pass.Context,
-	analyzerID string,
+	eligible func(pass.FileChange) bool,
 	check func(pass.FileChange, string) []finding.Finding,
 ) []finding.Finding {
-	scanned := append(pass.DefaultSourceExtensions(), ".md")
-	eligible := pass.ExtensionFilter(ctx, analyzerID, scanned)
-	return pass.EachChangedFile(ctx, eligible, func(
-		fc pass.FileChange, src []byte,
-	) []finding.Finding {
-		return check(fc, string(src))
-	})
+	// EachChangedFile skips testdata paths, so a dirty fixture cannot block its own fix.
+	return pass.EachChangedFile(
+		ctx, eligible, func(fc pass.FileChange, src []byte) []finding.Finding {
+			return check(fc, string(src))
+		},
+	)
+}
+
+func markedExtensions() []string {
+	// Markdown too: an invisible carrier is as much a defect in a README as in code.
+	return append(pass.DefaultSourceExtensions(), ".md")
 }
