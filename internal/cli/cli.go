@@ -29,39 +29,39 @@ func (exitErr *ExitError) Error() string {
 	return fmt.Sprintf("exit code %d", exitErr.Code)
 }
 
+type command func(inj remy.Injector, opts *version.Options) error
+
+func commands() map[string]command {
+	return map[string]command{
+		"generate":   generate.RunGenerate,
+		"install":    prefixed("install", install.Run),
+		"uninstall":  prefixed("uninstall", uninstall.Run),
+		"list":       list.RunList,
+		"validate":   validate.RunValidate,
+		"package":    packaging.RunPackage,
+		"hook":       hook.RunHook,
+		"commitlint": runCommitLint,
+		"governance": runGovernance,
+		"clean":      clean.RunClean,
+		"evals":      runEvals,
+	}
+}
+
+func prefixed(name string, run command) command {
+	return func(inj remy.Injector, opts *version.Options) error {
+		if runErr := run(inj, opts); runErr != nil {
+			return fmt.Errorf("%s: %w", name, runErr)
+		}
+		return nil
+	}
+}
+
 func Run(inj remy.Injector, opts *version.Options) error {
-	switch opts.Command {
-	case "generate":
-		return generate.RunGenerate(inj, opts)
-	case "install":
-		if installErr := install.Run(inj, opts); installErr != nil {
-			return fmt.Errorf("install: %w", installErr)
-		}
-		return nil
-	case "uninstall":
-		if uninstallErr := uninstall.Run(inj, opts); uninstallErr != nil {
-			return fmt.Errorf("uninstall: %w", uninstallErr)
-		}
-		return nil
-	case "list":
-		return list.RunList(inj, opts)
-	case "validate":
-		return validate.RunValidate(inj, opts)
-	case "package":
-		return packaging.RunPackage(inj, opts)
-	case "hook":
-		return hook.RunHook(inj, opts)
-	case "commitlint":
-		return runCommitLint(inj, opts)
-	case "governance":
-		return runGovernance(inj, opts)
-	case "clean":
-		return clean.RunClean(inj, opts)
-	case "evals":
-		return runEvals(inj, opts)
-	default:
+	run, ok := commands()[opts.Command]
+	if !ok {
 		return fmt.Errorf("unknown command %q", opts.Command)
 	}
+	return run(inj, opts)
 }
 
 func HandleBootstrapErr(command string, err error) int {
