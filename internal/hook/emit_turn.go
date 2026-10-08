@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/checklist"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -58,44 +59,56 @@ func (disp *Dispatcher) emitUserPrompt() error {
 	return disp.emitContext("hooks/user-prompt.txt", "UserPromptSubmit")
 }
 
-func (disp *Dispatcher) emitStop(event string, session *sessionTracker) (int, error) {
+func (disp *Dispatcher) emitStop(event string, session *sessionTracker) (stopOutcome, error) {
+	entered := time.Now()
 	projectDir := disp.resolveProjectDir()
 	if projectDir == "" {
-		return 0, nil
+		return stopOutcome{}, nil
 	}
-	repo, err := vcs.Open(projectDir)
+	repo, err := disp.open(projectDir)
 	if err != nil {
 		// Not a repository, or a real git failure: either way the hook
 		// stays quiet rather than nagging on every turn.
-		return 0, nil //nolint:nilerr // deliberate: see comment above.
+		return stopOutcome{}, nil //nolint:nilerr // deliberate: see comment above.
 	}
 	status, err := repo.WorktreeStatus()
 	if err != nil {
-		return 0, fmt.Errorf("read worktree status: %w", err)
+		return stopOutcome{}, fmt.Errorf("read worktree status: %w", err)
 	}
 	if status.IsClean() {
-		return 0, nil
+		return stopOutcome{}, nil
 	}
-	block, count := disp.governance(repo, status)
-	if block == "" {
+	result := disp.governanceWithin(repo, status, entered)
+	outcome := stopOutcome{findings: result.count, timedOut: result.timedOut}
+	if result.block == "" {
 		// Nothing actionable: stay silent rather than nagging about a
 		// dirty tree the governance checks have nothing to say about.
-		return 0, nil
+		return stopOutcome{}, nil
 	}
-	text, err := fs.ReadFile(disp.templates, "hooks/stop.txt")
+	context, err := disp.stopHeader(result)
 	if err != nil {
-		return count, fmt.Errorf("read stop.txt: %w", err)
+		return outcome, err
 	}
-	context := strings.TrimSpace(string(text)) + block
 	if bullets := checklist.Typed(status); bullets != "" {
 		context += "\n" + bullets
 	}
 	context += "\n\nUncommitted changes:\n" + cappedStatus(status)
 	if !session.FirstEmission(event, context) {
-		return count, nil
+		return outcome, nil
 	}
 	disp.emitOutput(event, context)
-	return count, nil
+	return outcome, nil
+}
+
+func (disp *Dispatcher) stopHeader(result governanceResult) (string, error) {
+	if result.timedOut {
+		return strings.TrimSpace(result.block), nil
+	}
+	text, err := fs.ReadFile(disp.templates, "hooks/stop.txt")
+	if err != nil {
+		return "", fmt.Errorf("read stop.txt: %w", err)
+	}
+	return strings.TrimSpace(string(text)) + result.block, nil
 }
 
 func cappedStatus(status vcs.Status) string {

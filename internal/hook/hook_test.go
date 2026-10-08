@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/contract"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -222,6 +223,90 @@ func TestDispatchContract_SessionAndSubagent(t *testing.T) {
 func stubGovernance(block string, count int) func(vcs.Repository, vcs.Status) (string, int) {
 	return func(vcs.Repository, vcs.Status) (string, int) {
 		return block, count
+	}
+}
+
+func TestRecord_LogsTheDispatchAttributes(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		entry       dispatchRecord
+		wantOK      bool
+		wantFinding float64
+		wantTimeout bool
+		wantError   string
+	}{
+		{
+			name:        "clean dispatch",
+			entry:       dispatchRecord{mode: "pre-edit"},
+			wantOK:      true,
+			wantFinding: 0,
+		},
+		{
+			name: "stop with findings that timed out",
+			entry: dispatchRecord{
+				mode:    "stop",
+				outcome: stopOutcome{findings: 3, timedOut: true},
+			},
+			wantOK:      true,
+			wantFinding: 3,
+			wantTimeout: true,
+		},
+		{
+			name:      "failed handler",
+			entry:     dispatchRecord{mode: "user-prompt", err: errors.New("boom")},
+			wantError: "boom",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			var logBuf bytes.Buffer
+			logger := slog.New(slog.NewJSONHandler(&logBuf, nil))
+			disp, _ := dispatchCapture(Deps{Logger: logger})
+			session := newSessionTracker("record-session")
+			testCase.entry.start = time.Now()
+
+			disp.record(session, testCase.entry)
+
+			var got map[string]any
+			if err := json.Unmarshal(logBuf.Bytes(), &got); err != nil {
+				t.Fatalf("unmarshal log line %q: %v", logBuf.String(), err)
+			}
+			if got["event"] != testCase.entry.mode {
+				t.Errorf("event = %v, want %q", got["event"], testCase.entry.mode)
+			}
+			if got["session_id"] != "record-session" {
+				t.Errorf("session_id = %v, want record-session", got["session_id"])
+			}
+			if got["ok"] != testCase.wantOK {
+				t.Errorf("ok = %v, want %v", got["ok"], testCase.wantOK)
+			}
+			if got["findings"] != testCase.wantFinding {
+				t.Errorf("findings = %v, want %v", got["findings"], testCase.wantFinding)
+			}
+			if timedOut, _ := got["timed_out"].(bool); timedOut != testCase.wantTimeout {
+				t.Errorf("timed_out = %v, want %v", timedOut, testCase.wantTimeout)
+			}
+			if gotError, _ := got["error"].(string); gotError != testCase.wantError {
+				t.Errorf("error = %q, want %q", gotError, testCase.wantError)
+			}
+		})
+	}
+}
+
+func TestDispatchUnknownMode_WritesNothing(t *testing.T) {
+	t.Parallel()
+
+	disp, out := dispatchCapture(Deps{})
+
+	if err := disp.Dispatch("bogus", newSessionPayload(t)); err != nil {
+		t.Fatalf("Dispatch must never block, got error: %v", err)
+	}
+	if out.Len() != 0 {
+		t.Errorf("unknown mode wrote %q, want no output", out.String())
 	}
 }
 
