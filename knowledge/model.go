@@ -1,5 +1,7 @@
 package knowledge
 
+import "slices"
+
 type Rule struct {
 	ID           string   `yaml:"id"`
 	Name         string   `yaml:"name"`
@@ -9,6 +11,23 @@ type Rule struct {
 	Linters      []string `yaml:"linters,omitempty"`
 	Analyzers    []string `yaml:"analyzers,omitempty"`
 	References   []string `yaml:"references,omitempty"`
+}
+
+func (rule Rule) FitsLanguages(known map[string]bool, languages []string) bool {
+	if len(languages) == 0 {
+		return true
+	}
+	tagged := false
+	for _, tag := range rule.Tags {
+		if !known[tag] {
+			continue
+		}
+		tagged = true
+		if slices.Contains(languages, tag) {
+			return true
+		}
+	}
+	return !tagged
 }
 
 type Pattern struct {

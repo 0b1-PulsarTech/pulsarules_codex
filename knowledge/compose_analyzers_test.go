@@ -35,56 +35,14 @@ func composers(idx *Index) map[string]composer {
 	return found
 }
 
-func languageSet(idx *Index) []string {
-	var languages []string
+func languageSet(idx *Index) map[string]bool {
+	languages := map[string]bool{}
 	for _, skill := range idx.Skills {
-		languages = append(languages, skill.Languages...)
+		for _, language := range skill.Languages {
+			languages[language] = true
+		}
 	}
 	return languages
-}
-
-func isRequired(ruleTags, composerLanguages, known []string) bool {
-	if len(composerLanguages) == 0 {
-		return true
-	}
-	tagged := false
-	for _, tag := range ruleTags {
-		if !slices.Contains(known, tag) {
-			continue
-		}
-		tagged = true
-		if slices.Contains(composerLanguages, tag) {
-			return true
-		}
-	}
-	return !tagged
-}
-
-func TestIsRequired(t *testing.T) {
-	t.Parallel()
-
-	known := []string{"go", "dart"}
-	testCases := []struct {
-		name      string
-		ruleTags  []string
-		languages []string
-		want      bool
-	}{
-		{"go rule in dart skill", []string{"style", "go"}, []string{"dart"}, false},
-		{"go rule in go skill", []string{"go"}, []string{"go"}, true},
-		{"neutral rule in dart skill", []string{"style"}, []string{"dart"}, true},
-		{"go rule in workflow", []string{"go"}, nil, true},
-		{"dart rule in go skill", []string{"dart"}, []string{"go"}, false},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			got := isRequired(testCase.ruleTags, testCase.languages, known)
-			if got != testCase.want {
-				t.Fatalf("got %v, want %v", got, testCase.want)
-			}
-		})
-	}
 }
 
 func TestContentRulesAreComposed(t *testing.T) {
@@ -117,7 +75,7 @@ func TestContentRulesAreComposed(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			owner := found[testCase.composerID]
-			if !isRequired(testCase.rule.Tags, owner.languages, known) {
+			if !testCase.rule.FitsLanguages(known, owner.languages) {
 				return
 			}
 			if !slices.Contains(owner.ruleIDs, testCase.rule.ID) {
