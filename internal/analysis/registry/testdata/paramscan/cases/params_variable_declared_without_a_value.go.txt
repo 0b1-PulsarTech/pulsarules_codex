@@ -1,0 +1,14 @@
+// dir: y
+// want: analyzer "text-markers" declares "k", nothing reads it
+// want: y run: a read in y is not attributable to one of [text-markers typo]
+// declared: text-markers=k
+// with: core
+package y
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
+func run(ctx core.AnalysisContext) {
+	var params core.ParamSet
+	params = ctx.Params("text-markers")
+	_ = params.Int("k", 0)
+}

@@ -1,0 +1,14 @@
+// dir: core
+// want: analyzer "file-size" declares "max_lines", nothing reads it
+// want: core Leak: core reads params outside its modeled readers
+package core
+
+type ParamSet struct{}
+
+func (ParamSet) Int(key string, fallback int) int { return fallback }
+
+type AnalysisContext struct{}
+
+func (AnalysisContext) Params(id string) ParamSet                             { return ParamSet{} }
+func ExtensionFilter(ctx AnalysisContext, id string, extra []string) []string { return extra }
+func Leak(params ParamSet)                                                    { params.Int("ghost", 1) }

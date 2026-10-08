@@ -1,0 +1,15 @@
+// dir: x
+// want: x: params are used outside a reader call: ctx.Params("file-size")
+// with: core,helper
+package x
+
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/helper"
+)
+
+func run(ctx core.AnalysisContext) int {
+	params := ctx.Params("file-size")
+	_ = params.Int("max_lines", 1)
+	return helper.Pass(ctx.Params("file-size"))
+}

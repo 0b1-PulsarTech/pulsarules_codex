@@ -1,0 +1,14 @@
+// dir: x
+// want: x: other is not a constant
+// with: core
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
+func run(ctx core.AnalysisContext, other string) {
+	params := ctx.Params("file-size")
+	if other != "" {
+		params = ctx.Params(other)
+	}
+	_ = params.Int("max_lines", 1)
+}

@@ -1,0 +1,14 @@
+// dir: y
+// want: analyzer "text-markers" declares "k", nothing reads it
+// want: y: params are used outside a reader call: ctx.Params("typo")
+// declared: text-markers=k
+// with: core
+package y
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
+func use(values map[string]any) any { return values["zzz"] }
+
+func run(ctx core.AnalysisContext) {
+	_ = use(ctx.Params("typo"))
+}

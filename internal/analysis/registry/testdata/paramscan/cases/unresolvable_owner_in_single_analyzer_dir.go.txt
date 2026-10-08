@@ -1,0 +1,13 @@
+// dir: x
+// want: analyzer "file-size" declares "max_lines", nothing reads it
+// want: x run: lookup() is not a constant
+// with: core
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
+func lookup() string { return "big-comment" }
+
+func run(ctx core.AnalysisContext) {
+	_ = ctx.Params(lookup()).Int("max_lines", 1)
+}

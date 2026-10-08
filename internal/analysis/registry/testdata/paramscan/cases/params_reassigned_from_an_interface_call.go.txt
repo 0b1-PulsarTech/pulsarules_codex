@@ -1,0 +1,17 @@
+// dir: x
+// want: x run: params come from src.Params("text-markers"), not AnalysisContext.Params
+// with: core
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
+type source interface{ Params(id string) core.ParamSet }
+
+func run(ctx core.AnalysisContext) {
+	var src source = ctx
+	params := ctx.Params("file-size")
+	if src != nil {
+		params = src.Params("text-markers")
+	}
+	_ = params.Int("max_lines", 1)
+}

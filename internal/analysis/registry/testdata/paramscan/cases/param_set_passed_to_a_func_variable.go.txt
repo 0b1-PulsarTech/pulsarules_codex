@@ -1,0 +1,13 @@
+// dir: x
+// want: x: ctx.Params("text-markers") names an analyzer outside [file-size] and no read is attributed to it
+// want: x: params are used outside a reader call: ctx.Params("text-markers")
+// declared: file-size=max_lines
+// with: core
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
+func run(ctx core.AnalysisContext) {
+	limit := func(params core.ParamSet) int { return params.Int("max_lines", 0) }
+	_ = limit(ctx.Params("text-markers"))
+}

@@ -1,0 +1,19 @@
+package core
+
+type ParamSet map[string]any
+
+func (ParamSet) Int(key string, fallback int) int { return fallback }
+
+func (ParamSet) Severity(fallback int) int { return fallback }
+
+type AnalyzerConfig struct {
+	Enabled bool
+	Params  map[string]any
+}
+
+type AnalysisConfig struct{ Analyzers map[string]AnalyzerConfig }
+
+type AnalysisContext struct{ Config *AnalysisConfig }
+
+func (AnalysisContext) Params(id string) ParamSet                             { return ParamSet{} }
+func ExtensionFilter(ctx AnalysisContext, id string, extra []string) []string { return extra }

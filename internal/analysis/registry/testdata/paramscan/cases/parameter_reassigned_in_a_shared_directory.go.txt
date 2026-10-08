@@ -1,0 +1,12 @@
+// dir: y
+// want: analyzer "file-size" declares "max_lines", nothing reads it
+// want: y run: a read in y is not attributable to one of [text-markers typo]
+// with: core
+package y
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
+func run(ctx core.AnalysisContext, params core.ParamSet) {
+	params = ctx.Params("typo")
+	_ = params.Int("max_lines", 1)
+}

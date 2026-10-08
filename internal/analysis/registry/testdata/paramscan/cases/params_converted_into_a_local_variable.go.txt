@@ -1,0 +1,11 @@
+// dir: x
+// want: x: params are used outside a reader call: core.ParamSet(raw)
+// with: core
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
+func limit(raw map[string]any) int {
+	params := core.ParamSet(raw)
+	return params.Int("max_lines", 0)
+}

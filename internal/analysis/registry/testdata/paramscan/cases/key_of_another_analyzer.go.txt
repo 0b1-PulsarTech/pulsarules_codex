@@ -1,0 +1,11 @@
+// dir: x
+// want: analyzer "file-size" declares "max_lines", nothing reads it
+// want: analyzer "file-size" reads "max_files", not declared
+// want: analyzer "package-file-count" declares "max_files", nothing reads it
+// declared: file-size=max_lines;package-file-count=max_files
+// with: core
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
+func run(params core.ParamSet, ctx core.AnalysisContext) { params.Int("max_files", 1) }

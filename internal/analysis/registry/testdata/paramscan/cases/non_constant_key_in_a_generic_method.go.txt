@@ -1,0 +1,11 @@
+// dir: x
+// want: analyzer "file-size" declares "max_lines", nothing reads it
+// want: x get: key is not a constant
+// with: core
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
+type holder[T any] struct{ params core.ParamSet }
+
+func (holder holder[T]) get(key string) int { return holder.params.Int(key, 1) }

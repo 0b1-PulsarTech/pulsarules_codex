@@ -1,0 +1,15 @@
+// dir: x
+// want: analyzer "file-size" declares "max_lines", nothing reads it
+// want: analyzer "text-markers" reads "max_lines", not declared
+// want: x: Params is called on holder, not an AnalysisContext
+// with: core
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
+type wrapped struct{ core.AnalysisContext }
+
+func run(ctx core.AnalysisContext) {
+	holder := wrapped{ctx}
+	_ = holder.Params("text-markers").Int("max_lines", 1)
+}

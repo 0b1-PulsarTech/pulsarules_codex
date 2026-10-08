@@ -1,0 +1,14 @@
+// dir: y
+// want: y: params are used outside a reader call: ctx.Params("typo")
+// declared: file-size=max_lines
+// with: core,x
+package y
+
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/x"
+)
+
+func run(ctx core.AnalysisContext) {
+	_ = x.Limit(ctx.Params("typo"))
+}
