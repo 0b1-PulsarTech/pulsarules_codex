@@ -570,7 +570,7 @@ skills:
       - skill-authoring
   - id: dart-style
     name: Dart style
-    description: Dart naming, three-group imports (dart:/external package:/workspace package:), const constructors on immutable value types, sealed hierarchies for closed variant sets, and no dynamic - Object? with one cast at the boundary instead. The Dart analogue of go-style.
+    description: Dart naming, three-group imports (dart:/package:/relative), const constructors on immutable value types, sealed hierarchies for closed variant sets, and no dynamic - Object? with one cast at the boundary instead. The Dart analogue of go-style.
     triggers:
       - writing or editing any .dart file
       - naming a package, directory, or file
