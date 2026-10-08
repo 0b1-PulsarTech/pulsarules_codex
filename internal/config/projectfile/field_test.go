@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 func TestFieldPathCovered(t *testing.T) {
@@ -294,4 +296,26 @@ func TestValidateGlobBraces(t *testing.T) {
 			"tests[0]: " + refused,
 		},
 	})
+}
+
+func TestClipName(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name, text string
+		limit      int
+		want       string
+	}{
+		{"fits", "a/b.yaml", 8, "a/b.yaml"},
+		{"keeps the tail", "dddd/.git/p.yaml", 12, ".../p.yaml"},
+		{"keeps a quoted tail", "d\xffd/p\x01", 12, "...d/p\x01"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := printable.ShortenPath(testCase.text, testCase.limit); got != testCase.want {
+				t.Fatalf("ClipName() = %q, want %q", got, testCase.want)
+			}
+		})
+	}
 }
