@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -109,11 +110,14 @@ func TestStripMapSection_InvalidJSON(t *testing.T) {
 	_, err := StripMapSection(
 		config,
 		"servers",
-		"servers",
+		"opencode.json mcp",
 		func(map[string]string) bool { return false },
 	)
 	if !errors.Is(err, ErrUnparseableJSON) {
 		t.Fatalf("err = %v, want ErrUnparseableJSON", err)
+	}
+	if !strings.Contains(err.Error(), ": opencode.json mcp: ") {
+		t.Errorf("err = %q, want it to carry the caller's description", err.Error())
 	}
 }
 
