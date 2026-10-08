@@ -18,6 +18,7 @@ steps:
     - gate on lint + test; each new architectural invariant backed by a fitness function
     - commit hygiene (one logical change, emoji format, no attribution trailer)
 composes_rules:
+    - source-files
     - code-placement
     - dependency-rule
     - fitness-functions

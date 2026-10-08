@@ -18,6 +18,7 @@ steps:
 composes_rules:
     - code-smells
     - effective-go
+    - source-files
     - testing
     - commits
 composes_patterns:

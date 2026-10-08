@@ -48,11 +48,9 @@ Applies to: every source file the project governs (`.go`, `.dart`, `.ts`, `.svel
    "it used to call", "the old code", "previously we", "was changed to", "no longer needed". The
    commit message carries what changed and why it changed. Passive "is used to" is not history and
    is not flagged.
-8. ASCII only (`typographic-markers`, which scans every source extension): no em dash, curly quotes,
-   or ellipsis character.
-9. Directive and machine comments stay (Go: `//nolint`, `//go:build`, `//go:embed`, `//go:generate`,
+8. Directive and machine comments stay (Go: `//nolint`, `//go:build`, `//go:embed`, `//go:generate`,
    `// goverter:`; Dart: `// ignore_for_file:`, `// ignore:`; any language: generated-code markers).
-10. No comments inside test functions or helpers except directive-only groups and an Example's
+9. No comments inside test functions or helpers except directive-only groups and an Example's
     `// Output:` (Go: `test-comment`).
 {{end}}
 
@@ -64,7 +62,6 @@ Applies to: every source file the project governs (`.go`, `.dart`, `.ts`, `.svel
 - A doc comment or docstring on a function, method, type, constant, variable or package.
 - A multi-line comment block opening a function body.
 - A comment narrating what changed or what the code used to do.
-- Non-ASCII punctuation in a comment.
 - A comment inside a test function or helper other than a directive-only group or an Example's
   `// Output:`.
 {{end}}
@@ -75,6 +72,5 @@ Applies to: every source file the project governs (`.go`, `.dart`, `.ts`, `.svel
 - [ ] No file-top comment beyond a generated marker or a tool directive.
 - [ ] No doc comment or docstring on a function, method, type, constant, variable or package.
 - [ ] No history narration; what changed is in the commit message.
-- [ ] Comments are ASCII only; tests carry no comment but directive-only groups and an Example's
-      `// Output:`.
+- [ ] Tests carry no comment but directive-only groups and an Example's `// Output:`.
 {{end}}

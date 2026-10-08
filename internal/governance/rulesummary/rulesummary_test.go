@@ -57,7 +57,7 @@ func TestInjectRuleSummaries(t *testing.T) {
 		}
 	}
 
-	check(t, 0, "effective-go", true)
+	check(t, 0, "source-files", true)
 	check(t, 1, "naming", true)
 	check(t, 2, "", false)
 	check(t, 3, "code-smells", true)
