@@ -23,9 +23,10 @@ type analyzerBuilder func(
 ) core.Analyzer
 
 type analyzerSpec struct {
-	id    string
-	build analyzerBuilder
-	gate  Gate
+	id       string
+	build    analyzerBuilder
+	gate     Gate
+	internal bool
 }
 
 func Analyzers(
@@ -53,6 +54,16 @@ func IDs() []string {
 	for idx, spec := range table {
 		// A builder can return nil, so the id is declared rather than derived via ID().
 		ids[idx] = spec.id
+	}
+	return ids
+}
+
+func InternalIDs() []string {
+	var ids []string
+	for _, spec := range specs() {
+		if spec.internal {
+			ids = append(ids, spec.id)
+		}
 	}
 	return ids
 }
