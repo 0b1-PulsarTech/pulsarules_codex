@@ -7,12 +7,16 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax/tssyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 )
 
 func main() {
+	if tssyntax.RunChild(os.Args, os.Exit) {
+		return
+	}
 	opts, err := cliopts.ParseArgs(os.Args[1:])
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
