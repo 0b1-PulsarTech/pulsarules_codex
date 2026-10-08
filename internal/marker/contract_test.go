@@ -34,8 +34,8 @@ func skillsTemplateFamily(t *testing.T, templates fs.FS) []string {
 	return append(mdFiles, mdcFiles...)
 }
 
-func TestGatedAssetsCarryInstalled(t *testing.T) {
-	t.Parallel()
+func loadGatedFixture(t *testing.T) (*knowledge.Index, fs.FS, *render.Renderer) {
+	t.Helper()
 
 	idx, templates, err := knowledge.Load("")
 	if err != nil {
@@ -45,7 +45,24 @@ func TestGatedAssetsCarryInstalled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new renderer: %v", err)
 	}
+	return idx, templates, rnd
+}
 
+func assertCarriesMarker(t *testing.T, label, body string, err error) {
+	t.Helper()
+
+	if err != nil {
+		t.Fatalf("render %s: %v", label, err)
+	}
+	if !strings.Contains(body, Installed) {
+		t.Errorf("rendered %s does not carry marker.Installed", label)
+	}
+}
+
+func TestGatedAssetsCarryInstalled(t *testing.T) {
+	t.Parallel()
+
+	idx, templates, rnd := loadGatedFixture(t)
 	if family := skillsTemplateFamily(t, templates); len(family) != 5 {
 		t.Fatalf(
 			"skills/ template family is %v (len %d), want 5 (SKILL.md.tmpl, WORKFLOW.md.tmpl, "+
@@ -66,34 +83,19 @@ func TestGatedAssetsCarryInstalled(t *testing.T) {
 		t.Run("skill/"+skill.ID, func(t *testing.T) {
 			t.Parallel()
 			body, renderErr := rnd.RenderSkill(idx, skill, nil)
-			if renderErr != nil {
-				t.Fatalf("render %q: %v", skill.ID, renderErr)
-			}
-			if !strings.Contains(body, Installed) {
-				t.Errorf("rendered skill %q does not carry marker.Installed", skill.ID)
-			}
+			assertCarriesMarker(t, "skill "+skill.ID, body, renderErr)
 		})
 		t.Run("skill-cursor/"+skill.ID, func(t *testing.T) {
 			t.Parallel()
 			body, renderErr := rnd.RenderSkillCursor(idx, skill, nil)
-			if renderErr != nil {
-				t.Fatalf("render cursor rule %q: %v", skill.ID, renderErr)
-			}
-			if !strings.Contains(body, Installed) {
-				t.Errorf("rendered cursor rule %q does not carry marker.Installed", skill.ID)
-			}
+			assertCarriesMarker(t, "cursor rule "+skill.ID, body, renderErr)
 		})
 	}
 	for _, workflow := range idx.Workflows {
 		t.Run("workflow/"+workflow.ID, func(t *testing.T) {
 			t.Parallel()
 			body, renderErr := rnd.RenderWorkflow(idx, workflow)
-			if renderErr != nil {
-				t.Fatalf("render workflow %q: %v", workflow.ID, renderErr)
-			}
-			if !strings.Contains(body, Installed) {
-				t.Errorf("rendered workflow %q does not carry marker.Installed", workflow.ID)
-			}
+			assertCarriesMarker(t, "workflow "+workflow.ID, body, renderErr)
 		})
 	}
 }
