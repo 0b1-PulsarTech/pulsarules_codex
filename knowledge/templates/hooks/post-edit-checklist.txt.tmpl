@@ -3,4 +3,4 @@ Post-edit checklist for {{.BaseName}}:
 {{end -}}
 {{if .IsGo}}  - no doc comments; why-only comments of at most three lines
 {{end -}}
-Then verify: go build ./... && go test -race ./...
+{{if .IsGo}}Then verify: go build ./... && go test -race ./...{{else}}Then verify: run this project's own build, test and lint{{end}}

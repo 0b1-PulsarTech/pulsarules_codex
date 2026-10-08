@@ -14,7 +14,7 @@ import (
 
 func (disp *Dispatcher) emitPreEdit(session *sessionTracker, in hookPayload) error {
 	filePath := in.ToolInput.FilePath
-	if len(disp.router.SkillsForFile(filePath)) == 0 {
+	if !disp.router.Routes(filePath) {
 		return nil
 	}
 	// Gate per file path, not per session: the failure this hook guards
@@ -40,8 +40,7 @@ func (disp *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload) er
 	// that routes no skill; no trigger names .md, where most markers live.
 	notice := disp.autoCleanEdited(filePath)
 
-	relevant := disp.router.SkillsForFile(filePath)
-	if len(relevant) == 0 {
+	if !disp.router.Routes(filePath) {
 		if notice == "" {
 			return nil
 		}
@@ -49,6 +48,7 @@ func (disp *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload) er
 		return nil
 	}
 
+	relevant := disp.router.SkillsForFile(filePath)
 	if skillsDir := disp.resolveSkillsDir(); skillsDir != "" {
 		relevant = filterInstalled(relevant, skillsDir)
 	} else {
@@ -58,13 +58,18 @@ func (disp *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload) er
 		relevant = nil
 	}
 	if len(relevant) == 0 {
-		return disp.emitContextWithNotice("hooks/post-edit.txt", "PostToolUse", notice)
+		// post-edit.txt names Go commands, which mean nothing for a Dart or TS file.
+		asset := "hooks/post-edit-other.txt"
+		if isGoFile(filePath) {
+			asset = "hooks/post-edit.txt"
+		}
+		return disp.emitContextWithNotice(asset, "PostToolUse", notice)
 	}
 
 	text, err := renderPostEditChecklist(disp.templates, postEditChecklist{
 		BaseName: printable.Path(filepath.Base(filePath)),
 		SkillIDs: relevant,
-		IsGo:     strings.ToLower(filepath.Ext(filePath)) == ".go",
+		IsGo:     isGoFile(filePath),
 	})
 	if err != nil {
 		return err
@@ -91,6 +96,8 @@ type postEditChecklist struct {
 	SkillIDs []string
 	IsGo     bool
 }
+
+func isGoFile(filePath string) bool { return strings.ToLower(filepath.Ext(filePath)) == ".go" }
 
 func renderPostEditChecklist(templates fs.FS, doc postEditChecklist) (string, error) {
 	asset := "hooks/post-edit-checklist.txt.tmpl"

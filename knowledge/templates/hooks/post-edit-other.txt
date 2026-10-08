@@ -1,0 +1,4 @@
+Post-edit: verify before committing:
+  run this project's own build, test and lint for the edited file
+
+Run each loaded skill Validation checklist.

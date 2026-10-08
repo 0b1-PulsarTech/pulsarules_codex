@@ -183,6 +183,10 @@ func TestDispatchPreEdit(t *testing.T) {
 		{"sql file fires", "q.sql", true},
 		{"proto file fires", "a.proto", true},
 		{"markdown skipped", "r.md", false},
+		{"ts file skipped", "src/x.ts", false},
+		{"tsx file skipped", "src/X.tsx", false},
+		{"js file skipped", "src/x.js", false},
+		{"extensionless file skipped", "Makefile", false},
 	}
 	idx := preEditIndex(t)
 	for _, testCase := range testCases {
@@ -256,4 +260,40 @@ func postEditPayload(t *testing.T, path, sessionID string) []byte {
 		t.Fatalf("marshal: %v", err)
 	}
 	return payload
+}
+
+func TestRenderPostEditChecklist_VerifyLine(t *testing.T) {
+	t.Parallel()
+
+	_, templates, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	testCases := []struct {
+		name string
+		isGo bool
+		want string
+	}{
+		{"go file", true, "go build ./..."},
+		{"other file", false, "this project's own build, test and lint"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got, renderErr := renderPostEditChecklist(templates, postEditChecklist{
+				BaseName: "a.dart",
+				SkillIDs: []string{"dart-style"},
+				IsGo:     testCase.isGo,
+			})
+			if renderErr != nil {
+				t.Fatalf("render: %v", renderErr)
+			}
+			if !strings.Contains(got, testCase.want) {
+				t.Errorf("checklist %q lacks %q", got, testCase.want)
+			}
+			if hasGo := strings.Contains(got, "go build"); hasGo != testCase.isGo {
+				t.Errorf("checklist %q: names go build = %v", got, hasGo)
+			}
+		})
+	}
 }
