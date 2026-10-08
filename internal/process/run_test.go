@@ -169,3 +169,137 @@ func TestError_MessageShapeMatchesWhatCallersLog(t *testing.T) {
 		t.Errorf("errors.Is(execErr, wrapped) = false, want true (Unwrap must reach it)")
 	}
 }
+
+func TestRun_MaxOutputCapsEachStream(t *testing.T) {
+	t.Parallel()
+
+	const limit = 100
+
+	testCases := []struct {
+		name         string
+		script       string
+		wantExceeded bool
+		wantStdout   int
+	}{
+		{"stdout at the limit", "head -c 100 /dev/zero", false, limit},
+		{"stdout past the limit", "head -c 101 /dev/zero", true, limit},
+		{"stderr past the limit", "head -c 101 /dev/zero >&2", true, 0},
+		{"endless stdout is killed", "while true; do echo xxxxxxxxxx; done", true, limit},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := Run(context.Background(), Command{
+				Name:      "sh",
+				Args:      []string{"-c", testCase.script},
+				MaxOutput: limit,
+				Timeout:   time.Minute,
+			})
+			if got := errors.Is(err, ErrOutputExceeded); got != testCase.wantExceeded {
+				t.Fatalf("errors.Is(ErrOutputExceeded) = %v, want %v (err %v)",
+					got, testCase.wantExceeded, err)
+			}
+			if !testCase.wantExceeded && err != nil {
+				t.Fatalf("Run: %v", err)
+			}
+			if len(result.Stdout) != testCase.wantStdout {
+				t.Errorf("len(Stdout) = %d, want %d", len(result.Stdout), testCase.wantStdout)
+			}
+		})
+	}
+}
+
+func TestRun_TimeoutReportsDeadlineExceeded(t *testing.T) {
+	t.Parallel()
+
+	_, err := Run(context.Background(), Command{
+		Name:    "sh",
+		Args:    []string{"-c", "sleep 5"},
+		Timeout: shortTimeout,
+	})
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("errors.Is(DeadlineExceeded) = false for %v", err)
+	}
+}
+
+func TestRun_ContextDoneBeforeStartReportsOnce(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		ctx    func() (context.Context, context.CancelFunc)
+		ctxErr error
+	}{
+		{
+			"deadline passed",
+			func() (context.Context, context.CancelFunc) {
+				return context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+			},
+			context.DeadlineExceeded,
+		},
+		{
+			"cancelled before start",
+			func() (context.Context, context.CancelFunc) {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+				return ctx, cancel
+			},
+			context.Canceled,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx, cancel := testCase.ctx()
+			defer cancel()
+
+			_, err := Run(ctx, Command{Name: "sh", Args: []string{"-c", "true"}})
+			if !errors.Is(err, testCase.ctxErr) {
+				t.Fatalf("errors.Is(%v) = false for %v", testCase.ctxErr, err)
+			}
+			if got := strings.Count(err.Error(), testCase.ctxErr.Error()); got != 1 {
+				t.Errorf("%v reported %d times in %q", testCase.ctxErr, got, err)
+			}
+		})
+	}
+}
+
+func TestCappedBuffer_ReportsExceedOnce(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name      string
+		limit     int
+		chunks    []string
+		wantCalls int
+		wantKept  string
+	}{
+		{"under the limit", 4, []string{"ab", "cd"}, 0, "abcd"},
+		{"one byte over", 4, []string{"abcde"}, 1, "abcd"},
+		{"exceeded across writes", 4, []string{"abc", "de"}, 1, "abcd"},
+		{"later writes stay silent", 4, []string{"abcde", "fg", "hi"}, 1, "abcd"},
+		{"unbounded when limit is zero", 0, []string{"abcdefgh"}, 0, "abcdefgh"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			calls := 0
+			capped := &cappedBuffer{limit: testCase.limit, onExceed: func() { calls++ }}
+			for _, chunk := range testCase.chunks {
+				written, err := capped.Write([]byte(chunk))
+				if written != len(chunk) || err != nil {
+					t.Fatalf("Write(%q) = %d, %v; want %d, nil", chunk, written, err, len(chunk))
+				}
+			}
+			if calls != testCase.wantCalls {
+				t.Errorf("onExceed calls = %d, want %d", calls, testCase.wantCalls)
+			}
+			if got := capped.buf.String(); got != testCase.wantKept {
+				t.Errorf("kept = %q, want %q", got, testCase.wantKept)
+			}
+		})
+	}
+}
