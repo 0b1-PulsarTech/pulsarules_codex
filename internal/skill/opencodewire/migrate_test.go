@@ -9,6 +9,22 @@ import (
 	"testing"
 )
 
+func assertRemoved(tb testing.TB, path string) {
+	tb.Helper()
+
+	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
+		tb.Errorf("expected %q removed, stat err = %v", path, err)
+	}
+}
+
+func assertSurvives(tb testing.TB, path string) {
+	tb.Helper()
+
+	if _, err := os.Stat(path); err != nil {
+		tb.Errorf("expected %q to survive, stat err = %v", path, err)
+	}
+}
+
 func TestRetireLegacyAgents_ForeignWarns(t *testing.T) {
 	t.Parallel()
 
@@ -41,16 +57,7 @@ func TestRetireLegacyAgents_ForeignWarns(t *testing.T) {
 			projectDir := t.TempDir()
 			legacyPath := filepath.Join(projectDir, legacyAgentsPath)
 			if testCase.seedContent != "" {
-				if err := os.MkdirAll(filepath.Dir(legacyPath), 0o750); err != nil {
-					t.Fatalf("mkdir .opencode: %v", err)
-				}
-				if err := os.WriteFile(
-					legacyPath,
-					[]byte(testCase.seedContent),
-					0o600,
-				); err != nil {
-					t.Fatalf("seed legacy AGENTS.md: %v", err)
-				}
+				seedFile(t, legacyPath, testCase.seedContent)
 			}
 
 			removed, warning, err := RetireLegacyAgents(projectDir)
@@ -66,18 +73,12 @@ func TestRetireLegacyAgents_ForeignWarns(t *testing.T) {
 			if testCase.wantWarn && !strings.Contains(warning, legacyPath) {
 				t.Errorf("warning %q does not name the offending file %q", warning, legacyPath)
 			}
-
-			_, statErr := os.Stat(legacyPath)
 			switch {
 			case testCase.seedContent == "":
 			case testCase.wantRemoved:
-				if !errors.Is(statErr, fs.ErrNotExist) {
-					t.Errorf("expected %q removed, stat err = %v", legacyPath, statErr)
-				}
+				assertRemoved(t, legacyPath)
 			default:
-				if statErr != nil {
-					t.Errorf("expected %q to survive, stat err = %v", legacyPath, statErr)
-				}
+				assertSurvives(t, legacyPath)
 			}
 		})
 	}
