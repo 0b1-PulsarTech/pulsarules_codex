@@ -208,3 +208,29 @@ func TestInstallWorkflows_WriteDocFailure(t *testing.T) {
 		)
 	}
 }
+
+func TestInstallDocs_WriteFailureBackups(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root bypasses directory permissions")
+	}
+	dest := t.TempDir()
+	idDir := filepath.Join(dest, "security")
+	docName := filepath.Join("nested", "SKILL.md")
+	docPath := filepath.Join(idDir, docName)
+	seedFile(t, docPath, "# my own security notes\n")
+	if err := os.Chmod(idDir, 0o500); err != nil {
+		t.Fatalf("lock id dir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(idDir, 0o750) })
+	render := func(_ string) (string, bool, error) { return "body", true, nil }
+
+	result, err := installDocs(dest, docName, []string{"security"}, render)
+	if err == nil {
+		t.Fatal("installDocs: expected a write error from the read-only id dir")
+	}
+	wantBackup := marker.BackupMessage(docPath, docPath+marker.BackupSuffix)
+	assertIDs(t, "backedUp", result.BackedUp, wantBackup)
+	assertIDs(t, "installed", result.Installed)
+}
