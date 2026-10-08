@@ -33,7 +33,7 @@ func merge(base, private *projectfile.File, presetFlag string) (*projectfile.Fil
 }
 
 func mergedName(base, private *projectfile.File) string {
-	return base.Path + " + " + private.Path + " (merged)"
+	return base.Path + mergedJoin + private.Path + mergedSuffix
 }
 
 func checkMergedSizes(merged *projectfile.File) error {

@@ -2,7 +2,6 @@ package loader
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -25,7 +24,7 @@ func loadLayers(
 	private, privateErr := loadPrivate(root, resolve, rules)
 	switch {
 	case baseErr != nil && privateErr != nil:
-		return nil, fmt.Errorf("%w; %w", baseErr, privateErr)
+		return nil, joinFaults(baseErr, privateErr)
 	case baseErr != nil:
 		return nil, baseErr
 	case privateErr != nil:
@@ -44,12 +43,12 @@ func mergeLayers(
 	// Each file alone must build, so a fault of one file is never blamed on the merge.
 	for _, layer := range []*projectfile.File{base, private} {
 		if _, err := Build(layer, ""); err != nil {
-			return nil, err
+			return nil, &fileError{File: layer.Path, Err: err}
 		}
 	}
 	merged, err := merge(base, private, presetFlag)
 	if err != nil {
-		return nil, err
+		return nil, &fileError{File: base.Path, Lead: mergedName(base, private), Err: err}
 	}
 	if err = checkPrivateOverrides(merged, private, presetFlag); err != nil {
 		return nil, err
@@ -63,9 +62,12 @@ func checkPrivateOverrides(merged, private *projectfile.File, presetFlag string)
 	project.Overrides = merged.Overrides[:len(merged.Overrides)-len(private.Overrides)]
 	cfg, err := Build(&project, presetFlag)
 	if err != nil {
-		return err
+		return &fileError{File: faultFile(nil, merged), Err: err}
 	}
-	return private.CheckOverrides(cfg)
+	if err = private.CheckOverrides(cfg); err != nil {
+		return &fileError{File: private.Path, Err: err}
+	}
+	return nil
 }
 
 func loadPrivate(
@@ -77,7 +79,10 @@ func loadPrivate(
 	}
 	if err != nil {
 		// Anything else may hide a private file that should apply, so the gates must not run.
-		return nil, &reworded{text: "locate private config: " + withoutRoot(err, root), cause: err}
+		// The directory is unknown, so the file is named by where it would live.
+		expected := "<git-common-dir>/" + privateFileName
+		reason := &reworded{text: "locate private config: " + withoutRoot(err, root), cause: err}
+		return nil, &fileError{File: expected, Err: reason}
 	}
 	path := filepath.Join(gitDir, privateFileName)
 	return loadOptional(path, displayName(root, path), rules)

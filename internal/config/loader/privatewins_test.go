@@ -150,11 +150,19 @@ func TestPrivateWinsKeepsWhatItShould(t *testing.T) {
 func TestPrivateWins_NarrowsEachFile(t *testing.T) {
 	t.Parallel()
 
-	const sizeOff = "analyzers: {file-size: {enabled: false}}\n"
+	const (
+		sizeOff     = "analyzers: {file-size: {enabled: false}}\n"
+		privateName = ".git/pulsarules.yaml: overrides[0].analyzers.file-size.enabled"
+	)
 	testCases := []struct {
 		name, base, private string
 		wantFile, wantErr   string
 	}{
+		{
+			name: "private override enabling after a private disable",
+			base: doc("preset: strict"), private: doc(sizeOff, enableDoc("a", "file-size")),
+			wantFile: ".git/pulsarules.yaml", wantErr: privateName,
+		},
 		{
 			name: "base widening alone fails even when the private file disables too",
 			base: doc(sizeOff, enableDoc("a", "file-size")), private: doc(sizeOff),
