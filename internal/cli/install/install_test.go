@@ -2,7 +2,9 @@ package install
 
 import (
 	"bytes"
+	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,35 +61,44 @@ func stubGoplsSoClaudeMCPIsWired(tb testing.TB) {
 	tb.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 
-func captureStdout(t *testing.T, fn func()) string {
-	t.Helper()
-	original := os.Stdout
-	reader, writer, err := os.Pipe()
+func captureStreams(tb testing.TB, fn func()) (stdout, stderr string) {
+	tb.Helper()
+	originalOut, originalErr := os.Stdout, os.Stderr
+	outReader, outWriter, err := os.Pipe()
 	if err != nil {
-		t.Fatalf("os.Pipe: %v", err)
+		tb.Fatalf("os.Pipe: %v", err)
 	}
-	os.Stdout = writer
-	defer func() { os.Stdout = original }()
+	errReader, errWriter, err := os.Pipe()
+	if err != nil {
+		tb.Fatalf("os.Pipe: %v", err)
+	}
+	os.Stdout, os.Stderr = outWriter, errWriter
+	defer func() { os.Stdout, os.Stderr = originalOut, originalErr }()
 
 	fn()
 
-	if closeErr := writer.Close(); closeErr != nil {
-		t.Fatalf("close pipe writer: %v", closeErr)
+	for _, writer := range []*os.File{outWriter, errWriter} {
+		if closeErr := writer.Close(); closeErr != nil {
+			tb.Fatalf("close pipe writer: %v", closeErr)
+		}
 	}
-	var buf bytes.Buffer
-	if _, copyErr := io.Copy(&buf, reader); copyErr != nil {
-		t.Fatalf("read pipe: %v", copyErr)
+	var outBuf, errBuf bytes.Buffer
+	if _, copyErr := io.Copy(&outBuf, outReader); copyErr != nil {
+		tb.Fatalf("read stdout pipe: %v", copyErr)
 	}
-	return buf.String()
+	if _, copyErr := io.Copy(&errBuf, errReader); copyErr != nil {
+		tb.Fatalf("read stderr pipe: %v", copyErr)
+	}
+	return outBuf.String(), errBuf.String()
 }
 
-//nolint:paralleltest // captureStdout swaps os.Stdout.
+//nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
 func TestInstallPostTargets_EmptyGitHooks(t *testing.T) {
 	dir := t.TempDir()
 	opts := &cliopts.Options{NoGitHooks: false}
 	hookReg := install.NewRegistry()
 
-	output := captureStdout(t, func() {
+	output, _ := captureStreams(t, func() {
 		if err := installPostTargets(
 			opts,
 			installConfig{absBase: dir, gitHooks: []string{}},
@@ -99,5 +110,60 @@ func TestInstallPostTargets_EmptyGitHooks(t *testing.T) {
 
 	if bytes.Contains([]byte(output), []byte("installed git hooks:")) {
 		t.Errorf("output = %q, must not print a git-hooks success line for an empty list", output)
+	}
+}
+
+func injectRun(tb testing.TB, inj remy.Injector) {
+	tb.Helper()
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		tb.Fatalf("DoInjections: %v", err)
+	}
+}
+
+//nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
+func TestRun_PrintHooks(t *testing.T) {
+	projectDir := t.TempDir()
+	opts := &cliopts.Options{Command: "install", Project: projectDir, PrintHooks: true}
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	injectRun(t, inj)
+	var runErr error
+	stdout, _ := captureStreams(t, func() { runErr = Run(inj, opts) })
+	if runErr != nil {
+		t.Fatalf("Run: %v", runErr)
+	}
+	if !strings.Contains(stdout, `"hooks"`) {
+		t.Errorf("stdout = %q, want the hooks block", stdout)
+	}
+	entries, err := os.ReadDir(projectDir)
+	if err != nil {
+		t.Fatalf("read project dir: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("--print-hooks wrote %d entries, want none", len(entries))
+	}
+}
+
+func TestRun_RejectsAnUnknownTargetBeforeWriting(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	opts := &cliopts.Options{
+		Command:   "install",
+		Project:   projectDir,
+		Skills:    "go-style",
+		Languages: "go",
+		Target:    []string{"bogus"},
+	}
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	injectRun(t, inj)
+	err := Run(inj, opts)
+	if err == nil || !strings.Contains(err.Error(), `invalid --target "bogus" (want `) {
+		t.Fatalf("err = %v, want an invalid --target error", err)
+	}
+	_, statErr := os.Stat(filepath.Join(projectDir, ".claude"))
+	if !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("rejected install created .claude, stat err = %v", statErr)
 	}
 }
