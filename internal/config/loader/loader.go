@@ -5,20 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"path/filepath"
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 const ConfigAnalyzerID = "config"
 
-func Rules() config.Rules {
+func Rules() projectfile.Rules {
 	internal := registry.InternalIDs()
-	return config.Rules{
+	return projectfile.Rules{
 		AnalyzerIDs: slices.DeleteFunc(registry.IDs(), func(id string) bool {
 			return slices.Contains(internal, id)
 		}),
@@ -28,34 +28,34 @@ func Rules() config.Rules {
 	}
 }
 
-func Load(root, explicit string) (*config.File, error) {
+func Load(root, explicit, presetFlag string) (*projectfile.File, error) {
 	if explicit != "" {
-		return loadFile(explicit, explicit)
+		return loadFile(explicit, explicit, Rules())
 	}
 	if root == "" {
 		return nil, nil
 	}
-	return loadOptional(filepath.Join(root, config.Name), config.Name)
+	return loadLayers(root, vcs.CommonDir, presetFlag)
 }
 
-func loadFile(path, display string) (*config.File, error) {
+func loadFile(path, display string, rules projectfile.Rules) (*projectfile.File, error) {
 	content, err := readBounded(path)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", display, err)
 	}
 	// Parse errors already lead with the file and field path.
-	return config.Parse(display, content, Rules())
+	return projectfile.Parse(display, content, rules)
 }
 
-func loadOptional(path, display string) (*config.File, error) {
-	file, err := loadFile(path, display)
+func loadOptional(path, display string, rules projectfile.Rules) (*projectfile.File, error) {
+	file, err := loadFile(path, display, rules)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 	return file, err
 }
 
-func Build(file *config.File, presetFlag string) (*config.GovernanceConfig, error) {
+func Build(file *projectfile.File, presetFlag string) (*config.GovernanceConfig, error) {
 	cfg := withPreset(file, presetFlag)
 	if file == nil {
 		return cfg, nil
@@ -66,7 +66,7 @@ func Build(file *config.File, presetFlag string) (*config.GovernanceConfig, erro
 	return cfg, nil
 }
 
-func withPreset(file *config.File, presetFlag string) *config.GovernanceConfig {
+func withPreset(file *projectfile.File, presetFlag string) *config.GovernanceConfig {
 	cfg := config.Defaults()
 	var filePreset string
 	if file != nil {
@@ -85,7 +85,7 @@ func ForRepo(repo vcs.Repository) (*config.GovernanceConfig, []finding.Finding) 
 }
 
 func ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
-	file, err := Load(root, "")
+	file, err := Load(root, "", "")
 	if err == nil {
 		var cfg *config.GovernanceConfig
 		if cfg, err = Build(file, ""); err == nil {
@@ -96,7 +96,7 @@ func ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
 		AnalyzerID: ConfigAnalyzerID,
 		Severity:   finding.SeverityError,
 		Category:   finding.CatProject,
-		File:       config.Name,
+		File:       projectfile.Name,
 		Message:    err.Error(),
 	}
 	return withPreset(nil, ""), []finding.Finding{findingItem}

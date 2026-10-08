@@ -1,4 +1,4 @@
-package config
+package projectfile
 
 import (
 	"bytes"
@@ -37,6 +37,7 @@ type Rules struct {
 	ReservedIDs      []string
 	Params           map[string][]string
 	DelegatedFormats []string
+	AnyAnalyzer      bool
 }
 
 type File struct {

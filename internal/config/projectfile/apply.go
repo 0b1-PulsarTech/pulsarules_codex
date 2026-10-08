@@ -1,4 +1,4 @@
-package config
+package projectfile
 
 import (
 	"maps"
@@ -6,9 +6,10 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 )
 
-func (file *File) ApplyTo(govCfg *GovernanceConfig) error {
+func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 	if file.IncludeGenerated != nil {
 		govCfg.IncludeGenerated = *file.IncludeGenerated
 	}
@@ -29,10 +30,10 @@ func (file *File) ApplyTo(govCfg *GovernanceConfig) error {
 			Run:    slices.Clone(entry.Run),
 		})
 	}
-	return govCfg.checkOverrides(file)
+	return file.CheckOverrides(govCfg)
 }
 
-func (govCfg *GovernanceConfig) checkOverrides(file *File) error {
+func (file *File) CheckOverrides(govCfg *config.GovernanceConfig) error {
 	problems := &Problems{path: file.Path}
 	listed := newRoot().key("overrides")
 	for idx, override := range file.Overrides {
@@ -51,13 +52,13 @@ func (govCfg *GovernanceConfig) checkOverrides(file *File) error {
 	return problems.err()
 }
 
-func applyAnalyzer(govCfg *GovernanceConfig, id string, entry AnalyzerEntry) {
+func applyAnalyzer(govCfg *config.GovernanceConfig, id string, entry AnalyzerEntry) {
 	if govCfg.Analyzers == nil {
-		govCfg.Analyzers = map[string]AnalyzerConfig{}
+		govCfg.Analyzers = map[string]config.AnalyzerConfig{}
 	}
 	current, found := govCfg.Analyzers[id]
 	if !found {
-		current = AnalyzerConfig{Enabled: true}
+		current = config.AnalyzerConfig{Enabled: true}
 	}
 	// Enabled is a pointer: absent keeps the current choice, false switches the analyzer off.
 	if entry.Enabled != nil {

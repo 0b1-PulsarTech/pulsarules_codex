@@ -1,4 +1,4 @@
-package config
+package projectfile
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 )
 
 func TestApplyProject(t *testing.T) {
@@ -15,21 +17,21 @@ func TestApplyProject(t *testing.T) {
 		name    string
 		preset  string
 		content string
-		check   func(t *testing.T, cfg *GovernanceConfig)
+		check   func(t *testing.T, cfg *config.GovernanceConfig)
 	}{
-		{"scalars", PresetStrict, fullProjectYAML, checkScalars},
-		{"analyzers", PresetStrict, fullProjectYAML, checkAnalyzers},
-		{"overrides", PresetStrict, fullProjectYAML, checkOverrides},
+		{"scalars", config.PresetStrict, fullProjectYAML, checkScalars},
+		{"analyzers", config.PresetStrict, fullProjectYAML, checkAnalyzers},
+		{"overrides", config.PresetStrict, fullProjectYAML, checkOverrides},
 		{
 			"merges into the preset",
-			PresetStrict,
+			config.PresetStrict,
 			"version: 1\nanalyzers:\n  file-size: {params: {extensions: [.go]}}\n" +
 				"  complexity: {enabled: true}\n",
 			checkMerged,
 		},
 		{
 			"keeps the preset enabled",
-			PresetMinimal,
+			config.PresetMinimal,
 			"version: 1\nanalyzers:\n  doc-comment: {params: {}}\n" +
 				"  control-flow: {enabled: true}\n",
 			checkKeepsEnabled,
@@ -42,7 +44,7 @@ func TestApplyProject(t *testing.T) {
 			if err != nil {
 				t.Fatalf("decodeFile() error = %v", err)
 			}
-			cfg := Defaults()
+			cfg := config.Defaults()
 			cfg.Preset = testCase.preset
 			cfg.ApplyPreset()
 			if err = file.ApplyTo(cfg); err != nil {
@@ -53,7 +55,7 @@ func TestApplyProject(t *testing.T) {
 	}
 }
 
-func checkScalars(t *testing.T, cfg *GovernanceConfig) {
+func checkScalars(t *testing.T, cfg *config.GovernanceConfig) {
 	t.Helper()
 	if !cfg.IncludeGenerated {
 		t.Error("IncludeGenerated = false, want true")
@@ -69,7 +71,7 @@ func checkScalars(t *testing.T, cfg *GovernanceConfig) {
 	}
 }
 
-func checkAnalyzers(t *testing.T, cfg *GovernanceConfig) {
+func checkAnalyzers(t *testing.T, cfg *config.GovernanceConfig) {
 	t.Helper()
 	if got := cfg.Analyzers["big-comment"]; !got.Enabled || got.Params["max_lines"] != 1 {
 		t.Errorf("big-comment = %+v", got)
@@ -82,7 +84,7 @@ func checkAnalyzers(t *testing.T, cfg *GovernanceConfig) {
 	}
 }
 
-func checkOverrides(t *testing.T, cfg *GovernanceConfig) {
+func checkOverrides(t *testing.T, cfg *config.GovernanceConfig) {
 	t.Helper()
 	if len(cfg.Overrides) != 1 {
 		t.Fatalf("Overrides = %+v, want one", cfg.Overrides)
@@ -96,7 +98,7 @@ func checkOverrides(t *testing.T, cfg *GovernanceConfig) {
 	}
 }
 
-func checkMerged(t *testing.T, cfg *GovernanceConfig) {
+func checkMerged(t *testing.T, cfg *config.GovernanceConfig) {
 	t.Helper()
 	fileSize := cfg.Analyzers["file-size"]
 	if fileSize.Params["max_lines"] != 180 || fileSize.Params["extensions"] == nil {
@@ -107,7 +109,7 @@ func checkMerged(t *testing.T, cfg *GovernanceConfig) {
 	}
 }
 
-func checkKeepsEnabled(t *testing.T, cfg *GovernanceConfig) {
+func checkKeepsEnabled(t *testing.T, cfg *config.GovernanceConfig) {
 	t.Helper()
 	if cfg.Analyzers["doc-comment"].Enabled {
 		t.Error("doc-comment re-enabled by a file entry that never set enabled")
@@ -153,7 +155,7 @@ func TestApplyProjectRejectsWideningOverride(t *testing.T) {
 			if err != nil {
 				t.Fatalf("decodeFile() error = %v", err)
 			}
-			err = file.ApplyTo(Defaults())
+			err = file.ApplyTo(config.Defaults())
 			if testCase.want == "" {
 				if err != nil {
 					t.Fatalf("ApplyProject() error = %v, want nil", err)
@@ -180,7 +182,7 @@ func TestApplyProjectBoundsWideningMessage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeFile() error = %v", err)
 	}
-	err = file.ApplyTo(Defaults())
+	err = file.ApplyTo(config.Defaults())
 	if err == nil {
 		t.Fatal("ApplyProject() error = nil, want the widening overrides rejected")
 	}
@@ -206,7 +208,7 @@ func TestApplyProjectClipsALongDelegatedID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeFile() error = %v", err)
 	}
-	err = file.ApplyTo(Defaults())
+	err = file.ApplyTo(config.Defaults())
 	want := strings.Repeat("x", 80) + "... is disabled for the whole project"
 	if err == nil || !strings.Contains(err.Error(), want) {
 		t.Fatalf("ApplyProject() error = %v, want containing %q", err, want)

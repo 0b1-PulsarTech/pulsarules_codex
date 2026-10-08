@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 )
 
 type endlessSource struct {
@@ -21,7 +21,7 @@ type endlessSource struct {
 }
 
 func (source *endlessSource) Read(buffer []byte) (int, error) {
-	if source.served > 2*config.MaxFileBytes {
+	if source.served > 2*projectfile.MaxFileBytes {
 		return 0, errors.New("read past twice the cap")
 	}
 	source.served += len(buffer)
@@ -39,10 +39,10 @@ func TestReadCapped(t *testing.T) {
 		{"small file", strings.NewReader("version: 1\n"), len("version: 1\n")},
 		{
 			"file at the cap",
-			strings.NewReader(strings.Repeat("x", config.MaxFileBytes)),
-			config.MaxFileBytes,
+			strings.NewReader(strings.Repeat("x", projectfile.MaxFileBytes)),
+			projectfile.MaxFileBytes,
 		},
-		{"endless source", &endlessSource{}, config.MaxFileBytes + 1},
+		{"endless source", &endlessSource{}, projectfile.MaxFileBytes + 1},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -65,8 +65,8 @@ func TestReadBounded(t *testing.T) {
 		name       string
 		size, want int
 	}{
-		{"file at the cap", config.MaxFileBytes, config.MaxFileBytes},
-		{"file twice the cap", 2 * config.MaxFileBytes, config.MaxFileBytes + 1},
+		{"file at the cap", projectfile.MaxFileBytes, projectfile.MaxFileBytes},
+		{"file twice the cap", 2 * projectfile.MaxFileBytes, projectfile.MaxFileBytes + 1},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -261,6 +261,23 @@ func TestRefused(t *testing.T) {
 	}
 }
 
+func TestLoadRefusesAPrivateFileThatIsNotRegular(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct{ name, kind string }{
+		{"a directory", "dir"},
+		{"a named pipe", "fifo"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			setup := layout{git: true, privateKind: testCase.kind}
+			result := loadWithin(t, setup.build(t), "")
+			assertErrorHas(t, result.err, []string{private + "read config: not a regular file"})
+		})
+	}
+}
+
 func closedHandle(path string) (*os.File, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -276,11 +293,8 @@ func TestReadFaultsNameTheStepNotThePath(t *testing.T) {
 	dir := t.TempDir()
 	readable := filepath.Join(dir, "readable.yaml")
 	locked := filepath.Join(dir, "locked.yaml")
-	for _, path := range []string{readable, locked} {
-		if err := os.WriteFile(path, []byte("version: 1\n"), 0o600); err != nil {
-			t.Fatalf("write %s: %v", path, err)
-		}
-	}
+	write(t, readable, "version: 1\n")
+	write(t, locked, "version: 1\n")
 	if err := os.Chmod(locked, 0); err != nil {
 		t.Fatalf("chmod: %v", err)
 	}

@@ -8,7 +8,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 )
 
 var errNotRegular = errors.New("read config: not a regular file")
@@ -72,7 +72,7 @@ func refused(mode fs.FileMode) bool {
 
 func readCapped(source io.Reader) ([]byte, error) {
 	// One byte past the cap is enough for Parse to reject the file without reading all of it.
-	content, err := io.ReadAll(io.LimitReader(source, config.MaxFileBytes+1))
+	content, err := io.ReadAll(io.LimitReader(source, projectfile.MaxFileBytes+1))
 	if err != nil {
 		return nil, readFault(err)
 	}

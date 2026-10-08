@@ -12,13 +12,14 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 func writeConfig(t *testing.T, dir, content string) string {
 	t.Helper()
-	path := filepath.Join(dir, config.Name)
+	path := filepath.Join(dir, projectfile.Name)
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
@@ -140,7 +141,7 @@ func reservedIDCases() []loadCase {
 }
 
 type loadResult struct {
-	file *config.File
+	file *projectfile.File
 	err  error
 }
 
@@ -149,7 +150,7 @@ func loadWithin(t *testing.T, root, explicit string) loadResult {
 	const deadline = 5 * time.Second
 	done := make(chan loadResult, 1)
 	go func() {
-		file, err := Load(root, explicit)
+		file, err := Load(root, explicit, "")
 		done <- loadResult{file: file, err: err}
 	}()
 	ctx, cancel := context.WithTimeout(t.Context(), deadline)
@@ -192,16 +193,16 @@ func TestLoad(t *testing.T) {
 func TestBuildPrecedence(t *testing.T) {
 	t.Parallel()
 
-	file := &config.File{
+	file := &projectfile.File{
 		Version: 1,
 		Preset:  config.PresetMinimal,
-		Analyzers: map[string]config.AnalyzerEntry{
+		Analyzers: map[string]projectfile.AnalyzerEntry{
 			"file-size": {Params: map[string]any{"max_lines": 7}},
 		},
 	}
 	testCases := []struct {
 		name       string
-		file       *config.File
+		file       *projectfile.File
 		flag       string
 		wantPreset string
 		wantLines  any
@@ -231,8 +232,8 @@ func TestBuildPrecedence(t *testing.T) {
 type enabledCase struct {
 	name        string
 	preset      string
-	analyzers   map[string]config.AnalyzerEntry
-	overrides   []map[string]config.OverrideRules
+	analyzers   map[string]projectfile.AnalyzerEntry
+	overrides   []map[string]projectfile.OverrideRules
 	flag        string
 	wantEnabled map[string]bool
 	wantErr     string
@@ -240,55 +241,55 @@ type enabledCase struct {
 
 func enabledCases() []enabledCase {
 	enable, disable := true, false
-	narrow := config.OverrideRules{Enabled: &enable}
-	fileSizeOff := map[string]config.AnalyzerEntry{"file-size": {Enabled: &disable}}
+	narrow := projectfile.OverrideRules{Enabled: &enable}
+	fileSizeOff := map[string]projectfile.AnalyzerEntry{"file-size": {Enabled: &disable}}
 	return []enabledCase{
 		{
 			name:        "file beats the minimal preset",
 			preset:      config.PresetMinimal,
-			analyzers:   map[string]config.AnalyzerEntry{"control-flow": {Enabled: &enable}},
+			analyzers:   map[string]projectfile.AnalyzerEntry{"control-flow": {Enabled: &enable}},
 			wantEnabled: map[string]bool{"control-flow": true, "complexity": false},
 		},
 		{
 			name:      "override enabling a file-disabled analyzer",
 			analyzers: fileSizeOff,
-			overrides: []map[string]config.OverrideRules{{"file-size": narrow}},
+			overrides: []map[string]projectfile.OverrideRules{{"file-size": narrow}},
 			wantErr: ".pulsarules.yaml: overrides[0].analyzers.file-size.enabled: " +
 				"file-size is disabled for the whole project; an override can only narrow it",
 		},
 		{
 			name:      "override enabling a preset-disabled analyzer",
 			preset:    config.PresetMinimal,
-			overrides: []map[string]config.OverrideRules{{"complexity": narrow}},
+			overrides: []map[string]projectfile.OverrideRules{{"complexity": narrow}},
 			wantErr:   "overrides[0].analyzers.complexity.enabled: complexity is disabled",
 		},
 		{
 			name:      "override enabling a disabled analyzer by sub-id",
-			analyzers: map[string]config.AnalyzerEntry{"golangci-lint": {Enabled: &disable}},
-			overrides: []map[string]config.OverrideRules{{"golangci-lint/errcheck": narrow}},
+			analyzers: map[string]projectfile.AnalyzerEntry{"golangci-lint": {Enabled: &disable}},
+			overrides: []map[string]projectfile.OverrideRules{{"golangci-lint/errcheck": narrow}},
 			wantErr: "overrides[0].analyzers.golangci-lint/errcheck.enabled: " +
 				"golangci-lint is disabled",
 		},
 		{
 			name:      "override disabling stays valid",
 			analyzers: fileSizeOff,
-			overrides: []map[string]config.OverrideRules{{"file-size": {Enabled: &disable}}},
+			overrides: []map[string]projectfile.OverrideRules{{"file-size": {Enabled: &disable}}},
 		},
 		{
 			name:      "override enabling an enabled analyzer",
-			overrides: []map[string]config.OverrideRules{{"file-size": narrow}},
+			overrides: []map[string]projectfile.OverrideRules{{"file-size": narrow}},
 		},
 	}
 }
 
 func presetEnabledCases() []enabledCase {
 	enable, disable := true, false
-	narrow := config.OverrideRules{Enabled: &enable}
+	narrow := projectfile.OverrideRules{Enabled: &enable}
 	return []enabledCase{
 		{
 			name:   "preset enables, one override disables, a later one re-enables",
 			preset: config.PresetStrict,
-			overrides: []map[string]config.OverrideRules{
+			overrides: []map[string]projectfile.OverrideRules{
 				{"complexity": {Enabled: &disable}}, {"complexity": narrow},
 			},
 			wantEnabled: map[string]bool{"complexity": true},
@@ -301,22 +302,22 @@ func presetEnabledCases() []enabledCase {
 		{
 			name:      "override enabling an analyzer the flag preset disabled",
 			flag:      config.PresetMinimal,
-			overrides: []map[string]config.OverrideRules{{"complexity": narrow}},
+			overrides: []map[string]projectfile.OverrideRules{{"complexity": narrow}},
 			wantErr:   "overrides[0].analyzers.complexity.enabled: complexity is disabled",
 		},
 	}
 }
 
-func (testCase enabledCase) projectFile() *config.File {
-	file := &config.File{
-		Path:      config.Name,
+func (testCase enabledCase) projectFile() *projectfile.File {
+	file := &projectfile.File{
+		Path:      projectfile.Name,
 		Version:   1,
 		Preset:    testCase.preset,
 		Analyzers: testCase.analyzers,
 	}
 	for _, rules := range testCase.overrides {
 		file.Overrides = append(file.Overrides,
-			config.OverrideEntry{Files: []string{"a/**"}, Analyzers: rules})
+			projectfile.OverrideEntry{Files: []string{"a/**"}, Analyzers: rules})
 	}
 	return file
 }
@@ -387,7 +388,7 @@ func TestForRoot(t *testing.T) {
 				}
 				return
 			}
-			assertConfigFinding(t, findings, config.Name, testCase.wantMessage)
+			assertConfigFinding(t, findings, projectfile.Name, testCase.wantMessage)
 		})
 	}
 }

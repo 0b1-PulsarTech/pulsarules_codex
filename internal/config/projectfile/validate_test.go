@@ -1,4 +1,4 @@
-package config
+package projectfile
 
 import (
 	"fmt"
@@ -420,5 +420,48 @@ func TestValidateUncompilableGlobsAreNotCharged(t *testing.T) {
 	}
 	if got := strings.Count(err.Error(), "compile glob"); got != 2 {
 		t.Fatalf("Validate() error = %v, want 2 compile problems", err)
+	}
+}
+
+func TestValidateAnyAnalyzer(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name, content string
+		anyAnalyzer   bool
+		want          string
+	}{
+		{"unknown id refused", "version: 1\nanalyzers: {nope: {}}\n", false, "unknown analyzer"},
+		{"unknown id accepted", "version: 1\nanalyzers: {nope: {}}\n", true, ""},
+		{
+			"unknown id in an override accepted",
+			"version: 1\noverrides: [{files: [a], analyzers: {nope/sub: {enabled: false}}}]\n",
+			true, "",
+		},
+		{
+			"severity still checked",
+			"version: 1\nanalyzers: {nope: {severity: loud}}\n", true, "invalid severity",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			file, err := decodeFile([]byte(testCase.content))
+			if err != nil {
+				t.Fatalf("decodeFile() error = %v", err)
+			}
+			rules := testRules()
+			rules.AnyAnalyzer = testCase.anyAnalyzer
+			err = file.Validate(rules)
+			if testCase.want == "" {
+				if err != nil {
+					t.Fatalf("Validate() error = %v, want nil", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), testCase.want) {
+				t.Fatalf("Validate() error = %v, want containing %q", err, testCase.want)
+			}
+		})
 	}
 }
