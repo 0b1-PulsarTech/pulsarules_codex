@@ -101,16 +101,17 @@ func injectRuleSummaries(findings []finding.Finding, index *knowledge.Index) {
 	if index == nil {
 		return
 	}
-	rules := defaultRuleMap()
+	rules := newResolver(index)
 	for idx := range findings {
-		if findings[idx].RuleSummary != "" {
+		finding := &findings[idx]
+		if finding.RuleSummary != "" {
 			continue
 		}
-		if findings[idx].RuleID == "" {
-			findings[idx].RuleID = lookupRule(rules, findings[idx].AnalyzerID)
+		if finding.RuleID == "" {
+			finding.RuleID = rules.resolve(finding.AnalyzerID, finding.File)
 		}
-		if findings[idx].RuleID != "" {
-			findings[idx].RuleSummary = index.Summary("rules", findings[idx].RuleID)
+		if finding.RuleID != "" {
+			finding.RuleSummary = index.Summary("rules", finding.RuleID)
 		}
 	}
 }
