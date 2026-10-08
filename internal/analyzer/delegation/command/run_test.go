@@ -181,6 +181,16 @@ func exitCases() []runCase {
 			[]core.Severity{core.SeverityError},
 			"sh exited with code 64: kaboom",
 		},
+		{
+			"stderr tail is bounded",
+			entryRunning(func(*testing.T, string) string {
+				return "head -c 9000 /dev/zero | tr '\\0' e >&2\nprintf LAST >&2\nexit 64\n"
+			}),
+			[]string{entryID + "/failed"},
+			[]string{""},
+			[]core.Severity{core.SeverityError},
+			"sh exited with code 64: " + strings.Repeat("e", 4035) + "LAST",
+		},
 	}
 }
 

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
@@ -96,5 +97,55 @@ func TestReportsDropped(t *testing.T) {
 				t.Errorf("finding = %q %q %v", got.AnalyzerID, got.Message, got.Severity)
 			}
 		})
+	}
+}
+
+func TestReportsDroppedQuotesOnce(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		file    string
+		want    string
+		notWant string
+	}{
+		{"NUL path", many("\x00", 100_000), `\x00`, `\\x`},
+		{"zero width space path", many("\u200b", 100_000), `\u200b`, `\\u`},
+		{"newline path", many("\n", 100_000), `\n`, `\\n`},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			first := diagnostic{code: "lint_x", file: testCase.file, line: 9}
+			lost := drops{count: 2, first: first}
+
+			got := reports{id: "tool"}.dropped(lost).Message
+
+			if !strings.Contains(got, testCase.want) || strings.Contains(got, testCase.notWant) {
+				t.Errorf("Message = %.60q, want %q once", got, testCase.want)
+			}
+			if !strings.HasSuffix(got, `":9 lint_x)`) {
+				t.Errorf("Message ends %q, want the line and code", got[len(got)-30:])
+			}
+		})
+	}
+}
+
+func TestReportsDroppedFitsTheLine(t *testing.T) {
+	t.Parallel()
+
+	lost := drops{
+		count: 1 << 30,
+		first: diagnostic{code: many("z", 10_000), file: many("\x00", 100_000), line: 1 << 30},
+	}
+
+	got := reports{id: "tool"}.dropped(lost)
+
+	if line := renderedLine(got); len(line) > maxLineBytes {
+		t.Errorf("rendered %d bytes, want at most %d", len(line), maxLineBytes)
+	}
+	if !strings.HasPrefix(got.Message, "1073741824 diagnostics on paths outside") {
+		t.Errorf("Message = %.80q", got.Message)
 	}
 }

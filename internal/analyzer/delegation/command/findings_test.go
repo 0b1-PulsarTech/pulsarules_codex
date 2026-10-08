@@ -2,10 +2,13 @@ package command
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
+
+const wantTailBytes = 4096
 
 func TestStderrTail(t *testing.T) {
 	t.Parallel()
@@ -20,14 +23,27 @@ func TestStderrTail(t *testing.T) {
 		{"short is trimmed", "  boom\n", "boom"},
 		{"control bytes become spaces", "a\x1b[31mb\x00c\nd\te", "a [31mb c\nd\te"},
 		{"invalid utf8 is replaced", "a\xffb", "a?b"},
+		{
+			"long keeps the end",
+			strings.Repeat("x", wantTailBytes) + "END",
+			strings.Repeat("x", wantTailBytes-3) + "END",
+		},
+		{
+			"cut inside a rune drops the fragment",
+			"\u00e9" + strings.Repeat("x", wantTailBytes-1),
+			strings.Repeat("x", wantTailBytes-1),
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := stderrTail(testCase.input)
+			got := stderrTail(testCase.input, wantTailBytes)
 			if got != testCase.want {
 				t.Errorf("stderrTail = %q, want %q", got, testCase.want)
+			}
+			if len(got) > wantTailBytes {
+				t.Errorf("len = %d, want at most %d", len(got), wantTailBytes)
 			}
 		})
 	}
