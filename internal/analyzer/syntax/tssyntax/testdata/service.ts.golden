@@ -1,0 +1,42 @@
+file testdata/service.ts language=typescript error=""
+fn Service kind=constructor line=9 body=9-9 params=2 named=0 cx=1 test=false nested=false
+fn size kind=accessor line=11 body=11-13 params=0 named=0 cx=1 test=false nested=false
+fn load kind=method line=15 body=15-32 params=2 named=0 cx=7 test=false nested=false
+fn describeKey kind=closure line=35 body=35-35 params=1 named=0 cx=2 test=false nested=false
+fn read kind=function line=44 body=44-51 params=2 named=0 cx=2 test=false nested=false
+fn closure kind=closure line=45 body=45-50 params=1 named=0 cx=2 test=false nested=true
+block line=16 depth=1
+block line=17 depth=2
+block line=20 depth=2
+block line=21 depth=3
+block line=26 depth=1
+import "node:fs/promises" line=1 group=0
+import "axios" line=2 group=1
+import "../config" line=3 group=2
+groups ["node:" "package" "relative"]
+name axios kind=import alias line=2 exported=false exempt=false
+name Settings kind=import alias line=3 exported=false exempt=false
+name Service kind=type line=6 exported=true exempt=false
+name Item kind=type parameter line=6 exported=false exempt=false
+name cache kind=field line=7 exported=false exempt=false
+name client kind=parameter line=9 exported=false exempt=false
+name options kind=parameter line=9 exported=false exempt=false
+name size kind=method line=11 exported=false exempt=false
+name load kind=method line=15 exported=false exempt=false
+name key kind=parameter line=15 exported=false exempt=false
+name retries kind=parameter line=15 exported=false exempt=false
+name attempt kind=loop variable line=16 exported=false exempt=false
+name reply kind=constant line=18 exported=false exempt=false
+name failure kind=catch parameter line=20 exported=false exempt=false
+name describeKey kind=constant line=35 exported=true exempt=false
+name key kind=parameter line=35 exported=false exempt=false
+name Mode kind=type line=37 exported=true exempt=false
+name Fast kind=enum value line=38 exported=false exempt=false
+name Slow kind=enum value line=39 exported=false exempt=false
+name read kind=function line=44 exported=true exempt=false
+name path kind=parameter line=44 exported=false exempt=false
+name encoding kind=parameter line=44 exported=false exempt=false
+name encoding kind=field line=44 exported=false exempt=false
+name entry kind=parameter line=45 exported=false exempt=false
+doc Service kind=type line=5 exempt=false mixed=false
+doc read kind=function line=43 exempt=false mixed=true

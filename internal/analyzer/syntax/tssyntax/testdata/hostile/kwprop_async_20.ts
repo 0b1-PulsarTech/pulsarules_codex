@@ -1,0 +1,1 @@
+const y = obj.default / 2; x = async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=0))))))))))))))))))));

@@ -108,10 +108,11 @@ func bindingNameCases() []nameCase {
 			},
 		},
 		{
-			name: "labels",
-			text: "outer: for (;;) { break outer; }\n",
+			name: "labels and the reactive label",
+			text: "outer: for (;;) { break outer; }\n$: doubled = 2;\n",
 			want: []syntax.Name{
 				{Name: "outer", Kind: syntax.NameLabel, Line: 1},
+				{Name: "$", Kind: syntax.NameLabel, Line: 2, Exempt: true},
 			},
 		},
 		{

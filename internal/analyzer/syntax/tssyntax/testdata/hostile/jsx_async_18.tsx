@@ -1,0 +1,1 @@
+const e = <X {...p} />; x = async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=async(a=0))))))))))))))))));

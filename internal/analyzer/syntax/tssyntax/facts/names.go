@@ -64,6 +64,11 @@ func (coll *collector) addName(name *ast.Node, template syntax.Name) {
 
 func (coll *collector) addLabel(label *ast.Node) {
 	coll.addName(label, syntax.Name{Kind: syntax.NameLabel})
+	last := len(coll.out.Names) - 1
+	// A Svelte reactive statement is the label "$", fixed by the framework.
+	if last >= 0 && coll.out.Names[last].Name == "$" {
+		coll.out.Names[last].Exempt = true
+	}
 }
 
 func (coll *collector) parameter(node *ast.Node) {

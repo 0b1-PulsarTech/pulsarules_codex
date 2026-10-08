@@ -1,0 +1,21 @@
+file testdata/panel.tsx language=typescript error=""
+fn Panel kind=function line=9 body=9-18 params=1 named=0 cx=2 test=false nested=false
+fn closure kind=closure line=11 body=11-11 params=2 named=0 cx=1 test=false nested=true
+fn closure kind=closure line=11 body=11-11 params=0 named=0 cx=1 test=false nested=true
+fn closure kind=closure line=15 body=15-15 params=1 named=0 cx=1 test=false nested=true
+import "react" line=1 group=1
+import "./hooks" line=2 group=2
+groups ["node:" "package" "relative"]
+name React kind=import alias line=1 exported=false exempt=false
+name PanelProps kind=type line=4 exported=false exempt=false
+name title kind=field line=5 exported=false exempt=false
+name onPick kind=method line=6 exported=false exempt=false
+name index kind=parameter line=6 exported=false exempt=false
+name Panel kind=function line=9 exported=true exempt=false
+name title kind=parameter line=9 exported=false exempt=false
+name onPick kind=parameter line=9 exported=false exempt=false
+name items kind=constant line=10 exported=false exempt=false
+name handlers kind=constant line=11 exported=false exempt=false
+name item kind=parameter line=11 exported=false exempt=false
+name index kind=parameter line=11 exported=false exempt=false
+name go kind=parameter line=15 exported=false exempt=false

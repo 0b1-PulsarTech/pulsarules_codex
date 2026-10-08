@@ -8,7 +8,7 @@ func LanguageForExtension(ext string) Language {
 		return LangGo
 	case ".dart":
 		return LangDart
-	case ".ts", ".tsx":
+	case ".ts", ".mts", ".cts", ".tsx":
 		return LangTypeScript
 	case ".js", ".mjs", ".cjs", ".jsx":
 		return LangJavaScript
