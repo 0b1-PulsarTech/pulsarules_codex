@@ -31,7 +31,7 @@ func resolveGitHooks(opts *version.Options) ([]string, error) {
 	// outside the allowed alphabet is refused here rather than quoted and hoped
 	// for at the point it runs.
 	if err := branch.ValidateExtraTypes(opts.BranchExtraTypes); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid --branch-extra-types: %w", err)
 	}
 	return hooks, nil
 }

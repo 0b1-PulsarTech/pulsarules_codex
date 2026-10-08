@@ -1,7 +1,10 @@
 package install
 
 import (
+	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 )
 
 func TestValidateGitHooks(t *testing.T) {
@@ -34,6 +37,37 @@ func TestValidateGitHooks(t *testing.T) {
 			}
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestResolveGitHooks_NamesTheBadFlag(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		opts     *version.Options
+		wantFlag string
+	}{
+		{
+			name:     "a severity typo names its flag",
+			opts:     &version.Options{TypographicSeverity: "fatal"},
+			wantFlag: "--typographic-severity",
+		},
+		{
+			name:     "an extra-types typo names its flag",
+			opts:     &version.Options{BranchExtraTypes: "Release"},
+			wantFlag: "--branch-extra-types",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := resolveGitHooks(testCase.opts)
+			if err == nil || !strings.Contains(err.Error(), testCase.wantFlag) {
+				t.Fatalf("resolveGitHooks err = %v, want one naming %q", err, testCase.wantFlag)
 			}
 		})
 	}

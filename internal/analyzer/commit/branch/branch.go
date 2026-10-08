@@ -95,9 +95,7 @@ func ValidateExtraTypes(spec string) error {
 		return nil
 	}
 	return fmt.Errorf(
-		"invalid --branch-extra-types %q (want a comma-separated list of "+
-			"lowercase names, e.g. spike,experiment)",
-		spec,
+		"%q is not a comma-separated list of lowercase names, e.g. spike,experiment", spec,
 	)
 }
 
