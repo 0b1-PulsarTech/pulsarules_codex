@@ -19,6 +19,7 @@ func (coll *collector) function(node *ast.Node) {
 	if body == nil && coll.isOverload(node) {
 		return
 	}
+	coll.names(node)
 	if body == nil {
 		node.ForEachChild(coll.each)
 		return
