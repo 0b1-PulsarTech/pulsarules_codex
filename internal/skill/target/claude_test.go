@@ -188,9 +188,20 @@ func TestClaudeTargetUninstall(t *testing.T) {
 	testCases := []struct {
 		name       string
 		keepSkills bool
+		checkSkill func(testing.TB, string)
+		checkDir   func(testing.TB, string)
 	}{
-		{name: "removes skills and hook wiring by default"},
-		{name: "keep-skills leaves the doc but still unwires hooks", keepSkills: true},
+		{
+			name:       "removes skills and hook wiring by default",
+			checkSkill: assertMissing,
+			checkDir:   assertMissing,
+		},
+		{
+			name:       "keep-skills leaves the doc but still unwires hooks",
+			keepSkills: true,
+			checkSkill: assertPresent,
+			checkDir:   assertPresent,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -202,9 +213,7 @@ func TestClaudeTargetUninstall(t *testing.T) {
 				t.Fatalf("Install: %v", err)
 			}
 			skillDoc := filepath.Join(base, ".claude", "skills", "go-style", "SKILL.md")
-			if _, statErr := os.Stat(skillDoc); statErr != nil {
-				t.Fatalf("Install did not write %q: %v", skillDoc, statErr)
-			}
+			requirePresent(t, skillDoc)
 
 			uctx := UninstallContext{
 				Base:             base,
@@ -217,37 +226,12 @@ func TestClaudeTargetUninstall(t *testing.T) {
 				t.Fatalf("Uninstall: %v", err)
 			}
 
-			_, statErr := os.Stat(skillDoc)
-			if testCase.keepSkills {
-				if statErr != nil {
-					t.Errorf("--keep-skills should have kept %q, stat err = %v", skillDoc, statErr)
-				}
-			} else if !errors.Is(statErr, fs.ErrNotExist) {
-				t.Errorf("expected %q to be removed, stat err = %v", skillDoc, statErr)
-			}
+			testCase.checkSkill(t, skillDoc)
 			if len(report.Notes) == 0 {
 				t.Error("expected at least one note describing what was removed/unwired")
 			}
-			settingsPath := filepath.Join(base, ".claude", "settings.json")
-			if _, statErr = os.Stat(settingsPath); !errors.Is(statErr, fs.ErrNotExist) {
-				t.Errorf(
-					"expected settings.json's hooks-only content to be removed, stat err = %v",
-					statErr,
-				)
-			}
-			claudeDir := filepath.Join(base, ".claude")
-			_, statErr = os.Stat(claudeDir)
-			if testCase.keepSkills {
-				if statErr != nil {
-					t.Errorf(
-						"--keep-skills should have kept %q, stat err = %v",
-						claudeDir,
-						statErr,
-					)
-				}
-			} else if !errors.Is(statErr, fs.ErrNotExist) {
-				t.Errorf("expected %q to be reaped once empty, stat err = %v", claudeDir, statErr)
-			}
+			assertMissing(t, filepath.Join(base, ".claude", "settings.json"))
+			testCase.checkDir(t, filepath.Join(base, ".claude"))
 
 			if _, err = (claudeTarget{}).Uninstall(uctx); err != nil {
 				t.Fatalf("second Uninstall: %v", err)

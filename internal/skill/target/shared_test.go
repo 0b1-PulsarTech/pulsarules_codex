@@ -1,9 +1,7 @@
 package target
 
 import (
-	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/marker"
@@ -59,22 +57,5 @@ func TestInstallSkillsAndWorkflows_Backups(t *testing.T) {
 			wantBackup := marker.BackupMessage(foreign, foreign+marker.BackupSuffix)
 			assertNote(t, report.Warnings, wantBackup)
 		})
-	}
-}
-
-func seedFile(tb testing.TB, filePath, content string) {
-	tb.Helper()
-	if err := os.MkdirAll(filepath.Dir(filePath), 0o750); err != nil {
-		tb.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(filePath, []byte(content), 0o600); err != nil {
-		tb.Fatalf("seed %q: %v", filePath, err)
-	}
-}
-
-func assertNote(tb testing.TB, entries []string, substr string) {
-	tb.Helper()
-	if !strings.Contains(strings.Join(entries, "\n"), substr) {
-		tb.Errorf("entries = %v, want one containing %q", entries, substr)
 	}
 }
