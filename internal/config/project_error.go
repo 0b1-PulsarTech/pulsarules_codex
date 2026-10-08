@@ -14,6 +14,10 @@ import (
 
 const ellipsis = "..."
 
+type edge int
+
+const headEdge, tailEdge edge = 0, 1
+
 type collector struct {
 	path   string
 	stored []string
@@ -53,27 +57,80 @@ func (col *collector) err() error {
 	return errors.New(strings.Join(texts, "; "))
 }
 
-func clip(text string, limit int) string {
-	kept, whole := fit(text, limit)
-	if whole {
-		return escape.Line(kept)
-	}
-	return ellipsis + escape.Line(kept)
+func ClipHead(text string, limit int) string {
+	return clip(text, limit, len(ellipsis), headEdge)
 }
 
-func fit(text string, limit int) (string, bool) {
-	hi, used := len(text), 0
-	for hi > 0 {
-		_, size := utf8.DecodeLastRuneInString(text[:hi])
-		if used += escapedWidth(text[hi-size : hi]); used > limit {
+func Fit(text string, limit int) (string, bool) {
+	return fit(text, limit, headEdge, escapedWidth)
+}
+
+func clip(text string, limit, reserve int, side edge) string {
+	kept, whole := fit(text, limit, side, escapedWidth)
+	if !whole {
+		kept, _ = fit(text, max(limit-reserve, 0), side, escapedWidth)
+	}
+	switch {
+	case whole:
+		return escape.Line(kept)
+	case side == tailEdge:
+		return ellipsis + escape.Line(kept)
+	}
+	return escape.Line(trimBrokenEscape(kept)) + ellipsis
+}
+
+func trimBrokenEscape(kept string) string {
+	// A cut backslash or "\x" before the ellipsis would read as a broken escape.
+	for {
+		cut := strings.LastIndexByte(kept, '\\')
+		if cut < 0 || !partialEscape(kept[cut+1:]) {
+			return kept
+		}
+		kept = kept[:cut]
+	}
+}
+
+func partialEscape(rest string) bool {
+	if rest == "" {
+		return true
+	}
+	for _, shape := range []string{"xhh", "uhhhh", "Uhhhhhhhh"} {
+		if rest[0] == shape[0] {
+			return len(rest) < len(shape) && strings.Trim(rest[1:], "0123456789abcdef") == ""
+		}
+	}
+	return false
+}
+
+func fit(text string, limit int, side edge, width func(string) int) (string, bool) {
+	lo, hi, used := 0, len(text), 0
+	for lo < hi {
+		unit := edgeUnit(text[lo:hi], side)
+		if used += width(unit); used > limit {
 			break
 		}
-		hi -= size
+		if side == tailEdge {
+			hi -= len(unit)
+		} else {
+			lo += len(unit)
+		}
 	}
-	if hi == 0 {
+	switch {
+	case lo >= hi:
 		return text, true
+	case side == tailEdge:
+		return text[hi:], false
 	}
-	return text[hi:], false
+	return text[:lo], false
+}
+
+func edgeUnit(text string, side edge) string {
+	if side == tailEdge {
+		_, size := utf8.DecodeLastRuneInString(text)
+		return text[len(text)-size:]
+	}
+	_, size := utf8.DecodeRuneInString(text)
+	return text[:size]
 }
 
 func escapedWidth(unit string) int { return len(escape.Line(unit)) }

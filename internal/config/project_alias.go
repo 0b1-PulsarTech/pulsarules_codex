@@ -159,7 +159,7 @@ func childPath(node *yaml.Node, idx int, path *fieldPath) *fieldPath {
 
 func clipPath(path string) string {
 	// Keeps the last MaxClipBytes of escaped text, and the ellipsis comes on top of that.
-	return clip(path, MaxClipBytes)
+	return clip(path, MaxClipBytes, 0, tailEdge)
 }
 
 func firstAliasLine(node *yaml.Node) int {

@@ -408,7 +408,14 @@ func TestCollectorCapsBytes(t *testing.T) {
 	}
 }
 
+func clipTail(text string, limit int) string { return clip(text, limit, len(ellipsis), tailEdge) }
+
 func parseText(text string, _ int) string { return clipParseText(text) }
+
+func fitHead(text string, limit int) string {
+	kept, whole := Fit(text, limit)
+	return fmt.Sprint(kept, " ", whole)
+}
 
 func TestClip(t *testing.T) {
 	t.Parallel()
@@ -422,11 +429,27 @@ func TestClip(t *testing.T) {
 		limit int
 		want  string
 	}{
-		{"tail fits", clip, "abc", 3, "abc"},
-		{"tail cut", clip, "abcdefg", 3, "...efg"},
-		{"tail never splits a rune", clip, "ab" + acc + acc + "x", 3, "..." + acc + "x"},
-		{"tail escapes the kept part", clip, "a" + ctl + ctl + ctl, 8, `...\x01\x01`},
-		{"tail literal backslash", clip, "xxxx" + bs + acc + "ab", 5, "..." + bs + acc + "ab"},
+		{"head fits", ClipHead, `a\x01`, 5, `a\x01`},
+		{"head keeps whole runes", ClipHead, acc + acc + acc, 6, acc + acc + acc},
+		{"head cut", ClipHead, "abcdefg", 6, "abc..."},
+		{"head escapes the kept part", ClipHead, "a" + ctl + ctl + ctl, 12, `a\x01\x01...`},
+		{"head never splits a rune", ClipHead, "ab" + acc + acc + "x", 6, "ab..."},
+		{"head literal backslash", ClipHead, "ab" + bs + "xyzw", 6, "ab..."},
+		{"head cut escape start", ClipHead, "ab" + bs + "xyzwv", 7, "ab..."},
+		{"head cut unicode start", ClipHead, "ab" + bs + "u00zwvv", 9, "ab..."},
+		{"head backslash pairs", ClipHead, "a" + bs + bs + bs + "xyzwvv", 8, "a..."},
+		{"head cut supplementary escape", ClipHead, "ab" + bs + "U000e0001zz", 10, "ab..."},
+		{"head cut short unicode escape", ClipHead, "ab" + bs + "u00e9zzz", 10, "ab..."},
+		{"head complete escape text", ClipHead, "a" + bs + "x41yzvv", 8, "a" + bs + "x41..."},
+		{"head invalid bytes", ClipHead, "a\xff\xff\xff", 8, `a\xff...`},
+		{"head backslash then rune", ClipHead, "x" + bs + acc + "abcd", 4, "x..."},
+		{"tail fits", clipTail, "abc", 3, "abc"},
+		{"tail cut", clipTail, "abcdefg", 6, "...efg"},
+		{"tail never splits a rune", clipTail, "ab" + acc + acc + "x", 6, "..." + acc + "x"},
+		{"tail escapes the kept part", clipTail, "a" + ctl + ctl + ctl, 11, `...\x01\x01`},
+		{"tail literal backslash", clipTail, "xxxx" + bs + acc + "ab", 8, "..." + bs + acc + "ab"},
+		{"fit stops before the limit", fitHead, "ab" + ctl + "cd", 6, "ab" + ctl + " false"},
+		{"fit keeps all", fitHead, "ab", 2, "ab true"},
 		{"parse short", parseText, "line 3: bad", 0, "line 3: bad"},
 		{"parse line", parseText, "line 1: " + long, 0, "line 1: " + long[:80] + "..."},
 		{"parse word", parseText, "line x: " + long, 0, "line x: " + long[:72] + "..."},

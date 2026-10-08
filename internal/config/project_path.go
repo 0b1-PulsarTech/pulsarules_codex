@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 )
 
 type segment struct {
@@ -153,6 +155,17 @@ func starTail(glob string) int {
 	}
 	return tail
 }
+
+func ClipName(name string, limit int) string {
+	if len(escape.Path(name)) <= limit {
+		return name
+	}
+	// Room for the quotes Path may add and for the ellipsis.
+	kept, _ := fit(name, limit-len(`""`)-len(ellipsis), tailEdge, quotedWidth)
+	return ellipsis + kept
+}
+
+func quotedWidth(unit string) int { return len(strconv.Quote(unit)) - len(`""`) }
 
 func clipValue(value string) string {
 	if len(value) <= MaxClipBytes {
