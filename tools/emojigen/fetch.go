@@ -146,14 +146,12 @@ func firstField(value, sep string) string {
 func get(url string) ([]byte, error) {
 	const fetchTimeout = 60 * time.Second
 
-	ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	client := &http.Client{Timeout: fetchTimeout}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build request %s: %w", url, err)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("get %s: %w", url, err)
 	}
