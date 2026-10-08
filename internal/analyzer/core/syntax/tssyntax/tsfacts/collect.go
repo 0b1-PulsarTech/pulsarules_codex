@@ -42,6 +42,7 @@ func Collect(root *ast.SourceFile, text string, options Options) (syntax.File, e
 	node := root.AsNode()
 	statements := node.Statements()
 	coll.locals = exportedLocals(statements)
+	coll.imports(statements)
 	node.ForEachChild(coll.each)
 	if coll.stop {
 		return syntax.File{}, ErrTooDeep
