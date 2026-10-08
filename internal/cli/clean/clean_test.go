@@ -2,6 +2,9 @@ package clean
 
 import (
 	"errors"
+	"io"
+	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,8 +15,19 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
+
+//nolint:ireturn // Hands the port to sweep, which takes the interface.
+func openRepo(tb testing.TB, root string) vcs.Repository {
+	tb.Helper()
+	repo, err := vcs.Open(root)
+	if err != nil {
+		tb.Fatalf("vcs.Open: %v", err)
+	}
+	return repo
+}
 
 func seedTree(tb testing.TB) string {
 	tb.Helper()
@@ -24,6 +38,7 @@ func seedTree(tb testing.TB) string {
 	files := map[string]string{
 		"notes.md":            "a\u200Bb and an em\u2014dash\n",
 		"code.go":             "package a // zero\u200Bwidth\n",
+		"held.go":             "package a\n\nvar s = \"x\u200By\"\n",
 		"skip.txt":            "a\u200Bb\n",
 		"testdata/fixture.md": "a\u200Bb\n",
 	}
@@ -67,6 +82,11 @@ func TestSweep_Write(t *testing.T) {
 	var out strings.Builder
 	if err := sweep(&out, root, rewrite, nil); err != nil {
 		t.Fatalf("sweep: %v", err)
+	}
+	const held = "held.go:3 left zero width space " +
+		"(in a string literal: write it as an escape (\\uXXXX); clean leaves it)"
+	if !strings.Contains(out.String(), held) {
+		t.Errorf("output lacks %q:\n%s", held, out.String())
 	}
 
 	testCases := []struct {
@@ -187,13 +207,9 @@ func TestSweep_WalksTheGatesGitFileSet(t *testing.T) {
 			t.Skipf("git %v: %v: %s", args, err, out)
 		}
 	}
-	repo, err := vcs.Open(root)
-	if err != nil {
-		t.Fatalf("vcs.Open: %v", err)
-	}
 
 	var out strings.Builder
-	if sweepErr := sweep(&out, root, report, repo); sweepErr != nil {
+	if sweepErr := sweep(&out, root, report, openRepo(t, root)); sweepErr != nil {
 		t.Fatalf("sweep: %v", sweepErr)
 	}
 	testCases := []struct {
@@ -290,13 +306,9 @@ func TestSweep_StaysInsideTheNamedDirectory(t *testing.T) {
 			t.Parallel()
 
 			root := seedScopedRepo(t)
-			repo, err := vcs.Open(root)
-			if err != nil {
-				t.Fatalf("vcs.Open: %v", err)
-			}
 			var out strings.Builder
-			err = sweep(&out, filepath.Join(root, testCase.project), testCase.how, repo)
-			if err != nil {
+			project := filepath.Join(root, testCase.project)
+			if err := sweep(&out, project, testCase.how, openRepo(t, root)); err != nil {
 				t.Fatalf("sweep: %v", err)
 			}
 			for _, rel := range all {
@@ -325,12 +337,8 @@ func TestSweep_SymlinkOutsideNotFollowed(t *testing.T) {
 	if err := os.Symlink(filepath.Join("..", "top.md"), link); err != nil {
 		t.Skipf("symlink: %v", err)
 	}
-	repo, err := vcs.Open(root)
-	if err != nil {
-		t.Fatalf("vcs.Open: %v", err)
-	}
 	var out strings.Builder
-	if err = sweep(&out, filepath.Join(root, "sub"), rewrite, repo); err != nil {
+	if err := sweep(&out, filepath.Join(root, "sub"), rewrite, openRepo(t, root)); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	top, err := os.ReadFile(filepath.Join(root, "top.md"))
@@ -352,17 +360,13 @@ func TestSweep_SymlinkOutsideNotFollowed(t *testing.T) {
 func TestSweep_DirOutsideRepo(t *testing.T) {
 	t.Parallel()
 
-	repo, err := vcs.Open(seedScopedRepo(t))
-	if err != nil {
-		t.Fatalf("vcs.Open: %v", err)
-	}
+	src := openRepo(t, seedScopedRepo(t))
 	outside := t.TempDir()
 	body := filepath.Join(outside, "a.md")
 	if writeErr := os.WriteFile(body, []byte("a\u200Bb\n"), 0o600); writeErr != nil {
 		t.Fatalf("seed: %v", writeErr)
 	}
-	var out strings.Builder
-	if sweepErr := sweep(&out, outside, rewrite, repo); sweepErr == nil {
+	if sweepErr := sweep(io.Discard, outside, rewrite, src); sweepErr == nil {
 		t.Fatal("sweep outside the repository returned nil")
 	}
 	got, readErr := os.ReadFile(body)
@@ -371,5 +375,97 @@ func TestSweep_DirOutsideRepo(t *testing.T) {
 	}
 	if !strings.ContainsRune(string(got), '\u200B') {
 		t.Error("a file outside the repository was rewritten")
+	}
+}
+
+func TestAdvice(t *testing.T) {
+	t.Parallel()
+
+	const (
+		caveat    = "inside a string literal it is data, so write the language's escape instead"
+		removable = "removable outside a string literal; inside one, write it as an escape"
+	)
+	testCases := []struct {
+		name  string
+		class invisible.Class
+		want  string
+	}{
+		{
+			"typographic",
+			invisible.ClassTypographic,
+			"replace with its ASCII form by hand; " + caveat,
+		},
+		{"strip", invisible.ClassStrip, removable},
+		{"space", invisible.ClassSpace, removable},
+		{"contextual", invisible.ClassContextual, "may be load-bearing; judge it before removing"},
+		{"unknown", invisible.Class(250), "unclassified"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := advice(testCase.class); got != testCase.want {
+				t.Errorf("advice(%v) = %q, want %q", testCase.class, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestSweep_SaysWhySkippedFilesAreLeft(t *testing.T) {
+	t.Parallel()
+
+	const body = "package m\n\nvar c = \"R$\u00A010,00\"\n// tail\u00A0x\nvar d = \"half\n"
+	const tail = "in files clean cannot read: fix their syntax first"
+	testCases := []struct {
+		name string
+		how  mode
+		want string
+	}{
+		{"report mode", report, "0 marker(s) found; 2 more " + tail},
+		{"write mode", rewrite, "2 marker(s) left for a human; 2 of them " + tail},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			path := filepath.Join(root, "eof.go")
+			if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			var out strings.Builder
+			if err := sweep(&out, root, testCase.how, nil); err != nil {
+				t.Fatalf("sweep: %v", err)
+			}
+			const note = "eof.go: skipped (does not lex: unterminated comment or literal): " +
+				"markers on lines 3, 4"
+			if !strings.Contains(out.String(), note) {
+				t.Errorf("output lacks %q:\n%s", note, out.String())
+			}
+			if !strings.Contains(out.String(), testCase.want) {
+				t.Errorf("output lacks %q:\n%s", testCase.want, out.String())
+			}
+			if got, _ := os.ReadFile(path); string(got) != body {
+				t.Errorf("file changed: %q", got)
+			}
+		})
+	}
+}
+
+type unlistableRepo struct{ vcs.Repository }
+
+func (unlistableRepo) ListFiles() ([]string, error) { return nil, errors.New("git unavailable") }
+
+//nolint:paralleltest // Replaces the process-wide default logger.
+func TestSweep_WarnsThroughTheDefaultLogger(t *testing.T) {
+	var logs strings.Builder
+	previous, output, flags := slog.Default(), log.Writer(), log.Flags()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous); log.SetOutput(output); log.SetFlags(flags) })
+	src := unlistableRepo{openRepo(t, seedScopedRepo(t))}
+	if err := sweep(io.Discard, src.Root(), report, src); err != nil {
+		t.Fatalf("sweep: %v", err)
+	}
+	if !strings.Contains(logs.String(), "walking the filesystem instead") {
+		t.Errorf("logs = %q, want the fallback warning", logs.String())
 	}
 }

@@ -49,25 +49,23 @@ func sweep(out io.Writer, dir string, how mode, repo vcs.Repository) error {
 	if err != nil {
 		return err
 	}
-	cleaner := cleaner.New(filepath.Join(root, scope))
-	var acted, remaining int
-
+	cleanerItem := cleaner.New(filepath.Join(root, scope))
+	var tally cleaner.Tally
 	var walkErr error
 	walkSources(root, repo, func(rel, _ string) bool {
 		if !within(scope, rel) {
 			return true
 		}
 		// Walk yields a path relative to root; Abs would anchor it to the working directory.
-		found, err := inspectOrClean(cleaner, filepath.Join(root, rel), how)
+		found, err := inspectOrClean(cleanerItem, filepath.Join(root, rel), how)
 		if err != nil {
 			walkErr = err
 			return false
 		}
-		if found.Skipped() {
+		if found.Skipped() && len(found.Remaining) == 0 {
 			return true
 		}
-		acted += len(found.Acted)
-		remaining += len(found.Remaining)
+		tally.Add(found)
 		printReport(out, found, how)
 		return true
 	})
@@ -75,20 +73,11 @@ func sweep(out io.Writer, dir string, how mode, repo vcs.Repository) error {
 		return fmt.Errorf("clean %q: %w", root, walkErr)
 	}
 
+	line := tally.ReportLine()
 	if how == rewrite {
-		_, _ = fmt.Fprintf(
-			out,
-			"removed %d carrier(s); %d marker(s) left for a human\n",
-			acted,
-			remaining,
-		)
-		return nil
+		line = tally.WriteLine()
 	}
-	_, _ = fmt.Fprintf(
-		out,
-		"%d marker(s) found; re-run with --write to remove the removable ones\n",
-		remaining,
-	)
+	_, _ = fmt.Fprintln(out, line)
 	return nil
 }
 
@@ -151,6 +140,10 @@ func inspectOrClean(cleaner *cleaner.Cleaner, path string, how mode) (cleaner.Re
 
 func printReport(out io.Writer, found cleaner.Report, how mode) {
 	path := printable.Path(found.Path)
+	if found.Skipped() {
+		_, _ = fmt.Fprintf(out, "%s: %s\n", path, found.SkipNote())
+		return
+	}
 	for _, acted := range found.Acted {
 		_, _ = fmt.Fprintf(out, "%s:%d removed %s\n", path, acted.Line, acted.Name)
 	}
@@ -159,20 +152,25 @@ func printReport(out io.Writer, found cleaner.Report, how mode) {
 		verb = "left"
 	}
 	for _, left := range found.Remaining {
-		_, _ = fmt.Fprintf(
-			out, "%s:%d %s %s (%s)\n", path, left.Line, verb, left.Name, advice(left.Class),
-		)
+		note := advice(left.Class)
+		if held := found.HeldNote(left); held != "" {
+			note = held
+		}
+		_, _ = fmt.Fprintf(out, "%s:%d %s %s (%s)\n", path, left.Line, verb, left.Name, note)
 	}
 }
 
 func advice(class invisible.Class) string {
+	const literalCaveat = "inside a string literal it is data, " +
+		"so write the language's escape instead"
+
 	switch class {
 	case invisible.ClassTypographic:
-		return "replace with its ASCII form by hand"
+		return "replace with its ASCII form by hand; " + literalCaveat
 	case invisible.ClassContextual:
 		return "may be load-bearing; judge it before removing"
 	case invisible.ClassStrip, invisible.ClassSpace:
-		return "removable"
+		return "removable outside a string literal; inside one, write it as an escape"
 	}
 	return "unclassified"
 }

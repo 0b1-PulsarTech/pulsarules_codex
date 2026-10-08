@@ -35,9 +35,11 @@ Applies to: every governed source extension (e.g. `.go`, `.dart`, `.ts`, `.tsx`,
    by hand (`typographic-markers`). In markdown the fence is machine-readable, so a fenced block or
    an inline code span is skipped outright - the character there is content being shown, not prose
    style. Invisible carriers - zero-width characters, bidi controls, soft hyphens, exotic spaces -
-   are removed by `pulsarules_cli clean --write`, and only the ones no neighbouring context can
-   justify (`text-markers`). A marker that a test needs as data is written as the language's escape
-   (Go `\u2014`), never as the character, so the fixture never trips the check that validates it.
+   are removed by `pulsarules_cli clean --write` from `.go` and `.md` files, and only the ones no
+   neighbouring context can justify (`text-markers`); one inside a Go string literal or a markdown
+   fenced block is reported and left for you to judge. A marker that a test needs as data is
+   written as the language's escape (Go `\u2014`), never as the character, so the fixture never
+   trips the check that validates it.
 3. How hard a marker lands depends on its class. An invisible carrier no neighbouring context can
    justify blocks: the bidi controls among them are the Trojan Source vector (CVE-2021-42574), where
    the diff a reviewer reads is not the code the compiler sees. One that may be load-bearing - a
