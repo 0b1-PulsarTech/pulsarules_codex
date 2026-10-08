@@ -2,6 +2,10 @@ package cli
 
 import (
 	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -9,6 +13,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsperm"
 )
 
 func TestRunGovernance_RequiresProjectDir(t *testing.T) {
@@ -34,13 +39,11 @@ func TestGovernanceConfig(t *testing.T) {
 			name:       "no flags keeps the default preset",
 			opts:       &cliopts.Options{},
 			wantPreset: config.PresetRecommended,
-			wantPath:   nil,
 		},
 		{
 			name:       "preset flag wins",
 			opts:       &cliopts.Options{Preset: config.PresetStrict},
 			wantPreset: config.PresetStrict,
-			wantPath:   nil,
 		},
 		{
 			name:       "golangci config lands in the analyzer params",
@@ -59,7 +62,7 @@ func TestGovernanceConfig(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := governanceConfig(testCase.opts)
+			cfg, err := governanceConfig(testCase.opts, "")
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -77,15 +80,12 @@ func TestGovernanceConfig(t *testing.T) {
 func TestGovernanceConfig_InvalidPreset(t *testing.T) {
 	t.Parallel()
 
-	_, err := governanceConfig(&cliopts.Options{Preset: "stict"})
+	_, err := governanceConfig(&cliopts.Options{Preset: "stict"}, "")
 	if err == nil {
 		t.Fatal("governanceConfig: expected an error for an unknown preset")
 	}
-	for _, want := range []string{
-		config.PresetRecommended,
-		config.PresetStrict,
-		config.PresetMinimal,
-	} {
+	presets := []string{config.PresetRecommended, config.PresetStrict, config.PresetMinimal}
+	for _, want := range presets {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error %q does not name valid preset %q", err, want)
 		}
@@ -147,7 +147,7 @@ func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := governanceConfig(testCase.opts)
+			cfg, err := governanceConfig(testCase.opts, "")
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -193,7 +193,7 @@ func TestSuppressedClause(t *testing.T) {
 func TestGovernanceConfig_StrictLowersFileSize(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := governanceConfig(&cliopts.Options{Preset: config.PresetStrict})
+	cfg, err := governanceConfig(&cliopts.Options{Preset: config.PresetStrict}, "")
 	if err != nil {
 		t.Fatalf("governanceConfig: %v", err)
 	}
@@ -223,7 +223,8 @@ func TestGovernanceConfig_TypographicSeverity(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := governanceConfig(&cliopts.Options{TypographicSeverity: testCase.severity})
+			opts := &cliopts.Options{TypographicSeverity: testCase.severity}
+			cfg, err := governanceConfig(opts, "")
 			if testCase.wantErr {
 				if err == nil {
 					t.Fatalf("governanceConfig(%q) err = nil, want an error", testCase.severity)
@@ -264,7 +265,7 @@ func TestGovernanceConfig_BranchExtraTypes(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := governanceConfig(&cliopts.Options{BranchExtraTypes: testCase.spec})
+			cfg, err := governanceConfig(&cliopts.Options{BranchExtraTypes: testCase.spec}, "")
 			if testCase.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
 					t.Fatalf("err = %v, want one naming %q", err, testCase.wantErr)
@@ -276,6 +277,191 @@ func TestGovernanceConfig_BranchExtraTypes(t *testing.T) {
 			}
 			if got := cfg.Analyzers["branch-name"].Params["extra_types"]; got != testCase.wantSet {
 				t.Errorf("extra_types param = %v, want %v", got, testCase.wantSet)
+			}
+		})
+	}
+}
+
+func writeProjectConfig(t *testing.T, content string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, config.ProjectFileName)
+	if err := os.WriteFile(path, []byte(content), fsperm.File); err != nil {
+		t.Fatalf("write project config: %v", err)
+	}
+	return dir
+}
+
+type precedenceCase struct {
+	name         string
+	opts         *cliopts.Options
+	wantPreset   string
+	wantGolangci any
+	wantSeverity string
+}
+
+func (testCase precedenceCase) assert(t *testing.T, cfg *config.GovernanceConfig) {
+	t.Helper()
+	if cfg.Preset != testCase.wantPreset {
+		t.Errorf("Preset = %q, want %q", cfg.Preset, testCase.wantPreset)
+	}
+	if got := cfg.Analyzers["big-comment"].Params["max_lines"]; got != 1 {
+		t.Errorf("big-comment max_lines = %v, want the file's 1", got)
+	}
+	got := cfg.Analyzers["golangci-lint"].Params["config_path"]
+	if got != testCase.wantGolangci {
+		t.Errorf("config_path = %v, want %v", got, testCase.wantGolangci)
+	}
+	if got = cfg.Severities["typographic-markers"]; got != testCase.wantSeverity {
+		t.Errorf("file severity = %q, want %q", got, testCase.wantSeverity)
+	}
+	if !cfg.IncludeGenerated {
+		t.Error("IncludeGenerated = false, want the file's true")
+	}
+}
+
+func TestGovernanceConfig_ProjectFilePrecedence(t *testing.T) {
+	t.Parallel()
+
+	const content = "version: 1\npreset: minimal\ninclude_generated: true\n" +
+		"analyzers:\n  big-comment: {params: {max_lines: 1}}\n" +
+		"  golangci-lint: {params: {config_path: file.yml}}\n" +
+		"  typographic-markers: {severity: error}\n"
+	root := writeProjectConfig(t, content)
+
+	testCases := []precedenceCase{
+		{"file only", &cliopts.Options{}, config.PresetMinimal, "file.yml", "error"},
+		{
+			"preset flag beats the file",
+			&cliopts.Options{Preset: config.PresetStrict},
+			config.PresetStrict, "file.yml", "error",
+		},
+		{
+			"param flag beats the file",
+			&cliopts.Options{GolangciConfig: "flag.yml"},
+			config.PresetMinimal, "flag.yml", "error",
+		},
+		{
+			"severity flag beats the file",
+			&cliopts.Options{TypographicSeverity: "warning"},
+			config.PresetMinimal, "file.yml", "",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			cfg, err := governanceConfig(testCase.opts, root)
+			if err != nil {
+				t.Fatalf("governanceConfig: %v", err)
+			}
+			testCase.assert(t, cfg)
+		})
+	}
+}
+
+func TestGovernanceConfig_ProjectFileErrors(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{"unknown key", "version: 1\nbogus: 1\n", ".pulsarules.yaml: line 2: bogus: unknown key"},
+		{"second document", "version: 1\n---\nversion: 1\n", "only one YAML document is allowed"},
+		{
+			"widening override",
+			"version: 1\nanalyzers: {file-size: {enabled: false}}\n" +
+				"overrides: [{files: [a], analyzers: {file-size: {enabled: true}}}]\n",
+			"overrides[0].analyzers.file-size.enabled: file-size is disabled",
+		},
+		{
+			"unknown param", "version: 1\nanalyzers: {file-size: {params: {max_line: 1}}}\n",
+			".pulsarules.yaml: analyzers.file-size.params.max_line: unknown param",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := writeProjectConfig(t, testCase.content)
+			_, err := governanceConfig(&cliopts.Options{}, root)
+			if err == nil || !strings.Contains(err.Error(), testCase.want) {
+				t.Fatalf("governanceConfig error = %v, want containing %q", err, testCase.want)
+			}
+		})
+	}
+}
+
+func TestGovernanceConfig_ExplicitConfigPath(t *testing.T) {
+	t.Parallel()
+
+	const content = "version: 1\nanalyzers: {big-comment: {params: {max_lines: 2}}}\n"
+	dir := writeProjectConfig(t, content)
+	explicit := filepath.Join(dir, config.ProjectFileName)
+
+	cfg, err := governanceConfig(&cliopts.Options{Config: explicit}, "")
+	if err != nil {
+		t.Fatalf("governanceConfig: %v", err)
+	}
+	if got := cfg.Analyzers["big-comment"].Params["max_lines"]; got != 2 {
+		t.Errorf("max_lines = %v, want 2", got)
+	}
+	missing := &cliopts.Options{Config: filepath.Join(dir, "nope.yaml")}
+	if _, err = governanceConfig(missing, dir); err == nil {
+		t.Error("governanceConfig with a missing --config: expected an error")
+	}
+}
+
+func TestGovernanceConfig_NoProjectFileIsUnchanged(t *testing.T) {
+	t.Parallel()
+
+	cfg, err := governanceConfig(&cliopts.Options{}, t.TempDir())
+	if err != nil {
+		t.Fatalf("governanceConfig: %v", err)
+	}
+	want := config.Defaults()
+	want.ApplyPreset()
+	if !reflect.DeepEqual(cfg, want) {
+		t.Fatalf("cfg = %+v, want the plain defaults %+v", cfg, want)
+	}
+}
+
+func TestGovernanceConfig_PresetFlag(t *testing.T) {
+	t.Parallel()
+
+	const (
+		base = "version: 1\noverrides:\n" +
+			"  - {files: ['lib/**'], analyzers: {doc-comment: {enabled: true}}}\n"
+		private = "version: 1\npreset: minimal\n"
+	)
+	testCases := []struct {
+		name, preset  string
+		wantOverrides int
+	}{
+		{"private preset drops the base override", "", 0},
+		{"the flag restores the preset the override needs", config.PresetRecommended, 1},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := writeProjectConfig(t, base)
+			cmd := exec.CommandContext(t.Context(), "git", "-C", root, "init", "-q")
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("git init: %v\n%s", err, out)
+			}
+			path := filepath.Join(root, ".git", "pulsarules.yaml")
+			if err := os.WriteFile(path, []byte(private), fsperm.File); err != nil {
+				t.Fatalf("write private config: %v", err)
+			}
+			cfg, err := governanceConfig(&cliopts.Options{Preset: testCase.preset}, root)
+			if err != nil {
+				t.Fatalf("governanceConfig: %v", err)
+			}
+			if len(cfg.Overrides) != testCase.wantOverrides {
+				t.Fatalf("overrides = %+v, want %d", cfg.Overrides, testCase.wantOverrides)
 			}
 		})
 	}

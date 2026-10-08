@@ -76,6 +76,14 @@ func TestParseArgs(t *testing.T) {
 			args:  []string{"list"},
 			check: checkListDefaultsToSkills,
 		},
+		{name: "unknown command", args: []string{"frobnicate"}, wantErr: true},
+	})
+}
+
+func TestParseArgs_Governance(t *testing.T) {
+	t.Parallel()
+
+	runParseArgsCases(t, []parseArgsCase{
 		{
 			name:  "governance suppresses generated files by default",
 			args:  []string{"governance", "--project", "/tmp/repo"},
@@ -86,7 +94,11 @@ func TestParseArgs(t *testing.T) {
 			args:  []string{"governance", "--project", "/tmp/repo", "--include-generated"},
 			check: checkGovernanceIncludeGenerated,
 		},
-		{name: "unknown command", args: []string{"frobnicate"}, wantErr: true},
+		{
+			name:  "governance takes a config path",
+			args:  []string{"governance", "--project", "/tmp/repo", "--config", "x/app.yaml"},
+			check: checkGovernanceConfigPath,
+		},
 	})
 }
 
@@ -197,8 +209,19 @@ func checkListDefaultsToSkills(t *testing.T, opts *Options) {
 	}
 }
 
+func checkGovernanceConfigPath(t *testing.T, opts *Options) {
+	t.Helper()
+	if opts.Config != "x/app.yaml" {
+		t.Errorf("Config = %q, want x/app.yaml", opts.Config)
+	}
+}
+
 func checkGovernanceDefaults(t *testing.T, opts *Options) {
 	t.Helper()
+	if opts.Preset != "" || opts.Config != "" {
+		t.Errorf("Preset = %q, Config = %q, want both unset so the file can supply them",
+			opts.Preset, opts.Config)
+	}
 	if opts.IncludeGenerated {
 		t.Error("IncludeGenerated = true, want false without the flag")
 	}

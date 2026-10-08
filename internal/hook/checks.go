@@ -2,8 +2,10 @@ package hook
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis/projectcfg"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -15,10 +17,12 @@ func RunGovernanceCheck(
 	scope analysis.Scope,
 ) (string, int) {
 	// The empty commit message is deliberate: only the git commit-msg hook validates one.
-	sess := analysis.NewSession(repo, "", index, nil)
+	cfg, configFindings := projectcfg.ForRepo(repo)
+	sess := analysis.NewSession(repo, "", index, cfg)
 	result := sess.Analyze(scope, &status, analysis.FileSetChanged)
+	findings := slices.Concat(configFindings, result.Findings)
 
-	block := analysis.FormatFindings(result.Findings, analysis.StyleHook, "Governance checks:")
+	block := analysis.FormatFindings(findings, analysis.StyleHook, "Governance checks:")
 	if block == "" {
 		return "", 0
 	}
@@ -30,5 +34,5 @@ func RunGovernanceCheck(
 			result.SuppressedGenerated,
 		)
 	}
-	return "\n" + block, len(result.Findings)
+	return "\n" + block, len(findings)
 }

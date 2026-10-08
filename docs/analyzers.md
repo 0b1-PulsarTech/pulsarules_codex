@@ -1,12 +1,12 @@
 # Comment and declaration analyzers
 
-Each analyzer below enforces a rule from `knowledge/standards/rules/`. Params are defaults in code;
-there is no project-config surface for them yet. `extensions` is a common param name, read under
-each analyzer's own id. Findings in generated files are dropped unless `--include-generated` is
-passed; the Go AST analyzers documented here (`test-comment`, `doc-comment`, `body-header-comment`,
-`variadic-index`, `too-many-results`, `ungrouped-interfaces`, `package-level-var`,
-`package-file-count` and `single-letter-name`) also skip generated files, even under
-`--include-generated`. `--preset minimal` disables `test-comment`, `single-use-declaration`,
+Each analyzer below enforces a rule from `knowledge/standards/rules/`. Params are defaults in code
+and can be changed per project in `.pulsarules.yaml`. `extensions` is a common param name, read
+under each analyzer's own id. Findings in generated files are dropped unless `--include-generated`
+is passed; the Go AST analyzers documented here (`test-comment`, `doc-comment`,
+`body-header-comment`, `variadic-index`, `too-many-results`, `ungrouped-interfaces`,
+`package-level-var`, `package-file-count` and `single-letter-name`) also skip generated files, even
+under `--include-generated`. `--preset minimal` disables `test-comment`, `single-use-declaration`,
 `doc-comment`, `body-header-comment`, `history-narration`, `variadic-index`, `too-many-results`,
 `ungrouped-interfaces`, `package-level-var` and `package-file-count`; it keeps `single-letter-name`
 with `exported_only` set, so only upper case single letters on a function, method, type, constant,
@@ -164,21 +164,19 @@ variable, field or interface method are reported.
 - Flags: a changed source file with more lines than the limit, 180 by default; a test file gets 2.6
   times that.
 - Params: `max_lines` (default 180), plus `extensions`.
-- Known limits: a `max_lines` at or below 0 (only a Go caller building its own `GovernanceConfig`
-  can set it; no flag or config file does) falls back to the default 180 rather than disabling the
+- Known limits: a `max_lines` at or below 0 falls back to the default 180 rather than disabling the
   check.
 
 ## big-comment
 
 - Rule: `comments`.
 - Flags: a hand-written comment block longer than `max_lines`.
-- Params: `max_lines` (default 3), plus `extensions`.
+- Params: `max_lines` (default 3, configurable in `.pulsarules.yaml`), plus `extensions`.
 - Exemptions: machine-read lines (directives, goverter, pulsarules markers) are not counted; a block
   led by a generated or simplification marker is exempt. Directive spans are gated on the language's
   own block syntax, and a second directive block is kept out of the hand count.
-- Known limits: the directive edge forms listed under `top-of-file` apply here too. A `max_lines` at
-  or below 0 (only a Go caller building its own `GovernanceConfig` can set it; no flag or config
-  file does) falls back to the default 3 rather than disabling the check.
+- Known limits: the directive edge forms listed under `top-of-file` apply here too. A `max_lines`
+  below 1, in the config or elsewhere, falls back to the default 3 rather than disabling the check.
 
 ## commit-move-purity
 

@@ -10,6 +10,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis/projectcfg"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/branchname"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
@@ -31,6 +32,29 @@ func validateScope(scope string) error {
 	return fmt.Errorf("invalid --scope %q (want %s)", scope, strings.Join(validScopes, "|"))
 }
 
+type governanceRun struct {
+	repo vcs.Repository
+	cfg  *config.GovernanceConfig
+	idx  *knowledge.Index
+}
+
+func loadGovernance(inj remy.Injector, opts *cliopts.Options) (governanceRun, error) {
+	repo, err := remy.Get[vcs.Repository](inj)
+	if err != nil {
+		return governanceRun{}, fmt.Errorf("open repository: %w", err)
+	}
+	cfg, err := governanceConfig(opts, repo.Root())
+	if err != nil {
+		return governanceRun{}, err
+	}
+
+	idx, err := remy.Get[*knowledge.Index](inj)
+	if err != nil {
+		return governanceRun{}, fmt.Errorf("get knowledge index: %w", err)
+	}
+	return governanceRun{repo: repo, cfg: cfg, idx: idx}, nil
+}
+
 func runGovernance(inj remy.Injector, opts *cliopts.Options) error {
 	if opts.ProjectDir == "" && os.Getenv("PULSARULES_PROJECT_DIR") == "" {
 		return errProjectDirRequired
@@ -39,18 +63,9 @@ func runGovernance(inj remy.Injector, opts *cliopts.Options) error {
 		return err
 	}
 
-	repo, err := remy.Get[vcs.Repository](inj)
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-	cfg, err := governanceConfig(opts)
+	run, err := loadGovernance(inj, opts)
 	if err != nil {
 		return err
-	}
-
-	idx, err := remy.Get[*knowledge.Index](inj)
-	if err != nil {
-		return fmt.Errorf("get knowledge index: %w", err)
 	}
 
 	scope := analysis.ParseScope(opts.Scope)
@@ -59,7 +74,7 @@ func runGovernance(inj remy.Injector, opts *cliopts.Options) error {
 		files = analysis.FileSetAll
 	}
 
-	result := analysis.NewSession(repo, "", idx, cfg).Analyze(scope, nil, files)
+	result := analysis.NewSession(run.repo, "", run.idx, run.cfg).Analyze(scope, nil, files)
 	return reportGovernance(result)
 }
 
@@ -98,30 +113,39 @@ func suppressedClause(suppressed int) string {
 	return fmt.Sprintf(", %d suppressed in generated files", suppressed)
 }
 
-func governanceConfig(opts *cliopts.Options) (*config.GovernanceConfig, error) {
-	cfg := config.Defaults()
-	if opts.Preset != "" {
-		// ApplyPreset silently ignores an unknown name, so reject it here.
-		if !config.ValidPreset(opts.Preset) {
-			return nil, fmt.Errorf(
-				"invalid --preset %q (want %s)", opts.Preset, strings.Join(config.Presets(), "|"),
-			)
-		}
-		cfg.Preset = opts.Preset
+func projectConfig(opts *cliopts.Options, root string) (*config.GovernanceConfig, error) {
+	// ApplyPreset silently ignores an unknown name, so reject it here.
+	if opts.Preset != "" && !config.ValidPreset(opts.Preset) {
+		return nil, fmt.Errorf(
+			"invalid --preset %q (want %s)", opts.Preset, strings.Join(config.Presets(), "|"),
+		)
 	}
-	cfg.ApplyPreset()
-	cfg.IncludeGenerated = opts.IncludeGenerated
+	file, err := projectcfg.Load(root, opts.Config, opts.Preset)
+	if err != nil {
+		return nil, err
+	}
+	return projectcfg.Build(file, opts.Preset)
+}
+
+func governanceConfig(opts *cliopts.Options, root string) (*config.GovernanceConfig, error) {
+	cfg, err := projectConfig(opts, root)
+	if err != nil {
+		return nil, err
+	}
+	if opts.IncludeGenerated {
+		cfg.IncludeGenerated = true
+	}
 
 	if opts.GolangciConfig != "" {
 		cfg.SetParam("golangci-lint", "config_path", opts.GolangciConfig)
 	}
-	if err := core.ValidateSeverityName(opts.TypographicSeverity); err != nil {
+	if err = core.ValidateSeverityName(opts.TypographicSeverity); err != nil {
 		return nil, fmt.Errorf("invalid --typographic-severity: %w", err)
 	}
 	if opts.TypographicSeverity != "" {
 		cfg.SetParam("typographic-markers", "severity", opts.TypographicSeverity)
 	}
-	if err := branchname.ValidateExtraTypes(opts.BranchExtraTypes); err != nil {
+	if err = branchname.ValidateExtraTypes(opts.BranchExtraTypes); err != nil {
 		return nil, fmt.Errorf("invalid --branch-extra-types: %w", err)
 	}
 	if opts.BranchExtraTypes != "" {

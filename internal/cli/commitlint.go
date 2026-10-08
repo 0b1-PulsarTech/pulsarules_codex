@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis/projectcfg"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/cliopts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -39,11 +41,13 @@ func runCommitLint(inj remy.Injector, opts *cliopts.Options) error {
 	if err != nil {
 		return fmt.Errorf("get knowledge index: %w", err)
 	}
-	sess := analysis.NewSession(repo, msg, idx, nil)
+	cfg, configFindings := projectcfg.ForRepo(repo)
+	sess := analysis.NewSession(repo, msg, idx, cfg)
 	// An explicit empty status keeps this a pure message linter. A nil
 	// status would have discovery read the worktree, and content findings from
 	// unrelated dirty files would fail a commit whose message is fine.
-	findings := sess.Analyze(analysis.ScopeCommit, &vcs.Status{}, analysis.FileSetChanged).Findings
+	result := sess.Analyze(analysis.ScopeCommit, &vcs.Status{}, analysis.FileSetChanged)
+	findings := slices.Concat(configFindings, result.Findings)
 
 	if len(findings) == 0 {
 		_, _ = fmt.Fprintln(os.Stderr, "commit message is valid")

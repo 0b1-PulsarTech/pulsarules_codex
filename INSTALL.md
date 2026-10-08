@@ -163,8 +163,10 @@ Additional install flags:
   command before anything is written, naming the valid set. `--no-git-hooks` skips installing git
   hooks entirely.
 - `--typographic-severity error|warning|info`: bake into the generated governance hooks how hard a
-  `typographic-markers` finding lands (the analyzer's own default is `error`); a git hook receives
-  no arguments from the person committing, so install time is the only chance to set it. The same
+  `typographic-markers` finding lands (the analyzer's own default is `error`). A project config's
+  `analyzers.<id>.severity` raises or lowers any check, golangci-lint and the delegated commands
+  included; this flag is the shortcut for the one people retune most. A git hook receives no
+  arguments from the person committing, so install time is the only chance to set it. The same
   flag on `governance` applies to a single run.
 - `--branch-extra-types spike,experiment`: bake into the pre-push hook extra branch-type prefixes
   the `branch-name` analyzer accepts beyond the Conventional Commit and gitflow sets. Only pre-push

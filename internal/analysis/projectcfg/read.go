@@ -22,8 +22,7 @@ func readBounded(path string) ([]byte, error) {
 func openNonBlocking(path string) (*os.File, error) {
 	// Non-blocking, so opening a pipe never waits for a writer.
 	flags := os.O_RDONLY | syscall.O_NONBLOCK
-	// G304: the path is the project config file or an explicit path from the caller.
-	//nolint:gosec
+	//nolint:gosec // G304: the path is the project config file or the operator's --config.
 	file, err := os.OpenFile(path, flags, 0)
 	if err != nil {
 		return nil, readFault(err)
