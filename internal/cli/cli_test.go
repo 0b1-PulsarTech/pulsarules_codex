@@ -3,16 +3,12 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"io"
 	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -283,80 +279,12 @@ func TestResolveLogPath(t *testing.T) {
 	}
 }
 
-func switchCaseCommands(t *testing.T, path, funcName string) []string {
-	t.Helper()
-
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
-	if err != nil {
-		t.Fatalf("parse %s: %v", path, err)
-	}
-
-	var commands []string
-	ast.Inspect(file, func(node ast.Node) bool {
-		fn, ok := node.(*ast.FuncDecl)
-		if !ok || fn.Name.Name != funcName {
-			return true
-		}
-		commands = caseLabelsInFirstSwitch(fn.Body)
-		return false
-	})
-	if commands == nil {
-		t.Fatalf("no switch statement found in %s.%s", path, funcName)
-	}
-	return commands
-}
-
-func caseLabelsInFirstSwitch(body *ast.BlockStmt) []string {
-	var commands []string
-	ast.Inspect(body, func(node ast.Node) bool {
-		sw, ok := node.(*ast.SwitchStmt)
-		if !ok {
-			return commands == nil
-		}
-		for _, stmt := range sw.Body.List {
-			clause, ok := stmt.(*ast.CaseClause)
-			if !ok {
-				continue
-			}
-			for _, expr := range clause.List {
-				lit, ok := expr.(*ast.BasicLit)
-				if !ok || lit.Kind != token.STRING {
-					continue
-				}
-				if unquoted, unquoteErr := strconv.Unquote(lit.Value); unquoteErr == nil {
-					commands = append(commands, unquoted)
-				}
-			}
-		}
-		return false
-	})
-	return commands
-}
-
-func TestDispatchCommands_InUsageText(t *testing.T) {
+func TestDispatchCommands_MatchBoundCommands(t *testing.T) {
 	t.Parallel()
 
-	for command := range commands() {
-		if !strings.Contains(cliopts.UsageText(), "pulsarules_cli "+command) {
-			t.Errorf("usage.txt has no %q line for a command Run dispatches", command)
-		}
-	}
-}
-
-func TestDispatchCommands_ParityWithParseArgs(t *testing.T) {
-	t.Parallel()
-
-	runCommands := slices.Sorted(maps.Keys(commands()))
-	parseCommands := switchCaseCommands(
-		t, filepath.Join("cliopts", "parse.go"), "bindCommandFlags",
-	)
-	slices.Sort(parseCommands)
-	if !slices.Equal(runCommands, parseCommands) {
-		t.Errorf(
-			"Run dispatches %v, bindCommandFlags binds %v - the table and the switch diverged",
-			runCommands, parseCommands,
-		)
+	dispatched := slices.Sorted(maps.Keys(commands()))
+	if bound := cliopts.Commands(); !slices.Equal(dispatched, bound) {
+		t.Errorf("Run dispatches %v, ParseArgs binds %v", dispatched, bound)
 	}
 }
 

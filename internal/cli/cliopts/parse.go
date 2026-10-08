@@ -3,7 +3,9 @@ package cliopts
 import (
 	"flag"
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 )
 
 func ParseArgs(args []string) (*Options, error) {
@@ -38,38 +40,62 @@ func ParseArgs(args []string) (*Options, error) {
 	return opts, nil
 }
 
+type flagBinder func(fs *flag.FlagSet, opts *Options)
+
+func commandBinders() map[string]flagBinder {
+	return map[string]flagBinder{
+		"generate":   bindGenerateFlags,
+		"install":    bindInstallFlags,
+		"uninstall":  bindUninstallFlags,
+		"package":    bindPackageFlags,
+		"list":       bindNoFlags,
+		"validate":   bindNoFlags,
+		"hook":       bindNoFlags,
+		"commitlint": bindCommitLintFlags,
+		"clean":      bindCleanFlags,
+		"evals":      bindEvalsFlags,
+		"governance": bindGovernanceFlags,
+	}
+}
+
 func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
-	switch command {
-	case "generate":
-		fs.StringVar(&opts.Out, "out", "", "output dir (defaults to ./generated)")
-	case "install":
-		bindInstallFlags(fs, opts)
-	case "uninstall":
-		bindUninstallFlags(fs, opts)
-	case "package":
-		fs.StringVar(
-			&opts.Out,
-			"out",
-			"",
-			"output zip path (defaults to ./build/standards-skills.zip)",
-		)
-	case "list", "validate", "hook":
-	case "commitlint":
-		fs.StringVar(&opts.CommitMsg, "msg", "", "commit message to validate")
-		fs.StringVar(&opts.CommitFile, "file", "", "path to a COMMIT_EDITMSG file")
-		fs.StringVar(&opts.ProjectDir, "project", "", "project dir for git history lookup")
-	case "clean":
-		fs.StringVar(&opts.ProjectDir, "project", "", "project dir to clean")
-		fs.BoolVar(&opts.Write, "write", false, "rewrite files instead of only reporting")
-	case "evals":
-		fs.StringVar(&opts.Artifact, "artifact", "", "path to the produced artifact to grade")
-		fs.StringVar(&opts.Scenario, "scenario", "", "grade only this scenario id")
-	case "governance":
-		bindGovernanceFlags(fs, opts)
-	default:
+	bind, ok := commandBinders()[command]
+	if !ok {
 		return fmt.Errorf("unknown command %q", command)
 	}
+	bind(fs, opts)
 	return nil
+}
+
+func bindNoFlags(*flag.FlagSet, *Options) {}
+
+func bindGenerateFlags(fs *flag.FlagSet, opts *Options) {
+	fs.StringVar(&opts.Out, "out", "", "output dir (defaults to ./generated)")
+}
+
+func bindPackageFlags(fs *flag.FlagSet, opts *Options) {
+	fs.StringVar(
+		&opts.Out,
+		"out",
+		"",
+		"output zip path (defaults to ./build/standards-skills.zip)",
+	)
+}
+
+func bindCommitLintFlags(fs *flag.FlagSet, opts *Options) {
+	fs.StringVar(&opts.CommitMsg, "msg", "", "commit message to validate")
+	fs.StringVar(&opts.CommitFile, "file", "", "path to a COMMIT_EDITMSG file")
+	fs.StringVar(&opts.ProjectDir, "project", "", "project dir for git history lookup")
+}
+
+func bindCleanFlags(fs *flag.FlagSet, opts *Options) {
+	fs.StringVar(&opts.ProjectDir, "project", "", "project dir to clean")
+	fs.BoolVar(&opts.Write, "write", false, "rewrite files instead of only reporting")
+}
+
+func bindEvalsFlags(fs *flag.FlagSet, opts *Options) {
+	fs.StringVar(&opts.Artifact, "artifact", "", "path to the produced artifact to grade")
+	fs.StringVar(&opts.Scenario, "scenario", "", "grade only this scenario id")
 }
 
 func parsePositionalArgs(opts *Options, fs *flag.FlagSet) {
@@ -123,4 +149,8 @@ func bindGovernanceFlags(fs *flag.FlagSet, opts *Options) {
 		false,
 		"report findings in generated files too (suppressed by default)",
 	)
+}
+
+func Commands() []string {
+	return slices.Sorted(maps.Keys(commandBinders()))
 }
