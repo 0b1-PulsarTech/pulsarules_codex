@@ -3,7 +3,60 @@ package config
 import (
 	"maps"
 	"slices"
+	"strings"
 )
+
+func (govCfg *GovernanceConfig) ApplyProject(file *ProjectFile) error {
+	if file.IncludeGenerated != nil {
+		govCfg.IncludeGenerated = *file.IncludeGenerated
+	}
+	govCfg.SkipDirs = append(govCfg.SkipDirs, file.SkipDirs...)
+	govCfg.TestGlobs = slices.Clone(file.Tests)
+	for id, entry := range file.Analyzers {
+		govCfg.applyAnalyzer(id, entry)
+	}
+	return govCfg.checkOverrides(file)
+}
+
+func (govCfg *GovernanceConfig) checkOverrides(file *ProjectFile) error {
+	problems := &collector{path: file.Path}
+	listed := newRoot().key("overrides")
+	for idx, override := range file.Overrides {
+		for _, id := range slices.Sorted(maps.Keys(override.Analyzers)) {
+			rules := override.Analyzers[id]
+			base, _, _ := strings.Cut(id, "/")
+			current, found := govCfg.Analyzers[base]
+			if rules.Enabled == nil || !*rules.Enabled || !found || current.Enabled {
+				continue
+			}
+			field := listed.item(idx).key("analyzers").key(id).key("enabled")
+			problems.add(0, field, "%s is disabled for the whole project; "+
+				"an override can only narrow it", clipValue(base))
+		}
+	}
+	return problems.err()
+}
+
+func (govCfg *GovernanceConfig) applyAnalyzer(id string, entry AnalyzerEntry) {
+	if govCfg.Analyzers == nil {
+		govCfg.Analyzers = map[string]AnalyzerConfig{}
+	}
+	current, found := govCfg.Analyzers[id]
+	if !found {
+		current = AnalyzerConfig{Enabled: true}
+	}
+	// Enabled is a pointer: absent keeps the current choice, false switches the analyzer off.
+	if entry.Enabled != nil {
+		current.Enabled = *entry.Enabled
+	}
+	if len(entry.Params) > 0 {
+		merged := make(map[string]any, len(current.Params)+len(entry.Params))
+		maps.Copy(merged, current.Params)
+		maps.Copy(merged, entry.Params)
+		current.Params = merged
+	}
+	govCfg.Analyzers[id] = current
+}
 
 func (val *validator) checkOverrides(entries []OverrideEntry) {
 	field := val.root.key("overrides")

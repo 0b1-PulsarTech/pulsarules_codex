@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"slices"
+	"sync"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/sources"
@@ -30,6 +31,9 @@ type Session struct {
 	gitSkips    sources.SkipSet
 	logger      *slog.Logger
 	providers   providerFactory
+	policyOnce  sync.Once
+	policy      testpolicy.Policy
+	policyErr   error
 }
 
 func NewSession(
@@ -47,8 +51,8 @@ func NewSession(
 		commitMsg:   commitMsg,
 		index:       index,
 		cfgAnalysis: toAnalysisConfig(cfg),
-		skips:       sources.NewSkipSet(sources.DefaultSkipDirs()),
-		gitSkips:    sources.NewSkipSet(sources.GitSkipDirs()),
+		skips:       sources.NewSkipSet(append(sources.DefaultSkipDirs(), cfg.SkipDirs...)),
+		gitSkips:    sources.NewSkipSet(append(sources.GitSkipDirs(), cfg.SkipDirs...)),
 		logger:      slog.Default(),
 		providers:   defaultProviders,
 	}
@@ -86,7 +90,7 @@ func (sess *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *D
 
 	if files == FileSetAll {
 		sess.attachSources(discovery)
-		discovery.ChangedFiles = walkAllFiles(discovery.Sources, testpolicy.Defaults())
+		discovery.ChangedFiles = walkAllFiles(discovery.Sources, sess.testPolicy())
 		return discovery
 	}
 
@@ -113,7 +117,7 @@ func (sess *Session) changedFiles(scope Scope, status *vcs.Status) []core.FileCh
 			return !change.Staged
 		})
 	}
-	return changesToFileChanges(changes, testpolicy.Defaults())
+	return changesToFileChanges(changes, sess.testPolicy())
 }
 
 func (sess *Session) Load(discovery *Discovery) *core.AnalysisContext {
@@ -131,7 +135,10 @@ func (sess *Session) Load(discovery *Discovery) *core.AnalysisContext {
 		GitHistory:    discovery.GitHistory,
 		StagedRenames: discovery.StagedRenames,
 		Skips:         discovery.Skips,
-		TestPolicy:    testpolicy.Defaults(),
+		TestPolicy:    sess.testPolicy(),
+	}
+	if sess.policyErr != nil {
+		ctx.Findings = append(ctx.Findings, configFinding(sess.policyErr))
 	}
 
 	if len(discovery.ChangedFiles) > 0 && discovery.Sources != nil {
@@ -148,4 +155,20 @@ func (sess *Session) Load(discovery *Discovery) *core.AnalysisContext {
 		)
 	}
 	return ctx
+}
+
+func (sess *Session) testPolicy() testpolicy.Policy {
+	sess.policyOnce.Do(func() {
+		var globs []string
+		if sess.cfgAnalysis != nil {
+			globs = sess.cfgAnalysis.TestGlobs
+		}
+		policy, err := testpolicy.New(globs)
+		if err != nil {
+			sess.policyErr = err
+			policy = testpolicy.Defaults()
+		}
+		sess.policy = policy
+	})
+	return sess.policy
 }

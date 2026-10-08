@@ -281,12 +281,12 @@ consumer project has no `knowledge/` tree and stays silent.
 ### internal/config
 
 `GovernanceConfig` is the top-level runtime configuration: per-analyzer enable/params
-(`AnalyzerConfig`), emoji rules (`EmojiConfig`), move-purity thresholds (`MovePurityConfig`), and
-`IncludeGenerated`. `Defaults()` returns the embedded baseline; `presets.go` applies a named preset
-(strict/recommended/minimal) in-memory. `internal/analysis/runner.go`'s `toAnalysisConfig` converts
-a `GovernanceConfig` into the `core.AnalysisConfig` the `StageRunner`'s `enabled()` check reads,
-projecting `EmojiConfig`/`MovePurityConfig` onto the `commit-lint` and `commit-move-purity`
-analyzers' own `Params` maps.
+(`AnalyzerConfig`), emoji rules (`EmojiConfig`), move-purity thresholds (`MovePurityConfig`),
+`IncludeGenerated`, and extra `SkipDirs`. `Defaults()` returns the embedded baseline; `presets.go`
+applies a named preset (strict/recommended/minimal) in-memory. `internal/analysis/runner.go`'s
+`toAnalysisConfig` converts a `GovernanceConfig` into the `core.AnalysisConfig` the `StageRunner`'s
+`enabled()` check reads, projecting `EmojiConfig`/`MovePurityConfig` onto the `commit-lint` and
+`commit-move-purity` analyzers' own `Params` maps.
 
 ### internal/obs
 

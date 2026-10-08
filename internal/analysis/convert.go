@@ -94,6 +94,12 @@ func changedSources(files []core.FileChange) []syntax.Source {
 	return sources
 }
 
+func configFinding(err error) core.Finding {
+	return core.NewReporter("config", core.SeverityError, core.CatProject).At(
+		".pulsarules.yaml", 0, err.Error(), "fix the test globs",
+	)
+}
+
 func (sess *Session) stagedRenames() []core.Rename {
 	const renameProbeScore = 1
 	// Low so a partial rename still reaches move-purity, which judges it against its own

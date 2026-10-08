@@ -25,6 +25,7 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *core.AnalysisConfig {
 	return &core.AnalysisConfig{
 		Analyzers:        analyzers,
 		IncludeGenerated: cfg.IncludeGenerated,
+		TestGlobs:        cfg.TestGlobs,
 	}
 }
 

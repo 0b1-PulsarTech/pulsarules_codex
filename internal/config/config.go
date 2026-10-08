@@ -6,6 +6,8 @@ type GovernanceConfig struct {
 	Emoji            EmojiConfig
 	MovePurity       MovePurityConfig
 	IncludeGenerated bool
+	SkipDirs         []string
+	TestGlobs        []string
 }
 
 type AnalyzerConfig struct {

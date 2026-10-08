@@ -1,25 +1,45 @@
 package testpolicy
 
 import (
+	"fmt"
 	"path"
 	"path/filepath"
 	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/pathglob"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax"
 )
 
 type Policy struct {
 	rules    map[syntax.Language]rule
 	fallback rule
+	globs    []pathglob.Pattern
 }
 
 func Defaults() Policy {
 	return Policy{rules: languageRules(), fallback: fallbackRule()}
 }
 
+func New(globs []string) (Policy, error) {
+	policy := Defaults()
+	for _, glob := range globs {
+		pattern, err := pathglob.Compile(glob)
+		if err != nil {
+			return Policy{}, fmt.Errorf("test glob: %w", err)
+		}
+		policy.globs = append(policy.globs, pattern)
+	}
+	return policy, nil
+}
+
 func (policy Policy) IsTest(file string) bool {
 	slashed := filepath.ToSlash(file)
+	if slices.ContainsFunc(policy.globs, func(pattern pathglob.Pattern) bool {
+		return pattern.Match(slashed)
+	}) {
+		return true
+	}
 	return policy.ruleFor(path.Ext(slashed)).matches(slashed)
 }
 
