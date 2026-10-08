@@ -2,6 +2,7 @@ package governance
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity"
@@ -68,6 +69,7 @@ func TestToAnalysisConfigProjectFields(t *testing.T) {
 	}{
 		{"tests and delegated", setTestsAndDelegated, checkTestsAndDelegated},
 		{"severity rules precede file rules", setSeverityRules, checkSeverityRules},
+		{"disabled delegated is dropped", setDisabledDelegated, checkDisabledDelegated},
 		{"no project file", func(*config.GovernanceConfig) {}, checkNoProjectFields},
 	}
 	for _, testCase := range testCases {
@@ -117,5 +119,38 @@ func checkNoProjectFields(t *testing.T, _ *config.GovernanceConfig, got *pass.An
 	t.Helper()
 	if len(got.Overrides) != 0 || len(got.TestGlobs) != 0 || len(got.Delegated) != 0 {
 		t.Fatalf("project fields set without a project file: %+v", got)
+	}
+}
+
+func setDisabledDelegated(cfg *config.GovernanceConfig) {
+	cfg.Delegated = []pass.DelegatedCommand{
+		{ID: "off", Run: []string{"a"}},
+		{ID: "on"},
+		{ID: "unlisted"},
+	}
+	cfg.Analyzers = map[string]config.AnalyzerConfig{
+		"off": {Enabled: false},
+		"on":  {Enabled: true},
+	}
+}
+
+func delegatedIDs(entries []pass.DelegatedCommand) []string {
+	ids := make([]string, len(entries))
+	for idx, entry := range entries {
+		ids[idx] = entry.ID
+	}
+	return ids
+}
+
+func checkDisabledDelegated(
+	t *testing.T, cfg *config.GovernanceConfig, got *pass.AnalysisConfig,
+) {
+	t.Helper()
+	if ids := delegatedIDs(got.Delegated); !slices.Equal(ids, []string{"on", "unlisted"}) {
+		t.Errorf("Delegated ids = %v, want [on unlisted]", ids)
+	}
+	wantSource := []string{"off", "on", "unlisted"}
+	if ids := delegatedIDs(cfg.Delegated); !slices.Equal(ids, wantSource) {
+		t.Errorf("source Delegated ids = %v, want %v", ids, wantSource)
 	}
 }
