@@ -178,7 +178,7 @@ func TestRunEntryRelativeExecutable(t *testing.T) {
 		ID: entryID, Dir: "sub", Format: "dart-analyze-json", Run: []string{"./fake.sh"},
 	}
 
-	if findings := NewAnalyzer(nil).runEntry(root, entry); len(findings) != 0 {
+	if findings := NewAnalyzer(nil).runEntry(root, nil, entry); len(findings) != 0 {
 		t.Fatalf("findings = %+v, want none (./fake.sh runs inside sub)", findings)
 	}
 }
@@ -218,7 +218,7 @@ func TestRunEntryLinkedRoot(t *testing.T) {
 				Run: writeScript(t, reportAt(`"$(pwd -P)/f.dart"`)),
 			}
 
-			findings := NewAnalyzer(nil).runEntry(logical, entry)
+			findings := NewAnalyzer(nil).runEntry(logical, nil, entry)
 			if len(findings) != 1 || findings[0].File != testCase.want ||
 				findings[0].AnalyzerID != entryID+"/c" {
 				t.Fatalf("findings = %+v, want one %s/c at %s", findings, entryID, testCase.want)

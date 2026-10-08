@@ -12,12 +12,20 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/execx"
 )
 
-func (analyzer *Analyzer) runEntry(root string, entry core.DelegatedCommand) []core.Finding {
+func (analyzer *Analyzer) runEntry(
+	root string, listed listing, entry core.DelegatedCommand,
+) []core.Finding {
 	rep := reports{id: entry.ID, rule: entry.Rule}
 	if physical, err := filepath.EvalSymlinks(root); err == nil {
 		root = physical
 	}
 	kind, dir, fault := analyzer.checkEntry(root, entry)
+	if fault == "" && !listed.holds(root, dir) {
+		fault = fmt.Sprintf(
+			"dir %q holds no file governance analyses (ignored, skipped dir, or submodule)",
+			entry.Dir,
+		)
+	}
 	if fault != "" {
 		return []core.Finding{rep.config(fault)}
 	}
@@ -41,7 +49,7 @@ func (analyzer *Analyzer) runEntry(root string, entry core.DelegatedCommand) []c
 	if failure != nil {
 		return []core.Finding{*failure}
 	}
-	where := scope{root: root, dir: dir}
+	where := scope{root: root, dir: dir, listed: listed}
 	return decodeFindings(inv, where, result, reported)
 }
 
@@ -86,21 +94,25 @@ func cause(err error) error {
 }
 
 type scope struct {
-	root string
-	dir  string
+	root   string
+	dir    string
+	listed listing
 }
 
 type placed struct {
-	rel    string
-	inside bool
+	rel     string
+	outcome verdict
 }
 
 func (where scope) place(file string) placed {
 	if file == "" {
-		return placed{inside: true}
+		return placed{outcome: kept}
 	}
 	rel, inside := relativeTo(where.root, where.dir, file)
-	return placed{rel: rel, inside: inside}
+	if !inside {
+		return placed{outcome: dropped}
+	}
+	return placed{rel: rel, outcome: where.listed.judge(where.root, where.dir, rel)}
 }
 
 func decodeFindings(
@@ -111,7 +123,7 @@ func decodeFindings(
 		return []core.Finding{inv.rep.failed("undecodable output: "+err.Error(), result.Stderr)}
 	}
 	sorted := where.sortOut(inv.rep, found)
-	if reported != 0 && len(sorted.findings) == 0 {
+	if reported != 0 && len(sorted.findings) == 0 && sorted.excluded == 0 {
 		reason := fmt.Sprintf("exit %d but no diagnostics inside the project", reported)
 		return []core.Finding{inv.rep.failed(reason, result.Stderr)}
 	}
