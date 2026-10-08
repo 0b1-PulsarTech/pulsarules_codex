@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -336,7 +337,7 @@ func caseLabelsInFirstSwitch(body *ast.BlockStmt) []string {
 func TestDispatchCommands_InUsageText(t *testing.T) {
 	t.Parallel()
 
-	for _, command := range switchCaseCommands(t, "cli.go", "Run") {
+	for command := range commands() {
 		if !strings.Contains(cliopts.UsageText(), "pulsarules_cli "+command) {
 			t.Errorf("usage.txt has no %q line for a command Run dispatches", command)
 		}
@@ -346,15 +347,14 @@ func TestDispatchCommands_InUsageText(t *testing.T) {
 func TestDispatchCommands_ParityWithParseArgs(t *testing.T) {
 	t.Parallel()
 
-	runCommands := switchCaseCommands(t, "cli.go", "Run")
+	runCommands := slices.Sorted(maps.Keys(commands()))
 	parseCommands := switchCaseCommands(
 		t, filepath.Join("cliopts", "parse.go"), "bindCommandFlags",
 	)
-	slices.Sort(runCommands)
 	slices.Sort(parseCommands)
 	if !slices.Equal(runCommands, parseCommands) {
 		t.Errorf(
-			"Run dispatches %v, bindCommandFlags binds %v - the two switches diverged",
+			"Run dispatches %v, bindCommandFlags binds %v - the table and the switch diverged",
 			runCommands, parseCommands,
 		)
 	}
