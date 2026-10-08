@@ -2,6 +2,7 @@ package governance
 
 import (
 	"maps"
+	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/message"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity"
@@ -26,7 +27,19 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *pass.AnalysisConfig {
 		Analyzers:        analyzers,
 		IncludeGenerated: cfg.IncludeGenerated,
 		TestGlobs:        cfg.TestGlobs,
+		Overrides:        slices.Concat(severityOverrides(cfg.Severities), cfg.Overrides),
 	}
+}
+
+func severityOverrides(severities map[string]string) []pass.Override {
+	// One rule with no file scope reaches analyzers that never read a severity param.
+	overrides := make([]pass.Override, 0, len(severities))
+	for _, id := range slices.Sorted(maps.Keys(severities)) {
+		overrides = append(overrides, pass.Override{
+			Analyzers: map[string]pass.OverrideConfig{id: {Severity: severities[id]}},
+		})
+	}
+	return overrides
 }
 
 func withEmojiParams(analyzers map[string]pass.AnalyzerConfig, emojiCfg config.EmojiConfig) {

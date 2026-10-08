@@ -3,6 +3,7 @@ package governance
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
 )
 
 type StageRunner struct {
@@ -33,10 +34,20 @@ func (runner *StageRunner) RunStages(ctx *pass.Context) []finding.Finding {
 			if _, inPlace := analyzer.(pass.InPlaceAnalyzer); inPlace {
 				continue
 			}
-			ctx.Findings = append(ctx.Findings, findings...)
+			ctx.Findings = append(ctx.Findings, runner.overridden(analyzer, findings)...)
 		}
 	}
 	return ctx.Findings
+}
+
+func (runner *StageRunner) overridden(
+	analyzer pass.Analyzer,
+	findings []finding.Finding,
+) []finding.Finding {
+	if runner.cfg == nil {
+		return findings
+	}
+	return overrides.Apply(findings, analyzer.ID(), runner.cfg.Overrides)
 }
 
 func (runner *StageRunner) enabled(analyzer pass.Analyzer) bool {

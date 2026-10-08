@@ -5,6 +5,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 )
 
 type stubAnalyzer struct {
@@ -160,6 +161,42 @@ func TestStageRunnerOrdersByStage(t *testing.T) {
 				findings[idx].AnalyzerID,
 				id,
 			)
+		}
+	}
+}
+
+func TestStageRunnerAppliesOverrides(t *testing.T) {
+	t.Parallel()
+
+	cfg := toAnalysisConfig(&config.GovernanceConfig{
+		Severities: map[string]string{"golangci-lint": "info"},
+		Overrides: []pass.Override{{
+			Files:     []string{"web/test/**"},
+			Analyzers: map[string]pass.OverrideConfig{"file-size": {Severity: "warning"}},
+		}},
+	})
+	runner := newPipeline(cfg)
+	runner.Register(stubAnalyzer{
+		id:    "golangci-lint",
+		stage: finding.StageStatic,
+		findings: []finding.Finding{{
+			AnalyzerID: "golangci-lint/errcheck", File: "main.go", Severity: finding.SeverityError,
+		}},
+	})
+	runner.Register(stubAnalyzer{
+		id:    "file-size",
+		stage: finding.StageStatic,
+		findings: []finding.Finding{
+			{AnalyzerID: "file-size", File: "web/test/a.dart", Severity: finding.SeverityError},
+			{AnalyzerID: "file-size", File: "web/lib/b.dart", Severity: finding.SeverityError},
+		},
+	})
+
+	findings := runner.RunStages(&pass.Context{})
+	want := []finding.Severity{finding.SeverityInfo, finding.SeverityWarning, finding.SeverityError}
+	for idx, severity := range want {
+		if findings[idx].Severity != severity {
+			t.Errorf("finding %d severity = %v, want %v", idx, findings[idx].Severity, severity)
 		}
 	}
 }

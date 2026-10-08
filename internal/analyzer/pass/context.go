@@ -83,6 +83,17 @@ type AnalysisConfig struct {
 	Analyzers        map[string]AnalyzerConfig
 	IncludeGenerated bool
 	TestGlobs        []string
+	Overrides        []Override
+}
+
+type Override struct {
+	Files     []string
+	Analyzers map[string]OverrideConfig
+}
+
+type OverrideConfig struct {
+	Enabled  *bool
+	Severity string
 }
 
 type AnalyzerConfig struct {
