@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
@@ -265,6 +266,16 @@ func TestUnwireConfig_ChangedSignal(t *testing.T) {
 			seed:        `{"instructions": ["AGENTS.md"]}`,
 			wantChanged: true,
 		},
+		{
+			name:        "present with only the gopls mcp server wired",
+			seed:        `{"mcp": {"gopls": {"type": "local"}}}`,
+			wantChanged: true,
+		},
+		{
+			name:        "present with only the skills path wired",
+			seed:        `{"skills": {"paths": ["` + SkillsSubdir + `"]}}`,
+			wantChanged: true,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -299,5 +310,54 @@ func TestUnwireConfig_Idempotent(t *testing.T) {
 	}
 	if _, err := UnwireConfig(projectDir); err != nil {
 		t.Fatalf("UnwireConfig #2: %v", err)
+	}
+}
+
+func TestUnwireConfig_UnreadableSections(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		seed    string
+		wantErr string
+	}{
+		{
+			name:    "instructions",
+			seed:    `{"instructions": "AGENTS.md"}`,
+			wantErr: "strip instructions: ",
+		},
+		{name: "mcp", seed: `{"mcp": ["gopls"]}`, wantErr: "strip mcp: "},
+		{name: "skills", seed: `{"skills": "all"}`, wantErr: "strip skills: "},
+		{
+			name:    "skills paths",
+			seed:    `{"skills": {"paths": "all"}}`,
+			wantErr: "strip skills: strip skills paths: ",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			projectDir := t.TempDir()
+			path := filepath.Join(projectDir, configFile)
+			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+
+			changed, err := UnwireConfig(projectDir)
+			if !errors.Is(err, fsx.ErrUnparseableJSON) {
+				t.Fatalf("err = %v, want fsx.ErrUnparseableJSON", err)
+			}
+			if !strings.Contains(err.Error(), testCase.wantErr) {
+				t.Errorf("err = %q, want it to contain %q", err.Error(), testCase.wantErr)
+			}
+			if changed {
+				t.Error("changed = true, want false on a failed strip")
+			}
+			got, readErr := os.ReadFile(path) //nolint:gosec // temp dir.
+			if readErr != nil || string(got) != testCase.seed {
+				t.Errorf("file = %q (%v), want it untouched", got, readErr)
+			}
+		})
 	}
 }
