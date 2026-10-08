@@ -49,11 +49,15 @@ func (where scope) sortOut(rep reports, found []diagnostic) sorted {
 }
 
 func (rep reports) dropped(lost drops) finding.Finding {
+	const maxPathBytes = 256
+
 	code := lost.first.code
 	if !validCode(code) {
 		code = "diagnostic"
 	}
-	first := strconv.Quote(lost.first.file)
+	file := lost.first.file
+	file = file[:headEnd(file, maxPathBytes, quotedSize)]
+	first := strconv.Quote(file)
 	if lost.first.line > 0 {
 		first += ":" + strconv.Itoa(lost.first.line)
 	}

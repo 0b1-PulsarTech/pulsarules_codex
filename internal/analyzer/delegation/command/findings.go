@@ -2,11 +2,11 @@ package command
 
 import (
 	"path/filepath"
-	"strconv"
 	"strings"
 	"unicode"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 type reports struct {
@@ -19,7 +19,8 @@ func (rep reports) named(sub string, severity finding.Severity) finding.Reporter
 }
 
 func (rep reports) plain(sub string, severity finding.Severity, message string) finding.Finding {
-	return rep.named(sub, severity).New(message)
+	room := lineRoom(rep.id + "/" + sub)
+	return rep.named(sub, severity).New(fitHead(message, room))
 }
 
 func (rep reports) config(message string) finding.Finding {
@@ -38,30 +39,43 @@ func (rep reports) timeout(name string) finding.Finding {
 }
 
 func (rep reports) failed(reason, stderr string) finding.Finding {
+	const maxReasonBytes = 512
+
+	reason = fitHead(reason, maxReasonBytes)
 	message := reason
-	if tail := stderrTail(stderr); tail != "" {
+	room := lineRoom(rep.id+"/failed") - len(printable.Line(reason)) - len(": ")
+	if tail := stderrTail(stderr, room); tail != "" {
 		message += ": " + tail
 	}
 	return rep.plain("failed", finding.SeverityError, message)
 }
 
 func (rep reports) diagnostic(item diagnostic, rel string) finding.Finding {
+	const arrowFrameBytes = 8
+
 	code, suffix := item.code, ""
 	if !validCode(code) {
 		code = "diagnostic"
 		if item.code != "" {
-			suffix = " (code " + strconv.Quote(item.code) + ")"
+			suffix = codeSuffix(item.code)
 		}
 	}
+	line := item.line
+	room, keep := locationRoom(rel, line)
+	if !keep {
+		rel, line, room = "", 0, 0
+	}
+	room = lineRoom(rep.id+"/"+code) - room - len(suffix)
 	finding := rep.named(code, item.severity).At(
-		rel, item.line, item.message+suffix, item.suggestion,
+		rel, line, fitHead(item.message, room)+suffix,
+		fitHead(item.suggestion, maxLineBytes-arrowFrameBytes),
 	)
 	finding.RuleID = rep.rule
 	return finding
 }
 
 func validCode(code string) bool {
-	if code == "" {
+	if code == "" || len(code) > maxCodeBytes {
 		return false
 	}
 	return strings.IndexFunc(code, func(char rune) bool {
@@ -69,8 +83,9 @@ func validCode(code string) bool {
 	}) < 0
 }
 
-func stderrTail(stderr string) string {
-	return strings.Map(shown, strings.ToValidUTF8(strings.TrimSpace(stderr), "?"))
+func stderrTail(stderr string, limit int) string {
+	text := strings.Map(shown, strings.ToValidUTF8(strings.TrimSpace(stderr), "?"))
+	return fitTail(text, limit)
 }
 
 func shown(char rune) rune {
