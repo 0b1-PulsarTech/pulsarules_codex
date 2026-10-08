@@ -124,16 +124,34 @@ func TestUnwireConfig_PreservesUnrelated(t *testing.T) {
 	}
 }
 
+type skillsCase struct {
+	name       string
+	seed       string
+	wantPaths  []string
+	wantNoKey  bool
+	wantURLLen int
+}
+
+func assertSkillsConfig(tb testing.TB, config opencodeConfig, testCase skillsCase) {
+	tb.Helper()
+
+	if slices.Contains(config.Skills.Paths, SkillsSubdir) {
+		tb.Errorf("SkillsSubdir survived: %v", config.Skills.Paths)
+	}
+	for _, want := range testCase.wantPaths {
+		if !slices.Contains(config.Skills.Paths, want) {
+			tb.Errorf("skills.paths missing user entry %q, got %v", want, config.Skills.Paths)
+		}
+	}
+	if len(config.Skills.URLs) != testCase.wantURLLen {
+		tb.Errorf("skills.urls = %v, want len %d", config.Skills.URLs, testCase.wantURLLen)
+	}
+}
+
 func TestUnwireConfig_Skills(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct {
-		name       string
-		seed       string
-		wantPaths  []string
-		wantNoKey  bool
-		wantURLLen int
-	}{
+	testCases := []skillsCase{
 		{
 			name:      "only our path removes the whole key",
 			seed:      `{"skills": {"paths": ["` + SkillsSubdir + `"]}}`,
@@ -156,9 +174,7 @@ func TestUnwireConfig_Skills(t *testing.T) {
 			t.Parallel()
 			projectDir := t.TempDir()
 			path := filepath.Join(projectDir, configFile)
-			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
-				t.Fatalf("seed: %v", err)
-			}
+			seedFile(t, path, testCase.seed)
 
 			changed, err := UnwireConfig(projectDir)
 			if err != nil {
@@ -174,22 +190,7 @@ func TestUnwireConfig_Skills(t *testing.T) {
 				}
 				return
 			}
-			config := readConfig(t, projectDir)
-			if slices.Contains(config.Skills.Paths, SkillsSubdir) {
-				t.Errorf("SkillsSubdir survived: %v", config.Skills.Paths)
-			}
-			for _, want := range testCase.wantPaths {
-				if !slices.Contains(config.Skills.Paths, want) {
-					t.Errorf(
-						"skills.paths missing user entry %q, got %v",
-						want,
-						config.Skills.Paths,
-					)
-				}
-			}
-			if len(config.Skills.URLs) != testCase.wantURLLen {
-				t.Errorf("skills.urls = %v, want len %d", config.Skills.URLs, testCase.wantURLLen)
-			}
+			assertSkillsConfig(t, readConfig(t, projectDir), testCase)
 		})
 	}
 }

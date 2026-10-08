@@ -54,26 +54,11 @@ func TestWireConfig_PreservesExisting(t *testing.T) {
   "mcp": {"other": {"type": "local", "command": ["other"], "enabled": true}}
 }`
 	path := filepath.Join(projectDir, "opencode.json")
-	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
+	seedFile(t, path, seed)
 
-	if err := WireConfig(projectDir, WithGopls); err != nil {
-		t.Fatalf("WireConfig #1: %v", err)
-	}
-	if err := WireConfig(projectDir, WithGopls); err != nil {
-		t.Fatalf("WireConfig #2: %v", err)
-	}
+	wireTwice(t, projectDir)
 
-	raw, err := os.ReadFile(path) //nolint:gosec // temp dir.
-	if err != nil {
-		t.Fatalf("read: %v", err)
-	}
-	var top map[string]json.RawMessage
-	if err = json.Unmarshal(raw, &top); err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	if _, ok := top["theme"]; !ok {
+	if _, ok := readTopLevel(t, path)["theme"]; !ok {
 		t.Error("lost unrelated key theme")
 	}
 
@@ -193,4 +178,39 @@ func readConfig(tb testing.TB, projectDir string) opencodeConfig {
 		tb.Fatalf("parse opencode.json: %v", err)
 	}
 	return config
+}
+
+func seedFile(tb testing.TB, path, content string) {
+	tb.Helper()
+
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		tb.Fatalf("mkdir %q: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		tb.Fatalf("seed %q: %v", path, err)
+	}
+}
+
+func wireTwice(tb testing.TB, projectDir string) {
+	tb.Helper()
+
+	for range 2 {
+		if err := WireConfig(projectDir, WithGopls); err != nil {
+			tb.Fatalf("WireConfig: %v", err)
+		}
+	}
+}
+
+func readTopLevel(tb testing.TB, path string) map[string]json.RawMessage {
+	tb.Helper()
+
+	raw, err := os.ReadFile(path) //nolint:gosec // temp dir.
+	if err != nil {
+		tb.Fatalf("read: %v", err)
+	}
+	var top map[string]json.RawMessage
+	if err = json.Unmarshal(raw, &top); err != nil {
+		tb.Fatalf("parse: %v", err)
+	}
+	return top
 }
