@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis/overrides"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
@@ -32,10 +33,20 @@ func (runner *StageRunner) RunStages(ctx *core.AnalysisContext) []core.Finding {
 			if _, inPlace := analyzer.(core.InPlaceAnalyzer); inPlace {
 				continue
 			}
-			ctx.Findings = append(ctx.Findings, findings...)
+			ctx.Findings = append(ctx.Findings, runner.overridden(analyzer, findings)...)
 		}
 	}
 	return ctx.Findings
+}
+
+func (runner *StageRunner) overridden(
+	analyzer core.Analyzer,
+	findings []core.Finding,
+) []core.Finding {
+	if runner.cfg == nil {
+		return findings
+	}
+	return overrides.Apply(findings, analyzer.ID(), runner.cfg.Overrides)
 }
 
 func (runner *StageRunner) enabled(analyzer core.Analyzer) bool {

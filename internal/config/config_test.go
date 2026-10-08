@@ -63,3 +63,19 @@ func TestSetParam(t *testing.T) {
 		})
 	}
 }
+
+func TestSetParamSeverityDropsFileSeverity(t *testing.T) {
+	t.Parallel()
+
+	cfg := Defaults()
+	cfg.Severities = map[string]string{"typographic-markers": "error", "doc-comment": "info"}
+	cfg.SetParam("typographic-markers", "severity", "warning")
+	cfg.SetParam("doc-comment", "other", "x")
+
+	if _, kept := cfg.Severities["typographic-markers"]; kept {
+		t.Error("file severity kept after the flag set the param")
+	}
+	if cfg.Severities["doc-comment"] != "info" {
+		t.Error("unrelated severity dropped")
+	}
+}

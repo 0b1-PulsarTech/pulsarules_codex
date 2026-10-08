@@ -1,5 +1,7 @@
 package config
 
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
+
 type GovernanceConfig struct {
 	Preset           string
 	Analyzers        map[string]AnalyzerConfig
@@ -7,7 +9,9 @@ type GovernanceConfig struct {
 	MovePurity       MovePurityConfig
 	IncludeGenerated bool
 	SkipDirs         []string
+	Severities       map[string]string
 	TestGlobs        []string
+	Overrides        []core.Override
 }
 
 type AnalyzerConfig struct {
@@ -61,5 +65,9 @@ func (govCfg *GovernanceConfig) SetParam(analyzerID, key string, value any) {
 		cfg.Params = map[string]any{}
 	}
 	cfg.Params[key] = value
+	if key == core.ParamSeverity {
+		// An explicit severity param (a CLI flag) wins over the project file's.
+		delete(govCfg.Severities, analyzerID)
+	}
 	govCfg.Analyzers[analyzerID] = cfg
 }

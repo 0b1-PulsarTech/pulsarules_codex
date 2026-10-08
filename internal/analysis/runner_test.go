@@ -1,8 +1,10 @@
 package analysis
 
 import (
+	"reflect"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/movepurity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 )
@@ -53,5 +55,63 @@ func TestToAnalysisConfig_ExplicitSetParam(t *testing.T) {
 	}
 	if got := params[movepurity.ParamMinSimilarity]; got != 99 {
 		t.Fatalf("min_similarity = %v, want explicit 99 to survive projection", got)
+	}
+}
+
+func TestToAnalysisConfigProjectFields(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		setup func(cfg *config.GovernanceConfig)
+		check func(t *testing.T, cfg *config.GovernanceConfig, got *core.AnalysisConfig)
+	}{
+		{"tests", setTests, checkTests},
+		{"severity rules precede file rules", setSeverityRules, checkSeverityRules},
+		{"no project file", func(*config.GovernanceConfig) {}, checkNoProjectFields},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := config.Defaults()
+			testCase.setup(cfg)
+			testCase.check(t, cfg, toAnalysisConfig(cfg))
+		})
+	}
+}
+
+func setTests(cfg *config.GovernanceConfig) {
+	cfg.TestGlobs = []string{"web/test/**"}
+}
+
+func checkTests(t *testing.T, cfg *config.GovernanceConfig, got *core.AnalysisConfig) {
+	t.Helper()
+	if !reflect.DeepEqual(got.TestGlobs, cfg.TestGlobs) {
+		t.Errorf("TestGlobs = %v", got.TestGlobs)
+	}
+}
+
+func setSeverityRules(cfg *config.GovernanceConfig) {
+	cfg.Severities = map[string]string{"naming": "info", "big-comment": "error"}
+	cfg.Overrides = []core.Override{{Files: []string{"a/**"}}}
+}
+
+func checkSeverityRules(t *testing.T, _ *config.GovernanceConfig, got *core.AnalysisConfig) {
+	t.Helper()
+	if len(got.Overrides) != 3 {
+		t.Fatalf("Overrides = %+v, want 2 severity rules then the file rule", got.Overrides)
+	}
+	if _, first := got.Overrides[0].Analyzers["big-comment"]; !first {
+		t.Errorf("severity rules not sorted by analyzer ID: %+v", got.Overrides)
+	}
+	if got.Overrides[2].Files[0] != "a/**" {
+		t.Errorf("file rule must come after the severity rules: %+v", got.Overrides)
+	}
+}
+
+func checkNoProjectFields(t *testing.T, _ *config.GovernanceConfig, got *core.AnalysisConfig) {
+	t.Helper()
+	if len(got.Overrides) != 0 || len(got.TestGlobs) != 0 {
+		t.Fatalf("project fields set without a project file: %+v", got)
 	}
 }

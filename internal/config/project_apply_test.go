@@ -19,6 +19,7 @@ func TestApplyProject(t *testing.T) {
 	}{
 		{"scalars", PresetStrict, fullProjectYAML, checkScalars},
 		{"analyzers", PresetStrict, fullProjectYAML, checkAnalyzers},
+		{"overrides", PresetStrict, fullProjectYAML, checkOverrides},
 		{
 			"merges into the preset",
 			PresetStrict,
@@ -72,6 +73,23 @@ func checkAnalyzers(t *testing.T, cfg *GovernanceConfig) {
 	}
 	if got := cfg.Analyzers["doc-comment"]; got.Enabled {
 		t.Errorf("doc-comment = %+v, want disabled", got)
+	}
+	if got := cfg.Severities["doc-comment"]; got != "error" {
+		t.Errorf("Severities[doc-comment] = %q", got)
+	}
+}
+
+func checkOverrides(t *testing.T, cfg *GovernanceConfig) {
+	t.Helper()
+	if len(cfg.Overrides) != 1 {
+		t.Fatalf("Overrides = %+v, want one", cfg.Overrides)
+	}
+	rules := cfg.Overrides[0].Analyzers
+	if enabled := rules["single-letter-name"].Enabled; enabled == nil || *enabled {
+		t.Errorf("single-letter-name = %+v, want disabled", rules["single-letter-name"])
+	}
+	if got := rules["file-size"].Severity; got != "warning" {
+		t.Errorf("file-size override severity = %q, want warning", got)
 	}
 }
 

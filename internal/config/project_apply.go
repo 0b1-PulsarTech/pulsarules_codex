@@ -4,6 +4,8 @@ import (
 	"maps"
 	"slices"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
 func (govCfg *GovernanceConfig) ApplyProject(file *ProjectFile) error {
@@ -14,6 +16,9 @@ func (govCfg *GovernanceConfig) ApplyProject(file *ProjectFile) error {
 	govCfg.TestGlobs = slices.Clone(file.Tests)
 	for id, entry := range file.Analyzers {
 		govCfg.applyAnalyzer(id, entry)
+	}
+	for _, override := range file.Overrides {
+		govCfg.Overrides = append(govCfg.Overrides, toCoreOverride(override))
 	}
 	return govCfg.checkOverrides(file)
 }
@@ -56,6 +61,20 @@ func (govCfg *GovernanceConfig) applyAnalyzer(id string, entry AnalyzerEntry) {
 		current.Params = merged
 	}
 	govCfg.Analyzers[id] = current
+	if entry.Severity != "" {
+		if govCfg.Severities == nil {
+			govCfg.Severities = map[string]string{}
+		}
+		govCfg.Severities[id] = entry.Severity
+	}
+}
+
+func toCoreOverride(entry OverrideEntry) core.Override {
+	analyzers := make(map[string]core.OverrideConfig, len(entry.Analyzers))
+	for id, rules := range entry.Analyzers {
+		analyzers[id] = core.OverrideConfig{Enabled: rules.Enabled, Severity: rules.Severity}
+	}
+	return core.Override{Files: slices.Clone(entry.Files), Analyzers: analyzers}
 }
 
 func (val *validator) checkOverrides(entries []OverrideEntry) {
