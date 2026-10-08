@@ -179,6 +179,42 @@ func TestTypographicSeverityIsConfigurable(t *testing.T) {
 	}
 }
 
+func TestEachAnalyzerReadsOnlyItsOwnExtensions(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		configured string
+		wantText   int
+		wantTypo   int
+	}{
+		{name: "nothing configured", wantText: 1, wantTypo: 1},
+		{name: "text-markers restricted", configured: "text-markers", wantTypo: 1},
+		{name: "typographic restricted", configured: "typographic-markers", wantText: 1},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := markdownContext(t, "a\u200Bb \u2014 c\n")
+			if testCase.configured != "" {
+				ctx.Config = &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
+					testCase.configured: {
+						Enabled: true,
+						Params:  map[string]any{"extensions": []any{"go"}},
+					},
+				}}
+			}
+			if got := len(NewTextAnalyzer().Analyze(ctx)); got != testCase.wantText {
+				t.Errorf("text-markers findings = %d, want %d", got, testCase.wantText)
+			}
+			if got := len(NewTypographicAnalyzer().Analyze(ctx)); got != testCase.wantTypo {
+				t.Errorf("typographic-markers findings = %d, want %d", got, testCase.wantTypo)
+			}
+		})
+	}
+}
+
 func markdownContext(t *testing.T, body string) *core.AnalysisContext {
 	t.Helper()
 	dir := t.TempDir()
