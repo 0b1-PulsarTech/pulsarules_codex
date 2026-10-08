@@ -22,7 +22,7 @@ func TestClean_LeavesWhatItCannotJudge(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, acted := Clean(testCase.src)
+			got, acted := Clean(testCase.src, nil)
 			if got != testCase.src {
 				t.Errorf("Clean rewrote %q to %q", testCase.src, got)
 			}
@@ -53,7 +53,7 @@ func TestClean_RemovesCarriers(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, acted := Clean(testCase.src)
+			got, acted := Clean(testCase.src, nil)
 			if got != testCase.want {
 				t.Fatalf("Clean(%q) = %q, want %q", testCase.src, got, testCase.want)
 			}
@@ -67,8 +67,8 @@ func TestClean_RemovesCarriers(t *testing.T) {
 func TestClean_IsIdempotent(t *testing.T) {
 	t.Parallel()
 
-	once, _ := Clean("a\u200Bb\u00A0c\u00ADd\u202Ee")
-	twice, acted := Clean(once)
+	once, _ := Clean("a\u200Bb\u00A0c\u00ADd\u202Ee", nil)
+	twice, acted := Clean(once, nil)
 	if twice != once {
 		t.Errorf("second Clean changed %q to %q", once, twice)
 	}
@@ -77,5 +77,39 @@ func TestClean_IsIdempotent(t *testing.T) {
 	}
 	if strings.ContainsAny(once, "\u200B\u00AD\u202E") {
 		t.Errorf("carriers survived: %q", once)
+	}
+}
+
+func TestClean_LeavesProtectedOffsets(t *testing.T) {
+	t.Parallel()
+
+	const src = "a\u00A0b\u200Bc\u00A0d"
+	testCases := []struct {
+		name      string
+		protected func(offset int) bool
+		want      string
+		wantActed int
+	}{
+		{"nothing protected", func(int) bool { return false }, "a bc d", 3},
+		{"everything protected", func(int) bool { return true }, src, 0},
+		{
+			"only the zero width space",
+			func(offset int) bool { return offset == 4 },
+			"a b\u200Bc d",
+			2,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, acted := Clean(src, testCase.protected)
+			if len(acted) != testCase.wantActed {
+				t.Errorf("acted = %d, want %d", len(acted), testCase.wantActed)
+			}
+			if got != testCase.want {
+				t.Errorf("Clean = %q, want %q", got, testCase.want)
+			}
+		})
 	}
 }
