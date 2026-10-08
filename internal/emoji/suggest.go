@@ -48,30 +48,44 @@ func drawSpread(ranked []string, seed string, want int) []string {
 	return picks
 }
 
+type picker struct {
+	seen    map[string]bool
+	exclude []string
+	inPool  map[string]bool
+}
+
+func (pick picker) take(shortcode string) bool {
+	if pick.seen[shortcode] || !pick.inPool[shortcode] {
+		return false
+	}
+	if slices.Contains(pick.exclude, shortcode) {
+		return false
+	}
+	pick.seen[shortcode] = true
+	return true
+}
+
 func (catalog *Catalog) candidates(commitType, seed string, exclude []string) candidateSet {
 	var set candidateSet
-	seen := make(map[string]bool, len(catalog.pool))
-	take := func(shortcode string) bool {
-		if seen[shortcode] || slices.Contains(exclude, shortcode) || !catalog.inPool[shortcode] {
-			return false
-		}
-		seen[shortcode] = true
-		return true
+	pick := picker{
+		seen:    make(map[string]bool, len(catalog.pool)),
+		exclude: exclude,
+		inPool:  catalog.inPool,
 	}
 
 	for _, shortcode := range catalog.themeMatches(seed) {
-		if take(shortcode) {
+		if pick.take(shortcode) {
 			set.themed = append(set.themed, shortcode)
 		}
 	}
 	// The type ranking only biases order: the emoji names the area of the change, not its type.
 	for _, shortcode := range catalog.byType[commitType] {
-		if take(shortcode) {
+		if pick.take(shortcode) {
 			set.typed = append(set.typed, shortcode)
 		}
 	}
 	for _, shortcode := range catalog.pool {
-		if !take(shortcode) {
+		if !pick.take(shortcode) {
 			continue
 		}
 		if catalog.allowed[shortcode].useCount > 0 {

@@ -190,3 +190,58 @@ func TestDrawSpreadPicksDistinctEntries(t *testing.T) {
 		}
 	}
 }
+
+func TestPicker_Take(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name      string
+		shortcode string
+		seen      map[string]bool
+		exclude   []string
+		inPool    map[string]bool
+		want      bool
+	}{
+		{
+			name:      "pool member is taken",
+			shortcode: ":bug:",
+			inPool:    map[string]bool{":bug:": true},
+			want:      true,
+		},
+		{
+			name:      "already seen is refused",
+			shortcode: ":bug:",
+			seen:      map[string]bool{":bug:": true},
+			inPool:    map[string]bool{":bug:": true},
+		},
+		{
+			name:      "outside the pool is refused",
+			shortcode: ":bug:",
+			inPool:    map[string]bool{":dart:": true},
+		},
+		{
+			name:      "excluded is refused",
+			shortcode: ":bug:",
+			exclude:   []string{":bug:"},
+			inPool:    map[string]bool{":bug:": true},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			seen := map[string]bool{}
+			for shortcode := range testCase.seen {
+				seen[shortcode] = true
+			}
+			pick := picker{seen: seen, exclude: testCase.exclude, inPool: testCase.inPool}
+
+			if got := pick.take(testCase.shortcode); got != testCase.want {
+				t.Fatalf("take(%q) = %v, want %v", testCase.shortcode, got, testCase.want)
+			}
+			if again := pick.take(testCase.shortcode); again {
+				t.Errorf("take(%q) a second time = true, want false", testCase.shortcode)
+			}
+		})
+	}
+}
