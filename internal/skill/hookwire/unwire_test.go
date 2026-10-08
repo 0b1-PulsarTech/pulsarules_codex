@@ -310,3 +310,37 @@ func TestUnwireSettings_IdempotentSecondRunIsNoOp(t *testing.T) {
 		t.Error("expected the second run to report changed = false, nothing left to unwire")
 	}
 }
+
+func TestUnwireSettings_UserHookTimeout(t *testing.T) {
+	t.Parallel()
+
+	testCases := userTimeoutCases()
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			claudeDir := t.TempDir()
+			path := filepath.Join(claudeDir, "settings.json")
+			seed := userStopSeed(testCase.timeout)
+			if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			changed, err := UnwireSettings(claudeDir, "settings.json")
+			if err != nil {
+				t.Fatalf("UnwireSettings must accept any user timeout: %v", err)
+			}
+			if !changed {
+				t.Error("expected our command to be removed")
+			}
+			for _, group := range readHooks(t, claudeDir, "settings.json")["Stop"] {
+				for _, command := range group.Hooks {
+					if strings.Contains(command.Command, hookScript) {
+						t.Errorf("our command survived: %q", command.Command)
+					}
+				}
+			}
+			if got := userStopTimeout(t, claudeDir); got != testCase.timeout {
+				t.Errorf("user timeout = %q, want %q", got, testCase.timeout)
+			}
+		})
+	}
+}

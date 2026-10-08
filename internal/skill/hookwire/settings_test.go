@@ -205,3 +205,62 @@ func readHooks(tb testing.TB, claudeDir, settingsFile string) map[string][]hookG
 	}
 	return settings.Hooks
 }
+
+func userStopSeed(timeout string) string {
+	return `{"hooks":{"Stop":[{"hooks":[` +
+		`{"type":"command","command":"bash third-party.sh","timeout":` + timeout + `},` +
+		`{"type":"command","command":"bash ` + hookScript + ` stop"}]}]}}`
+}
+
+type timeoutCase struct {
+	name    string
+	timeout string
+}
+
+func userTimeoutCases() []timeoutCase {
+	return []timeoutCase{
+		{name: "fractional", timeout: "30.5"},
+		{name: "integer", timeout: "30"},
+		{name: "exponent", timeout: "1e2"},
+		{name: "text", timeout: `"abc"`},
+		{name: "numeric text", timeout: `"30"`},
+		{name: "boolean", timeout: "true"},
+		{name: "null", timeout: "null"},
+	}
+}
+
+func userStopTimeout(tb testing.TB, claudeDir string) string {
+	tb.Helper()
+	for _, group := range readHooks(tb, claudeDir, "settings.json")["Stop"] {
+		for _, command := range group.Hooks {
+			if strings.Contains(command.Command, "third-party.sh") {
+				return string(command.Timeout)
+			}
+		}
+	}
+	tb.Fatal("user Stop hook lost")
+	return ""
+}
+
+func TestWireSettings_KeepsAnyUserHookTimeoutValue(t *testing.T) {
+	t.Parallel()
+
+	testCases := userTimeoutCases()
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			claudeDir := t.TempDir()
+			seed := userStopSeed(testCase.timeout)
+			path := filepath.Join(claudeDir, "settings.json")
+			if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			if err := WireSettings(fakeTemplates(), claudeDir, "settings.json"); err != nil {
+				t.Fatalf("WireSettings must accept any user timeout: %v", err)
+			}
+			if got := userStopTimeout(t, claudeDir); got != testCase.timeout {
+				t.Errorf("user timeout = %q, want %q", got, testCase.timeout)
+			}
+		})
+	}
+}

@@ -9,8 +9,9 @@ import (
 )
 
 type hookCommand struct {
-	Type    string `json:"type"`
-	Command string `json:"command"`
+	Type    string          `json:"type"`
+	Command string          `json:"command"`
+	Timeout json.RawMessage `json:"timeout,omitempty"`
 }
 
 type hookGroup struct {
@@ -22,10 +23,13 @@ type hooksBlock struct {
 	Hooks map[string][]hookGroup `json:"hooks"`
 }
 
+const StopTimeoutSeconds = 90
+
 type hookRegistration struct {
 	Event   string
 	Matcher string
 	Mode    string
+	Timeout int
 }
 
 func hookRegistrations() []hookRegistration {
@@ -36,7 +40,9 @@ func hookRegistrations() []hookRegistration {
 		{Event: "PostToolUse", Matcher: "Write|Edit|MultiEdit", Mode: "post-edit"},
 		{Event: "UserPromptSubmit", Mode: "user-prompt"},
 		{Event: "SubagentStart", Mode: "subagent-start"},
-		{Event: "Stop", Mode: "stop"},
+		// The host default is 600s and it discards output past the timeout; the Stop
+		// deadline in internal/hook must stay under this by the margin the test pins.
+		{Event: "Stop", Mode: "stop", Timeout: StopTimeoutSeconds},
 		{Event: "SessionEnd", Mode: "session-end"},
 	}
 }
