@@ -2,6 +2,7 @@ package branchname
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -182,6 +183,47 @@ func TestValidExtraTypes(t *testing.T) {
 
 			if got := ValidExtraTypes(testCase.spec); got != testCase.want {
 				t.Errorf("ValidExtraTypes(%q) = %v, want %v", testCase.spec, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestValidateExtraTypes(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		spec    string
+		wantErr bool
+	}{
+		{name: "empty is allowed", spec: ""},
+		{name: "a list is allowed", spec: "spike,experiment"},
+		{name: "uppercase is refused", spec: "Release", wantErr: true},
+		{name: "an empty entry is refused", spec: "release,", wantErr: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := ValidateExtraTypes(testCase.spec)
+			if !testCase.wantErr {
+				if err != nil {
+					t.Fatalf("ValidateExtraTypes(%q) = %v, want nil", testCase.spec, err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("ValidateExtraTypes(%q) = nil, want an error", testCase.spec)
+			}
+			if strings.Contains(err.Error(), "--") {
+				t.Errorf("error %q names a CLI flag; the CLI callers add it", err)
+			}
+			wantQuoted := fmt.Sprintf("%q", testCase.spec)
+			if !strings.Contains(err.Error(), wantQuoted) {
+				t.Errorf("error %q does not quote the spec %s", err, wantQuoted)
+			}
+			if !strings.Contains(err.Error(), "comma-separated") {
+				t.Errorf("error %q does not name the expected form", err)
 			}
 		})
 	}

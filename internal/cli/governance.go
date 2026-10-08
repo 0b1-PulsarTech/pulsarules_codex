@@ -116,13 +116,13 @@ func governanceConfig(opts *cliopts.Options) (*config.GovernanceConfig, error) {
 		cfg.SetParam("golangci-lint", "config_path", opts.GolangciConfig)
 	}
 	if err := core.ValidateSeverityName(opts.TypographicSeverity); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid --typographic-severity: %w", err)
 	}
 	if opts.TypographicSeverity != "" {
 		cfg.SetParam("typographic-markers", "severity", opts.TypographicSeverity)
 	}
 	if err := branchname.ValidateExtraTypes(opts.BranchExtraTypes); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid --branch-extra-types: %w", err)
 	}
 	if opts.BranchExtraTypes != "" {
 		cfg.SetParam("branch-name", "extra_types", opts.BranchExtraTypes)

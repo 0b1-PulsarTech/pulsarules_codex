@@ -240,3 +240,43 @@ func TestGovernanceConfig_TypographicSeverity(t *testing.T) {
 		})
 	}
 }
+
+func TestGovernanceConfig_BranchExtraTypes(t *testing.T) {
+	t.Parallel()
+
+	const wantMessage = `invalid --branch-extra-types: "Release" is not a comma-separated list ` +
+		`of lowercase names, e.g. spike,experiment`
+
+	testCases := []struct {
+		name    string
+		spec    string
+		wantErr string
+		wantSet any
+	}{
+		{name: "unset leaves the params alone", wantSet: nil},
+		{
+			name: "a list reaches the analyzer", spec: "spike,experiment",
+			wantSet: "spike,experiment",
+		},
+		{name: "uppercase names the flag and the form", spec: "Release", wantErr: wantMessage},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg, err := governanceConfig(&cliopts.Options{BranchExtraTypes: testCase.spec})
+			if testCase.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
+					t.Fatalf("err = %v, want one naming %q", err, testCase.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("governanceConfig: %v", err)
+			}
+			if got := cfg.Analyzers["branch-name"].Params["extra_types"]; got != testCase.wantSet {
+				t.Errorf("extra_types param = %v, want %v", got, testCase.wantSet)
+			}
+		})
+	}
+}
