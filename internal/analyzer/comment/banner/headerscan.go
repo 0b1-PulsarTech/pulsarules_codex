@@ -6,10 +6,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
-func firstContentLine(lines []string) (int, bool) {
+func firstContentLine(lines []string, skip func(string) bool) (int, bool) {
 	for pos := 0; pos < len(lines); {
 		line := lines[pos]
-		if strings.TrimSpace(line) == "" {
+		if strings.TrimSpace(line) == "" || (skip != nil && skip(line)) {
 			pos++
 			continue
 		}

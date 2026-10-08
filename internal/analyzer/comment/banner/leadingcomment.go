@@ -15,11 +15,36 @@ func leadingCommentLine(lang pass.Language, extension string, src []byte) (int, 
 		return 0, false
 	}
 	lines := strings.Split(string(body), "\n")
-	pos, ok := firstContentLine(lines)
+	var skip func(string) bool
+	if isScriptExtension(extension) {
+		skip = isToolPragma
+	}
+	pos, ok := firstContentLine(lines, skip)
 	if !ok {
 		return 0, false
 	}
+	if isAnnotationExtension(extension) {
+		offset, exempt := annotationBannerLine(lines[pos:])
+		if exempt {
+			return 0, false
+		}
+		if offset > 0 {
+			return pos + offset + 1, true
+		}
+	}
 	return pos + 1, isComment(lang, extension, lines[pos])
+}
+
+func isScriptExtension(extension string) bool {
+	return isAnnotationExtension(extension) || extension == ".ts" || extension == ".tsx"
+}
+
+func isAnnotationExtension(extension string) bool {
+	switch extension {
+	case ".js", ".mjs", ".cjs", ".jsx":
+		return true
+	}
+	return false
 }
 
 func isComment(lang pass.Language, extension, line string) bool {
