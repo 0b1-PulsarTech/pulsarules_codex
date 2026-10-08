@@ -1,0 +1,128 @@
+package config
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+
+	"gopkg.in/yaml.v3"
+)
+
+const ProjectFileName = ".pulsarules.yaml"
+
+const (
+	MaxFileBytes     = 256 << 10
+	MaxReported      = 20
+	MaxReportedBytes = 3072
+	MaxClipBytes     = 80
+)
+
+type ProjectFile struct {
+	Path             string                   `yaml:"-"`
+	Version          int                      `yaml:"version"`
+	Preset           string                   `yaml:"preset"`
+	IncludeGenerated *bool                    `yaml:"include_generated"`
+	SkipDirs         []string                 `yaml:"skip_dirs"`
+	Tests            []string                 `yaml:"tests"`
+	Analyzers        map[string]AnalyzerEntry `yaml:"analyzers"`
+	Overrides        []OverrideEntry          `yaml:"overrides"`
+	Delegated        []DelegatedEntry         `yaml:"delegated"`
+}
+
+type AnalyzerEntry struct {
+	Enabled  *bool          `yaml:"enabled"`
+	Severity string         `yaml:"severity"`
+	Params   map[string]any `yaml:"params"`
+}
+
+type OverrideEntry struct {
+	Files     []string                 `yaml:"files"`
+	Analyzers map[string]OverrideRules `yaml:"analyzers"`
+}
+
+type OverrideRules struct {
+	Enabled  *bool          `yaml:"enabled"`
+	Severity string         `yaml:"severity"`
+	Params   map[string]any `yaml:"params"`
+}
+
+type DelegatedEntry struct {
+	ID     string   `yaml:"id"`
+	Dir    string   `yaml:"dir"`
+	Format string   `yaml:"format"`
+	Rule   string   `yaml:"rule"`
+	Run    []string `yaml:"run"`
+}
+
+type decoded struct {
+	file     *ProjectFile
+	problems *collector
+}
+
+func decode(path string, content []byte) (decoded, error) {
+	if len(content) > MaxFileBytes {
+		return decoded{}, fmt.Errorf("%s: config is larger than %d KiB", path, MaxFileBytes>>10)
+	}
+	if err := rejectBadText(path, content); err != nil {
+		return decoded{}, err
+	}
+	root, err := readDocument(path, content)
+	if err != nil {
+		return decoded{}, err
+	}
+	value, top := root.Content[0], newRoot()
+	parsed := decoded{problems: &collector{path: path}}
+	walkSchema(parsed.problems, value, top)
+	if value = deref(value); value.Kind != yaml.MappingNode && !isNull(value) {
+		return parsed, nil
+	}
+	file := &ProjectFile{Path: path}
+	err = root.Decode(file)
+	if err == nil {
+		parsed.file = file
+		return parsed, nil
+	}
+	if parsed.problems.total == 0 {
+		return decoded{}, leftover(path, err)
+	}
+	// The walk already reported the same mismatches in terms of the file, not Go types.
+	if _, isType := errors.AsType[*yaml.TypeError](err); isType {
+		parsed.file = file
+	}
+	return parsed, nil
+}
+
+func readDocument(path string, content []byte) (*yaml.Node, error) {
+	decoder := yaml.NewDecoder(bytes.NewReader(content))
+	var root yaml.Node
+	err := decoder.Decode(&root)
+	if errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("%s: version: required", path)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%s: %s", path, clipParseText(plainText(err)))
+	}
+	for {
+		var extra yaml.Node
+		err = decoder.Decode(&extra)
+		if errors.Is(err, io.EOF) {
+			return &root, nil
+		}
+		if err != nil || !emptyDocument(&extra) {
+			return nil, fmt.Errorf("%s: only one YAML document is allowed", path)
+		}
+	}
+}
+
+func deref(node *yaml.Node) *yaml.Node {
+	for node.Kind == yaml.AliasNode && node.Alias != nil {
+		node = node.Alias
+	}
+	return node
+}
+
+func emptyDocument(node *yaml.Node) bool {
+	return node.Kind == yaml.DocumentNode && len(node.Content) == 1 &&
+		isNull(node.Content[0]) && node.Content[0].Value == ""
+}
