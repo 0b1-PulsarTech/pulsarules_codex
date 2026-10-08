@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
 )
@@ -128,6 +129,11 @@ func sizeCases() []expansionCase {
 			"version: 1\nanalyzers:\n  " + key[:1024] + ": {}\n",
 			"",
 		},
+		{
+			"a key one byte over the scalar limit",
+			"version: 1\nanalyzers:\n  ? " + key + "\n  : {}\n",
+			head + "3: ..." + strings.Repeat("K", 80) + tooLong,
+		},
 	}
 }
 
@@ -135,6 +141,7 @@ func depthCases() []expansionCase {
 	const head = ".pulsarules.yaml: line "
 	const tooDeep = ": nested deeper than 64 levels"
 	const tooBig = ".pulsarules.yaml: config is larger than 256 KiB"
+	deepTail := "..." + strings.Repeat(".a", 40)
 	return []expansionCase{
 		{
 			"a hundred byte key nested nine thousand deep",
@@ -142,6 +149,16 @@ func depthCases() []expansionCase {
 			tooBig,
 		},
 		{"nesting at exactly 64 levels", paramsYAML(nestedValue(60, "a")), ""},
+		{
+			"nesting one level over the limit",
+			paramsYAML(nestedValue(61, "a")),
+			head + "5: " + deepTail + tooDeep,
+		},
+		{
+			"nine thousand levels of one byte keys",
+			paramsYAML(nestedValue(9000, "a")),
+			head + "5: " + deepTail + tooDeep,
+		},
 		{"an alias chain at the depth limit", aliasChain(59), ""},
 		{
 			"an alias chain one level over the limit",
@@ -269,6 +286,76 @@ func TestCheckExpansion(t *testing.T) {
 			}
 			if err == nil || err.Error() != testCase.want {
 				t.Fatalf("decodeFile() error = %v, want %q", err, testCase.want)
+			}
+		})
+	}
+}
+
+type clipPathCase struct {
+	name string
+	path string
+	want string
+}
+
+func clipPathCases() []clipPathCase {
+	return []clipPathCase{
+		{"empty", "", ""},
+		{"short", "a.b", "a.b"},
+		{"exactly the clip", strings.Repeat("a", 80), strings.Repeat("a", 80)},
+		{"one over", "b" + strings.Repeat("a", 80), "..." + strings.Repeat("a", 80)},
+		{
+			"a rune across the cut",
+			strings.Repeat("\u00e9", 60) + "a",
+			"..." + strings.Repeat("\u00e9", 39) + "a",
+		},
+		{
+			"a short escape across the cut",
+			strings.Repeat("\n", 50) + "a",
+			"..." + strings.Repeat(`\n`, 39) + "a",
+		},
+		{
+			"a hex escape across the cut",
+			strings.Repeat("\x01", 30) + "ab",
+			"..." + strings.Repeat(`\x01`, 19) + "ab",
+		},
+		{
+			"a unicode escape across the cut",
+			strings.Repeat("\u0085", 20),
+			"..." + strings.Repeat(`\u0085`, 13),
+		},
+		{
+			"a long escape across the cut",
+			strings.Repeat("\U000e0001", 8) + "abcde",
+			"..." + strings.Repeat(`\U000e0001`, 7) + "abcde",
+		},
+		{
+			"a literal backslash before a rune",
+			strings.Repeat("x", 30) + `\` + "\u00e9" + strings.Repeat("a", 78),
+			"...\u00e9" + strings.Repeat("a", 78),
+		},
+		{
+			"a literal backslash before a control byte",
+			strings.Repeat("x", 30) + `\` + "\x01" + strings.Repeat("a", 76),
+			"..." + `\x01` + strings.Repeat("a", 76),
+		},
+		{
+			"literal backslash pairs",
+			"zzzzz/" + strings.Repeat(`\x`, 300),
+			"..." + strings.Repeat(`\x`, 40),
+		},
+	}
+}
+
+func TestClipPath(t *testing.T) {
+	t.Parallel()
+
+	testCases := clipPathCases()
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := clipPath(testCase.path)
+			if got != testCase.want || !utf8.ValidString(got) {
+				t.Fatalf("clipPath() = %q, want %q", got, testCase.want)
 			}
 		})
 	}

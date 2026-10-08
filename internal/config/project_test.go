@@ -27,10 +27,7 @@ func decodeFile(content []byte) (*ProjectFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = parsed.problems.err(); err != nil {
-		return nil, err
-	}
-	return parsed.file, nil
+	return parsed.result()
 }
 
 func TestDecodeFile(t *testing.T) {
@@ -309,6 +306,14 @@ func repeatedBadGlobs(count int) string {
 	return "version: 1\ntests: [" + strings.Repeat("a//b, ", count) + "]\n"
 }
 
+func hugeAliasKey(width, overrides int) string {
+	var content strings.Builder
+	content.WriteString("version: 1\nanalyzers:\n  ? &k " + strings.Repeat("K", width))
+	content.WriteString("\n  : {}\noverrides:\n")
+	content.WriteString(strings.Repeat("  - {files: [a], analyzers: {? *k : {}}}\n", overrides))
+	return content.String()
+}
+
 func TestParseCapsReportedProblems(t *testing.T) {
 	t.Parallel()
 
@@ -321,6 +326,7 @@ func TestParseCapsReportedProblems(t *testing.T) {
 		{"alias fan-out", problemAmplifier(300), "... and 90280 more problems", 21},
 		{"exactly the cap", repeatedBadGlobs(20), "", 20},
 		{"one over the cap", repeatedBadGlobs(21), "... and 1 more problem", 21},
+		{"huge alias key", hugeAliasKey(1000, 30), "... and 11 more problems", 21},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

@@ -5,9 +5,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 )
+
+const ellipsis = "..."
 
 type collector struct {
 	path   string
@@ -27,7 +32,7 @@ func (col *collector) add(line int, at *fieldPath, format string, args ...any) {
 		text += "line " + strconv.Itoa(line) + ": "
 	}
 	if field := at.String(); field != "" {
-		text += field + ": "
+		text += clipPath(field) + ": "
 	}
 	text += fmt.Sprintf(format, args...)
 	col.bytes += len(text)
@@ -47,6 +52,31 @@ func (col *collector) err() error {
 	}
 	return errors.New(strings.Join(texts, "; "))
 }
+
+func clip(text string, limit int) string {
+	kept, whole := fit(text, limit)
+	if whole {
+		return escape.Line(kept)
+	}
+	return ellipsis + escape.Line(kept)
+}
+
+func fit(text string, limit int) (string, bool) {
+	hi, used := len(text), 0
+	for hi > 0 {
+		_, size := utf8.DecodeLastRuneInString(text[:hi])
+		if used += escapedWidth(text[hi-size : hi]); used > limit {
+			break
+		}
+		hi -= size
+	}
+	if hi == 0 {
+		return text, true
+	}
+	return text[hi:], false
+}
+
+func escapedWidth(unit string) int { return len(escape.Line(unit)) }
 
 func clipParseText(text string) string {
 	prefix := linePrefix(text)

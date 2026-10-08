@@ -33,7 +33,7 @@ func checkExpansion(path string, root *yaml.Node) error {
 	}
 	message := over.reason
 	if field := over.path.String(); field != "" {
-		message = field + ": " + message
+		message = clipPath(field) + ": " + message
 	}
 	return fmt.Errorf("%s: line %d: %s", path, over.line, message)
 }
@@ -155,6 +155,11 @@ func childPath(node *yaml.Node, idx int, path *fieldPath) *fieldPath {
 		return path.key(keyName(node.Content[idx&^1]))
 	}
 	return path
+}
+
+func clipPath(path string) string {
+	// Keeps the last MaxClipBytes of escaped text, and the ellipsis comes on top of that.
+	return clip(path, MaxClipBytes)
 }
 
 func firstAliasLine(node *yaml.Node) int {

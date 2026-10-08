@@ -309,12 +309,23 @@ func assertPlainMessage(t *testing.T, err error) {
 	}
 }
 
+func clipCases() []schemaCase {
+	const head = ".pulsarules.yaml: line "
+	return []schemaCase{
+		{
+			"a walker path longer than the clip keeps its tail",
+			"version: 1\nanalyzers:\n  ? " + strings.Repeat("K", 1000) + "\n  : {bogus: 1}\n",
+			[]string{head + "4: ..." + strings.Repeat("K", 74) + ".bogus: unknown key"},
+		},
+	}
+}
+
 func TestSchemaWalk(t *testing.T) {
 	t.Parallel()
 
 	for _, testCase := range slices.Concat(
 		unknownKeyCases(), keyShapeCases(), aliasLineCases(), kindCases(), scalarKindCases(),
-		nullCases(), nullKeyCases(), mergeCases(), mergeKeySpellingCases(),
+		nullCases(), nullKeyCases(), mergeCases(), mergeKeySpellingCases(), clipCases(),
 	) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
