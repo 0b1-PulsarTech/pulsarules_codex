@@ -14,6 +14,7 @@ type collector struct {
 	stored []string
 	bytes  int
 	total  int
+	walked int
 }
 
 func (col *collector) add(line int, at *fieldPath, format string, args ...any) {

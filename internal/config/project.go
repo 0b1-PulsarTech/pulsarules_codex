@@ -9,14 +9,30 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const ProjectFileName = ".pulsarules.yaml"
+const (
+	ProjectFileName  = ".pulsarules.yaml"
+	SupportedVersion = 1
+)
 
 const (
-	MaxFileBytes     = 256 << 10
-	MaxReported      = 20
-	MaxReportedBytes = 3072
-	MaxClipBytes     = 80
+	MaxFileBytes      = 256 << 10
+	MaxGlobBytes      = 256
+	MaxGlobStars      = 4
+	MaxTotalGlobs     = 256
+	MaxTotalGlobBytes = 4096
+	MaxWildcardWork   = 256
+	MaxStarTextBytes  = 2048
+	MaxReported       = 20
+	MaxReportedBytes  = 3072
+	MaxClipBytes      = 80
 )
+
+type Rules struct {
+	AnalyzerIDs      []string
+	ReservedIDs      []string
+	Params           map[string][]string
+	DelegatedFormats []string
+}
 
 type ProjectFile struct {
 	Path             string                   `yaml:"-"`
@@ -55,9 +71,28 @@ type DelegatedEntry struct {
 	Run    []string `yaml:"run"`
 }
 
+func Parse(path string, content []byte, rules Rules) (*ProjectFile, error) {
+	parsed, err := decode(path, content)
+	if err != nil {
+		return nil, err
+	}
+	if parsed.file != nil {
+		parsed.file.check(rules, parsed.top, parsed.problems)
+	}
+	return parsed.result()
+}
+
+func (parsed decoded) result() (*ProjectFile, error) {
+	if err := parsed.problems.err(); err != nil {
+		return nil, err
+	}
+	return parsed.file, nil
+}
+
 type decoded struct {
 	file     *ProjectFile
 	problems *collector
+	top      *fieldPath
 }
 
 func decode(path string, content []byte) (decoded, error) {
@@ -72,7 +107,7 @@ func decode(path string, content []byte) (decoded, error) {
 		return decoded{}, err
 	}
 	value, top := root.Content[0], newRoot()
-	parsed := decoded{problems: &collector{path: path}}
+	parsed := decoded{problems: &collector{path: path}, top: top}
 	walkSchema(parsed.problems, value, top)
 	if value = deref(value); value.Kind != yaml.MappingNode && !isNull(value) {
 		return parsed, nil

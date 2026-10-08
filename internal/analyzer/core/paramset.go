@@ -91,20 +91,20 @@ func severityByName() map[string]Severity {
 	}
 }
 
-func severityNames() []string {
+func SeverityNames() []string {
 	return slices.Sorted(maps.Keys(severityByName()))
 }
 
 func ValidateSeverityName(name string) error {
-	if name == "" || validSeverityName(name) {
+	if name == "" || ValidSeverityName(name) {
 		return nil
 	}
 	return fmt.Errorf(
-		"unknown severity %q (want %s)", name, strings.Join(severityNames(), "|"),
+		"unknown severity %q (want %s)", name, strings.Join(SeverityNames(), "|"),
 	)
 }
 
-func validSeverityName(name string) bool {
+func ValidSeverityName(name string) bool {
 	_, ok := severityByName()[name]
 	return ok
 }

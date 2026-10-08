@@ -24,6 +24,7 @@ func walkSchema(problems *collector, root *yaml.Node, top *fieldPath) {
 }
 
 func (walker *schemaWalker) report(line int, at *fieldPath, format string, args ...any) {
+	at.mark()
 	walker.problems.add(line, at, format, args...)
 }
 
