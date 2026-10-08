@@ -1,26 +1,29 @@
 package message
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+)
 
 type ruleReporters struct {
-	initial         pass.Reporter
-	merge           pass.Reporter
-	emojiRequired   pass.Reporter
-	emojiCount      pass.Reporter
-	typeRequired    pass.Reporter
-	typeEnum        pass.Reporter
-	scopeCharset    pass.Reporter
-	descRequired    pass.Reporter
-	descLength      pass.Reporter
-	descCapitalize  pass.Reporter
-	descNoPeriod    pass.Reporter
-	bodyLength      pass.Reporter
-	bodyTotalLength pass.Reporter
-	noCoauthor      pass.Reporter
+	initial         finding.Reporter
+	merge           finding.Reporter
+	emojiRequired   finding.Reporter
+	emojiCount      finding.Reporter
+	typeRequired    finding.Reporter
+	typeEnum        finding.Reporter
+	scopeCharset    finding.Reporter
+	descRequired    finding.Reporter
+	descLength      finding.Reporter
+	descCapitalize  finding.Reporter
+	descNoPeriod    finding.Reporter
+	bodyLength      finding.Reporter
+	bodyTotalLength finding.Reporter
+	noCoauthor      finding.Reporter
 }
 
-func commitReporter(id string) pass.Reporter {
-	return pass.NewReporter(id, pass.SeverityError, pass.CatCommit)
+func commitReporter(id string) finding.Reporter {
+	return finding.NewReporter(id, finding.SeverityError, finding.CatCommit)
 }
 
 func defaultRuleReporters() ruleReporters {
@@ -61,10 +64,10 @@ func (reporters ruleReporters) resolved(ctx *pass.Context) ruleReporters {
 }
 
 type emojiReporters struct {
-	prohibited pass.Reporter
-	catalog    pass.Reporter
-	repeat     pass.Reporter
-	softRepeat pass.Reporter
+	prohibited finding.Reporter
+	catalog    finding.Reporter
+	repeat     finding.Reporter
+	softRepeat finding.Reporter
 }
 
 func defaultEmojiReporters() emojiReporters {
@@ -72,8 +75,8 @@ func defaultEmojiReporters() emojiReporters {
 		prohibited: commitReporter("commit-emoji-prohibited"),
 		catalog:    commitReporter("commit-emoji-catalog"),
 		repeat:     commitReporter("commit-emoji-repeat"),
-		softRepeat: pass.NewReporter(
-			"commit-emoji-soft-repeat", pass.SeverityInfo, pass.CatCommit,
+		softRepeat: finding.NewReporter(
+			"commit-emoji-soft-repeat", finding.SeverityInfo, finding.CatCommit,
 		),
 	}
 }

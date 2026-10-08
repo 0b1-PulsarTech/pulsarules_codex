@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
@@ -48,10 +49,10 @@ type languageCase struct {
 	src      string
 	want     int
 	line     int
-	severity pass.Severity
+	severity finding.Severity
 }
 
-func analyzeSource(t *testing.T, file, src string, config *pass.AnalysisConfig) []pass.Finding {
+func analyzeSource(t *testing.T, file, src string, config *pass.AnalysisConfig) []finding.Finding {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -102,7 +103,7 @@ func TestTopOfFile_SeverityParam(t *testing.T) {
 		"top-of-file": {Enabled: true, Params: map[string]any{pass.ParamSeverity: "error"}},
 	}}
 	findings := analyzeSource(t, "a.ts", "// a note\nconst a = 1\n", config)
-	if len(findings) != 1 || findings[0].Severity != pass.SeverityError {
+	if len(findings) != 1 || findings[0].Severity != finding.SeverityError {
 		t.Fatalf("want one error-severity finding, got %+v", findings)
 	}
 }

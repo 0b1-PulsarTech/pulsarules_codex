@@ -1,6 +1,7 @@
 package message
 
 import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
@@ -38,9 +39,9 @@ func NewAnalyzer(catalog *emoji.Catalog) *Analyzer {
 
 func (analyzer *Analyzer) ID() string { return ID }
 
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if ctx.CommitMsg == "" {
 		return nil
 	}
@@ -48,7 +49,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	msg := commitmsg.Parse(ctx.CommitMsg)
 	windowCfg := analyzer.windowCfg.merge(ctx.Params(analyzer.ID()))
 
-	findings := make([]pass.Finding, 0, typicalFindingCapacity)
+	findings := make([]finding.Finding, 0, typicalFindingCapacity)
 	findings = append(
 		findings,
 		Validate(msg, analyzer.ruleCfg, analyzer.ruleReporters.resolved(ctx))...,

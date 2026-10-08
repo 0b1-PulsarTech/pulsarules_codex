@@ -7,6 +7,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
@@ -154,7 +155,7 @@ func secondCases() []checkCase {
 	}
 }
 
-func analyzeSource(t *testing.T, source string, limit int) []pass.Finding {
+func analyzeSource(t *testing.T, source string, limit int) []finding.Finding {
 	t.Helper()
 
 	cache := astcache.New()
@@ -163,7 +164,7 @@ func analyzeSource(t *testing.T, source string, limit int) []pass.Finding {
 		t.Fatal(err)
 	}
 	typeCheck(t, cache.FileSet(), file)
-	reporter := pass.NewReporter("too-many-results", pass.SeverityWarning, pass.CatAST)
+	reporter := finding.NewReporter("too-many-results", finding.SeverityWarning, finding.CatAST)
 	return rule{reporter: reporter, limit: limit}.check(
 		cache.FileSet(),
 		pass.FileChange{Path: "foo.go", Extension: ".go"},

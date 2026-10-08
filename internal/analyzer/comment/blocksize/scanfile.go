@@ -4,19 +4,20 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 type limit struct {
 	maxLines int
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func scanFile(
 	src []byte, fc pass.FileChange, syntax lexer.CommentSyntax, bound limit,
-) []pass.Finding {
-	var findings []pass.Finding
+) []finding.Finding {
+	var findings []finding.Finding
 	scanner := lexer.NewCommentScanner(syntax)
 	blockStart := 0
 	blockLines := 0

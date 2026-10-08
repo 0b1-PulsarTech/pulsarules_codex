@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
@@ -80,7 +81,7 @@ func TestEach(t *testing.T) {
 				)
 			}
 			var visited []string
-			Each(ctx, func(fc pass.FileChange, _ *syntax.File) []pass.Finding {
+			Each(ctx, func(fc pass.FileChange, _ *syntax.File) []finding.Finding {
 				visited = append(visited, fc.Path)
 				return nil
 			})

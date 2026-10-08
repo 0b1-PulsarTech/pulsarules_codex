@@ -95,14 +95,7 @@ func initKindFor(vs *ast.ValueSpec, idx int) InitKind {
 	default:
 		return InitNone
 	}
-	for {
-		paren, ok := value.(*ast.ParenExpr)
-		if !ok {
-			break
-		}
-		value = paren.X
-	}
-	switch value.(type) {
+	switch ast.Unparen(value).(type) {
 	case *ast.CallExpr:
 		return InitCall
 	case *ast.CompositeLit:

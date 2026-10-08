@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast/testfunc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -18,17 +19,17 @@ func NewAnalyzer() *Analyzer {
 
 func (analyzer *Analyzer) ID() string { return "body-header-comment" }
 
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) reporter() pass.Reporter {
-	return pass.NewReporter(analyzer.ID(), pass.SeverityWarning, pass.CatAST)
+func (analyzer *Analyzer) reporter() finding.Reporter {
+	return finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatAST)
 }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	const defaultMinLines = 2
 	reporter := pass.ResolveReporter(analyzer.reporter(), ctx)
 	minLines := ctx.Params(analyzer.ID()).Int("min_lines", defaultMinLines)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if fc.Generated {
 			return nil
 		}
@@ -44,12 +45,12 @@ type bodySite struct {
 
 type check struct {
 	fset     *token.FileSet
-	reporter pass.Reporter
+	reporter finding.Reporter
 	minLines int
 }
 
-func (settings check) file(fc pass.FileChange, file *ast.File) []pass.Finding {
-	var findings []pass.Finding
+func (settings check) file(fc pass.FileChange, file *ast.File) []finding.Finding {
+	var findings []finding.Finding
 	for _, site := range bodySites(fc, file) {
 		groups := headerGroups(file.Comments, site.body)
 		lines := 0

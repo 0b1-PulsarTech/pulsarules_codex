@@ -8,6 +8,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/testfile"
@@ -389,7 +390,7 @@ func TestIdentity(t *testing.T) {
 	t.Parallel()
 
 	analyzer := NewAnalyzer()
-	if analyzer.ID() != "package-file-count" || analyzer.Stage() != pass.StageAST {
+	if analyzer.ID() != "package-file-count" || analyzer.Stage() != finding.StageAST {
 		t.Fatalf("id=%q stage=%v", analyzer.ID(), analyzer.Stage())
 	}
 }

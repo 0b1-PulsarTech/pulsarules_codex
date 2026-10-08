@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 )
 
 type emojiWindowConfig struct {
@@ -27,14 +27,14 @@ func defaultEmojiWindowConfig() emojiWindowConfig {
 	}
 }
 
-func (check emojiCheck) validateWindow() []pass.Finding {
+func (check emojiCheck) validateWindow() []finding.Finding {
 	if len(check.Message.Emojis) == 0 {
 		return nil
 	}
 	current := check.Message.Emojis[0]
 
 	if slices.Contains(check.recentEmojis(check.Config.HardWindow), current) {
-		return []pass.Finding{check.Reporters.repeat.NewWithSuggestion(
+		return []finding.Finding{check.Reporters.repeat.NewWithSuggestion(
 			"emoji :"+current+": already appears in the last "+
 				strconv.Itoa(check.Config.HardWindow)+
 				" commits; every commit in that window needs a distinct emoji",
@@ -42,7 +42,7 @@ func (check emojiCheck) validateWindow() []pass.Finding {
 		)}
 	}
 	if slices.Contains(check.recentEmojis(check.Config.SoftWindow), current) {
-		return []pass.Finding{check.Reporters.softRepeat.NewWithSuggestion(
+		return []finding.Finding{check.Reporters.softRepeat.NewWithSuggestion(
 			"emoji :"+current+": was used within the last "+strconv.Itoa(check.Config.SoftWindow)+
 				" commits; a fresher one would read better",
 			check.suggestionText(),

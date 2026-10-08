@@ -10,7 +10,7 @@ func collectTickerFieldNames(file *ast.File) map[string]bool {
 			return true
 		}
 		for _, field := range structType.Fields.List {
-			if !isTickerOrTimerType(field.Type) {
+			if !isTickerOrTimerType(file, field.Type) {
 				continue
 			}
 			for _, ident := range field.Names {

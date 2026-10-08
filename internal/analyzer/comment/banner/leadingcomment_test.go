@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 )
 
 func TestLeadingCommentLine_Languages(t *testing.T) {
@@ -21,7 +21,7 @@ func goCases() []languageCase {
 }
 
 func goBasicCases() []languageCase {
-	const goSev = pass.SeverityError
+	const goSev = finding.SeverityError
 	return []languageCase{
 		{name: "go clean file", file: "a.go", src: "package a\n\nimport \"fmt\"\n"},
 		{name: "go blank lines before package", file: "a.go", src: "\n\npackage a\n"},
@@ -68,7 +68,7 @@ func goBasicCases() []languageCase {
 }
 
 func goExtendedCases() []languageCase {
-	const goSev = pass.SeverityError
+	const goSev = finding.SeverityError
 	return []languageCase{
 		{
 			name:     "go goverter line is a hand comment",
@@ -106,7 +106,7 @@ func goExtendedCases() []languageCase {
 }
 
 func scriptCases() []languageCase {
-	const warn = pass.SeverityWarning
+	const warn = finding.SeverityWarning
 	return []languageCase{
 		{
 			name:     "ts hand comment",
@@ -169,7 +169,7 @@ func scriptCases() []languageCase {
 }
 
 func docblockCases() []languageCase {
-	const warn = pass.SeverityWarning
+	const warn = finding.SeverityWarning
 	jest := "/**\n * @jest-environment jsdom\n */\nconst a = 1\n"
 	return []languageCase{
 		{name: "jest multi-line docblock", file: "a.ts", src: jest},
@@ -213,7 +213,7 @@ func docblockCases() []languageCase {
 }
 
 func dartCases() []languageCase {
-	const warn = pass.SeverityWarning
+	const warn = finding.SeverityWarning
 	return []languageCase{
 		{
 			name:     "dart hand comment",
@@ -246,7 +246,7 @@ func dartCases() []languageCase {
 }
 
 func markupCases() []languageCase {
-	const warn = pass.SeverityWarning
+	const warn = finding.SeverityWarning
 	return []languageCase{
 		{
 			name:     "svelte hand comment",
@@ -288,7 +288,7 @@ func markupCases() []languageCase {
 }
 
 func sqlCases() []languageCase {
-	const warn = pass.SeverityWarning
+	const warn = finding.SeverityWarning
 	return []languageCase{
 		{
 			name:     "sql hand comment",
@@ -343,7 +343,7 @@ func sqlCases() []languageCase {
 }
 
 func dataCases() []languageCase {
-	const warn = pass.SeverityWarning
+	const warn = finding.SeverityWarning
 	return []languageCase{
 		{name: "proto syntax line", file: "a.proto", src: "syntax = \"proto3\";\n"},
 		{

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
@@ -35,14 +35,14 @@ type lintPos struct {
 	Line     int    `json:"Line"`
 }
 
-func (runner *Runner) parseOutput(result process.Result, cmdErr error) []pass.Finding {
+func (runner *Runner) parseOutput(result process.Result, cmdErr error) []finding.Finding {
 	if failure := runner.exitFailure(result, cmdErr); failure != nil {
 		return failure
 	}
 
 	var parsed lintReport
 	if parseErr := json.Unmarshal(extractJSON([]byte(result.Stdout)), &parsed); parseErr != nil {
-		return []pass.Finding{
+		return []finding.Finding{
 			runner.failure.New(
 				fmt.Sprintf("failed to parse golangci-lint output: %s", parseErr),
 			),
@@ -58,7 +58,7 @@ func (runner *Runner) parseOutput(result process.Result, cmdErr error) []pass.Fi
 	return findings
 }
 
-func (runner *Runner) exitFailure(result process.Result, cmdErr error) []pass.Finding {
+func (runner *Runner) exitFailure(result process.Result, cmdErr error) []finding.Finding {
 	if cmdErr == nil {
 		return nil
 	}
@@ -66,7 +66,7 @@ func (runner *Runner) exitFailure(result process.Result, cmdErr error) []pass.Fi
 	if !errors.As(cmdErr, &exitErr) {
 		// A non-ExitError means the command never produced stdout to parse;
 		// report the real cause, not a JSON parse failure on empty output.
-		return []pass.Finding{
+		return []finding.Finding{
 			runner.failure.New(fmt.Sprintf("golangci-lint failed: %s", cmdErr)),
 		}
 	}
@@ -74,29 +74,29 @@ func (runner *Runner) exitFailure(result process.Result, cmdErr error) []pass.Fi
 		return nil
 	}
 	if unavailable(result.Stderr) {
-		return []pass.Finding{runner.warning.New(
+		return []finding.Finding{runner.warning.New(
 			"golangci-lint was busy elsewhere; its checks did not run",
 		)}
 	}
-	return []pass.Finding{
+	return []finding.Finding{
 		runner.failure.New(fmt.Sprintf("golangci-lint failed: %s", result.Stderr)),
 	}
 }
 
-func issueFindings(issues []lintIssue) (findings []pass.Finding, escaped int) {
+func issueFindings(issues []lintIssue) (findings []finding.Finding, escaped int) {
 	for _, issue := range issues {
 		if escapesProject(issue.Pos.Filename) {
 			escaped++
 			continue
 		}
-		severity := pass.SeverityWarning
+		severity := finding.SeverityWarning
 		if strings.Contains(issue.Severity, "error") {
-			severity = pass.SeverityError
+			severity = finding.SeverityError
 		}
-		findings = append(findings, pass.Finding{
+		findings = append(findings, finding.Finding{
 			AnalyzerID: fmt.Sprintf("golangci-lint/%s", issue.FromLinter),
 			Severity:   severity,
-			Category:   pass.CatSyntax,
+			Category:   finding.CatSyntax,
 			File:       issue.Pos.Filename,
 			Line:       issue.Pos.Line,
 			Message:    issue.Text,
@@ -105,7 +105,7 @@ func issueFindings(issues []lintIssue) (findings []pass.Finding, escaped int) {
 	return findings, escaped
 }
 
-func (runner *Runner) escapedWarning(escaped int) pass.Finding {
+func (runner *Runner) escapedWarning(escaped int) finding.Finding {
 	return runner.warning.NewWithSuggestion(
 		fmt.Sprintf("dropped %d finding(s) naming files outside the analysed project", escaped),
 		"run `golangci-lint cache clean`; a stale cache reports paths from "+

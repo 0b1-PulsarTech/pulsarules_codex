@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -11,9 +12,9 @@ type langProbe struct {
 	langs *pass.LanguageRegistry
 }
 
-func (probe *langProbe) ID() string                             { return "probe" }
-func (probe *langProbe) Stage() pass.StageID                    { return pass.StageAST }
-func (probe *langProbe) Analyze(_ *pass.Context) []pass.Finding { return nil }
+func (probe *langProbe) ID() string                                { return "probe" }
+func (probe *langProbe) Stage() finding.StageID                    { return finding.StageAST }
+func (probe *langProbe) Analyze(_ *pass.Context) []finding.Finding { return nil }
 
 func TestLangSpec_InjectedRegistry(t *testing.T) {
 	t.Parallel()

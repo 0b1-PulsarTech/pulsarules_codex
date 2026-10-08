@@ -1,4 +1,4 @@
-package strictyaml
+package projectfile
 
 import (
 	"bytes"

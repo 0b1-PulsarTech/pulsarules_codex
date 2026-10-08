@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
@@ -101,23 +102,23 @@ func TestCarrierSeverityByClass(t *testing.T) {
 	testCases := []struct {
 		name string
 		body string
-		want pass.Severity
+		want finding.Severity
 	}{
-		{name: "zero width space blocks", body: "a\u200Bb\n", want: pass.SeverityError},
-		{name: "bidi override blocks", body: "a\u202Eb\n", want: pass.SeverityError},
-		{name: "no-break space blocks", body: "a\u00A0b\n", want: pass.SeverityError},
+		{name: "zero width space blocks", body: "a\u200Bb\n", want: finding.SeverityError},
+		{name: "bidi override blocks", body: "a\u202Eb\n", want: finding.SeverityError},
+		{name: "no-break space blocks", body: "a\u00A0b\n", want: finding.SeverityError},
 		{
 			name: "zero width joiner between ascii blocks (no emoji to glue, so it's " +
 				"a plain carrier)",
 			body: "a\u200Db\n",
-			want: pass.SeverityError,
+			want: finding.SeverityError,
 		},
 		{
 			name: "zero width joiner between emoji advises",
 			body: "\U0001F468\u200D\U0001F469\n",
-			want: pass.SeverityWarning,
+			want: finding.SeverityWarning,
 		},
-		{name: "byte order mark advises", body: "a\uFEFFb\n", want: pass.SeverityWarning},
+		{name: "byte order mark advises", body: "a\uFEFFb\n", want: finding.SeverityWarning},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -140,19 +141,19 @@ func TestTypographicSeverityIsConfigurable(t *testing.T) {
 	testCases := []struct {
 		name     string
 		severity string
-		want     pass.Severity
+		want     finding.Severity
 	}{
-		{name: "default blocks", want: pass.SeverityError},
+		{name: "default blocks", want: finding.SeverityError},
 		{
 			name:     "warning keeps the report without the gate",
 			severity: "warning",
-			want:     pass.SeverityWarning,
+			want:     finding.SeverityWarning,
 		},
-		{name: "info reports quietly", severity: "info", want: pass.SeverityInfo},
+		{name: "info reports quietly", severity: "info", want: finding.SeverityInfo},
 		{
 			name:     "unrecognized value keeps the blocking default",
 			severity: "fatal",
-			want:     pass.SeverityError,
+			want:     finding.SeverityError,
 		},
 	}
 	for _, testCase := range testCases {

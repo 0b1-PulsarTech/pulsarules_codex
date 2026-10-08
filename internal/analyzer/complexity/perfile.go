@@ -4,11 +4,12 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
-func (th thresholds) checkChanged(ctx *pass.Context, fc pass.FileChange) []pass.Finding {
+func (th thresholds) checkChanged(ctx *pass.Context, fc pass.FileChange) []finding.Finding {
 	var neutral []syntax.Function
 	if file, ok := ctx.Syntax.Get(fc.Path); ok && file.ParseError == "" {
 		neutral = file.Functions
@@ -28,10 +29,10 @@ func (th thresholds) checkChanged(ctx *pass.Context, fc pass.FileChange) []pass.
 		findings := th.checkFile(fc, &syntax.File{Functions: neutral})
 		return append(findings, th.checkGoFile(fset, fc, tree)...)
 	}
-	var findings []pass.Finding
+	var findings []finding.Finding
 	for idx, fn := range neutral {
 		findings = append(findings, th.checkTopLevel(fc, fn)...)
-		findings = append(findings, th.checkGoFunc(fset, fc, decls[idx])...)
+		findings = append(findings, th.checkGoFunc(fset, fc, tree, decls[idx])...)
 	}
 	return findings
 }

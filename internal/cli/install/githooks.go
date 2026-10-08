@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/branch"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/githook"
@@ -24,7 +24,7 @@ func resolveGitHooks(opts *version.Options) ([]string, error) {
 	}
 	// Reject before the value is baked into a script: a typo that installs cleanly
 	// would fail every commit from inside the hook, where the flag is not visible.
-	if err := pass.ValidateSeverityName(opts.TypographicSeverity); err != nil {
+	if err := finding.ValidateSeverityName(opts.TypographicSeverity); err != nil {
 		return nil, fmt.Errorf("invalid --typographic-severity: %w", err)
 	}
 	// The value is written into a generated shell script, so an entry

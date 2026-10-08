@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -14,15 +15,15 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) ID() string          { return "ungrouped-interfaces" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string             { return "ungrouped-interfaces" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(
-		pass.NewReporter(analyzer.ID(), pass.SeverityWarning, pass.CatAST),
+		finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatAST),
 		ctx,
 	)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if fc.Generated {
 			return nil
 		}
@@ -37,8 +38,8 @@ type interfaceDecl struct {
 }
 
 func checkFile(
-	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter pass.Reporter,
-) []pass.Finding {
+	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter finding.Reporter,
+) []finding.Finding {
 	decls := interfaceDecls(file)
 	total := 0
 	for _, decl := range decls {
@@ -67,7 +68,7 @@ func checkFile(
 	if outside == 1 {
 		noun = "interface"
 	}
-	return []pass.Finding{
+	return []finding.Finding{
 		reporter.At(
 			fc.Path,
 			fset.Position(first.Pos()).Line,

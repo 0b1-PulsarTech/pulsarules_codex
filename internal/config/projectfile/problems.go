@@ -1,4 +1,4 @@
-package strictyaml
+package projectfile
 
 import (
 	"errors"
@@ -14,6 +14,7 @@ type Problems struct {
 	stored []string
 	bytes  int
 	total  int
+	walked int
 }
 
 func (col *Problems) add(line int, at *Field, format string, args ...any) {

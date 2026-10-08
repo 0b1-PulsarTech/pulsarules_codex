@@ -3,6 +3,8 @@ package variadicindex
 import (
 	"go/ast"
 	"go/token"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 )
 
 type scope struct {
@@ -50,7 +52,7 @@ func (walker scope) declares(decl *ast.DeclStmt) bool {
 			continue
 		}
 		walker.exprs(valueSpec.Values)
-		if walker.hasName(valueSpec.Names) {
+		if goast.IdentsNamed(valueSpec.Names, walker.name) {
 			return true
 		}
 	}
@@ -110,7 +112,8 @@ func (walker scope) switchStmt(node *ast.SwitchStmt) {
 
 func (walker scope) rangeStmt(node *ast.RangeStmt) {
 	walker.node(node.X)
-	if node.Tok == token.DEFINE && walker.hasExpr([]ast.Expr{node.Key, node.Value}) {
+	keyValue := []ast.Expr{node.Key, node.Value}
+	if node.Tok == token.DEFINE && goast.ExprsMention(keyValue, walker.name) {
 		return
 	}
 	walker.stmts(node.Body.List)
@@ -152,7 +155,8 @@ func (walker scope) node(root ast.Node) {
 	ast.Inspect(root, func(node ast.Node) bool {
 		switch typed := node.(type) {
 		case *ast.FuncLit:
-			if !walker.hasField(typed.Type.Params) && !walker.hasField(typed.Type.Results) {
+			if !goast.FieldsDeclare(typed.Type.Params, walker.name) &&
+				!goast.FieldsDeclare(typed.Type.Results, walker.name) {
 				walker.stmts(typed.Body.List)
 			}
 			return false

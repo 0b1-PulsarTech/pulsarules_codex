@@ -5,42 +5,47 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
-	shadowReporter pass.Reporter
-	reuseReporter  pass.Reporter
+	shadowReporter finding.Reporter
+	reuseReporter  finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		shadowReporter: pass.NewReporter("shadowing", pass.SeverityWarning, pass.CatAST),
+		shadowReporter: finding.NewReporter("shadowing", finding.SeverityWarning, finding.CatAST),
 		// The two findings share scope machinery but say opposite things.
-		reuseReporter: pass.NewReporter("short-decl-reuse", pass.SeverityWarning, pass.CatAST),
+		reuseReporter: finding.NewReporter(
+			"short-decl-reuse",
+			finding.SeverityWarning,
+			finding.CatAST,
+		),
 	}
 }
 
-func (analyzer *Analyzer) ID() string          { return "shadowing" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string             { return "shadowing" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reps := fileReporters{
 		shadow: pass.ResolveReporter(analyzer.shadowReporter, ctx),
 		reuse:  pass.ResolveReporter(analyzer.reuseReporter, ctx),
 	}
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		return analyzer.checkFile(ctx.ASTCache.FileSet(), fc, file, reps)
 	})
 }
 
 type fileReporters struct {
-	shadow pass.Reporter
-	reuse  pass.Reporter
+	shadow finding.Reporter
+	reuse  finding.Reporter
 }
 
 func (reps fileReporters) forFunc(
-	fset *token.FileSet, fc pass.FileChange, findings *[]pass.Finding,
+	fset *token.FileSet, fc pass.FileChange, findings *[]finding.Finding,
 ) reporter {
 	reported := make(map[string]bool)
 	// One report per name per function. The mandated `(out T, err error)` plus
@@ -80,8 +85,8 @@ func (reps fileReporters) forFunc(
 
 func (analyzer *Analyzer) checkFile(
 	fset *token.FileSet, fc pass.FileChange, file *ast.File, reps fileReporters,
-) []pass.Finding {
-	var findings []pass.Finding
+) []finding.Finding {
+	var findings []finding.Finding
 	// simplification: function literals are not walked; doing so mostly finds
 	// `if err := f(); err != nil` in closures, not worth reporting yet. Upgrade
 	// path: walk FuncLit bodies in walkStmt.

@@ -2,24 +2,18 @@ package filecount
 
 import (
 	"go/ast"
-	"path"
-	"strconv"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 )
 
 const entImportPath = "entgo.io/ent"
 
 func inspectEnt(file *ast.File) bool {
 	locals := make(map[string]bool)
-	for _, spec := range file.Imports {
-		got, err := strconv.Unquote(spec.Path.Value)
-		if err != nil || got != entImportPath && got != entImportPath+"/schema/mixin" {
-			continue
+	for _, importPath := range []string{entImportPath, entImportPath + "/schema/mixin"} {
+		for _, local := range goast.ImportNames(file, importPath) {
+			locals[local] = true
 		}
-		local := path.Base(got)
-		if spec.Name != nil {
-			local = spec.Name.Name
-		}
-		locals[local] = true
 	}
 	return embedsSchema(file, locals)
 }

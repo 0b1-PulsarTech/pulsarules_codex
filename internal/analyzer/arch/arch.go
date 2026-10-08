@@ -6,13 +6,14 @@ import (
 	"io/fs"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 func resolveModuleOrFindings(
-	reporter pass.Reporter,
+	reporter finding.Reporter,
 	projectDir string,
-) (string, []pass.Finding) {
+) (string, []finding.Finding) {
 	modulePath, err := pass.ModulePath(projectDir)
 	if err == nil {
 		return modulePath, nil
@@ -21,25 +22,25 @@ func resolveModuleOrFindings(
 	if errors.Is(err, fs.ErrNotExist) {
 		return "", nil
 	}
-	return "", []pass.Finding{reporter.New(
+	return "", []finding.Finding{reporter.New(
 		fmt.Sprintf("cannot determine the project's module path: %s", err),
 	)}
 }
 
 type PackageBoundaryAnalyzer struct {
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewPackageBoundaryAnalyzer() *PackageBoundaryAnalyzer {
 	return &PackageBoundaryAnalyzer{
-		reporter: pass.NewReporter("arch-boundary", pass.SeverityError, pass.CatArch),
+		reporter: finding.NewReporter("arch-boundary", finding.SeverityError, finding.CatArch),
 	}
 }
 
-func (analyzer *PackageBoundaryAnalyzer) ID() string          { return "arch-boundary" }
-func (analyzer *PackageBoundaryAnalyzer) Stage() pass.StageID { return pass.StageArch }
+func (analyzer *PackageBoundaryAnalyzer) ID() string             { return "arch-boundary" }
+func (analyzer *PackageBoundaryAnalyzer) Stage() finding.StageID { return finding.StageArch }
 
-func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}
@@ -65,19 +66,19 @@ func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []pass.Findi
 }
 
 type ImportCycleAnalyzer struct {
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewImportCycleAnalyzer() *ImportCycleAnalyzer {
 	return &ImportCycleAnalyzer{
-		reporter: pass.NewReporter("import-cycle", pass.SeverityError, pass.CatArch),
+		reporter: finding.NewReporter("import-cycle", finding.SeverityError, finding.CatArch),
 	}
 }
 
-func (analyzer *ImportCycleAnalyzer) ID() string          { return "import-cycle" }
-func (analyzer *ImportCycleAnalyzer) Stage() pass.StageID { return pass.StageArch }
+func (analyzer *ImportCycleAnalyzer) ID() string             { return "import-cycle" }
+func (analyzer *ImportCycleAnalyzer) Stage() finding.StageID { return finding.StageArch }
 
-func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}

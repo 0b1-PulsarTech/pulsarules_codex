@@ -6,13 +6,14 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 func buildCtx(
-	t *testing.T, files, unchanged map[string]string, prior []pass.Finding,
+	t *testing.T, files, unchanged map[string]string, prior []finding.Finding,
 ) *pass.Context {
 	t.Helper()
 
@@ -37,7 +38,7 @@ func buildCtx(
 	}
 }
 
-func located(findings []pass.Finding) []string {
+func located(findings []finding.Finding) []string {
 	out := make([]string, 0, len(findings))
 	for _, finding := range findings {
 		out = append(out, fmt.Sprintf("%s:%d:%s", finding.File, finding.Line, finding.Message))
@@ -50,7 +51,7 @@ type levelVarCase struct {
 	name  string
 	files map[string]string
 	extra map[string]string
-	prior []pass.Finding
+	prior []finding.Finding
 	want  []string
 }
 
@@ -172,7 +173,7 @@ func TestIdentity(t *testing.T) {
 	t.Parallel()
 
 	analyzer := NewAnalyzer()
-	if analyzer.ID() != "package-level-var" || analyzer.Stage() != pass.StageAST {
+	if analyzer.ID() != "package-level-var" || analyzer.Stage() != finding.StageAST {
 		t.Fatalf("id=%q stage=%v", analyzer.ID(), analyzer.Stage())
 	}
 }

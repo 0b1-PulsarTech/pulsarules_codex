@@ -3,6 +3,7 @@ package message
 import (
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
@@ -13,12 +14,12 @@ func TestRuleReporters_ResolvedSeverity(t *testing.T) {
 	testCases := []struct {
 		name string
 		ctx  *pass.Context
-		want pass.Severity
+		want finding.Severity
 	}{
 		{
 			name: "no config keeps the compiled-in default",
 			ctx:  &pass.Context{},
-			want: pass.SeverityError,
+			want: finding.SeverityError,
 		},
 		{
 			name: "a configured severity for the sub-rule id overrides it",
@@ -27,7 +28,7 @@ func TestRuleReporters_ResolvedSeverity(t *testing.T) {
 					"commit-desc-required": {Params: map[string]any{"severity": "warning"}},
 				},
 			}},
-			want: pass.SeverityWarning,
+			want: finding.SeverityWarning,
 		},
 	}
 	for _, testCase := range testCases {

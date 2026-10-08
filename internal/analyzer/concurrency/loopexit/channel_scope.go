@@ -1,33 +1,30 @@
 package loopexit
 
-import "go/ast"
+import (
+	"go/ast"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
+)
 
 type channelScope struct {
+	file             *ast.File
 	tickerIdents     map[string]bool
 	doneIdents       map[string]bool
 	typedIdents      map[string]bool
 	tickerFieldNames map[string]bool
 }
 
-func isTimeTickCall(expr ast.Expr) bool {
-	return isTimeCall(expr, "Tick")
+func isTimeTickCall(file *ast.File, expr ast.Expr) bool {
+	return isTimeCall(file, expr, "Tick")
 }
 
-func isTimeNewTickerCall(expr ast.Expr) bool {
-	return isTimeCall(expr, "NewTicker")
+func isTimeNewTickerCall(file *ast.File, expr ast.Expr) bool {
+	return isTimeCall(file, expr, "NewTicker")
 }
 
-func isTimeCall(expr ast.Expr, name string) bool {
+func isTimeCall(file *ast.File, expr ast.Expr, name string) bool {
 	call, ok := expr.(*ast.CallExpr)
-	if !ok {
-		return false
-	}
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || sel.Sel == nil || sel.Sel.Name != name {
-		return false
-	}
-	pkg, ok := sel.X.(*ast.Ident)
-	return ok && pkg.Name == "time"
+	return ok && goast.PkgCall(file, call, "time", name)
 }
 
 func isDotCSelector(expr ast.Expr) bool {
@@ -40,7 +37,7 @@ func isTickerDotCSelector(expr ast.Expr, scope channelScope) bool {
 	if !ok || !isDotCSelector(expr) {
 		return false
 	}
-	if isTimeNewTickerCall(sel.X) {
+	if isTimeNewTickerCall(scope.file, sel.X) {
 		return true
 	}
 	switch base := sel.X.(type) {
@@ -53,16 +50,11 @@ func isTickerDotCSelector(expr ast.Expr, scope channelScope) bool {
 	}
 }
 
-func isTickerOrTimerType(expr ast.Expr) bool {
+func isTickerOrTimerType(file *ast.File, expr ast.Expr) bool {
 	if star, ok := expr.(*ast.StarExpr); ok {
 		expr = star.X
 	}
-	sel, ok := expr.(*ast.SelectorExpr)
-	if !ok || sel.Sel == nil {
-		return false
-	}
-	pkg, ok := sel.X.(*ast.Ident)
-	return ok && pkg.Name == "time" && (sel.Sel.Name == "Ticker" || sel.Sel.Name == "Timer")
+	return goast.PkgRef(file, expr, "time", "Ticker", "Timer")
 }
 
 func isDoneCall(expr ast.Expr) bool {
@@ -75,9 +67,10 @@ func isDoneCall(expr ast.Expr) bool {
 }
 
 func collectChannelScope(
-	params *ast.FieldList, body *ast.BlockStmt, tickerFieldNames map[string]bool,
+	file *ast.File, params *ast.FieldList, body *ast.BlockStmt, tickerFieldNames map[string]bool,
 ) channelScope {
 	scope := channelScope{
+		file:             file,
 		tickerIdents:     map[string]bool{},
 		doneIdents:       map[string]bool{},
 		typedIdents:      map[string]bool{},
@@ -105,7 +98,7 @@ func recordTypedParams(params *ast.FieldList, scope channelScope) {
 		return
 	}
 	for _, field := range params.List {
-		if !isTickerOrTimerType(field.Type) {
+		if !isTickerOrTimerType(scope.file, field.Type) {
 			continue
 		}
 		for _, ident := range field.Names {
@@ -115,7 +108,7 @@ func recordTypedParams(params *ast.FieldList, scope channelScope) {
 }
 
 func recordTypedVar(spec *ast.ValueSpec, scope channelScope) {
-	if spec.Type == nil || !isTickerOrTimerType(spec.Type) {
+	if spec.Type == nil || !isTickerOrTimerType(scope.file, spec.Type) {
 		return
 	}
 	for _, ident := range spec.Names {
@@ -133,7 +126,7 @@ func recordChannelAssign(assign *ast.AssignStmt, scope channelScope) {
 			continue
 		}
 		switch {
-		case isTimeTickCall(rhs) || isTimeNewTickerCall(rhs):
+		case isTimeTickCall(scope.file, rhs) || isTimeNewTickerCall(scope.file, rhs):
 			scope.tickerIdents[ident.Name] = true
 		case isDoneCall(rhs):
 			scope.doneIdents[ident.Name] = true

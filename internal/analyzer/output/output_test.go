@@ -3,6 +3,7 @@ package output
 import (
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -11,18 +12,24 @@ func TestOutputAnalyzer_SortBySeverity(t *testing.T) {
 
 	analyzer := NewAnalyzer()
 	ctx := &pass.Context{
-		Findings: []pass.Finding{
-			{AnalyzerID: "a", Severity: pass.SeverityInfo, File: "b.go", Line: 5, Message: "info"},
+		Findings: []finding.Finding{
+			{
+				AnalyzerID: "a",
+				Severity:   finding.SeverityInfo,
+				File:       "b.go",
+				Line:       5,
+				Message:    "info",
+			},
 			{
 				AnalyzerID: "b",
-				Severity:   pass.SeverityError,
+				Severity:   finding.SeverityError,
 				File:       "a.go",
 				Line:       10,
 				Message:    "error",
 			},
 			{
 				AnalyzerID: "c",
-				Severity:   pass.SeverityWarning,
+				Severity:   finding.SeverityWarning,
 				File:       "c.go",
 				Line:       1,
 				Message:    "warn",
@@ -35,13 +42,13 @@ func TestOutputAnalyzer_SortBySeverity(t *testing.T) {
 	if len(ctx.Findings) != 3 {
 		t.Fatalf("expected 3 findings, got %d", len(ctx.Findings))
 	}
-	if ctx.Findings[0].Severity != pass.SeverityError {
+	if ctx.Findings[0].Severity != finding.SeverityError {
 		t.Errorf("first should be error, got %d", ctx.Findings[0].Severity)
 	}
-	if ctx.Findings[1].Severity != pass.SeverityWarning {
+	if ctx.Findings[1].Severity != finding.SeverityWarning {
 		t.Errorf("second should be warning, got %d", ctx.Findings[1].Severity)
 	}
-	if ctx.Findings[2].Severity != pass.SeverityInfo {
+	if ctx.Findings[2].Severity != finding.SeverityInfo {
 		t.Errorf("third should be info, got %d", ctx.Findings[2].Severity)
 	}
 }
@@ -51,10 +58,10 @@ func TestOutputAnalyzer_SortByFileThenLine(t *testing.T) {
 
 	analyzer := NewAnalyzer()
 	ctx := &pass.Context{
-		Findings: []pass.Finding{
-			{AnalyzerID: "a", Severity: pass.SeverityWarning, File: "b.go", Line: 5},
-			{AnalyzerID: "b", Severity: pass.SeverityWarning, File: "a.go", Line: 10},
-			{AnalyzerID: "c", Severity: pass.SeverityWarning, File: "a.go", Line: 3},
+		Findings: []finding.Finding{
+			{AnalyzerID: "a", Severity: finding.SeverityWarning, File: "b.go", Line: 5},
+			{AnalyzerID: "b", Severity: finding.SeverityWarning, File: "a.go", Line: 10},
+			{AnalyzerID: "c", Severity: finding.SeverityWarning, File: "a.go", Line: 3},
 		},
 	}
 
@@ -76,13 +83,31 @@ func TestOutputAnalyzer_Dedup(t *testing.T) {
 
 	analyzer := NewAnalyzer()
 	ctx := &pass.Context{
-		Findings: []pass.Finding{
-			{AnalyzerID: "x", Severity: pass.SeverityError, File: "a.go", Line: 1, Message: "dup"},
-			{AnalyzerID: "x", Severity: pass.SeverityError, File: "a.go", Line: 1, Message: "dup"},
-			{AnalyzerID: "x", Severity: pass.SeverityError, File: "a.go", Line: 1, Message: "dup"},
+		Findings: []finding.Finding{
+			{
+				AnalyzerID: "x",
+				Severity:   finding.SeverityError,
+				File:       "a.go",
+				Line:       1,
+				Message:    "dup",
+			},
+			{
+				AnalyzerID: "x",
+				Severity:   finding.SeverityError,
+				File:       "a.go",
+				Line:       1,
+				Message:    "dup",
+			},
+			{
+				AnalyzerID: "x",
+				Severity:   finding.SeverityError,
+				File:       "a.go",
+				Line:       1,
+				Message:    "dup",
+			},
 			{
 				AnalyzerID: "y",
-				Severity:   pass.SeverityError,
+				Severity:   finding.SeverityError,
 				File:       "a.go",
 				Line:       2,
 				Message:    "other",
@@ -113,10 +138,10 @@ func TestOutputAnalyzer_SortByLineWithinOneFile(t *testing.T) {
 
 	analyzer := NewAnalyzer()
 	ctx := &pass.Context{
-		Findings: []pass.Finding{
-			{AnalyzerID: "a", Severity: pass.SeverityWarning, File: "a.go", Line: 9},
-			{AnalyzerID: "b", Severity: pass.SeverityWarning, File: "a.go", Line: 2},
-			{AnalyzerID: "c", Severity: pass.SeverityWarning, File: "a.go", Line: 2},
+		Findings: []finding.Finding{
+			{AnalyzerID: "a", Severity: finding.SeverityWarning, File: "a.go", Line: 9},
+			{AnalyzerID: "b", Severity: finding.SeverityWarning, File: "a.go", Line: 2},
+			{AnalyzerID: "c", Severity: finding.SeverityWarning, File: "a.go", Line: 2},
 		},
 	}
 

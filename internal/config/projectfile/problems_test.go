@@ -1,4 +1,4 @@
-package strictyaml
+package projectfile
 
 import (
 	"errors"
@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 )
 
 func decoderTextCases() []parseCase {
@@ -201,7 +199,7 @@ func TestDecodeHidesDecoderText(t *testing.T) {
 			if err == nil || err.Error() != strings.Join(testCase.want, "; ") {
 				t.Fatalf("decodeFile() error = %v, want %q", err, testCase.want)
 			}
-			text := strings.ReplaceAll(err.Error(), projectfile.Name, "")
+			text := strings.ReplaceAll(err.Error(), Name, "")
 			for _, leaked := range []string{"cannot", "!!", "yaml:"} {
 				if strings.Contains(text, leaked) {
 					t.Errorf("decodeFile() error %q leaks %q", err, leaked)
@@ -269,7 +267,7 @@ func TestLeftover(t *testing.T) {
 	for _, testCase := range leftoverCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := leftover(projectfile.Name, testCase.err)
+			got := leftover(Name, testCase.err)
 			if got.Error() != testCase.want {
 				t.Fatalf("leftover() = %q, want %q", got, testCase.want)
 			}

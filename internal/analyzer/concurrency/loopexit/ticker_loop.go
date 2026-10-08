@@ -4,7 +4,8 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 )
 
 type loopShape struct {
@@ -33,7 +34,7 @@ func tickerLoopShape(target ast.Node, scope channelScope) (loopShape, bool) {
 }
 
 func isRangeTickerPaced(expr ast.Expr, scope channelScope) bool {
-	if isTimeTickCall(expr) || isTickerDotCSelector(expr, scope) {
+	if isTimeTickCall(scope.file, expr) || isTickerDotCSelector(expr, scope) {
 		return true
 	}
 	ident, ok := expr.(*ast.Ident)
@@ -41,7 +42,7 @@ func isRangeTickerPaced(expr ast.Expr, scope channelScope) bool {
 }
 
 func containsDotCReceive(node ast.Node, scope channelScope) bool {
-	return containsMatch(node, func(visited ast.Node) bool {
+	return goast.AnyUntil(node, func(visited ast.Node) bool {
 		unary, ok := visited.(*ast.UnaryExpr)
 		if !ok || unary.Op != token.ARROW {
 			return false
@@ -51,13 +52,13 @@ func containsDotCReceive(node ast.Node, scope channelScope) bool {
 		}
 		ident, ok := unary.X.(*ast.Ident)
 		return ok && scope.tickerIdents[ident.Name]
-	})
+	}, isNestedLoopOrFunc)
 }
 
 func containsDoneReceive(node ast.Node, doneIdents map[string]bool) bool {
-	return containsMatch(node, func(visited ast.Node) bool {
+	return goast.AnyUntil(node, func(visited ast.Node) bool {
 		return isDoneReceiveNode(visited, doneIdents)
-	})
+	}, isNestedLoopOrFunc)
 }
 
 func isDoneReceiveNode(node ast.Node, doneIdents map[string]bool) bool {
@@ -76,31 +77,19 @@ func isDoneReceiveNode(node ast.Node, doneIdents map[string]bool) bool {
 	return ok && doneIdents[ident.Name]
 }
 
-func containsMatch(node ast.Node, match func(ast.Node) bool) bool {
-	found := false
-	ast.Inspect(node, func(visited ast.Node) bool {
-		if found {
-			return false
-		}
-		if match(visited) {
-			found = true
-			return false
-		}
-		switch visited.(type) {
-		case *ast.ForStmt, *ast.RangeStmt, *ast.FuncLit:
-			// A nested loop is analysed on its own, and a receive in a nested closure
-			// does not pace or stop this one.
-			return false
-		default:
-			return true
-		}
-	})
-	return found
+func isNestedLoopOrFunc(node ast.Node) bool {
+	// A nested loop is analysed on its own; a nested closure's receive paces neither.
+	switch node.(type) {
+	case *ast.ForStmt, *ast.RangeStmt, *ast.FuncLit:
+		return true
+	default:
+		return false
+	}
 }
 
 func checkTickerLoop(
 	check fileCheck, shape loopShape, scope channelScope, label string,
-) []pass.Finding {
+) []finding.Finding {
 	if containsDoneReceive(shape.body, scope.doneIdents) || loopCanTerminate(shape.body, label) {
 		return nil
 	}
@@ -116,7 +105,7 @@ func checkTickerLoop(
 		return nil
 	}
 	if hasMarker {
-		return []pass.Finding{check.reporter.At(
+		return []finding.Finding{check.reporter.At(
 			check.fc.Path,
 			forLine,
 			"pulsarules:process-lifetime marker has no stated reason; explain "+
@@ -124,7 +113,7 @@ func checkTickerLoop(
 			"add a reason after the marker, e.g. //pulsarules:process-lifetime <reason>",
 		)}
 	}
-	return []pass.Finding{check.reporter.At(
+	return []finding.Finding{check.reporter.At(
 		check.fc.Path,
 		forLine,
 		"ticker-paced loop has no <-ctx.Done() arm and no "+

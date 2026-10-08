@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
@@ -193,6 +194,19 @@ func pprofUnflaggedImportCases() []checkFileTestCase {
 			wantSubstr: `"email"`,
 		},
 		{
+			name: "a shadow inside a nested func literal does not hide a later real call",
+			source: "package foo\n" +
+				"import \"runtime/pprof\"\n" +
+				"type notPprof struct{}\n" +
+				"func (notPprof) Labels(pairs ...string) []string { return pairs }\n" +
+				"func run(email string) pprof.LabelSet {\n" +
+				"\tfunc() { pprof := notPprof{}; _ = pprof.Labels(\"a\", \"b\") }()\n" +
+				"\treturn pprof.Labels(\"email\", email)\n" +
+				"}\n",
+			expect:     1,
+			wantSubstr: `"email"`,
+		},
+		{
 			name: "an imported file with a differently named Labels call is not pprof.Labels",
 			source: "package foo\n" +
 				"import \"runtime/pprof\"\n" +
@@ -249,7 +263,7 @@ func labelSource(args string) string {
 		"}\n"
 }
 
-func analyzeSource(t *testing.T, source string) []pass.Finding {
+func analyzeSource(t *testing.T, source string) []finding.Finding {
 	t.Helper()
 
 	dir := t.TempDir()

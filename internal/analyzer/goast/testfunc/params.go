@@ -2,7 +2,8 @@ package testfunc
 
 import (
 	"go/ast"
-	"strconv"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 )
 
 func testingAlias(file *ast.File) string {
@@ -10,15 +11,8 @@ func testingAlias(file *ast.File) string {
 	if file == nil {
 		return testingImportPath
 	}
-	for _, spec := range file.Imports {
-		path, err := strconv.Unquote(spec.Path.Value)
-		if err != nil || path != testingImportPath {
-			continue
-		}
-		if spec.Name != nil {
-			return spec.Name.Name
-		}
-		return testingImportPath
+	if names := goast.ImportNames(file, testingImportPath); len(names) > 0 {
+		return names[0]
 	}
 	return testingImportPath
 }

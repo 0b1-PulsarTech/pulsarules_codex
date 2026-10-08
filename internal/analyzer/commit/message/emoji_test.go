@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 )
@@ -65,14 +65,14 @@ func TestValidateEmojiCatalog(t *testing.T) {
 				return
 			}
 
-			finding, found := findingByID(findings, testCase.wantID)
+			findingItem, found := findingByID(findings, testCase.wantID)
 			if !found {
 				t.Fatalf("expected %s, got %+v", testCase.wantID, findings)
 			}
-			if finding.Severity != pass.SeverityError {
-				t.Fatalf("severity = %v, want error", finding.Severity)
+			if findingItem.Severity != finding.SeverityError {
+				t.Fatalf("severity = %v, want error", findingItem.Severity)
 			}
-			if finding.Suggestion == "" {
+			if findingItem.Suggestion == "" {
 				t.Fatal("a blocking emoji finding must offer alternatives")
 			}
 		})
@@ -174,16 +174,16 @@ func TestValidateEmojiWindow(t *testing.T) {
 				return
 			}
 
-			finding, found := findingByID(findings, testCase.wantID)
+			findingItem, found := findingByID(findings, testCase.wantID)
 			if !found {
 				t.Fatalf("expected %s, got %+v", testCase.wantID, findings)
 			}
-			wantSeverity := pass.SeverityError
+			wantSeverity := finding.SeverityError
 			if testCase.wantID == "commit-emoji-soft-repeat" {
-				wantSeverity = pass.SeverityInfo
+				wantSeverity = finding.SeverityInfo
 			}
-			if finding.Severity != wantSeverity {
-				t.Fatalf("severity = %v, want %v", finding.Severity, wantSeverity)
+			if findingItem.Severity != wantSeverity {
+				t.Fatalf("severity = %v, want %v", findingItem.Severity, wantSeverity)
 			}
 		})
 	}

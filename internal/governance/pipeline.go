@@ -1,15 +1,18 @@
 package governance
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+)
 
 type StageRunner struct {
-	stages map[pass.StageID][]pass.Analyzer
+	stages map[finding.StageID][]pass.Analyzer
 	cfg    *pass.AnalysisConfig
 }
 
 func newPipeline(cfg *pass.AnalysisConfig) *StageRunner {
 	return &StageRunner{
-		stages: make(map[pass.StageID][]pass.Analyzer),
+		stages: make(map[finding.StageID][]pass.Analyzer),
 		cfg:    cfg,
 	}
 }
@@ -18,8 +21,8 @@ func (runner *StageRunner) Register(analyzer pass.Analyzer) {
 	runner.stages[analyzer.Stage()] = append(runner.stages[analyzer.Stage()], analyzer)
 }
 
-func (runner *StageRunner) RunStages(ctx *pass.Context) []pass.Finding {
-	for stage := pass.StageContext; stage <= pass.StageOutput; stage++ {
+func (runner *StageRunner) RunStages(ctx *pass.Context) []finding.Finding {
+	for stage := finding.StageContext; stage <= finding.StageOutput; stage++ {
 		analyzers := runner.stages[stage]
 		for _, analyzer := range analyzers {
 			if !runner.enabled(analyzer) {

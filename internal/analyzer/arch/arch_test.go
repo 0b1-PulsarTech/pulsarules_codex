@@ -3,6 +3,7 @@ package arch
 import (
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -129,7 +130,7 @@ func TestPackageBoundary_MalformedGoMod(t *testing.T) {
 			len(findings),
 		)
 	}
-	if findings[0].Severity != pass.SeverityError {
+	if findings[0].Severity != finding.SeverityError {
 		t.Errorf("expected an error-severity finding, got %v", findings[0].Severity)
 	}
 }
@@ -150,7 +151,7 @@ func TestImportCycle_MalformedGoMod(t *testing.T) {
 			len(findings),
 		)
 	}
-	if findings[0].Severity != pass.SeverityError {
+	if findings[0].Severity != finding.SeverityError {
 		t.Errorf("expected an error-severity finding, got %v", findings[0].Severity)
 	}
 }

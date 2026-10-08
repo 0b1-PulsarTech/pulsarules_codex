@@ -1,10 +1,12 @@
 package pass
 
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+
 type (
 	Analyzer interface {
 		ID() string
-		Stage() StageID
-		Analyze(ctx *Context) []Finding
+		Stage() finding.StageID
+		Analyze(ctx *Context) []finding.Finding
 	}
 
 	InPlaceAnalyzer interface {

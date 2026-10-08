@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -94,7 +95,7 @@ func (moves *moveContext) isGoEdit(edit fileEdit) verdict {
 	return moves.goEquivalent(oldSrc, newSrc, edit)
 }
 
-func notPureMoveFinding(reporter pass.Reporter, rename pass.Rename) pass.Finding {
+func notPureMoveFinding(reporter finding.Reporter, rename pass.Rename) finding.Finding {
 	return reporter.At(
 		rename.NewPath,
 		0,
@@ -106,7 +107,7 @@ func notPureMoveFinding(reporter pass.Reporter, rename pass.Rename) pass.Finding
 	)
 }
 
-func mixedChangesetFinding(reporter pass.Reporter, renameCount, editCount int) pass.Finding {
+func mixedChangesetFinding(reporter finding.Reporter, renameCount, editCount int) finding.Finding {
 	return reporter.NewWithSuggestion(
 		fmt.Sprintf(
 			"this commit mixes %d rename(s) with %d edit(s); split the move into its own commit",
@@ -116,7 +117,7 @@ func mixedChangesetFinding(reporter pass.Reporter, renameCount, editCount int) p
 	)
 }
 
-func unlinksLoadFinding(reporter pass.Reporter, file, target string) pass.Finding {
+func unlinksLoadFinding(reporter finding.Reporter, file, target string) finding.Finding {
 	return reporter.At(
 		file,
 		0,
@@ -130,7 +131,11 @@ func unlinksLoadFinding(reporter pass.Reporter, file, target string) pass.Findin
 	)
 }
 
-func strandsCompiledFinding(reporter pass.Reporter, rename pass.Rename, file string) pass.Finding {
+func strandsCompiledFinding(
+	reporter finding.Reporter,
+	rename pass.Rename,
+	file string,
+) finding.Finding {
 	return reporter.At(
 		rename.NewPath,
 		0,
@@ -144,7 +149,7 @@ func strandsCompiledFinding(reporter pass.Reporter, rename pass.Rename, file str
 	)
 }
 
-func renameCarriesEditFinding(reporter pass.Reporter, rename pass.Rename) pass.Finding {
+func renameCarriesEditFinding(reporter finding.Reporter, rename pass.Rename) finding.Finding {
 	return reporter.At(
 		rename.NewPath,
 		0,

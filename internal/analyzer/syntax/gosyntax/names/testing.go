@@ -2,32 +2,16 @@ package names
 
 import (
 	"go/ast"
-	"strconv"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 )
 
 func testingNames(file *ast.File) map[string]bool {
 	names := map[string]bool{}
-	for _, spec := range file.Imports {
-		if path, _ := strconv.Unquote(spec.Path.Value); path != "testing" {
-			continue
-		}
-		if spec.Name == nil {
-			names["testing"] = true
-			continue
-		}
-		names[spec.Name.Name] = true
+	for _, name := range goast.ImportNames(file, "testing") {
+		names[name] = true
 	}
 	return names
-}
-
-func unparen(expr ast.Expr) ast.Expr {
-	for {
-		paren, isParen := expr.(*ast.ParenExpr)
-		if !isParen {
-			return expr
-		}
-		expr = paren.X
-	}
 }
 
 func testingTypeName(expr ast.Expr, names map[string]bool) string {
@@ -46,10 +30,10 @@ func testingTypeName(expr ast.Expr, names map[string]bool) string {
 }
 
 func isTestingType(expr ast.Expr, names map[string]bool) bool {
-	expr = unparen(expr)
+	expr = ast.Unparen(expr)
 	star, isPointer := expr.(*ast.StarExpr)
 	if isPointer {
-		expr = unparen(star.X)
+		expr = ast.Unparen(star.X)
 	}
 	switch testingTypeName(expr, names) {
 	case "T", "B", "F", "M":

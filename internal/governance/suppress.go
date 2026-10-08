@@ -4,23 +4,24 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 type Result struct {
-	Findings            []pass.Finding
+	Findings            []finding.Finding
 	SuppressedGenerated int
 }
 
-func splitGenerated(ctx *pass.Context, findings []pass.Finding) Result {
+func splitGenerated(ctx *pass.Context, findings []finding.Finding) Result {
 	known := make(map[string]bool, len(ctx.ChangedFiles))
 	for _, fc := range ctx.ChangedFiles {
 		known[fc.Path] = fc.Generated
 	}
 
-	kept := make([]pass.Finding, 0, len(findings))
+	kept := make([]finding.Finding, 0, len(findings))
 	suppressed := 0
 	for _, finding := range findings {
 		// A finding with no file (a commit-message rule) belongs to no file and is never

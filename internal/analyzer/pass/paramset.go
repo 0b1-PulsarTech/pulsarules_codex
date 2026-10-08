@@ -1,11 +1,10 @@
 package pass
 
 import (
-	"fmt"
-	"maps"
-	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 )
 
 type ParamSet map[string]any
@@ -83,34 +82,8 @@ func (params ParamSet) String(key string, fallback string) string {
 
 const ParamSeverity = "severity"
 
-func severityByName() map[string]Severity {
-	return map[string]Severity{
-		"error":   SeverityError,
-		"warning": SeverityWarning,
-		"info":    SeverityInfo,
-	}
-}
-
-func severityNames() []string {
-	return slices.Sorted(maps.Keys(severityByName()))
-}
-
-func ValidateSeverityName(name string) error {
-	if name == "" || validSeverityName(name) {
-		return nil
-	}
-	return fmt.Errorf(
-		"unknown severity %q (want %s)", name, strings.Join(severityNames(), "|"),
-	)
-}
-
-func validSeverityName(name string) bool {
-	_, ok := severityByName()[name]
-	return ok
-}
-
-func (params ParamSet) Severity(fallback Severity) Severity {
-	if severity, ok := severityByName()[params.String(ParamSeverity, "")]; ok {
+func (params ParamSet) Severity(fallback finding.Severity) finding.Severity {
+	if severity, ok := finding.SeverityByName()[params.String(ParamSeverity, "")]; ok {
 		return severity
 	}
 	return fallback

@@ -1,6 +1,9 @@
 package movepurity
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+)
 
 const ID = "commit-move-purity"
 
@@ -11,7 +14,7 @@ var _ pass.Analyzer = (*Analyzer)(nil)
 type Analyzer struct {
 	minSimilarity int
 	reader        gitReader
-	reporter      pass.Reporter
+	reporter      finding.Reporter
 }
 
 func NewAnalyzer(reader gitReader) *Analyzer {
@@ -19,15 +22,15 @@ func NewAnalyzer(reader gitReader) *Analyzer {
 	return &Analyzer{
 		minSimilarity: defaultMinSimilarity,
 		reader:        reader,
-		reporter:      pass.NewReporter(ID, pass.SeverityWarning, pass.CatCommit),
+		reporter:      finding.NewReporter(ID, finding.SeverityWarning, finding.CatCommit),
 	}
 }
 
 func (analyzer *Analyzer) ID() string { return ID }
 
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if len(ctx.StagedRenames) == 0 {
 		return nil
 	}
@@ -39,7 +42,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if analyzer.reader != nil {
 		moves = newMoveContext(analyzer.reader, ctx.StagedRenames)
 	}
-	var findings []pass.Finding
+	var findings []finding.Finding
 	for _, rename := range ctx.StagedRenames {
 		if finding, ok := renameFinding(moves, reporter, rename, minSimilarity); ok {
 			findings = append(findings, finding)
@@ -60,17 +63,17 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 
 func renameFinding(
 	moves *moveContext,
-	reporter pass.Reporter,
+	reporter finding.Reporter,
 	rename pass.Rename,
 	minSimilarity int,
-) (pass.Finding, bool) {
+) (finding.Finding, bool) {
 	isLow := rename.Score < minSimilarity
 	if moves == nil {
 		return notPureMoveFinding(reporter, rename), isLow
 	}
 	switch got := moves.renameVerdict(rename); {
 	case got == verdictPure:
-		return pass.Finding{}, false
+		return finding.Finding{}, false
 	case got == verdictClauseOnly:
 		return relocationUnsafeFinding(
 			reporter,
@@ -87,8 +90,8 @@ func renameFinding(
 }
 
 func editFinding(
-	moves *moveContext, reporter pass.Reporter, rename pass.Rename, got verdict,
-) pass.Finding {
+	moves *moveContext, reporter finding.Reporter, rename pass.Rename, got verdict,
+) finding.Finding {
 	switch got {
 	case verdictUnsafe:
 		return relocationUnsafeFinding(reporter, rename, "is byte-identical but")

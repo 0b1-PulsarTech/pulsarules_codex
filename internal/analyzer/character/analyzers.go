@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 )
 
 type textReporters struct {
-	carrier     pass.Reporter
-	contextual  pass.Reporter
-	frontmatter pass.Reporter
+	carrier     finding.Reporter
+	contextual  finding.Reporter
+	frontmatter finding.Reporter
 }
 
 type TextAnalyzer struct {
@@ -23,30 +24,42 @@ func NewTextAnalyzer() *TextAnalyzer {
 		// Classes `clean --write` removes outright: no neighbouring context can justify
 		// them, and the bidi controls among them are the Trojan Source vector
 		// (CVE-2021-42574), so they block.
-		carrier: pass.NewReporter("text-markers", pass.SeverityError, pass.CatSyntax),
+		carrier: finding.NewReporter("text-markers", finding.SeverityError, finding.CatSyntax),
 		// Invisible characters that may be load-bearing (emoji glue, script joiners)
 		// cannot be judged here, so they advise instead of blocking.
-		contextual:  pass.NewReporter("text-markers", pass.SeverityWarning, pass.CatSyntax),
-		frontmatter: pass.NewReporter("ai-frontmatter", pass.SeverityError, pass.CatSyntax),
+		contextual: finding.NewReporter(
+			"text-markers",
+			finding.SeverityWarning,
+			finding.CatSyntax,
+		),
+		frontmatter: finding.NewReporter(
+			"ai-frontmatter",
+			finding.SeverityError,
+			finding.CatSyntax,
+		),
 	}}
 }
 
 func (analyzer *TextAnalyzer) ID() string { return "text-markers" }
 
-func (analyzer *TextAnalyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *TextAnalyzer) Stage() finding.StageID { return finding.StageStatic }
 
-func (analyzer *TextAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *TextAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporters := textReporters{
 		carrier:     pass.ResolveReporter(analyzer.reporters.carrier, ctx),
 		contextual:  pass.ResolveReporter(analyzer.reporters.contextual, ctx),
 		frontmatter: pass.ResolveReporter(analyzer.reporters.frontmatter, ctx),
 	}
-	return eachMarkedFile(ctx, analyzer.ID(), func(fc pass.FileChange, src string) []pass.Finding {
-		return checkCarriers(fc, src, reporters)
-	})
+	return eachMarkedFile(
+		ctx,
+		analyzer.ID(),
+		func(fc pass.FileChange, src string) []finding.Finding {
+			return checkCarriers(fc, src, reporters)
+		},
+	)
 }
 
-func checkCarriers(fc pass.FileChange, src string, reporters textReporters) []pass.Finding {
+func checkCarriers(fc pass.FileChange, src string, reporters textReporters) []finding.Finding {
 	findings := frontmatterFindings(fc, src, reporters.frontmatter)
 	for _, found := range invisible.Scan(src) {
 		if found.Class == invisible.ClassTypographic {
@@ -75,35 +88,43 @@ func carrierAdvice(class invisible.Class) string {
 }
 
 type TypographicAnalyzer struct {
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewTypographicAnalyzer() *TypographicAnalyzer {
 	return &TypographicAnalyzer{
 		// Blocks by default; a project that treats ASCII punctuation as house style
 		// lowers it through the analyzer's "severity" param.
-		reporter: pass.NewReporter("typographic-markers", pass.SeverityError, pass.CatSyntax),
+		reporter: finding.NewReporter(
+			"typographic-markers",
+			finding.SeverityError,
+			finding.CatSyntax,
+		),
 	}
 }
 
 func (analyzer *TypographicAnalyzer) ID() string { return "typographic-markers" }
 
-func (analyzer *TypographicAnalyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *TypographicAnalyzer) Stage() finding.StageID { return finding.StageStatic }
 
-func (analyzer *TypographicAnalyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *TypographicAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	return eachMarkedFile(ctx, analyzer.ID(), func(fc pass.FileChange, src string) []pass.Finding {
-		return checkTypographic(fc, src, reporter)
-	})
+	return eachMarkedFile(
+		ctx,
+		analyzer.ID(),
+		func(fc pass.FileChange, src string) []finding.Finding {
+			return checkTypographic(fc, src, reporter)
+		},
+	)
 }
 
-func checkTypographic(fc pass.FileChange, src string, reporter pass.Reporter) []pass.Finding {
+func checkTypographic(fc pass.FileChange, src string, reporter finding.Reporter) []finding.Finding {
 	var code []region
 	if strings.EqualFold(fc.Extension, ".md") {
 		code = codeRegions(src)
 	}
 
-	var findings []pass.Finding
+	var findings []finding.Finding
 	for _, found := range invisible.Scan(src) {
 		if found.Class != invisible.ClassTypographic || inCode(code, found.Offset) {
 			continue

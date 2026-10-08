@@ -71,6 +71,12 @@ linters:
 			wantCount:   1,
 			wantMessage: "cannot read the golangci-lint config",
 		},
+		{
+			name:        "config makes yaml.v3 panic on a merged map key",
+			config:      "version: \"2\"\nb: &b {x: 1}\nlinters: {<<: ~, *b : 1}\n",
+			wantCount:   1,
+			wantMessage: "cannot read the golangci-lint config",
+		},
 	}
 }
 

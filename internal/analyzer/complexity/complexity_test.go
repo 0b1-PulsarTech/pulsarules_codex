@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax"
@@ -82,14 +83,14 @@ func TestAnalyze_HonoursConfiguredSeverity(t *testing.T) {
 	testCases := []struct {
 		name   string
 		config *pass.AnalysisConfig
-		want   pass.Severity
+		want   finding.Severity
 	}{
 		{
 			name: "default severity is warning",
 			config: &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
 				"complexity": {Params: map[string]any{"max_func_lines": 1}},
 			}},
-			want: pass.SeverityWarning,
+			want: finding.SeverityWarning,
 		},
 		{
 			name: "configured severity overrides the default",
@@ -98,7 +99,7 @@ func TestAnalyze_HonoursConfiguredSeverity(t *testing.T) {
 					Params: map[string]any{"max_func_lines": 1, "severity": "error"},
 				},
 			}},
-			want: pass.SeverityError,
+			want: finding.SeverityError,
 		},
 	}
 	for _, testCase := range testCases {
@@ -135,7 +136,7 @@ func fourLineFixture(t *testing.T) (*astcache.Cache, string) {
 	return cache, path
 }
 
-func hasFuncLinesFinding(findings []pass.Finding) bool {
+func hasFuncLinesFinding(findings []finding.Finding) bool {
 	for _, finding := range findings {
 		if strings.Contains(finding.Message, "is 4 lines, max 1") {
 			return true

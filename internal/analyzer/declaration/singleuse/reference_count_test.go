@@ -3,6 +3,7 @@ package singleuse
 import (
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -23,12 +24,16 @@ func TestCheckCandidate(t *testing.T) {
 	t.Parallel()
 
 	decl := Declaration{Name: "helperCount", File: "a.go", Line: 3}
-	reporter := pass.NewReporter("single-use-declaration", pass.SeverityWarning, pass.CatAST)
+	reporter := finding.NewReporter(
+		"single-use-declaration",
+		finding.SeverityWarning,
+		finding.CatAST,
+	)
 
 	testCases := []struct {
 		name     string
 		provider fakeProvider
-		want     []pass.Finding
+		want     []finding.Finding
 	}{
 		{
 			name:     "no sole user yields no finding",
@@ -38,10 +43,10 @@ func TestCheckCandidate(t *testing.T) {
 		{
 			name:     "a sole user yields a finding naming it",
 			provider: fakeProvider{owner: "Track", ok: true},
-			want: []pass.Finding{{
+			want: []finding.Finding{{
 				AnalyzerID: "single-use-declaration",
-				Severity:   pass.SeverityWarning,
-				Category:   pass.CatAST,
+				Severity:   finding.SeverityWarning,
+				Category:   finding.CatAST,
 				File:       "a.go",
 				Line:       3,
 				Message:    "helperCount is referenced only inside Track",

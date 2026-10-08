@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
@@ -13,9 +14,9 @@ func checkElses(
 	fset *token.FileSet,
 	fc pass.FileChange,
 	file *ast.File,
-	reporter pass.Reporter,
-) map[int][]pass.Finding {
-	findings := map[int][]pass.Finding{}
+	reporter finding.Reporter,
+) map[int][]finding.Finding {
+	findings := map[int][]finding.Finding{}
 	blockIdx := 0
 	emit := func(pos token.Pos, msg, suggestion string) {
 		findings[blockIdx] = append(

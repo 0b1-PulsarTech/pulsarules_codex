@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -43,7 +44,7 @@ func TestAnalyze(t *testing.T) {
 				if len(got) != 1 {
 					t.Fatalf("findings = %+v, want exactly one", got)
 				}
-				if got[0].Severity != pass.SeverityError {
+				if got[0].Severity != finding.SeverityError {
 					t.Errorf("severity = %v, want error (it must block the push)", got[0].Severity)
 				}
 				if !strings.Contains(got[0].Message, testCase.branch) {
@@ -116,18 +117,18 @@ func TestAnalyze_SeverityParam(t *testing.T) {
 	testCases := []struct {
 		name     string
 		severity string
-		want     pass.Severity
+		want     finding.Severity
 	}{
-		{name: "unset keeps the blocking default", want: pass.SeverityError},
+		{name: "unset keeps the blocking default", want: finding.SeverityError},
 		{
 			name:     "configured warning overrides the default",
 			severity: "warning",
-			want:     pass.SeverityWarning,
+			want:     finding.SeverityWarning,
 		},
 		{
 			name:     "unrecognized value keeps the blocking default",
 			severity: "bogus",
-			want:     pass.SeverityError,
+			want:     finding.SeverityError,
 		},
 	}
 	for _, testCase := range testCases {

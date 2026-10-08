@@ -1,12 +1,10 @@
-package strictyaml
+package projectfile
 
 import (
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 )
 
 type schemaCase struct {
@@ -350,7 +348,7 @@ func TestSchemaFieldsHaveExplicitTags(t *testing.T) {
 	t.Parallel()
 
 	seen := map[reflect.Type]bool{}
-	schemaStructs(reflect.TypeFor[projectfile.File](), seen)
+	schemaStructs(reflect.TypeFor[File](), seen)
 	if len(seen) < 4 {
 		t.Fatalf("visited %d struct types, want the whole schema", len(seen))
 	}

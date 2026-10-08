@@ -3,6 +3,8 @@ package packagevar
 import (
 	"go/ast"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 )
 
 func (scan fileScan) sentinelCall(call *ast.CallExpr, name string) bool {
@@ -15,11 +17,12 @@ func (scan fileScan) nestedSentinel(call *ast.CallExpr) bool {
 }
 
 func (scan fileScan) isStdSentinel(call *ast.CallExpr) bool {
-	return isPkgCall(call, scan.errorsPkg, "New") || isPkgCall(call, scan.fmtPkg, "Errorf")
+	return goast.PkgCall(scan.file, call, "errors", "New") ||
+		goast.PkgCall(scan.file, call, "fmt", "Errorf")
 }
 
 func (scan fileScan) isErrConstructor(call *ast.CallExpr) bool {
-	switch fun := unparen(call.Fun).(type) {
+	switch fun := ast.Unparen(call.Fun).(type) {
 	case *ast.Ident:
 		return isCtorName(fun.Name) && scan.errFuncs[fun.Name]
 	case *ast.SelectorExpr:
@@ -46,7 +49,7 @@ func (scan fileScan) simpleArgs(args []ast.Expr) bool {
 }
 
 func (scan fileScan) isSimpleArg(expr ast.Expr) bool {
-	switch arg := unparen(expr).(type) {
+	switch arg := ast.Unparen(expr).(type) {
 	case *ast.BasicLit, *ast.Ident:
 		return true
 	case *ast.SelectorExpr:
@@ -69,23 +72,4 @@ func isErrReturning(fn *ast.FuncDecl) bool {
 	}
 	ident, ok := typ.(*ast.Ident)
 	return ok && (ident.Name == "error" || hasErrSuffix(ident.Name))
-}
-
-func isPkgCall(call *ast.CallExpr, pkg, fn string) bool {
-	sel, ok := unparen(call.Fun).(*ast.SelectorExpr)
-	if !ok {
-		return false
-	}
-	ident, ok := sel.X.(*ast.Ident)
-	return ok && ident.Name == pkg && sel.Sel.Name == fn
-}
-
-func unparen(expr ast.Expr) ast.Expr {
-	for {
-		paren, ok := expr.(*ast.ParenExpr)
-		if !ok {
-			return expr
-		}
-		expr = paren.X
-	}
 }

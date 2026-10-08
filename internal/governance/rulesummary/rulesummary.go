@@ -4,6 +4,7 @@ import (
 	"maps"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -86,17 +87,17 @@ func NewAnalyzer(index *knowledge.Index) *Analyzer {
 	return &Analyzer{index: index}
 }
 
-func (analyzer *Analyzer) ID() string          { return "rule-injection" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageRuleInjection }
+func (analyzer *Analyzer) ID() string             { return "rule-injection" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageRuleInjection }
 
 func (analyzer *Analyzer) TransformsInPlace() {}
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	injectRuleSummaries(ctx.Findings, analyzer.index)
 	return nil
 }
 
-func injectRuleSummaries(findings []pass.Finding, index *knowledge.Index) {
+func injectRuleSummaries(findings []finding.Finding, index *knowledge.Index) {
 	if index == nil {
 		return
 	}

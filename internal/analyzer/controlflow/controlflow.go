@@ -4,29 +4,30 @@ import (
 	"fmt"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/syntaxfiles"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
 type Analyzer struct {
 	maxNesting int
-	reporter   pass.Reporter
+	reporter   finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	const defaultMaxNesting = 4
 	return &Analyzer{
 		maxNesting: defaultMaxNesting,
-		reporter:   pass.NewReporter("control-flow", pass.SeverityWarning, pass.CatAST),
+		reporter:   finding.NewReporter("control-flow", finding.SeverityWarning, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string          { return "control-flow" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string             { return "control-flow" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	return syntaxfiles.Each(ctx, func(fc pass.FileChange, file *syntax.File) []pass.Finding {
+	return syntaxfiles.Each(ctx, func(fc pass.FileChange, file *syntax.File) []finding.Finding {
 		return analyzer.checkBlocks(fc, file, goElses(ctx, fc, reporter), reporter)
 	})
 }
@@ -34,8 +35,8 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 func goElses(
 	ctx *pass.Context,
 	fc pass.FileChange,
-	reporter pass.Reporter,
-) map[int][]pass.Finding {
+	reporter finding.Reporter,
+) map[int][]finding.Finding {
 	if ctx.ASTCache == nil {
 		return nil
 	}
@@ -49,10 +50,10 @@ func goElses(
 func (analyzer *Analyzer) checkBlocks(
 	fc pass.FileChange,
 	file *syntax.File,
-	elses map[int][]pass.Finding,
-	reporter pass.Reporter,
-) []pass.Finding {
-	var findings []pass.Finding
+	elses map[int][]finding.Finding,
+	reporter finding.Reporter,
+) []finding.Finding {
+	var findings []finding.Finding
 	for idx, block := range file.Blocks {
 		findings = append(findings, elses[idx]...)
 		if block.Depth <= analyzer.maxNesting {

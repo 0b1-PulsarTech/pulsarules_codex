@@ -5,27 +5,25 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 )
 
 type fileScan struct {
-	fset      *token.FileSet
-	path      string
-	file      *ast.File
-	reporter  pass.Reporter
-	reported  map[site]bool
-	assigned  map[string]bool
-	imports   map[string]bool
-	types     map[string]bool
-	errFuncs  map[string]bool
-	errorsPkg string
-	fmtPkg    string
-	embeds    []*ast.CommentGroup
-	enums     map[string]bool
+	fset     *token.FileSet
+	path     string
+	file     *ast.File
+	reporter finding.Reporter
+	reported map[site]bool
+	assigned map[string]bool
+	imports  map[string]bool
+	types    map[string]bool
+	errFuncs map[string]bool
+	embeds   []*ast.CommentGroup
+	enums    map[string]bool
 }
 
-func (scan fileScan) run() []pass.Finding {
-	var findings []pass.Finding
+func (scan fileScan) run() []finding.Finding {
+	var findings []finding.Finding
 	prevEnd := token.NoPos
 	for _, decl := range scan.file.Decls {
 		if gen, ok := decl.(*ast.GenDecl); ok && gen.Tok == token.VAR {
@@ -36,8 +34,8 @@ func (scan fileScan) run() []pass.Finding {
 	return findings
 }
 
-func (scan fileScan) genFindings(gen *ast.GenDecl, declPrevEnd token.Pos) []pass.Finding {
-	var findings []pass.Finding
+func (scan fileScan) genFindings(gen *ast.GenDecl, declPrevEnd token.Pos) []finding.Finding {
+	var findings []finding.Finding
 	prevEnd, specPos := declPrevEnd, gen.Pos()
 	if gen.Lparen.IsValid() {
 		prevEnd = gen.Lparen
@@ -58,8 +56,8 @@ func (scan fileScan) genFindings(gen *ast.GenDecl, declPrevEnd token.Pos) []pass
 	return findings
 }
 
-func (scan fileScan) nameFindings(vs *ast.ValueSpec) []pass.Finding {
-	var findings []pass.Finding
+func (scan fileScan) nameFindings(vs *ast.ValueSpec) []finding.Finding {
+	var findings []finding.Finding
 	blankReported := false
 	for idx, name := range vs.Names {
 		if scan.isSpecExempt(vs, idx) || scan.isNameExempt(vs, idx) {
@@ -90,11 +88,11 @@ func blankSuggestion(vs *ast.ValueSpec) string {
 	if len(vs.Values) != 1 {
 		return generic
 	}
-	call, ok := unparen(vs.Values[0]).(*ast.CallExpr)
+	call, ok := ast.Unparen(vs.Values[0]).(*ast.CallExpr)
 	if !ok || len(call.Args) != 1 {
 		return generic
 	}
-	if _, isSel := unparen(call.Fun).(*ast.SelectorExpr); !isSel {
+	if _, isSel := ast.Unparen(call.Fun).(*ast.SelectorExpr); !isSel {
 		return generic
 	}
 	return generic + "; to assert an interface write `var _ " +

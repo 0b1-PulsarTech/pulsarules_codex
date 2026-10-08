@@ -3,6 +3,7 @@ package governance
 import (
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -12,7 +13,7 @@ import (
 type splitTestCase struct {
 	name           string
 	files          []pass.FileChange
-	findings       []pass.Finding
+	findings       []finding.Finding
 	wantKept       []string
 	wantSuppressed int
 }
@@ -64,7 +65,7 @@ func splitTestCases() []splitTestCase {
 		{
 			name:  "findings in generated files are suppressed and counted",
 			files: files,
-			findings: []pass.Finding{
+			findings: []finding.Finding{
 				{AnalyzerID: "shadowing", File: "internal/dbgen/lead.sql.go", Line: 12},
 				{AnalyzerID: "shadowing", File: "internal/dbgen/task.sql.go", Line: 8},
 				{AnalyzerID: "naming", File: "internal/repo/lead.go", Line: 4},
@@ -75,7 +76,7 @@ func splitTestCases() []splitTestCase {
 		{
 			name:  "a finding with no file is never suppressed",
 			files: files,
-			findings: []pass.Finding{
+			findings: []finding.Finding{
 				{AnalyzerID: "commit-lint", File: ""},
 				{AnalyzerID: "file-size", File: "internal/dbgen/lead.sql.go"},
 			},
@@ -85,7 +86,7 @@ func splitTestCases() []splitTestCase {
 		{
 			name:  "no generated file means nothing is filtered",
 			files: []pass.FileChange{{Path: "internal/repo/lead.go", Extension: ".go"}},
-			findings: []pass.Finding{
+			findings: []finding.Finding{
 				{AnalyzerID: "naming", File: "internal/repo/lead.go"},
 			},
 			wantKept:       []string{"internal/repo/lead.go"},
@@ -101,7 +102,7 @@ func splitTestCases() []splitTestCase {
 		{
 			name:  "every finding suppressed leaves an empty set with a count",
 			files: files,
-			findings: []pass.Finding{
+			findings: []finding.Finding{
 				{AnalyzerID: "shadowing", File: "internal/dbgen/lead.sql.go"},
 				{AnalyzerID: "shadowing", File: "internal/dbgen/task.sql.go"},
 			},
@@ -122,7 +123,7 @@ func TestSplitGenerated_UnlistedFiles(t *testing.T) {
 		ChangedFiles: nil,
 		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 	}
-	findings := []pass.Finding{
+	findings := []finding.Finding{
 		{AnalyzerID: "golangci-lint", File: "gen.go"},
 		{AnalyzerID: "golangci-lint", File: "hand.go"},
 		{AnalyzerID: "golangci-lint", File: "missing.go"},
@@ -240,7 +241,7 @@ func TestSplitGenerated_AtlasMigrationDir(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := &pass.Context{Sources: newTestProvider(atlasFixture(t))}
-			findings := []pass.Finding{{AnalyzerID: "top-of-file", File: testCase.file}}
+			findings := []finding.Finding{{AnalyzerID: "top-of-file", File: testCase.file}}
 
 			got := splitGenerated(ctx, findings)
 			if got.SuppressedGenerated != testCase.wantSuppressed {

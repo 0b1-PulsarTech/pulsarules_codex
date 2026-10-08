@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -48,6 +49,26 @@ func checkFileCasesMagicNumbers() []checkFileTestCase {
 				"	_ = x\n" +
 				"}\n",
 			expect: 0,
+		},
+		{
+			name: "aliased strconv import bit-size argument not flagged as magic number",
+			source: "package foo\n" +
+				"import conv \"strconv\"\n" +
+				"func f() {\n" +
+				"	x, _ := conv.ParseInt(\"1\", 10, 64)\n" +
+				"	_ = x\n" +
+				"}\n",
+			expect: 0,
+		},
+		{
+			name: "local value named strconv does not exempt its last argument",
+			source: "package foo\n" +
+				"import \"strconv\"\n" +
+				"func f(strconv parser) {\n" +
+				"	x, _ := strconv.ParseInt(\"1\", 10, 77)\n" +
+				"	_ = x\n" +
+				"}\n",
+			expect: 1,
 		},
 		{
 			name: "strconv ParseFloat bit-size argument not flagged as magic number",
@@ -125,9 +146,9 @@ func TestFindMagicNumbers_SkipsTestFiles(t *testing.T) {
 				t.Fatalf("decl 0 = %T, want *ast.FuncDecl", file.Decls[0])
 			}
 			fc := pass.FileChange{Path: "foo.go", Extension: ".go", IsTest: testCase.isTest}
-			reporter := pass.NewReporter("complexity", pass.SeverityInfo, pass.CatAST)
+			reporter := finding.NewReporter("complexity", finding.SeverityInfo, finding.CatAST)
 
-			if got := findMagicNumbers(fset, fc, fn, reporter); len(got) != testCase.want {
+			if got := findMagicNumbers(fset, fc, file, fn, reporter); len(got) != testCase.want {
 				t.Errorf("findMagicNumbers = %+v, want %d finding(s)", got, testCase.want)
 			}
 		})
@@ -154,9 +175,11 @@ func TestFindMagicNumbers_ReportsEveryLiteral(t *testing.T) {
 	if !ok {
 		t.Fatalf("decl 0 = %T, want *ast.FuncDecl", file.Decls[0])
 	}
-	reporter := pass.NewReporter("complexity", pass.SeverityInfo, pass.CatAST)
+	reporter := finding.NewReporter("complexity", finding.SeverityInfo, finding.CatAST)
 
-	got := findMagicNumbers(fset, pass.FileChange{Path: "foo.go", Extension: ".go"}, fn, reporter)
+	got := findMagicNumbers(
+		fset, pass.FileChange{Path: "foo.go", Extension: ".go"}, file, fn, reporter,
+	)
 	if len(got) != 3 {
 		t.Fatalf("findMagicNumbers = %+v, want one finding per literal", got)
 	}

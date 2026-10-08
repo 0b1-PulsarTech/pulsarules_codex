@@ -3,25 +3,26 @@ package filecount
 import (
 	"fmt"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 const ID = "package-file-count"
 
 type Analyzer struct {
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: pass.NewReporter(ID, pass.SeverityWarning, pass.CatAST),
+		reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string          { return ID }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string             { return ID }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if ctx.Sources == nil {
 		return nil
 	}
@@ -32,7 +33,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
 	anchors := changedAnchors(ctx, eligible)
 
-	var findings []pass.Finding
+	var findings []finding.Finding
 	if len(ctx.ChangedFiles) > 0 {
 		for _, problem := range exempt.invalid() {
 			findings = append(findings, reporter.At(

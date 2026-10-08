@@ -4,8 +4,6 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-	"path"
-	"strconv"
 )
 
 func (scan fileScan) isAssertion(vs *ast.ValueSpec) bool {
@@ -25,7 +23,7 @@ func (scan fileScan) allAssertive(vs *ast.ValueSpec) bool {
 }
 
 func (scan fileScan) isConversionOrComposite(expr ast.Expr) bool {
-	switch value := unparen(expr).(type) {
+	switch value := ast.Unparen(expr).(type) {
 	case *ast.CompositeLit:
 		return scan.callFree(value)
 	case *ast.Ident:
@@ -39,8 +37,8 @@ func (scan fileScan) isConversionOrComposite(expr ast.Expr) bool {
 }
 
 func (scan fileScan) isAssertCall(call *ast.CallExpr) bool {
-	arg := unparen(call.Args[0])
-	switch fun := unparen(call.Fun).(type) {
+	arg := ast.Unparen(call.Args[0])
+	switch fun := ast.Unparen(call.Fun).(type) {
 	case *ast.Ident:
 		if fun.Name == "new" {
 			return scan.isTypeExpr(arg)
@@ -72,7 +70,7 @@ func (scan fileScan) isConversionType(fun ast.Expr) bool {
 	case *ast.Ident:
 		return scan.isTypeName(typ.Name)
 	case *ast.ParenExpr:
-		inner := unparen(typ.X)
+		inner := ast.Unparen(typ.X)
 		if star, isStar := inner.(*ast.StarExpr); isStar {
 			return scan.isTypeExpr(star.X)
 		}
@@ -84,7 +82,7 @@ func (scan fileScan) isConversionType(fun ast.Expr) bool {
 }
 
 func (scan fileScan) isTypeExpr(expr ast.Expr) bool {
-	inner := unparen(expr)
+	inner := ast.Unparen(expr)
 	switch typ := inner.(type) {
 	case *ast.Ident:
 		return scan.isTypeName(typ.Name)
@@ -102,7 +100,7 @@ func (scan fileScan) isTypeExpr(expr ast.Expr) bool {
 
 func isLiteralArg(expr ast.Expr) bool {
 	if sign, isSigned := expr.(*ast.UnaryExpr); isSigned && isSignOp(sign.Op) {
-		expr = unparen(sign.X)
+		expr = ast.Unparen(sign.X)
 	}
 	_, isLit := expr.(*ast.BasicLit)
 	return isLit
@@ -132,35 +130,4 @@ func (scan fileScan) isTypeName(name string) bool {
 	}
 	_, isType := types.Universe.Lookup(name).(*types.TypeName)
 	return isType
-}
-
-func importNames(file *ast.File) map[string]bool {
-	names := make(map[string]bool, len(file.Imports))
-	for _, spec := range file.Imports {
-		got, err := strconv.Unquote(spec.Path.Value)
-		switch {
-		case err != nil:
-		case spec.Name == nil:
-			names[path.Base(got)] = true
-		case spec.Name.Name != "_" && spec.Name.Name != ".":
-			names[spec.Name.Name] = true
-		}
-	}
-	return names
-}
-
-func importName(file *ast.File, importPath string) string {
-	for _, spec := range file.Imports {
-		got, err := strconv.Unquote(spec.Path.Value)
-		if err != nil || got != importPath {
-			continue
-		}
-		if spec.Name == nil {
-			return path.Base(importPath)
-		}
-		if spec.Name.Name != "_" && spec.Name.Name != "." {
-			return spec.Name.Name
-		}
-	}
-	return ""
 }

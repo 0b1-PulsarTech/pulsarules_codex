@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
@@ -16,14 +17,14 @@ func NewAnalyzer(langs *pass.LanguageRegistry) *Analyzer {
 	return &Analyzer{langs: langs}
 }
 
-func (analyzer *Analyzer) ID() string          { return "history-narration" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string             { return "history-narration" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
-func (analyzer *Analyzer) reporter() pass.Reporter {
-	return pass.NewReporter(analyzer.ID(), pass.SeverityWarning, pass.CatSyntax)
+func (analyzer *Analyzer) reporter() finding.Reporter {
+	return finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatSyntax)
 }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if analyzer.langs == nil {
 		return nil
 	}
@@ -35,7 +36,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	return pass.EachChangedFile(
 		ctx,
 		eligible,
-		func(fc pass.FileChange, src []byte) []pass.Finding {
+		func(fc pass.FileChange, src []byte) []finding.Finding {
 			syntax := analyzer.langs.Lookup(fc.Extension).CommentSyntax()
 			source := commentSource{syntax: syntax, parsed: analyzer.cachedGo(ctx, fc)}
 			return scanFile(src, fc, reporter, source)
@@ -75,9 +76,9 @@ type commentSource struct {
 }
 
 func scanFile(
-	src []byte, fc pass.FileChange, reporter pass.Reporter, source commentSource,
-) []pass.Finding {
-	var findings []pass.Finding
+	src []byte, fc pass.FileChange, reporter finding.Reporter, source commentSource,
+) []finding.Finding {
+	var findings []finding.Finding
 	phrases := narrationPhrases()
 	for _, block := range commentBlocks(src, fc, source.syntax, source.parsed) {
 		for _, found := range findHits(wordsOf(block), phrases) {

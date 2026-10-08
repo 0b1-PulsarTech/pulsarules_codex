@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
@@ -17,7 +18,7 @@ type branchReader interface {
 
 type Analyzer struct {
 	repo     branchReader
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 var _ pass.Analyzer = (*Analyzer)(nil)
@@ -25,14 +26,14 @@ var _ pass.Analyzer = (*Analyzer)(nil)
 func NewAnalyzer(repo branchReader) *Analyzer {
 	return &Analyzer{
 		repo:     repo,
-		reporter: pass.NewReporter(ID, pass.SeverityError, pass.CatCommit),
+		reporter: finding.NewReporter(ID, finding.SeverityError, finding.CatCommit),
 	}
 }
 
-func (analyzer *Analyzer) ID() string          { return ID }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string             { return ID }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if analyzer.repo == nil {
 		return nil
 	}
@@ -46,7 +47,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	if hasAllowedType(branch, allowed) {
 		return nil
 	}
-	return []pass.Finding{pass.ResolveReporter(analyzer.reporter, ctx).New(fmt.Sprintf(
+	return []finding.Finding{pass.ResolveReporter(analyzer.reporter, ctx).New(fmt.Sprintf(
 		"branch %q does not start with a type prefix (want <type>/<description>, type one of %s)",
 		branch, strings.Join(allowed, "|"),
 	))}

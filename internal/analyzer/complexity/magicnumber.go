@@ -6,6 +6,8 @@ import (
 	"go/token"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -15,15 +17,16 @@ import (
 func findMagicNumbers(
 	fset *token.FileSet,
 	fc pass.FileChange,
+	file *ast.File,
 	fn *ast.FuncDecl,
-	reporter pass.Reporter,
-) []pass.Finding {
+	reporter finding.Reporter,
+) []finding.Finding {
 	// A test's literals are its documentation: a table-driven case reads `want: 3`.
 	if fc.IsTest {
 		return nil
 	}
 
-	var findings []pass.Finding
+	var findings []finding.Finding
 	// ast.Inspect visits a call before its arguments, so an exemption is marked in time.
 	exemptPos := map[token.Pos]bool{}
 
@@ -33,7 +36,7 @@ func findMagicNumbers(
 			return false
 		}
 		if call, ok := node.(*ast.CallExpr); ok {
-			markStdlibBitSizeArg(call, exemptPos)
+			markStdlibBitSizeArg(file, call, exemptPos)
 			return true
 		}
 		lit, ok := node.(*ast.BasicLit)
@@ -68,21 +71,8 @@ func isOctalModeLiteral(val string) bool {
 	return strings.HasPrefix(val, "0o") || strings.HasPrefix(val, "0O")
 }
 
-func isStrconvBitSizeFunc(name string) bool {
-	switch name {
-	case "ParseInt", "ParseUint", "ParseFloat":
-		return true
-	}
-	return false
-}
-
-func markStdlibBitSizeArg(call *ast.CallExpr, exempt map[token.Pos]bool) {
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok {
-		return
-	}
-	pkg, ok := sel.X.(*ast.Ident)
-	if !ok || pkg.Name != "strconv" || !isStrconvBitSizeFunc(sel.Sel.Name) {
+func markStdlibBitSizeArg(file *ast.File, call *ast.CallExpr, exempt map[token.Pos]bool) {
+	if !goast.PkgCall(file, call, "strconv", "ParseInt", "ParseUint", "ParseFloat") {
 		return
 	}
 	if len(call.Args) == 0 {

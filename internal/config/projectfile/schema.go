@@ -1,11 +1,9 @@
-package strictyaml
+package projectfile
 
 import (
 	"reflect"
 
 	"gopkg.in/yaml.v3"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 )
 
 type pair struct {
@@ -21,11 +19,12 @@ type schemaWalker struct {
 func walkSchema(problems *Problems, root *yaml.Node, top *Field) {
 	walker := schemaWalker{problems: problems}
 	if !isNull(deref(root)) {
-		walker.walk(root, reflect.TypeFor[projectfile.File](), top)
+		walker.walk(root, reflect.TypeFor[File](), top)
 	}
 }
 
 func (walker *schemaWalker) report(line int, at *Field, format string, args ...any) {
+	at.mark()
 	walker.problems.add(line, at, format, args...)
 }
 

@@ -3,6 +3,7 @@ package pass
 import (
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
@@ -81,8 +82,8 @@ func eachChangedFileTestCases() []eachChangedFileTestCase {
 func TestEachChangedFile(t *testing.T) {
 	t.Parallel()
 
-	echoPath := func(fc FileChange, src []byte) []Finding {
-		return []Finding{{File: fc.Path, Message: string(src)}}
+	echoPath := func(fc FileChange, src []byte) []finding.Finding {
+		return []finding.Finding{{File: fc.Path, Message: string(src)}}
 	}
 
 	for _, testCase := range eachChangedFileTestCases() {

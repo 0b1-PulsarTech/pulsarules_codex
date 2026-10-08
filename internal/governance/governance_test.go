@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
@@ -247,7 +247,7 @@ func (repo countingRepo) ListFiles() ([]string, error) {
 	return repo.goldenRepo.ListFiles()
 }
 
-func typographicFiles(findings []pass.Finding) map[string]bool {
+func typographicFiles(findings []finding.Finding) map[string]bool {
 	seen := map[string]bool{}
 	for _, finding := range findings {
 		if finding.AnalyzerID == "typographic-markers" {

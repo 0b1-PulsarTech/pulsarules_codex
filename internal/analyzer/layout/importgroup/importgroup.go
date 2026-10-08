@@ -6,38 +6,39 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/syntaxfiles"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
 type Analyzer struct {
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: pass.NewReporter("import-groups", pass.SeverityError, pass.CatSyntax),
+		reporter: finding.NewReporter("import-groups", finding.SeverityError, finding.CatSyntax),
 	}
 }
 
-func (analyzer *Analyzer) ID() string          { return "import-groups" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string             { return "import-groups" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	return syntaxfiles.Each(ctx, func(fc pass.FileChange, file *syntax.File) []pass.Finding {
+	return syntaxfiles.Each(ctx, func(fc pass.FileChange, file *syntax.File) []finding.Finding {
 		return checkFile(fc, file, reporter)
 	})
 }
 
-func checkFile(fc pass.FileChange, file *syntax.File, reporter pass.Reporter) []pass.Finding {
+func checkFile(fc pass.FileChange, file *syntax.File, reporter finding.Reporter) []finding.Finding {
 	if len(file.ImportGroups) == 0 || len(file.Imports) == 0 {
 		return nil
 	}
 	prevGroup := file.Imports[0].Group
 	for _, spec := range file.Imports[1:] {
 		if spec.Group < prevGroup {
-			return []pass.Finding{
+			return []finding.Finding{
 				reporter.At(
 					fc.Path,
 					spec.Line,

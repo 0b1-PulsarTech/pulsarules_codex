@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
@@ -70,7 +71,7 @@ func TestBigComment_LargeBlock(t *testing.T) {
 	if len(findings) != 1 {
 		t.Fatalf("expected 1 finding, got %d", len(findings))
 	}
-	if findings[0].Severity != pass.SeverityWarning {
+	if findings[0].Severity != finding.SeverityWarning {
 		t.Errorf("expected warning severity, got %d", findings[0].Severity)
 	}
 }

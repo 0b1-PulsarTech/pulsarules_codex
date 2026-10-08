@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
@@ -159,7 +160,7 @@ func checkFileCleanCases() []checkFileTestCase {
 	}
 }
 
-func analyzeSource(t *testing.T, source string) []pass.Finding {
+func analyzeSource(t *testing.T, source string) []finding.Finding {
 	t.Helper()
 
 	dir := t.TempDir()

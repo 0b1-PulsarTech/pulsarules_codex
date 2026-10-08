@@ -6,33 +6,34 @@ import (
 	"go/token"
 	"go/types"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: pass.NewReporter("named-returns", pass.SeverityWarning, pass.CatAST),
+		reporter: finding.NewReporter("named-returns", finding.SeverityWarning, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string          { return "named-returns" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string             { return "named-returns" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		return checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
 	})
 }
 
 func checkFile(
-	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter pass.Reporter,
-) []pass.Finding {
-	var findings []pass.Finding
+	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter finding.Reporter,
+) []finding.Finding {
+	var findings []finding.Finding
 
 	ast.Inspect(file, func(node ast.Node) bool {
 		switch typed := node.(type) {
@@ -67,13 +68,13 @@ type declSite struct {
 }
 
 func checkResults(
-	fset *token.FileSet, fc pass.FileChange, site declSite, reporter pass.Reporter,
-) []pass.Finding {
+	fset *token.FileSet, fc pass.FileChange, site declSite, reporter finding.Reporter,
+) []finding.Finding {
 	dup, found := duplicateResultType(site.results)
 	if !found {
 		return nil
 	}
-	return []pass.Finding{reporter.At(
+	return []finding.Finding{reporter.At(
 		fc.Path,
 		fset.Position(site.pos).Line,
 		fmt.Sprintf(

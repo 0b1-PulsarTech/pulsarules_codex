@@ -3,28 +3,29 @@ package simplification
 import (
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 type Analyzer struct {
 	langs    *pass.LanguageRegistry
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewAnalyzer(langs *pass.LanguageRegistry) *Analyzer {
 	return &Analyzer{
 		langs: langs,
-		reporter: pass.NewReporter(
-			"simplification-path", pass.SeverityWarning, pass.CatSyntax,
+		reporter: finding.NewReporter(
+			"simplification-path", finding.SeverityWarning, finding.CatSyntax,
 		),
 	}
 }
 
-func (analyzer *Analyzer) ID() string          { return "simplification-path" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string             { return "simplification-path" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if analyzer.langs == nil {
 		return nil
 	}
@@ -36,14 +37,19 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	return pass.EachChangedFile(
 		ctx,
 		eligible,
-		func(fc pass.FileChange, src []byte) []pass.Finding {
+		func(fc pass.FileChange, src []byte) []finding.Finding {
 			return scanFile(src, fc.Path, analyzer.langs.Lookup(fc.Extension), reporter)
 		},
 	)
 }
 
-func scanFile(src []byte, path string, lang pass.Language, reporter pass.Reporter) []pass.Finding {
-	var findings []pass.Finding
+func scanFile(
+	src []byte,
+	path string,
+	lang pass.Language,
+	reporter finding.Reporter,
+) []finding.Finding {
+	var findings []finding.Finding
 	lines := strings.Split(string(src), "\n")
 	// A block is the marker line plus every comment line immediately after it. One
 	// scanner runs in file order first, so continuations match big-comment's reading.

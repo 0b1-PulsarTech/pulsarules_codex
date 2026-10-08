@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast/testfunc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -19,15 +20,15 @@ func NewAnalyzer() *Analyzer {
 
 func (analyzer *Analyzer) ID() string { return "test-comment" }
 
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) reporter() pass.Reporter {
-	return pass.NewReporter(analyzer.ID(), pass.SeverityWarning, pass.CatAST)
+func (analyzer *Analyzer) reporter() finding.Reporter {
+	return finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatAST)
 }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter(), ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if !fc.IsTest || fc.Generated {
 			return nil
 		}
@@ -39,14 +40,14 @@ type fileScan struct {
 	fset     *token.FileSet
 	fc       pass.FileChange
 	file     *ast.File
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func checkFile(
-	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter pass.Reporter,
-) []pass.Finding {
+	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter finding.Reporter,
+) []finding.Finding {
 	scan := fileScan{fset: fset, fc: fc, file: file, reporter: reporter}
-	var findings []pass.Finding
+	var findings []finding.Finding
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || !testfunc.Covers(fc, file, fn) {
@@ -68,9 +69,9 @@ func checkFile(
 	return findings
 }
 
-func (scan fileScan) body(fn *ast.FuncDecl) []pass.Finding {
+func (scan fileScan) body(fn *ast.FuncDecl) []finding.Finding {
 	kind, _ := testfunc.Kind(scan.file, fn)
-	var findings []pass.Finding
+	var findings []finding.Finding
 	for _, group := range bodyComments(scan.file.Comments, fn) {
 		if kind == testfunc.KindExample && isExampleOutputComment(group) {
 			continue

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
@@ -38,7 +38,7 @@ func TestParseOutput_LockContention(t *testing.T) {
 			if len(got) != 1 {
 				t.Fatalf("got %d findings, want 1: %+v", len(got), got)
 			}
-			blocked := got[0].Severity == pass.SeverityError
+			blocked := got[0].Severity == finding.SeverityError
 			if blocked != testCase.wantBlocked {
 				t.Fatalf("blocked = %v, want %v: %+v", blocked, testCase.wantBlocked, got[0])
 			}
@@ -59,25 +59,25 @@ func TestParseOutput_Results(t *testing.T) {
 		stdout       string
 		cmdErr       error
 		wantMessages []string
-		wantSeverity []pass.Severity
+		wantSeverity []finding.Severity
 	}{
 		{
 			name:         "a command that never ran reports its cause",
 			cmdErr:       errors.New("not found"),
 			wantMessages: []string{"golangci-lint failed: not found"},
-			wantSeverity: []pass.Severity{pass.SeverityError},
+			wantSeverity: []finding.Severity{finding.SeverityError},
 		},
 		{
 			name:         "a real exit status reports the stderr",
 			cmdErr:       failedExit("3"),
 			wantMessages: []string{"golangci-lint failed: boom"},
-			wantSeverity: []pass.Severity{pass.SeverityError},
+			wantSeverity: []finding.Severity{finding.SeverityError},
 		},
 		{
 			name:         "malformed json is a failure",
 			stdout:       "{not json",
 			wantMessages: []string{"failed to parse golangci-lint output: "},
-			wantSeverity: []pass.Severity{pass.SeverityError},
+			wantSeverity: []finding.Severity{finding.SeverityError},
 		},
 		{
 			name: "an error severity issue blocks and a plain one warns",
@@ -87,14 +87,14 @@ func TestParseOutput_Results(t *testing.T) {
 				`{"FromLinter":"b","Text":"y","Severity":"",` +
 				`"Pos":{"Filename":"g.go","Line":4}}]}`,
 			wantMessages: []string{"x", "y"},
-			wantSeverity: []pass.Severity{pass.SeverityError, pass.SeverityWarning},
+			wantSeverity: []finding.Severity{finding.SeverityError, finding.SeverityWarning},
 		},
 		{
 			name: "paths escaping the project are dropped with a warning",
 			stdout: `{"Issues":[{"FromLinter":"a","Text":"x",` +
 				`"Pos":{"Filename":"../gone/f.go","Line":1}}]}`,
 			wantMessages: []string{"dropped 1 finding(s)"},
-			wantSeverity: []pass.Severity{pass.SeverityWarning},
+			wantSeverity: []finding.Severity{finding.SeverityWarning},
 		},
 		{
 			name:         "no issues yields no findings",

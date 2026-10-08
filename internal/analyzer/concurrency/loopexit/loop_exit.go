@@ -3,6 +3,8 @@ package loopexit
 import (
 	"go/ast"
 	"go/token"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 )
 
 type breakScope int
@@ -13,10 +15,10 @@ const (
 )
 
 func loopCanTerminate(body *ast.BlockStmt, label string) bool {
-	hasReturn := containsMatch(body, func(node ast.Node) bool {
+	hasReturn := goast.AnyUntil(body, func(node ast.Node) bool {
 		_, ok := node.(*ast.ReturnStmt)
 		return ok
-	})
+	}, isNestedLoopOrFunc)
 	return hasReturn || hasLoopExitingBreak(body, label)
 }
 

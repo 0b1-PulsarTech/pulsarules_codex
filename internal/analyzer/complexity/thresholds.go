@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"math"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
@@ -14,8 +15,8 @@ type thresholds struct {
 	maxComplexity int
 	maxFuncLines  int
 	maxParams     int
-	warnReporter  pass.Reporter
-	infoReporter  pass.Reporter
+	warnReporter  finding.Reporter
+	infoReporter  finding.Reporter
 }
 
 func (th thresholds) maxFuncLinesFor(fc pass.FileChange) int {
@@ -28,23 +29,23 @@ func (th thresholds) maxFuncLinesFor(fc pass.FileChange) int {
 	return th.maxFuncLines
 }
 
-func (th thresholds) checkFile(fc pass.FileChange, file *syntax.File) []pass.Finding {
-	findings := make([]pass.Finding, 0, len(file.Functions))
+func (th thresholds) checkFile(fc pass.FileChange, file *syntax.File) []finding.Finding {
+	findings := make([]finding.Finding, 0, len(file.Functions))
 	for _, fn := range file.Functions {
 		findings = append(findings, th.checkTopLevel(fc, fn)...)
 	}
 	return findings
 }
 
-func (th thresholds) checkTopLevel(fc pass.FileChange, fn syntax.Function) []pass.Finding {
+func (th thresholds) checkTopLevel(fc pass.FileChange, fn syntax.Function) []finding.Finding {
 	if fn.Nested {
 		return nil
 	}
 	return th.checkFunction(fc, fn)
 }
 
-func (th thresholds) checkFunction(fc pass.FileChange, fn syntax.Function) []pass.Finding {
-	var findings []pass.Finding
+func (th thresholds) checkFunction(fc pass.FileChange, fn syntax.Function) []finding.Finding {
+	var findings []finding.Finding
 	if fn.Complexity > th.maxComplexity {
 		findings = append(findings, th.warnReporter.At(
 			fc.Path,
@@ -84,11 +85,11 @@ func (th thresholds) checkGoFile(
 	fset *token.FileSet,
 	fc pass.FileChange,
 	file *ast.File,
-) []pass.Finding {
+) []finding.Finding {
 	decls := bodyDecls(file)
-	findings := make([]pass.Finding, 0, len(decls))
+	findings := make([]finding.Finding, 0, len(decls))
 	for _, fn := range decls {
-		findings = append(findings, th.checkGoFunc(fset, fc, fn)...)
+		findings = append(findings, th.checkGoFunc(fset, fc, file, fn)...)
 	}
 	return findings
 }
@@ -96,13 +97,14 @@ func (th thresholds) checkGoFile(
 func (th thresholds) checkGoFunc(
 	fset *token.FileSet,
 	fc pass.FileChange,
+	file *ast.File,
 	fn *ast.FuncDecl,
-) []pass.Finding {
+) []finding.Finding {
 	if fset == nil {
 		return nil
 	}
 	findings := checkFlagArguments(fset, fc, fn, th.warnReporter)
-	return append(findings, findMagicNumbers(fset, fc, fn, th.infoReporter)...)
+	return append(findings, findMagicNumbers(fset, fc, file, fn, th.infoReporter)...)
 }
 
 func bodyDecls(file *ast.File) []*ast.FuncDecl {

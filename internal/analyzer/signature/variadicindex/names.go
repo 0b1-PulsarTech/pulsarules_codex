@@ -3,48 +3,13 @@ package variadicindex
 import (
 	"go/ast"
 	"go/token"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 )
 
 func (walker scope) isTarget(expr ast.Expr) bool {
-	for {
-		paren, ok := expr.(*ast.ParenExpr)
-		if !ok {
-			break
-		}
-		expr = paren.X
-	}
-	ident, ok := expr.(*ast.Ident)
+	ident, ok := ast.Unparen(expr).(*ast.Ident)
 	return ok && ident.Name == walker.name
-}
-
-func (walker scope) hasField(fields *ast.FieldList) bool {
-	if fields == nil {
-		return false
-	}
-	for _, field := range fields.List {
-		if walker.hasName(field.Names) {
-			return true
-		}
-	}
-	return false
-}
-
-func (walker scope) hasName(idents []*ast.Ident) bool {
-	for _, ident := range idents {
-		if ident.Name == walker.name {
-			return true
-		}
-	}
-	return false
-}
-
-func (walker scope) hasExpr(exprs []ast.Expr) bool {
-	for _, expr := range exprs {
-		if ident, ok := expr.(*ast.Ident); ok && ident.Name == walker.name {
-			return true
-		}
-	}
-	return false
 }
 
 func (walker scope) initShadows(init ast.Stmt) bool {
@@ -58,7 +23,7 @@ func (walker scope) initShadows(init ast.Stmt) bool {
 }
 
 func (walker scope) defines(assign *ast.AssignStmt) bool {
-	return assign.Tok == token.DEFINE && walker.hasExpr(assign.Lhs)
+	return assign.Tok == token.DEFINE && goast.ExprsMention(assign.Lhs, walker.name)
 }
 
 func (walker scope) exprs(list []ast.Expr) {

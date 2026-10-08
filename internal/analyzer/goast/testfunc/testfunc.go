@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -80,20 +81,12 @@ func isTestingReceiver(expr ast.Expr) bool {
 }
 
 func callsHelper(body *ast.BlockStmt) bool {
-	if body == nil {
-		return false
-	}
-	found := false
-	ast.Inspect(body, func(node ast.Node) bool {
+	return body != nil && goast.Any(body, func(node ast.Node) bool {
 		call, ok := node.(*ast.CallExpr)
 		if !ok || len(call.Args) != 0 {
-			return !found
+			return false
 		}
-		if sel, ok := call.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Helper" &&
-			isTestingReceiver(sel.X) {
-			found = true
-		}
-		return !found
+		sel, isSel := call.Fun.(*ast.SelectorExpr)
+		return isSel && sel.Sel.Name == "Helper" && isTestingReceiver(sel.X)
 	})
-	return found
 }

@@ -5,38 +5,39 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
 	maxLines int
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	const defaultMaxLines = 180
 	return &Analyzer{
 		maxLines: defaultMaxLines,
-		reporter: pass.NewReporter("file-size", pass.SeverityWarning, pass.CatProject),
+		reporter: finding.NewReporter("file-size", finding.SeverityWarning, finding.CatProject),
 	}
 }
 
-func (analyzer *Analyzer) ID() string          { return "file-size" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageStatic }
+func (analyzer *Analyzer) ID() string             { return "file-size" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	limits := newLineLimits(analyzer.resolveMaxLines(ctx))
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
 	eligible := pass.ExtensionFilter(ctx, analyzer.ID(), pass.DefaultSourceExtensions())
 	return pass.EachChangedFile(ctx, eligible, func(
 		fc pass.FileChange, src []byte,
-	) []pass.Finding {
+	) []finding.Finding {
 		limit := limits.forFile(fc)
 		lines := countLines(src)
 		if lines <= limit {
 			return nil
 		}
-		return []pass.Finding{reporter.At(
+		return []finding.Finding{reporter.At(
 			fc.Path,
 			0,
 			fmt.Sprintf("file is %d lines, max %d", lines, limit),

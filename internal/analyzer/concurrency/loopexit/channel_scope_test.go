@@ -43,6 +43,28 @@ func channelScopeAssignmentCases() []channelScopeTestCase {
 			wantTickerName: "ticker",
 		},
 		{
+			name: "an aliased time import still tracks a ticker identifier",
+			source: "package foo\n" +
+				"import clock \"time\"\n" +
+				"func poll(interval clock.Duration) {\n" +
+				"\tticker := clock.NewTicker(interval)\n" +
+				"\t_ = ticker\n" +
+				"}\n",
+			wantTickerName: "ticker",
+		},
+		{
+			name: "a local value named time is not the time package",
+			source: "package foo\n" +
+				"import \"time\"\n" +
+				"func poll() {\n" +
+				"\tvar time source\n" +
+				"\ttick := time.Tick(1)\n" +
+				"\t_ = tick\n" +
+				"}\n" +
+				"type source struct{}\n" +
+				"func (source) Tick(int) chan int { return nil }\n",
+		},
+		{
 			name: "a ctx.Done assignment is tracked as a done identifier",
 			source: "package foo\n" +
 				"import \"context\"\n" +
@@ -127,7 +149,7 @@ func TestCollectChannelScope(t *testing.T) {
 			t.Parallel()
 
 			file, params, body := parseFirstFuncBody(t, testCase.source)
-			scope := collectChannelScope(params, body, collectTickerFieldNames(file))
+			scope := collectChannelScope(file, params, body, collectTickerFieldNames(file))
 			assertChannelScope(t, scope, testCase)
 		})
 	}
@@ -181,7 +203,9 @@ func TestIsDotCSelector(t *testing.T) {
 func TestIsTickerDotCSelector(t *testing.T) {
 	t.Parallel()
 
+	file, _, _ := parseFirstFuncBody(t, "package foo\nimport \"time\"\nfunc f() {}\n")
 	scope := channelScope{
+		file:             file,
 		tickerIdents:     map[string]bool{},
 		typedIdents:      map[string]bool{"ticker": true},
 		tickerFieldNames: map[string]bool{"ticker": true},

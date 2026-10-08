@@ -1,24 +1,31 @@
 package singleuse
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+)
 
 type Analyzer struct {
 	provider DeclarationProvider
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
 		provider: goProvider{},
-		reporter: pass.NewReporter("single-use-declaration", pass.SeverityWarning, pass.CatAST),
+		reporter: finding.NewReporter(
+			"single-use-declaration",
+			finding.SeverityWarning,
+			finding.CatAST,
+		),
 	}
 }
 
 func (analyzer *Analyzer) ID() string { return "single-use-declaration" }
 
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if ctx.ASTCache == nil || ctx.Sources == nil {
 		return nil
 	}
@@ -37,7 +44,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
 	ex := exemptionsFromParams(params)
-	var findings []pass.Finding
+	var findings []finding.Finding
 	for _, decl := range analyzer.provider.Declarations(ctx) {
 		if !ex.eligible(decl, kinds) {
 			continue

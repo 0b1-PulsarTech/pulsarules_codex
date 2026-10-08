@@ -7,6 +7,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
@@ -135,7 +136,7 @@ func flaggedCases() []checkCase {
 	}
 }
 
-func analyzeSource(t *testing.T, source string) []pass.Finding {
+func analyzeSource(t *testing.T, source string) []finding.Finding {
 	t.Helper()
 
 	cache := astcache.New()
@@ -144,7 +145,7 @@ func analyzeSource(t *testing.T, source string) []pass.Finding {
 		t.Fatal(err)
 	}
 	typeCheck(t, cache.FileSet(), file)
-	reporter := pass.NewReporter("variadic-index", pass.SeverityWarning, pass.CatAST)
+	reporter := finding.NewReporter("variadic-index", finding.SeverityWarning, finding.CatAST)
 	return checkFile(
 		cache.FileSet(),
 		pass.FileChange{Path: "foo.go", Extension: ".go"},

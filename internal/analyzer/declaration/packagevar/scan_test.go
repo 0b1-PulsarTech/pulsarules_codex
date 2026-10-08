@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/singleuse"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 )
 
 func blankReportCases() []levelVarCase {
@@ -65,7 +65,7 @@ func levelVarDedupeCases() []levelVarCase {
 		{
 			name:  "skipped when single-use-declaration already reported the name",
 			files: map[string]string{"a.go": "package p\n\nvar once = 1\n"},
-			prior: []pass.Finding{{
+			prior: []finding.Finding{{
 				AnalyzerID: single, File: "a.go", Line: 3,
 				Symbol: "once",
 			}},
@@ -73,7 +73,7 @@ func levelVarDedupeCases() []levelVarCase {
 		{
 			name:  "same line other name still reported",
 			files: map[string]string{"a.go": "package p\n\nvar a, b = 1, 2\n"},
-			prior: []pass.Finding{{
+			prior: []finding.Finding{{
 				AnalyzerID: single, File: "a.go", Line: 3,
 				Symbol: "a",
 			}},
@@ -82,7 +82,7 @@ func levelVarDedupeCases() []levelVarCase {
 		{
 			name:  "grouped name line differs from var line",
 			files: map[string]string{"a.go": "package p\n\nvar (\n\tx = 1\n\ty = 2\n)\n"},
-			prior: []pass.Finding{{
+			prior: []finding.Finding{{
 				AnalyzerID: single, File: "a.go", Line: 5,
 				Symbol: "y",
 			}},
@@ -91,13 +91,13 @@ func levelVarDedupeCases() []levelVarCase {
 		{
 			name:  "not skipped for another analyzer at the same line",
 			files: map[string]string{"a.go": "package p\n\nvar once = 1\n"},
-			prior: []pass.Finding{{AnalyzerID: "other", File: "a.go", Line: 3, Symbol: "once"}},
+			prior: []finding.Finding{{AnalyzerID: "other", File: "a.go", Line: 3, Symbol: "once"}},
 			want:  []string{"a.go:3:package-level var once"},
 		},
 		{
 			name:  "not skipped for single-use-declaration in another file",
 			files: map[string]string{"a.go": "package p\n\nvar once = 1\n"},
-			prior: []pass.Finding{{
+			prior: []finding.Finding{{
 				AnalyzerID: single, File: "b.go", Line: 3,
 				Symbol: "once",
 			}},

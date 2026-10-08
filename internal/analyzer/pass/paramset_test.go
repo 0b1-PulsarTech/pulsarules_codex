@@ -3,6 +3,8 @@ package pass
 import (
 	"slices"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 )
 
 func TestParamSetInt(t *testing.T) {
@@ -230,50 +232,50 @@ func TestParamSetSeverity(t *testing.T) {
 	testCases := []struct {
 		name     string
 		params   ParamSet
-		fallback Severity
-		want     Severity
+		fallback finding.Severity
+		want     finding.Severity
 	}{
 		{
 			name:     "error",
 			params:   ParamSet{"severity": "error"},
-			fallback: SeverityWarning,
-			want:     SeverityError,
+			fallback: finding.SeverityWarning,
+			want:     finding.SeverityError,
 		},
 		{
 			name:     "warning",
 			params:   ParamSet{"severity": "warning"},
-			fallback: SeverityError,
-			want:     SeverityWarning,
+			fallback: finding.SeverityError,
+			want:     finding.SeverityWarning,
 		},
 		{
 			name:     "info",
 			params:   ParamSet{"severity": "info"},
-			fallback: SeverityError,
-			want:     SeverityInfo,
+			fallback: finding.SeverityError,
+			want:     finding.SeverityInfo,
 		},
 		{
 			name:     "absent key keeps the fallback",
 			params:   ParamSet{},
-			fallback: SeverityError,
-			want:     SeverityError,
+			fallback: finding.SeverityError,
+			want:     finding.SeverityError,
 		},
 		{
 			name:     "nil set keeps the fallback",
 			params:   nil,
-			fallback: SeverityError,
-			want:     SeverityError,
+			fallback: finding.SeverityError,
+			want:     finding.SeverityError,
 		},
 		{
 			name:     "unrecognized value keeps the fallback",
 			params:   ParamSet{"severity": "fatal"},
-			fallback: SeverityError,
-			want:     SeverityError,
+			fallback: finding.SeverityError,
+			want:     finding.SeverityError,
 		},
 		{
 			name:     "non-string value keeps the fallback",
 			params:   ParamSet{"severity": 2},
-			fallback: SeverityError,
-			want:     SeverityError,
+			fallback: finding.SeverityError,
+			want:     finding.SeverityError,
 		},
 	}
 	for _, testCase := range testCases {
@@ -306,7 +308,7 @@ func TestValidateSeverityName(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := ValidateSeverityName(testCase.severity)
+			err := finding.ValidateSeverityName(testCase.severity)
 			if (err != nil) != testCase.wantErr {
 				t.Errorf("ValidateSeverityName(%q) err = %v, wantErr %v",
 					testCase.severity, err, testCase.wantErr)

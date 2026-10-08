@@ -4,33 +4,35 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: pass.NewReporter("time-discipline", pass.SeverityWarning, pass.CatAST),
+		reporter: finding.NewReporter("time-discipline", finding.SeverityWarning, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string          { return "time-discipline" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string             { return "time-discipline" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		return checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
 	})
 }
 
 func checkFile(
-	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter pass.Reporter,
-) []pass.Finding {
-	var findings []pass.Finding
+	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter finding.Reporter,
+) []finding.Finding {
+	var findings []finding.Finding
 
 	bubbles := synctestBubbles(file)
 	ast.Inspect(file, func(node ast.Node) bool {
@@ -38,7 +40,7 @@ func checkFile(
 		case *ast.CallExpr:
 			// A sleep in a synctest bubble advances the fake clock, so flagging it
 			// would ask the author to replace correct code.
-			if isTimeSleepCall(typed) && !insideBubble(bubbles, typed.Pos()) {
+			if goast.PkgCall(file, typed, "time", "Sleep") && !insideBubble(bubbles, typed.Pos()) {
 				findings = append(findings, reporter.At(
 					fc.Path,
 					fset.Position(typed.Pos()).Line,
@@ -51,7 +53,7 @@ func checkFile(
 			// Interface method signatures are also *ast.Field nodes; walking
 			// only *ast.StructType excludes an interface's Now() method.
 			for _, field := range typed.Fields.List {
-				name, ok := clockSeamFieldName(field)
+				name, ok := clockSeamFieldName(file, field)
 				if !ok {
 					continue
 				}
@@ -74,7 +76,7 @@ func synctestBubbles(file *ast.File) [][2]token.Pos {
 	var bubbles [][2]token.Pos
 	ast.Inspect(file, func(node ast.Node) bool {
 		call, ok := node.(*ast.CallExpr)
-		if !ok || !isSynctestRunner(call) {
+		if !ok || !goast.PkgCall(file, call, "testing/synctest", "Test", "Run") {
 			return true
 		}
 		for _, arg := range call.Args {
@@ -87,18 +89,6 @@ func synctestBubbles(file *ast.File) [][2]token.Pos {
 	return bubbles
 }
 
-func isSynctestRunner(call *ast.CallExpr) bool {
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || sel.Sel == nil {
-		return false
-	}
-	if sel.Sel.Name != "Test" && sel.Sel.Name != "Run" {
-		return false
-	}
-	pkg, ok := sel.X.(*ast.Ident)
-	return ok && pkg.Name == "synctest"
-}
-
 func insideBubble(bubbles [][2]token.Pos, pos token.Pos) bool {
 	for _, bubble := range bubbles {
 		if pos >= bubble[0] && pos < bubble[1] {
@@ -108,16 +98,7 @@ func insideBubble(bubbles [][2]token.Pos, pos token.Pos) bool {
 	return false
 }
 
-func isTimeSleepCall(call *ast.CallExpr) bool {
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || sel.Sel == nil || sel.Sel.Name != "Sleep" {
-		return false
-	}
-	pkg, ok := sel.X.(*ast.Ident)
-	return ok && pkg.Name == "time"
-}
-
-func clockSeamFieldName(field *ast.Field) (string, bool) {
+func clockSeamFieldName(file *ast.File, field *ast.Field) (string, bool) {
 	if len(field.Names) == 0 {
 		return "", false
 	}
@@ -128,17 +109,8 @@ func clockSeamFieldName(field *ast.Field) (string, bool) {
 	if fn.Results == nil || len(fn.Results.List) != 1 || len(fn.Results.List[0].Names) != 0 {
 		return "", false
 	}
-	if !isTimeTimeExpr(fn.Results.List[0].Type) {
+	if !goast.PkgRef(file, fn.Results.List[0].Type, "time", "Time") {
 		return "", false
 	}
 	return field.Names[0].Name, true
-}
-
-func isTimeTimeExpr(expr ast.Expr) bool {
-	sel, ok := expr.(*ast.SelectorExpr)
-	if !ok || sel.Sel == nil || sel.Sel.Name != "Time" {
-		return false
-	}
-	pkg, ok := sel.X.(*ast.Ident)
-	return ok && pkg.Name == "time"
 }

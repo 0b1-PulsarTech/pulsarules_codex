@@ -4,42 +4,49 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: pass.NewReporter("context-discipline", pass.SeverityWarning, pass.CatAST),
+		reporter: finding.NewReporter(
+			"context-discipline",
+			finding.SeverityWarning,
+			finding.CatAST,
+		),
 	}
 }
 
-func (analyzer *Analyzer) ID() string          { return "context-discipline" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string             { return "context-discipline" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		return checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
 	})
 }
 
 type fileCheck struct {
+	file             *ast.File
 	fset             *token.FileSet
 	fc               pass.FileChange
 	comments         []*ast.CommentGroup
 	codeLines        map[int]bool
 	tickerFieldNames map[string]bool
-	reporter         pass.Reporter
+	reporter         finding.Reporter
 }
 
 func checkFile(
-	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter pass.Reporter,
-) []pass.Finding {
+	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter finding.Reporter,
+) []finding.Finding {
 	check := fileCheck{
+		file:      file,
 		fset:      fset,
 		fc:        fc,
 		comments:  file.Comments,
@@ -48,7 +55,7 @@ func checkFile(
 		tickerFieldNames: collectTickerFieldNames(file),
 		reporter:         reporter,
 	}
-	var findings []pass.Finding
+	var findings []finding.Finding
 	ast.Inspect(file, func(node ast.Node) bool {
 		params, body := funcSignature(node)
 		if body == nil {
@@ -71,14 +78,14 @@ func funcSignature(target ast.Node) (*ast.FieldList, *ast.BlockStmt) {
 	}
 }
 
-func checkFuncBody(check fileCheck, params *ast.FieldList, body *ast.BlockStmt) []pass.Finding {
+func checkFuncBody(check fileCheck, params *ast.FieldList, body *ast.BlockStmt) []finding.Finding {
 	if body == nil {
 		return nil
 	}
-	scope := collectChannelScope(params, body, check.tickerFieldNames)
+	scope := collectChannelScope(check.file, params, body, check.tickerFieldNames)
 	labels := collectLoopLabels(body)
 
-	var findings []pass.Finding
+	var findings []finding.Finding
 	ast.Inspect(body, func(node ast.Node) bool {
 		if funcLit, ok := node.(*ast.FuncLit); ok {
 			findings = append(findings, checkFuncBody(check, funcLit.Type.Params, funcLit.Body)...)

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
@@ -26,8 +26,8 @@ func forcedLinters() []string {
 type Runner struct {
 	path    string
 	timeout time.Duration
-	failure pass.Reporter
-	warning pass.Reporter
+	failure finding.Reporter
+	warning finding.Reporter
 }
 
 func NewRunner(golangciLintPath string) *Runner {
@@ -37,12 +37,12 @@ func NewRunner(golangciLintPath string) *Runner {
 		// Per call, not aggregated over runPerModule's loop: modules vary in size,
 		// so sharing one budget would starve a large one.
 		timeout: golangciLintTimeout,
-		failure: pass.NewReporter("golangci-lint", pass.SeverityError, pass.CatSyntax),
-		warning: pass.NewReporter("golangci-lint", pass.SeverityWarning, pass.CatSyntax),
+		failure: finding.NewReporter("golangci-lint", finding.SeverityError, finding.CatSyntax),
+		warning: finding.NewReporter("golangci-lint", finding.SeverityWarning, finding.CatSyntax),
 	}
 }
 
-func (runner *Runner) Run(projectDir, configPath string) []pass.Finding {
+func (runner *Runner) Run(projectDir, configPath string) []finding.Finding {
 	if runner.path == "" {
 		return nil
 	}
@@ -53,7 +53,7 @@ func (runner *Runner) Run(projectDir, configPath string) []pass.Finding {
 	return runner.runLint(projectDir, configPath)
 }
 
-func (runner *Runner) runLint(projectDir, configPath string) []pass.Finding {
+func (runner *Runner) runLint(projectDir, configPath string) []finding.Finding {
 	if hasGoWork(projectDir) {
 		return runner.runPerModule(projectDir, configPath)
 	}
@@ -61,7 +61,7 @@ func (runner *Runner) runLint(projectDir, configPath string) []pass.Finding {
 	return runner.runSingle(projectDir, configPath)
 }
 
-func (runner *Runner) runPerModule(projectDir, configPath string) []pass.Finding {
+func (runner *Runner) runPerModule(projectDir, configPath string) []finding.Finding {
 	modules := parseGoWorkModules(projectDir)
 	if len(modules) == 0 {
 		return runner.runSingle(projectDir, configPath)
@@ -78,7 +78,7 @@ func (runner *Runner) runPerModule(projectDir, configPath string) []pass.Finding
 	return allFindings
 }
 
-func (runner *Runner) runSingle(projectDir, configPath string) []pass.Finding {
+func (runner *Runner) runSingle(projectDir, configPath string) []finding.Finding {
 	configFlag := resolvedConfigFlag(projectDir, configPath)
 	result, err := runner.run(projectDir, lintArgs("./...", configFlag))
 	return append(runner.forcedBaselineFindings(configFlag), runner.parseOutput(result, err)...)

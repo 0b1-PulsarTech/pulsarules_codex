@@ -7,80 +7,46 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type Analyzer struct {
-	reporter pass.Reporter
+	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
 		// SeverityError, unlike every other CatAST reporter: a PII label leaking into
 		// a panic traceback is a security incident, not a style nit, so it blocks.
-		reporter: pass.NewReporter("pprof-labels", pass.SeverityError, pass.CatAST),
+		reporter: finding.NewReporter("pprof-labels", finding.SeverityError, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string          { return "pprof-labels" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string             { return "pprof-labels" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		return checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
 	})
 }
 
-type pprofCheck struct {
-	fset      *token.FileSet
-	fc        pass.FileChange
-	pprofName string
-	reporter  pass.Reporter
-}
-
 func checkFile(
-	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter pass.Reporter,
-) []pass.Finding {
-	pprofName, ok := pprofImportName(file)
-	if !ok {
-		return nil
-	}
-	check := pprofCheck{fset: fset, fc: fc, pprofName: pprofName, reporter: reporter}
-
-	var findings []pass.Finding
+	fset *token.FileSet, fc pass.FileChange, file *ast.File, reporter finding.Reporter,
+) []finding.Finding {
+	var findings []finding.Finding
 	ast.Inspect(file, func(node ast.Node) bool {
-		params, body := funcSignature(node)
-		if body == nil {
-			return true
-		}
-		findings = append(findings, checkFuncBody(check, params, body)...)
-		return false
-	})
-	return findings
-}
-
-func checkFuncBody(
-	check pprofCheck, params *ast.FieldList, body *ast.BlockStmt,
-) []pass.Finding {
-	shadowed := isNameShadowed(params, body, check.pprofName)
-
-	var findings []pass.Finding
-	ast.Inspect(body, func(node ast.Node) bool {
-		if funcLit, ok := node.(*ast.FuncLit); ok {
-			findings = append(
-				findings, checkFuncBody(check, funcLit.Type.Params, funcLit.Body)...,
-			)
-			return false
-		}
 		call, ok := node.(*ast.CallExpr)
-		if !ok || shadowed || !isPprofLabelsCall(call, check.pprofName) {
+		if !ok || !goast.PkgCall(file, call, "runtime/pprof", "Labels") {
 			return true
 		}
 		for _, key := range piiKeyArgs(call) {
-			findings = append(findings, check.reporter.At(
-				check.fc.Path,
-				check.fset.Position(call.Pos()).Line,
+			findings = append(findings, reporter.At(
+				fc.Path,
+				fset.Position(call.Pos()).Line,
 				fmt.Sprintf(
 					"pprof.Labels key %q looks like PII; its value reaches panic "+
 						"tracebacks under GOTRACEBACK=all - use an opaque correlation "+
@@ -93,15 +59,6 @@ func checkFuncBody(
 		return true
 	})
 	return findings
-}
-
-func isPprofLabelsCall(call *ast.CallExpr, pprofName string) bool {
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || sel.Sel == nil || sel.Sel.Name != "Labels" {
-		return false
-	}
-	pkg, ok := sel.X.(*ast.Ident)
-	return ok && pkg.Name == pprofName
 }
 
 func piiKeyArgs(call *ast.CallExpr) []string {

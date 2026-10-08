@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -143,8 +144,8 @@ func (moves *moveContext) headNamesIn(scope declScope) map[string]bool {
 }
 
 func relocationUnsafeFinding(
-	reporter pass.Reporter, rename pass.Rename, lead string,
-) pass.Finding {
+	reporter finding.Reporter, rename pass.Rename, lead string,
+) finding.Finding {
 	return reporter.At(
 		rename.NewPath,
 		0,
@@ -161,7 +162,7 @@ func relocationUnsafeFinding(
 	)
 }
 
-func inclusionChangeFinding(reporter pass.Reporter, rename pass.Rename) pass.Finding {
+func inclusionChangeFinding(reporter finding.Reporter, rename pass.Rename) finding.Finding {
 	return reporter.At(
 		rename.NewPath,
 		0,

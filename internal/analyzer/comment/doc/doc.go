@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/ast/syntaxfiles"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
@@ -16,15 +17,15 @@ func NewAnalyzer() *Analyzer {
 
 func (analyzer *Analyzer) ID() string { return "doc-comment" }
 
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) reporter() pass.Reporter {
-	return pass.NewReporter(analyzer.ID(), pass.SeverityWarning, pass.CatAST)
+func (analyzer *Analyzer) reporter() finding.Reporter {
+	return finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatAST)
 }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter(), ctx)
-	return syntaxfiles.Each(ctx, func(fc pass.FileChange, file *syntax.File) []pass.Finding {
+	return syntaxfiles.Each(ctx, func(fc pass.FileChange, file *syntax.File) []finding.Finding {
 		if fc.Generated {
 			return nil
 		}
@@ -32,8 +33,8 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
 	})
 }
 
-func checkFile(fc pass.FileChange, file *syntax.File, reporter pass.Reporter) []pass.Finding {
-	var findings []pass.Finding
+func checkFile(fc pass.FileChange, file *syntax.File, reporter finding.Reporter) []finding.Finding {
+	var findings []finding.Finding
 	for _, site := range file.DocSites {
 		if site.Exempt {
 			continue

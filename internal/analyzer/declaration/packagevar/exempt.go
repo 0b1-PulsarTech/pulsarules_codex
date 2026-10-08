@@ -33,7 +33,7 @@ func (scan fileScan) isValueExempt(typ ast.Expr, name string, value ast.Expr) bo
 }
 
 func (scan fileScan) isShapedError(name string, expr ast.Expr) bool {
-	switch value := unparen(expr).(type) {
+	switch value := ast.Unparen(expr).(type) {
 	case *ast.Ident:
 		return name == "_" && value.Name == "nil"
 	case *ast.CompositeLit:
@@ -47,7 +47,7 @@ func (scan fileScan) isShapedError(name string, expr ast.Expr) bool {
 }
 
 func (scan fileScan) isAddrOfCallFreeLit(value *ast.UnaryExpr) bool {
-	lit, isLit := unparen(value.X).(*ast.CompositeLit)
+	lit, isLit := ast.Unparen(value.X).(*ast.CompositeLit)
 	return value.Op == token.AND && isLit && scan.callFree(lit)
 }
 
@@ -62,7 +62,7 @@ func (scan fileScan) isImportedSel(sel *ast.SelectorExpr) bool {
 }
 
 func (scan fileScan) isSentinelValue(name string, expr ast.Expr) bool {
-	switch value := unparen(expr).(type) {
+	switch value := ast.Unparen(expr).(type) {
 	case *ast.CallExpr:
 		return scan.sentinelCall(value, name)
 	case *ast.SelectorExpr:
@@ -70,7 +70,7 @@ func (scan fileScan) isSentinelValue(name string, expr ast.Expr) bool {
 	case *ast.CompositeLit:
 		return scan.isErrComposite(name, value)
 	case *ast.UnaryExpr:
-		lit, isLit := unparen(value.X).(*ast.CompositeLit)
+		lit, isLit := ast.Unparen(value.X).(*ast.CompositeLit)
 		return value.Op == token.AND && isLit && scan.isErrComposite(name, lit)
 	}
 	return false

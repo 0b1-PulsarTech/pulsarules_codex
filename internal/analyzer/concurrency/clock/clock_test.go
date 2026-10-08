@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
@@ -105,6 +106,29 @@ func checkFileSleepCases() []checkFileTestCase {
 			expect: 2,
 		},
 		{
+			name:   "an aliased time import still sleeps on the wall clock",
+			source: "package foo\nimport clock \"time\"\nfunc f() { clock.Sleep(clock.Second) }\n",
+			expect: 1,
+		},
+		{
+			name: "a local value named time is not the time package",
+			source: "package foo\n" +
+				"import \"time\"\n" +
+				"type sleeper struct{}\n" +
+				"func (sleeper) Sleep(int) {}\n" +
+				"func f() { var time sleeper; time.Sleep(1) }\n",
+			expect: 0,
+		},
+		{
+			name: "an aliased synctest import still opens a bubble",
+			source: "package foo\n" +
+				"import (\n\t\"testing\"\n\tsim \"testing/synctest\"\n\t\"time\"\n)\n" +
+				"func TestX(t *testing.T) {\n" +
+				"\tsim.Test(t, func(t *testing.T) { time.Sleep(time.Second) })\n" +
+				"}\n",
+			expect: 0,
+		},
+		{
 			name: "a differently named Sleep method is not time.Sleep",
 			source: "package foo\n" +
 				"type limiter struct{}\n" +
@@ -177,7 +201,7 @@ func checkFileCleanCases() []checkFileTestCase {
 	}
 }
 
-func analyzeSource(t *testing.T, source string) []pass.Finding {
+func analyzeSource(t *testing.T, source string) []finding.Finding {
 	t.Helper()
 
 	dir := t.TempDir()

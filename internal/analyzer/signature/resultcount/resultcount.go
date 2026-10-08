@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -14,17 +15,17 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) ID() string          { return "too-many-results" }
-func (analyzer *Analyzer) Stage() pass.StageID { return pass.StageAST }
+func (analyzer *Analyzer) ID() string             { return "too-many-results" }
+func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []pass.Finding {
+func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	const defaultMaxResults = 3
 	limit := ctx.Params(analyzer.ID()).Int("max_results", defaultMaxResults)
 	reporter := pass.ResolveReporter(
-		pass.NewReporter(analyzer.ID(), pass.SeverityWarning, pass.CatAST),
+		finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatAST),
 		ctx,
 	)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []pass.Finding {
+	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if fc.Generated {
 			return nil
 		}
@@ -39,12 +40,12 @@ type declSite struct {
 }
 
 type rule struct {
-	reporter pass.Reporter
+	reporter finding.Reporter
 	limit    int
 }
 
-func (rule rule) check(fset *token.FileSet, fc pass.FileChange, file *ast.File) []pass.Finding {
-	var findings []pass.Finding
+func (rule rule) check(fset *token.FileSet, fc pass.FileChange, file *ast.File) []finding.Finding {
+	var findings []finding.Finding
 	ast.Inspect(file, func(node ast.Node) bool {
 		for _, site := range sitesOf(node) {
 			count := countResults(site.results)
