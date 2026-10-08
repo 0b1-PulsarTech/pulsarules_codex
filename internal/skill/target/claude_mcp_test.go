@@ -60,9 +60,9 @@ func TestUnwireClaudeMCP_NotesWhenGoplsRemoved(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest // fakeGoplsOnPath needs t.Setenv, which bars t.Parallel.
 func TestGenerateGoplsSkill_ForeignBackup(t *testing.T) {
-	fakeGoplsOnPath(t)
+	t.Parallel()
+
 	_, templates, err := knowledge.Load("")
 	if err != nil {
 		t.Fatalf("knowledge.Load: %v", err)
@@ -74,7 +74,7 @@ func TestGenerateGoplsSkill_ForeignBackup(t *testing.T) {
 	seedFile(t, filepath.Join(goplsDir, "SKILL.md"), mine)
 
 	var report Report
-	if err = generateGoplsSkill(templates, skillsDir, &report); err != nil {
+	if err = generateGoplsSkill(templates, skillsDir, "gopls reference", &report); err != nil {
 		t.Fatalf("generateGoplsSkill: %v", err)
 	}
 	if len(report.Warnings) == 0 {

@@ -53,14 +53,18 @@ func unwireClaudeMCP(repoDir string, report *Report) error {
 	return nil
 }
 
-func generateGoplsSkill(templates fs.FS, skillsDir string, report *Report) error {
+func goplsInstructions() (string, error) {
 	const goplsInstructionsTimeout = 30 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), goplsInstructionsTimeout)
 	defer cancel()
 	instructions, err := mcpwire.GoplsInstructions(ctx)
 	if err != nil {
-		return fmt.Errorf("get gopls instructions: %w", err)
+		return "", fmt.Errorf("get gopls instructions: %w", err)
 	}
+	return instructions, nil
+}
+
+func generateGoplsSkill(templates fs.FS, skillsDir, instructions string, report *Report) error {
 	backedUp, genErr := mcpwire.GenerateGoplsSkill(templates, skillsDir, instructions)
 	// Backed-up foreign files must reach the report, or a hand-written skill is renamed silently.
 	for _, msg := range backedUp {
@@ -78,7 +82,11 @@ func goplsSkill(ctx Context, dest string, report *Report) (generated bool, err e
 		// No Go detected: neither the server nor its navigation skill applies.
 		return false, nil
 	case mcpwire.GoplsOnPath():
-		if err = generateGoplsSkill(ctx.Templates, dest, report); err != nil {
+		instructions, instructionsErr := goplsInstructions()
+		if instructionsErr != nil {
+			return false, instructionsErr
+		}
+		if err = generateGoplsSkill(ctx.Templates, dest, instructions, report); err != nil {
 			return false, err
 		}
 		return true, nil
