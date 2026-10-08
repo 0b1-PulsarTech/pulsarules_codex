@@ -28,6 +28,11 @@ func Rules() config.Rules {
 }
 
 func Load(root, explicit, presetFlag string) (*config.ProjectFile, error) {
+	file, err := load(root, explicit, presetFlag)
+	return file, capReport(err, file)
+}
+
+func load(root, explicit, presetFlag string) (*config.ProjectFile, error) {
 	if explicit != "" {
 		return loadFile(explicit, explicit, Rules())
 	}
@@ -40,10 +45,14 @@ func Load(root, explicit, presetFlag string) (*config.ProjectFile, error) {
 func loadFile(path, display string, rules config.Rules) (*config.ProjectFile, error) {
 	content, err := readBounded(path)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", display, err)
+		return nil, &FileError{File: display, Err: fmt.Errorf("%s: %w", display, err)}
 	}
 	// Parse errors already lead with the file and field path.
-	return config.Parse(display, content, rules)
+	file, err := config.Parse(display, content, rules)
+	if err != nil {
+		return nil, &FileError{File: display, Err: err}
+	}
+	return file, nil
 }
 
 func loadOptional(path, display string, rules config.Rules) (*config.ProjectFile, error) {
@@ -60,7 +69,7 @@ func Build(file *config.ProjectFile, presetFlag string) (*config.GovernanceConfi
 		return cfg, nil
 	}
 	if err := cfg.ApplyProject(file); err != nil {
-		return nil, err
+		return nil, capReport(err, file)
 	}
 	return cfg, nil
 }
@@ -95,7 +104,7 @@ func ForRoot(root string) (*config.GovernanceConfig, []core.Finding) {
 		AnalyzerID: ConfigAnalyzerID,
 		Severity:   core.SeverityError,
 		Category:   core.CatProject,
-		File:       config.ProjectFileName,
+		File:       faultFile(err, file),
 		Message:    err.Error(),
 	}
 	return withPreset(nil, ""), []core.Finding{finding}

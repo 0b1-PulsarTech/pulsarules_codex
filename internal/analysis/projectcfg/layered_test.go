@@ -43,14 +43,27 @@ type layout struct {
 	git, worktree bool
 	privateKind   string
 	brokenGit     bool
+	deep          string
+	baseLoop      bool
+	unreadable    bool
+	privateLen    int
 }
 
 func (spec layout) build(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
+	if spec.privateLen > 0 {
+		spec.deep = exactDeep(spec.privateLen - len(root) - len("/main/.git/"+privateFileName))
+	}
+	if spec.deep != "" && !spec.worktree {
+		root = filepath.Join(root, spec.deep)
+		if err := os.MkdirAll(root, 0o750); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+	}
 	mainDir := root
 	if spec.worktree {
-		mainDir = filepath.Join(root, "main")
+		mainDir = filepath.Join(root, "main", spec.deep)
 		root = filepath.Join(root, "linked")
 		if err := os.MkdirAll(mainDir, 0o750); err != nil {
 			t.Fatalf("mkdir: %v", err)
@@ -73,6 +86,17 @@ func (spec layout) placeBase(t *testing.T, root string) {
 	path := filepath.Join(root, config.ProjectFileName)
 	if spec.base != "" {
 		write(t, path, spec.base)
+	}
+	if spec.baseLoop {
+		if err := os.Symlink(config.ProjectFileName, path); err != nil {
+			t.Fatalf("symlink: %v", err)
+		}
+	}
+	if spec.unreadable {
+		write(t, path, bogusKey)
+		if err := os.Chmod(path, 0); err != nil {
+			t.Fatalf("chmod: %v", err)
+		}
 	}
 	if spec.brokenGit {
 		write(t, filepath.Join(root, ".git"), "gitdir: "+filepath.Join(root, "nowhere")+"\n")
@@ -238,6 +262,118 @@ func TestDisplayName(t *testing.T) {
 	}
 }
 
+type forRootCase struct {
+	name         string
+	spec         layout
+	wantFile     string
+	wantMessage  string
+	wantNoSubstr string
+}
+
+func forRootCases() []forRootCase {
+	return slices.Concat(forRootFileCases(), forRootBuildCases(), forRootNumberingCases())
+}
+
+func forRootFileCases() []forRootCase {
+	const privateName = ".git/pulsarules.yaml"
+	return []forRootCase{
+		{
+			name:        "invalid private is one config finding",
+			spec:        layout{base: baseStrict, private: bogusKey, git: true},
+			wantFile:    privateName,
+			wantMessage: privateName + ": line 2: bogus: unknown key",
+		},
+		{
+			name:        "invalid base names the base",
+			spec:        layout{base: bogusKey, private: baseStrict, git: true},
+			wantFile:    config.ProjectFileName,
+			wantMessage: ".pulsarules.yaml: line 2: bogus: unknown key",
+		},
+		{
+			name:        "both invalid blames the base first",
+			spec:        layout{base: bogusKey, private: bogusKey, git: true},
+			wantFile:    config.ProjectFileName,
+			wantMessage: "; " + privateName + ": line 2: bogus",
+		},
+	}
+}
+
+func forRootBuildCases() []forRootCase {
+	const (
+		privateName = ".git/pulsarules.yaml"
+		narrowOff   = "analyzers: {file-size: {enabled: false}}\n"
+	)
+	widen := overrideOf("a", "enabled: true")
+	return []forRootCase{
+		{
+			name: "base alone widening names the base, not the merge",
+			spec: layout{
+				base: "version: 1\n" + narrowOff + widen, private: baseStrict, git: true,
+			},
+			wantFile:     config.ProjectFileName,
+			wantMessage:  ".pulsarules.yaml: overrides[0].analyzers.file-size.enabled",
+			wantNoSubstr: "(merged)",
+		},
+		{
+			name: "private alone widening names the private file",
+			spec: layout{
+				base: baseStrict, private: "version: 1\n" + narrowOff + widen, git: true,
+			},
+			wantFile:     privateName,
+			wantMessage:  privateName + ": overrides[0].analyzers.file-size.enabled",
+			wantNoSubstr: "(merged)",
+		},
+	}
+}
+
+func forRootNumberingCases() []forRootCase {
+	const privateName = ".git/pulsarules.yaml"
+	baseOverrides := overridesOf(
+		"{files: [x], analyzers: {file-size: {severity: info}}}",
+		"{files: [y], analyzers: {file-size: {severity: error}}}",
+	)
+	return []forRootCase{
+		{
+			name: "private override widening a base disable names the private file",
+			spec: layout{
+				base:    doc("analyzers: {big-comment: {enabled: false}}", baseOverrides),
+				private: doc(enableDoc("a", "big-comment")), git: true,
+			},
+			wantFile:     privateName,
+			wantMessage:  privateName + ": overrides[0].analyzers.big-comment.enabled: big-comm",
+			wantNoSubstr: "(merged)",
+		},
+		{
+			name: "private override index counts the private file only",
+			spec: layout{
+				base:    doc("analyzers: {big-comment: {enabled: false}}", baseOverrides),
+				private: doc(overridesOf(enable("a", "file-size"), enable("b", "big-comment"))),
+				git:     true,
+			},
+			wantFile:     privateName,
+			wantMessage:  privateName + ": overrides[1].analyzers.big-comment.enabled",
+			wantNoSubstr: "(merged)",
+		},
+	}
+}
+
+func TestForRootLayered(t *testing.T) {
+	t.Parallel()
+
+	for _, testCase := range forRootCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			_, findings := ForRoot(testCase.spec.build(t))
+			assertConfigFinding(t, findings, testCase.wantFile, testCase.wantMessage)
+			if testCase.wantNoSubstr != "" &&
+				strings.Contains(findings[0].Message, testCase.wantNoSubstr) {
+				t.Fatalf("message = %q, must not contain %q",
+					findings[0].Message, testCase.wantNoSubstr)
+			}
+		})
+	}
+}
+
 func failing(err error) commonDirResolver {
 	return func(string) (string, error) { return "", err }
 }
@@ -294,6 +430,9 @@ func TestLoadPrivateFailsClosed(t *testing.T) {
 			file, err := loadLayers(spec.build(t), testCase.resolve, "")
 			if testCase.wantErr != "" {
 				assertErrorHas(t, err, []string{testCase.wantErr})
+				if got := faultFile(err, nil); got != "<git-common-dir>/pulsarules.yaml" {
+					t.Fatalf("faultFile() = %q, want the expected private file", got)
+				}
 				return
 			}
 			if err != nil || (file == nil) != testCase.wantNil {
