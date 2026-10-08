@@ -32,8 +32,9 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		return nil
 	}
 	var findings []finding.Finding
+	listed := listingOf(ctx.Sources)
 	for _, entry := range ctx.Config.Delegated {
-		findings = append(findings, analyzer.runEntry(ctx.ProjectDir, entry)...)
+		findings = append(findings, analyzer.runEntry(ctx.ProjectDir, listed, entry)...)
 	}
 	return findings
 }

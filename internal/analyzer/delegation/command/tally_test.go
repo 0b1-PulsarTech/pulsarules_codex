@@ -61,7 +61,7 @@ func TestReportsDropped(t *testing.T) {
 		{
 			"first omits a zero line",
 			drops{count: 2, first: diagnostic{code: "c", file: "x.dart"}},
-			`2 diagnostics on paths outside the project (first: "x.dart" c)`,
+			`2 diagnostics on paths outside the project or missing (first: "x.dart" c)`,
 		},
 		{
 			"names count and first",
@@ -69,19 +69,19 @@ func TestReportsDropped(t *testing.T) {
 				count: 3, worst: finding.SeverityWarning,
 				first: diagnostic{code: "lint_x", file: "/out/x.dart", line: 7},
 			},
-			`3 diagnostics on paths outside the project ` +
+			`3 diagnostics on paths outside the project or missing ` +
 				`(first: "/out/x.dart":7 lint_x)`,
 		},
 		{
 			"invalid code is generic",
 			drops{count: 1, first: diagnostic{code: "Bad Code", file: "x.dart"}},
-			`1 diagnostic on a path outside the project ` +
+			`1 diagnostic on a path outside the project or missing ` +
 				`(first: "x.dart" diagnostic)`,
 		},
 		{
 			"control bytes in the path are quoted",
 			drops{count: 1, first: diagnostic{code: "c", file: "a\x1b[0m\n"}},
-			`1 diagnostic on a path outside the project ` +
+			`1 diagnostic on a path outside the project or missing ` +
 				`(first: "a\x1b[0m\n" c)`,
 		},
 	}

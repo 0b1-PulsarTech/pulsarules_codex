@@ -159,7 +159,7 @@ func droppedCases() []runCase {
 			[]string{entryID + "/dropped"},
 			[]string{""},
 			[]finding.Severity{finding.SeverityError},
-			"1 diagnostic on a path outside the project",
+			"1 diagnostic on a path outside the project or missing",
 		},
 		{
 			"a dropped error beside a kept info is reported after it",
@@ -264,7 +264,7 @@ func TestRunEntryRuleAndDir(t *testing.T) {
 		Run: writeScript(t, script),
 	}
 
-	findings := NewAnalyzer(newIndex(t)).runEntry(root, entry)
+	findings := NewAnalyzer(newIndex(t)).runEntry(root, nil, entry)
 	if len(findings) != 1 {
 		t.Fatalf("findings = %+v", findings)
 	}
@@ -350,7 +350,7 @@ func runRunCases(t *testing.T, testCases []runCase) {
 			t.Parallel()
 
 			root := t.TempDir()
-			findings := NewAnalyzer(index).runEntry(root, testCase.entry(t, root))
+			findings := NewAnalyzer(index).runEntry(root, nil, testCase.entry(t, root))
 
 			ids := make([]string, len(findings))
 			files := make([]string, len(findings))

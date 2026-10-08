@@ -23,6 +23,7 @@ func (lost *drops) note(item diagnostic) {
 
 type sorted struct {
 	findings []finding.Finding
+	excluded int
 	lost     drops
 }
 
@@ -35,11 +36,14 @@ func (where scope) sortOut(rep reports, found []diagnostic) sorted {
 			place = where.place(item.file)
 			memo[item.file] = place
 		}
-		if !place.inside {
+		switch place.outcome {
+		case excluded:
+			out.excluded++
+		case dropped:
 			out.lost.note(item)
-			continue
+		case kept:
+			out.findings = append(out.findings, rep.diagnostic(item, place.rel))
 		}
-		out.findings = append(out.findings, rep.diagnostic(item, place.rel))
 	}
 	return out
 }
@@ -58,7 +62,7 @@ func (rep reports) dropped(lost drops) finding.Finding {
 		subject = "diagnostic on a path"
 	}
 	message := fmt.Sprintf(
-		"%d %s outside the project (first: %s %s)", lost.count, subject, first, code,
+		"%d %s outside the project or missing (first: %s %s)", lost.count, subject, first, code,
 	)
 	return rep.plain("dropped", lost.worst, message)
 }
