@@ -28,10 +28,9 @@ func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	eligible := func(fc core.FileChange) bool {
 		return extFilter(fc) && analyzer.langs.Lookup(fc.Extension) != nil
 	}
-	return core.EachChangedFile(ctx, eligible, func(
-		fc core.FileChange, src []byte,
-	) []core.Finding {
-		lineNum, ok := leadingCommentLine(analyzer.langs.Lookup(fc.Extension), fc.Extension, src)
+	scan := func(fc core.FileChange, src []byte) []core.Finding {
+		lang := analyzer.langs.Lookup(fc.Extension)
+		lineNum, ok := leadingCommentLine(lang, fc.Extension, src)
 		if !ok {
 			return nil
 		}
@@ -41,11 +40,15 @@ func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 			"file starts with a comment",
 			"remove the leading comment; no file or package docstrings",
 		)}
-	})
+	}
+	return core.EachChangedFile(ctx, eligible, scan)
 }
 
 func defaultExtensions() []string {
-	return []string{".go", ".proto", ".sql", ".nix", ".svelte", ".ts", ".dart"}
+	return []string{
+		".go", ".proto", ".sql", ".nix", ".svelte", ".ts", ".dart",
+		".js", ".mjs", ".cjs", ".jsx", ".tsx",
+	}
 }
 
 func reporterFor(ctx *core.AnalysisContext, id, extension string) core.Reporter {

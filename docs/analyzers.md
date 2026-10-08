@@ -152,9 +152,18 @@ variable, field or interface method are reported.
 
 - Rule: `comments`.
 - Flags: a file whose first content is a comment. Severity is error for `.go`, warning elsewhere.
-- Params: `extensions` (default `.go`, `.proto`, `.sql`, `.nix`, `.svelte`, `.ts`, `.dart`).
+- Params: `extensions` (default `.go`, `.proto`, `.sql`, `.nix`, `.svelte`, `.ts`, `.dart`, `.js`,
+  `.mjs`, `.cjs`, `.jsx`, `.tsx`).
 - Exemptions: required header lines (generated markers, tool directives) are skipped, and a file
-  recognised as generated is exempt in full.
+  recognised as generated is exempt in full. In `.js`, `.mjs`, `.cjs` and `.jsx` files a leading
+  JSDoc block that holds only `@type`, `@satisfies`, `@import` or a one line `@typedef` followed by
+  code is allowed; in `.ts` and `.tsx` it is flagged. Single line tool pragmas (`@flow`, `@noflow`,
+  `@jsx`, `@jsxFrag`, `@jsxImportSource`, `@jsxRuntime`, `@refresh reset`) are skipped only in the
+  `//` form, in the JavaScript and TypeScript extensions; a JSDoc annotation followed by a
+  `// @flow` line is still flagged. Docblock pragmas such as `@jest-environment`,
+  `@vitest-environment`, `@format` and `@prettier` are allowed in every extension. Only a comment
+  that is wholly such a tool directive is exempt. In `.svelte` and `.vue` files the first content
+  line is checked, and only an HTML `<!--` comment there counts.
 - Known limits: `/* a */ /* global b */ /* hand` is not counted; a directive line followed by code is
   skipped without a flush; nolint and global edge forms; a bare `/* eslint` prefix.
 
