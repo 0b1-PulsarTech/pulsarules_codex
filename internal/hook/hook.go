@@ -19,8 +19,8 @@ func (disp *Dispatcher) Dispatch(mode string, payload []byte) error {
 	start := time.Now()
 
 	var (
-		findings int
-		err      error
+		outcome stopOutcome
+		err     error
 	)
 	switch mode {
 	case "session-start":
@@ -34,14 +34,14 @@ func (disp *Dispatcher) Dispatch(mode string, payload []byte) error {
 	case "user-prompt":
 		err = disp.emitUserPrompt()
 	case "stop":
-		findings, err = disp.emitStop("Stop", session)
+		outcome, err = disp.emitStop("Stop", session)
 	case "subagent-start":
 		err = disp.emitSubagentStart()
 	case "session-end":
 		session.Cleanup()
 	}
 
-	disp.record(mode, session, start, findings, err)
+	disp.record(session, dispatchRecord{mode: mode, start: start, outcome: outcome, err: err})
 	// A hook must never block: a handler failure surfaces only through the log.
 	return nil
 }
@@ -82,25 +82,34 @@ func (disp *Dispatcher) emitContextWithNotice(asset, event, notice string) error
 	return nil
 }
 
-func (disp *Dispatcher) record(
-	mode string,
-	session *SessionTracker,
-	start time.Time,
-	findings int,
-	err error,
-) {
+type stopOutcome struct {
+	findings int
+	timedOut bool
+}
+
+type dispatchRecord struct {
+	mode    string
+	start   time.Time
+	outcome stopOutcome
+	err     error
+}
+
+func (disp *Dispatcher) record(session *SessionTracker, entry dispatchRecord) {
 	if disp.logger == nil {
 		return
 	}
 	args := []any{
-		slog.String("event", mode),
+		slog.String("event", entry.mode),
 		slog.String("session_id", session.SessionID()),
-		slog.Int64("duration_ms", time.Since(start).Milliseconds()),
-		slog.Int("findings", findings),
-		slog.Bool("ok", err == nil),
+		slog.Int64("duration_ms", time.Since(entry.start).Milliseconds()),
+		slog.Int("findings", entry.outcome.findings),
+		slog.Bool("ok", entry.err == nil),
 	}
-	if err != nil {
-		args = append(args, slog.String("error", err.Error()))
+	if entry.outcome.timedOut {
+		args = append(args, slog.Bool("timed_out", true))
+	}
+	if entry.err != nil {
+		args = append(args, slog.String("error", entry.err.Error()))
 	}
 	disp.logger.Info("hook dispatched", args...)
 }

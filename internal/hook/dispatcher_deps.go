@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analysis"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -22,6 +23,7 @@ type Dispatcher struct {
 	projectDir string
 	skillsDir  string
 	governance func(repo vcs.Repository, status vcs.Status) (string, int)
+	open       func(dir string) (vcs.Repository, error)
 }
 
 type Deps struct {
@@ -33,6 +35,7 @@ type Deps struct {
 	ProjectDir string
 	SkillsDir  string
 	Governance func(repo vcs.Repository, status vcs.Status) (block string, count int)
+	Open       func(dir string) (vcs.Repository, error)
 }
 
 func NewDispatcher(deps Deps) *Dispatcher {
@@ -50,6 +53,10 @@ func NewDispatcher(deps Deps) *Dispatcher {
 			return RunGovernanceCheck(repo, status, deps.Index, analysis.ScopeChanged)
 		}
 	}
+	open := deps.Open
+	if open == nil {
+		open = vcs.Open
+	}
 	return &Dispatcher{
 		templates:  deps.Templates,
 		logger:     deps.Logger,
@@ -60,6 +67,7 @@ func NewDispatcher(deps Deps) *Dispatcher {
 		projectDir: deps.ProjectDir,
 		skillsDir:  deps.SkillsDir,
 		governance: governance,
+		open:       open,
 	}
 }
 
@@ -92,4 +100,46 @@ func (disp *Dispatcher) warnMissingProjectDir(session *SessionTracker) {
 	if disp.logger != nil {
 		disp.logger.Warn(msg)
 	}
+}
+
+const StopGovernanceDeadline = 60 * time.Second
+
+type governanceResult struct {
+	block    string
+	count    int
+	timedOut bool
+}
+
+func (disp *Dispatcher) governanceWithin(
+	repo vcs.Repository,
+	status vcs.Status,
+	entered time.Time,
+) governanceResult {
+	// The host discards output past its timeout, so the budget runs from Stop entry.
+	remaining := StopGovernanceDeadline - time.Since(entered)
+	if remaining <= 0 {
+		return governanceResult{block: governanceTimeoutNotice(), timedOut: true}
+	}
+	done := make(chan governanceResult, 1)
+	// No context reaches the analysis: an expired run is abandoned to die with the process.
+	go func() {
+		block, count := disp.governance(repo, status)
+		done <- governanceResult{block: block, count: count}
+	}()
+	timer := time.NewTimer(remaining)
+	defer timer.Stop()
+	select {
+	case res := <-done:
+		return res
+	case <-timer.C:
+		return governanceResult{block: governanceTimeoutNotice(), timedOut: true}
+	}
+}
+
+func governanceTimeoutNotice() string {
+	return fmt.Sprintf(
+		"Governance did not finish within %ds; run `pulsarules_cli governance` "+
+			"before committing (the git hooks still check).\n",
+		int(StopGovernanceDeadline/time.Second),
+	)
 }
