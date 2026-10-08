@@ -16,24 +16,26 @@ const MaxTreeDepth = 50_000
 var errTooDeep = errors.New("syntax tree is nested too deeply")
 
 type collector struct {
-	text   string
-	lines  tsparse.Lines
-	isTest bool
-	out    syntax.File
-	frames []int
-	locals map[string]bool
-	depth  int
-	stop   bool
-	each   ast.Visitor
+	text    string
+	lines   tsparse.Lines
+	isTest  bool
+	factory *ast.NodeFactory
+	out     syntax.File
+	frames  []int
+	locals  map[string]bool
+	depth   int
+	stop    bool
+	each    ast.Visitor
 }
 
 type Options struct{ IsTest bool }
 
 func Collect(root *ast.SourceFile, text string, options Options) (syntax.File, error) {
 	coll := &collector{
-		text:   text,
-		lines:  tsparse.NewLines(text),
-		isTest: options.IsTest,
+		text:    text,
+		lines:   tsparse.NewLines(text),
+		isTest:  options.IsTest,
+		factory: ast.NewNodeFactory(ast.NodeFactoryHooks{}),
 	}
 	coll.each = func(child *ast.Node) bool {
 		coll.walk(child)
@@ -43,6 +45,7 @@ func Collect(root *ast.SourceFile, text string, options Options) (syntax.File, e
 	statements := node.Statements()
 	coll.locals = exportedLocals(statements)
 	coll.imports(statements)
+	coll.docStatements(statements, "")
 	node.ForEachChild(coll.each)
 	if coll.stop {
 		return syntax.File{}, errTooDeep
