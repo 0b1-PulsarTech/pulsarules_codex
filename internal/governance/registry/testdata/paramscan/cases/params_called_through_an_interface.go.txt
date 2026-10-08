@@ -1,0 +1,13 @@
+// dir: x
+// want: x run: params come from src.Params("text-markers"), not Context.Params
+// with: pass
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+type source interface{ Params(id string) pass.ParamSet }
+
+func run(ctx pass.Context) {
+	var src source = ctx
+	_ = src.Params("text-markers").Int("max_lines", 1)
+}

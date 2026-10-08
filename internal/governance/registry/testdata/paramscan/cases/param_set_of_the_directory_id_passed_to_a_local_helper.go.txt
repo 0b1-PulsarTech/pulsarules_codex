@@ -1,0 +1,12 @@
+// dir: x
+// want: clean
+// with: pass
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+func limit(params pass.ParamSet) int { return params.Int("max_lines", 0) }
+
+func run(ctx pass.Context) {
+	_ = limit(ctx.Params("file-size"))
+}

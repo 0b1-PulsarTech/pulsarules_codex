@@ -1,0 +1,15 @@
+// dir: x
+// want: analyzer "file-size" declares "max_lines", nothing reads it
+// want: x run: key is not a constant
+// with: pass
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+func run(params pass.ParamSet, ctx pass.Context) {
+	key := "max_lines"
+	if ctx == (pass.Context{}) {
+		key = "ghost"
+	}
+	params.Int(key, 1)
+}

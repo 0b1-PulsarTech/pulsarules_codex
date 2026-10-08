@@ -1,0 +1,12 @@
+// dir: x
+// want: analyzer "file-size" declares "max_lines", nothing reads it
+// want: x run: ctx is not a constant
+// want: x: a method expression reads Params
+// with: pass
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+func run(ctx pass.Context) {
+	_ = pass.Context.Params(ctx, "text-markers").Int("max_lines", 1)
+}

@@ -1,0 +1,10 @@
+// dir: x
+// want: clean
+// with: pass
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+const key = "max_lines"
+
+func run(params pass.ParamSet, ctx pass.Context) { params.Int(key, 1) }

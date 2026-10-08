@@ -1,0 +1,16 @@
+// dir: y
+// want: analyzer "file-size" declares "max_lines", nothing reads it
+// want: y run: a read in y is not attributable to one of [text-markers typo]
+// want: y: params are used outside a reader call: ctx.Params("typo")
+// want: y: params are used outside a reader call: shared
+// with: pass
+package y
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+var shared pass.ParamSet
+
+func run(ctx pass.Context) int {
+	shared = ctx.Params("typo")
+	return shared.Int("max_lines", 0)
+}

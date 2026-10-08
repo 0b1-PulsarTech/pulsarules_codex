@@ -1,0 +1,11 @@
+// dir: x
+// want: x: params are used outside a reader call: pass.ParamSet(raw)
+// with: pass
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+func limit(raw map[string]any) int {
+	params := pass.ParamSet(raw)
+	return params.Int("max_lines", 0)
+}

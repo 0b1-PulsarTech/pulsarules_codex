@@ -1,0 +1,14 @@
+// dir: x
+// want: x run: params come from get("text-markers"), not Context.Params
+// with: pass
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+func run(ctx pass.Context, get func(string) pass.ParamSet) {
+	params := ctx.Params("file-size")
+	if get != nil {
+		params = get("text-markers")
+	}
+	_ = params.Int("max_lines", 1)
+}

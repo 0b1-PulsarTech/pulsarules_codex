@@ -1,0 +1,13 @@
+// dir: x
+// want: x: ctx.Params("big-comment") names an analyzer outside [file-size] and no read is attributed to it
+// want: x: ctx.Params("text-markers") names an analyzer outside [file-size] and no read is attributed to it
+// with: pass
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+func run(ctx pass.Context) {
+	params := ctx.Params("big-comment")
+	params = ctx.Params("text-markers")
+	_ = params.Int("max_lines", 1)
+}

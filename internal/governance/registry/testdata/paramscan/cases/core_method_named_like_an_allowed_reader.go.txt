@@ -1,0 +1,12 @@
+// dir: pass
+// want: analyzer "file-size" declares "max_lines", nothing reads it
+// want: pass Severity: core reads params outside its modeled readers
+package pass
+
+type ParamSet struct{}
+
+func (ParamSet) Int(key string, fallback int) int { return fallback }
+
+type Other struct{}
+
+func (Other) Severity(params ParamSet) int { return params.Int("ghost", 1) }

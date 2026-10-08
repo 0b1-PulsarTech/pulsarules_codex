@@ -1,0 +1,9 @@
+// dir: x
+// want: analyzer "file-size" declares "ghost", nothing reads it
+// declared: file-size=max_lines,ghost
+// with: pass
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+func run(params pass.ParamSet, ctx pass.Context) { params.Int("max_lines", 1) }

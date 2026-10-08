@@ -1,0 +1,16 @@
+// dir: y
+// want: analyzer "text-markers" declares "k", nothing reads it
+// want: y: params are used outside a reader call: ctx.Params("typo")
+// declared: text-markers=k
+// with: pass
+package y
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+type reader interface{ Int(key string, fallback int) int }
+
+func get[T reader](values T) int { return values.Int("zzz", 0) }
+
+func run(ctx pass.Context) {
+	_ = get(ctx.Params("typo"))
+}

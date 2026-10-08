@@ -1,0 +1,14 @@
+// dir: x
+// want: analyzer "file-size" declares "max_lines", nothing reads it
+// want: analyzer "fresh" reads "extensions", not declared
+// with: pass
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+type fresh struct{}
+
+func (fresh) ID() string { return "fresh" }
+func run(params pass.ParamSet, ctx pass.Context) {
+	_ = pass.ExtensionFilter(ctx, fresh{}.ID(), nil)
+}

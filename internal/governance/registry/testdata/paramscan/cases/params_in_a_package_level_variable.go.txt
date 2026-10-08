@@ -1,0 +1,13 @@
+// dir: x
+// want: x: params are used outside a reader call: ctx.Params("file-size")
+// want: x: params are used outside a reader call: shared
+// with: pass
+package x
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+var shared pass.ParamSet
+
+func set(ctx pass.Context) { shared = ctx.Params("file-size") }
+
+func limit() int { return shared.Int("max_lines", 0) }

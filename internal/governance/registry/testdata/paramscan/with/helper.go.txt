@@ -1,0 +1,5 @@
+package helper
+
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+
+func Pass(pass.ParamSet) int { return 0 }
