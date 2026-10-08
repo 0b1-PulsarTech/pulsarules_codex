@@ -1,7 +1,7 @@
 ---
 id: dart-style
 name: Dart style
-description: Dart naming, three-group imports (dart:/external package:/workspace package:), const constructors on immutable value types, sealed hierarchies for closed variant sets, and no dynamic - Object? with one cast at the boundary instead.
+description: Dart naming, three-group imports (dart:/package:/relative), const constructors on immutable value types, sealed hierarchies for closed variant sets, and no dynamic - Object? with one cast at the boundary instead.
 tags:
     - dart
     - style
@@ -11,9 +11,9 @@ references:
 
 # Dart style
 
-> Dart naming (packages, files, identifiers), three-group imports, `const` constructors on immutable
-> value types, `sealed` hierarchies for a closed set of variants, and no `dynamic` anywhere -
-> `Object?` plus one cast at the boundary instead.
+> Dart naming (packages, files, identifiers), three-group imports (`dart:`, `package:`, relative),
+> `const` constructors on immutable value types, `sealed` hierarchies for a closed set of variants,
+> and no `dynamic` anywhere - `Object?` plus one cast at the boundary instead.
 
 Applies to: every `.dart` file in a project where Dart is the authorial language and a non-Dart shell
 (for example SvelteKit) only hosts it. The Dart analogue of [[effective-go]] and [[naming]].
@@ -31,10 +31,10 @@ Applies to: every `.dart` file in a project where Dart is the authorial language
    receives it performs exactly one cast (or a `switch`/`is` check) at the boundary where the value
    enters typed Dart, and every line past that boundary is fully typed.
 2. Group imports into three blocks, separated by one blank line, each block alphabetized: `dart:`
-   (standard library) first, external `package:` imports (pub.dev dependencies) second, this
-   workspace's own `package:` imports (the project's other packages) last. Multiple imports from the
-   same package stay together with no blank line between them; a different package starts a new line
-   in the same block, not a new block.
+   (standard library) first, every `package:` import (pub.dev dependencies and this workspace's own
+   packages alike) second, relative imports last. This is the order the `directives_ordering` lint
+   checks. Multiple imports from the same package stay together with no blank line between them; a
+   different package starts a new line in the same block, not a new block.
 3. Give an immutable value type a `const` constructor and mark the class `@immutable`. A type with no
    mutable field and no reason to allocate more than one identical instance is a `final class` with a
    `const` constructor, not a mutable one constructed fresh every time.
@@ -61,8 +61,8 @@ Applies to: every `.dart` file in a project where Dart is the authorial language
   package's own public API leaves no other spelling for a type argument, the call site is isolated in
   its own file with a comment naming the package constraint - it is never a default choice, and never
   spreads past that one call site.
-- An import block that mixes `dart:`/external `package:`/workspace `package:` origins in one
-  paragraph, skips the blank-line separation between them, or leaves a block unsorted.
+- An import block that mixes `dart:`, `package:` and relative origins in one paragraph, skips the
+  blank-line separation between them, or leaves a block unsorted.
 - A mutable class standing in for a value type that has no mutable field.
 - A payload-carrying enum, or an open (non-`sealed`) class hierarchy, used where a closed set of
   variants is meant; a `default` case on a `switch` over a `sealed` hierarchy.
@@ -72,8 +72,8 @@ Applies to: every `.dart` file in a project where Dart is the authorial language
 
 {{define "validation"}}
 - [ ] No `dynamic` in the diff; every runtime-typed value is `Object?` cast once at its boundary.
-- [ ] Imports are three blank-line-separated, alphabetized groups: `dart:`, external `package:`,
-  workspace `package:`.
+- [ ] Imports are three blank-line-separated, alphabetized groups: `dart:`, then all `package:`,
+  then relative.
 - [ ] Immutable value types are `@immutable` with a `const` constructor.
 - [ ] A closed variant set is `sealed`, every variant `final`, every `switch` over it exhaustive with
   no `default`.
