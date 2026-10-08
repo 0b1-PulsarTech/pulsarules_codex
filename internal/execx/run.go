@@ -48,7 +48,9 @@ func Run(ctx context.Context, cmd Command) (Result, error) {
 	runCtx, cancel := boundedContext(ctx, cmd.Timeout)
 	defer cancel()
 
-	//nolint:gosec // G204: fixed subcommands built by callers, not user-controlled.
+	// The name and args come from this codebase's own callers (git, golangci-lint,
+	// gopls) or from a project's own delegated command list, run without a shell.
+	//nolint:gosec // G204: no shell; callers pass fixed subcommands or the project's own list.
 	execCmd := exec.CommandContext(runCtx, cmd.Name, cmd.Args...)
 	execCmd.Dir = cmd.Dir
 	const ioWaitGrace = 5 * time.Second

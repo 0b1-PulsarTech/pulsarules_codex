@@ -61,6 +61,15 @@ func delegationSpecs() []analyzerSpec {
 			},
 			gate: GateFullOnly,
 		},
+		{
+			id: command.AnalyzerID,
+			build: func(
+				index *knowledge.Index, _ *core.LanguageRegistry, _ vcs.Repository,
+			) core.Analyzer {
+				return command.NewAnalyzer(index)
+			},
+			gate: GateFullOnly,
+		},
 	}
 }
 

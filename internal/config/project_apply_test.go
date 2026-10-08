@@ -64,6 +64,9 @@ func checkScalars(t *testing.T, cfg *GovernanceConfig) {
 	if !reflect.DeepEqual(cfg.TestGlobs, []string{"web/test/**"}) {
 		t.Errorf("TestGlobs = %v", cfg.TestGlobs)
 	}
+	if len(cfg.Delegated) != 1 || cfg.Delegated[0].ID != "dart-analyze" {
+		t.Errorf("Delegated = %+v", cfg.Delegated)
+	}
 }
 
 func checkAnalyzers(t *testing.T, cfg *GovernanceConfig) {

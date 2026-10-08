@@ -113,7 +113,7 @@ func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
 				static,
 				[]string{"branch-name"},
 				arch,
-				[]string{"golangci-lint"},
+				[]string{"golangci-lint", "delegated-command"},
 				tail,
 			),
 		},

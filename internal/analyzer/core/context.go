@@ -83,6 +83,7 @@ type AnalysisConfig struct {
 	IncludeGenerated bool
 	TestGlobs        []string
 	Overrides        []Override
+	Delegated        []DelegatedCommand
 }
 
 type Override struct {
@@ -93,6 +94,11 @@ type Override struct {
 type OverrideConfig struct {
 	Enabled  *bool
 	Severity string
+}
+
+type DelegatedCommand struct {
+	ID, Dir, Format, Rule string
+	Run                   []string
 }
 
 type AnalyzerConfig struct {

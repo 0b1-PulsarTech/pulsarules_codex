@@ -12,6 +12,7 @@ type GovernanceConfig struct {
 	Severities       map[string]string
 	TestGlobs        []string
 	Overrides        []core.Override
+	Delegated        []core.DelegatedCommand
 }
 
 type AnalyzerConfig struct {
