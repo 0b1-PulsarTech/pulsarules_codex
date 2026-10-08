@@ -262,18 +262,21 @@ failing, since a hook must never block the agent's turn) and routes it to a per-
 (`session-start`, `pre-edit`, `post-edit`, `pre-search`, `user-prompt`, `stop`, `subagent-start`,
 `session-end`). It always returns nil; failures surface only through the optional `*slog.Logger`.
 `Router.SkillsForFile` resolves which skills a `post-edit` event should announce from
-`knowledge.Index`'s own `skills.yaml`/`router.yaml` data (the always-load baseline for `.go` files,
-any skill whose trigger names the file's extension, the "Any test work" dispatch row for `_test.go`
-files) instead of a hardcoded per-extension map, so a new skill trigger routes with no Go change.
-`SessionTracker` (`session.go`) writes per-session marker files under the OS temp dir, keyed by
-event and session ID (an ID that is not a plain token is hashed first), so `OncePerSession` and
-content-hashed `FirstEmission` deduplicate repeat emissions within one session; `Cleanup` scans and
-removes them at `session-end`. The `checklist` subpackage's `Typed` builds the per-extension
-post-edit checklist bullets from the worktree status, and `checks.go`'s `RunGovernanceCheck` is what
-the `stop` handler calls into the governance pipeline through: it opens a `Session`, runs it over
-the changed files at the scope the caller passes (the `Stop` hook passes `analysis.ScopeChanged`),
-and formats findings with `analysis.StyleHook`. `drift.go` runs once per session at `session-start`:
-it compares `knowledge.Fingerprint()` (the digest of the standards the binary embeds, see
+`knowledge.Index`'s own `skills.yaml`/`router.yaml` data (the always-load baseline entries that fit
+the edited file's language, any skill whose trigger names its extension, the test dispatch rows
+fitting Go for `_test.go` files) instead of a hardcoded per-extension map, so a new skill trigger
+routes with no Go change. `SessionTracker` (`session.go`) writes per-session marker files under the
+OS temp dir, keyed by event and session ID (an ID that is not a plain token is hashed first), so
+`OncePerSession` and content-hashed `FirstEmission` deduplicate repeat emissions within one session;
+`Cleanup` scans and removes them at `session-end`. The `checklist` subpackage's `Typed` builds the
+per-extension post-edit checklist bullets from the worktree status, and `checks.go`'s
+`RunGovernanceCheck` is what the `stop` handler calls into the governance pipeline through: it opens
+a `Session`, runs it over the changed files at the scope the caller passes (the `Stop` hook passes
+`analysis.ScopeChanged`), and formats findings with `analysis.StyleHook`. `Router.Routes` gates
+`pre-edit` and `post-edit`: a `.go` file, or one a skill trigger names by extension; the baseline
+alone never fires them for a Dart or TypeScript file. The post-edit verify line names Go commands
+only for a `.go` file. `drift.go` runs once per session at `session-start`: it compares
+`knowledge.Fingerprint()` (the digest of the standards the binary embeds, see
 `knowledge/fingerprint.go`) against the project's `knowledge/` tree on disk and warns when the
 binary trails the source it was built from. This is a guard for the development repo itself - a
 consumer project has no `knowledge/` tree and stays silent.

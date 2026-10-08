@@ -23,10 +23,11 @@ import (
 
 func hookTemplates() fstest.MapFS {
 	return fstest.MapFS{
-		"hooks/contract.txt":      {Data: []byte("contract text\n")},
-		"hooks/contract-tail.txt": {Data: []byte("commit tail text\n")},
-		"hooks/pre-edit.txt":      {Data: []byte("pre-edit reminder text\n")},
-		"hooks/post-edit.txt":     {Data: []byte("post-edit generic reminder\n")},
+		"hooks/contract.txt":        {Data: []byte("contract text\n")},
+		"hooks/contract-tail.txt":   {Data: []byte("commit tail text\n")},
+		"hooks/pre-edit.txt":        {Data: []byte("pre-edit reminder text\n")},
+		"hooks/post-edit.txt":       {Data: []byte("post-edit generic reminder\n")},
+		"hooks/post-edit-other.txt": {Data: []byte("post-edit non-go reminder\n")},
 		"hooks/post-edit-checklist.txt.tmpl": {Data: []byte(
 			"checklist for {{.BaseName}}:\n" +
 				"{{range .SkillIDs}}  - {{.}}\n{{end -}}" +
@@ -377,6 +378,40 @@ func TestDispatchPostEdit_ExplicitSkillsDir(t *testing.T) {
 			ctx := extractContext(t, out.String())
 			if !strings.Contains(ctx, testCase.wantContains) {
 				t.Errorf("output missing %q:\n%s", testCase.wantContains, ctx)
+			}
+		})
+	}
+}
+
+func TestDispatchPostEdit_NonGoFallback(t *testing.T) {
+	t.Parallel()
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	disp, out := dispatchCapture(Deps{Index: idx, SkillsDir: t.TempDir()})
+	_ = disp.Dispatch("post-edit", postEditPayload(t, "query.sql", uniqueSessionID(t)))
+	ctx := extractContext(t, out.String())
+	if !strings.Contains(ctx, "post-edit non-go reminder") {
+		t.Errorf("expected the non-Go reminder, got %q", ctx)
+	}
+}
+
+func TestDispatchPostEdit_SilentForTSAndJS(t *testing.T) {
+	t.Parallel()
+
+	skillsDir := t.TempDir()
+	for _, id := range []string{"dart-style", "ts-errors", "domain-hygiene", "code-minimalism"} {
+		installSkillFixture(t, skillsDir, id)
+	}
+	for _, filePath := range []string{"src/x.ts", "src/X.tsx", "src/x.js"} {
+		t.Run(filePath, func(t *testing.T) {
+			t.Parallel()
+			disp, out := dispatchCapture(Deps{Index: preEditIndex(t), SkillsDir: skillsDir})
+			_ = disp.Dispatch("post-edit", postEditPayload(t, filePath, uniqueSessionID(t)))
+			if strings.TrimSpace(out.String()) != "" {
+				t.Errorf("post-edit %s: output %q, want silence", filePath, out.String())
 			}
 		})
 	}

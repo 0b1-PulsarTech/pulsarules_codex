@@ -97,3 +97,30 @@ func (idx *Index) SkillsOrdered() []Skill {
 	})
 	return ordered
 }
+
+func (idx *Index) BaselineFor(languages ...string) []string {
+	if idx == nil {
+		return nil
+	}
+	var ids []string
+	for _, entry := range idx.Router.Baseline.Always {
+		if idx.Fits(entry.Skill, languages...) {
+			ids = append(ids, entry.Skill)
+		}
+	}
+	return ids
+}
+
+func (idx *Index) Fits(id string, languages ...string) bool {
+	for _, skill := range idx.Skills {
+		if skill.ID != id {
+			continue
+		}
+		// A skill with no languages is neutral and fits every project.
+		return len(skill.Languages) == 0 ||
+			slices.ContainsFunc(skill.Languages, func(own string) bool {
+				return slices.Contains(languages, own)
+			})
+	}
+	return true
+}

@@ -28,20 +28,57 @@ func (router *Router) SkillsForFile(filePath string) []string {
 	}
 
 	var ids []string
-	if ext == ".go" {
-		for _, entry := range router.index.Router.Baseline.Always {
-			ids = append(ids, entry.Skill)
-		}
+	if languages := fileLanguages(ext); len(languages) > 0 {
+		ids = append(ids, router.index.BaselineFor(languages...)...)
 	}
+	ids = append(ids, router.triggered(filePath, ext)...)
+	return slicesx.Dedupe(ids)
+}
+
+func (router *Router) Routes(filePath string) bool {
+	if router == nil || router.index == nil {
+		return false
+	}
+	ext := strings.ToLower(filepath.Ext(filePath))
+	if ext == "" {
+		return false
+	}
+	// A Go file, or one a skill names by extension; the baseline alone never makes a
+	// Dart or TS file noisy.
+	if ext == ".go" && len(router.index.Router.Baseline.Always) > 0 {
+		return true
+	}
+	return len(router.triggered(filePath, ext)) > 0
+}
+
+func (router *Router) triggered(filePath, ext string) []string {
+	var ids []string
 	for _, skill := range router.index.Skills {
 		if triggersName(skill.Triggers, ext) {
 			ids = append(ids, skill.ID)
 		}
 	}
 	if strings.HasSuffix(strings.ToLower(filePath), "_test.go") {
-		ids = append(ids, router.dispatchSkills("test")...)
+		for _, id := range router.dispatchSkills("test") {
+			// The word also matches the _test.dart row, whose skills a Go test must not list.
+			if router.index.Fits(id, "go") {
+				ids = append(ids, id)
+			}
+		}
 	}
-	return slicesx.Dedupe(ids)
+	return ids
+}
+
+func fileLanguages(ext string) []string {
+	switch ext {
+	case ".go":
+		return []string{"go"}
+	case ".dart":
+		return []string{"dart"}
+	case ".svelte":
+		return []string{"svelte"}
+	}
+	return nil
 }
 
 func (router *Router) dispatchSkills(keyword string) []string {

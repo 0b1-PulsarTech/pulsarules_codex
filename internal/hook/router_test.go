@@ -12,9 +12,25 @@ import (
 func fakeRouterIndex() *knowledge.Index {
 	return &knowledge.Index{
 		Skills: []knowledge.Skill{
-			{ID: "go-style", Triggers: []string{"writing or editing any .go file"}},
-			{ID: "errors-logging", Triggers: []string{"returning / wrapping / mapping an error"}},
-			{ID: "code-placement", Triggers: []string{"deciding where a file or package belongs"}},
+			{
+				ID:        "go-style",
+				Languages: []string{"go"},
+				Triggers:  []string{"writing or editing any .go file"},
+			},
+			{
+				ID:        "errors-logging",
+				Languages: []string{"go"},
+				Triggers:  []string{"returning / wrapping / mapping an error"},
+			},
+			{
+				ID:        "code-placement",
+				Languages: []string{"go"},
+				Triggers:  []string{"deciding where a file or package belongs"},
+			},
+			{ID: "dart-style", Languages: []string{"dart"}},
+			{ID: "dart-errors", Languages: []string{"dart"}},
+			{ID: "dart-testing", Languages: []string{"dart"}},
+			{ID: "ts-errors", Languages: []string{"typescript", "javascript", "svelte"}},
 			{
 				ID:       "code-minimalism",
 				Triggers: []string{"writing or editing any function/method body"},
@@ -32,10 +48,14 @@ func fakeRouterIndex() *knowledge.Index {
 					{Skill: "errors-logging"},
 					{Skill: "code-placement"},
 					{Skill: "code-minimalism"},
+					{Skill: "dart-style"},
+					{Skill: "dart-errors"},
+					{Skill: "ts-errors"},
 				},
 			},
 			Dispatch: []knowledge.RouterDispatchRow{
 				{Signal: "Any test work", Skills: []string{"integration-tests"}},
+				{Signal: "Writing or editing a _test.dart file", Skills: []string{"dart-testing"}},
 			},
 		},
 	}
@@ -59,6 +79,11 @@ func TestRouterSkillsForFile(t *testing.T) {
 			"pkg/foo_test.go",
 			append(goBaseline(), "integration-tests"),
 		},
+		{
+			"dart file routes the Dart baseline", "lib/a.dart",
+			[]string{"code-minimalism", "dart-style", "dart-errors"},
+		},
+		{"svelte file routes ts-errors", "src/A.svelte", []string{"code-minimalism", "ts-errors"}},
 		{"sql file routes database-persistence", "query.sql", []string{"database-persistence"}},
 		{"unmatched extension routes nothing", "README.md", nil},
 		{"extensionless file routes nothing", "Makefile", nil},
@@ -70,6 +95,35 @@ func TestRouterSkillsForFile(t *testing.T) {
 			got := router.SkillsForFile(testCase.filePath)
 			if !sameSet(got, testCase.want) {
 				t.Fatalf("SkillsForFile(%q) = %v, want %v", testCase.filePath, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestRouterRoutes(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		router   *Router
+		filePath string
+		want     bool
+	}{
+		{"go file", NewRouter(fakeRouterIndex()), "pkg/foo.go", true},
+		{"sql file", NewRouter(fakeRouterIndex()), "query.sql", true},
+		{"ts file has no trigger", NewRouter(fakeRouterIndex()), "src/a.ts", false},
+		{"dart file has no trigger", NewRouter(fakeRouterIndex()), "lib/a.dart", false},
+		{"markdown", NewRouter(fakeRouterIndex()), "README.md", false},
+		{"extensionless file", NewRouter(fakeRouterIndex()), "Makefile", false},
+		{"go file with no baseline", NewRouter(&knowledge.Index{}), "pkg/foo.go", false},
+		{"nil index", NewRouter(nil), "pkg/foo.go", false},
+		{"nil router", nil, "pkg/foo.go", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := testCase.router.Routes(testCase.filePath); got != testCase.want {
+				t.Fatalf("Routes(%q) = %v, want %v", testCase.filePath, got, testCase.want)
 			}
 		})
 	}
