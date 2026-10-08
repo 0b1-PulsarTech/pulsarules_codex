@@ -87,7 +87,7 @@ func summarizeCases() []summarizeCase {
 		},
 		{
 			name: "syntax error becomes a parse error", path: "bad.go", body: "package\n",
-			wantParse: "file has no syntax tree",
+			wantParse: "parse bad.go: bad.go:1:9: expected 'IDENT', found 'EOF'",
 		},
 		{
 			name: "unreadable source becomes a parse error", path: "gone.go", unread: true,

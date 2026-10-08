@@ -2,6 +2,7 @@ package astcache
 
 import (
 	"go/token"
+	"strings"
 	"testing"
 )
 
@@ -81,5 +82,41 @@ func TestFileSetShared(t *testing.T) {
 	})
 	if count == 0 {
 		t.Fatal("FileSet has no files")
+	}
+}
+
+func TestErr(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		path    string
+		src     string
+		parse   bool
+		wantErr string
+	}{
+		{
+			name: "parse failure is kept", path: "bad.go", src: "package\n",
+			parse: true, wantErr: "parse bad.go: ",
+		},
+		{name: "parsed file has none", path: "ok.go", src: "package ok\n", parse: true},
+		{name: "unknown path has none", path: "never.go"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			cache := New()
+			if testCase.parse {
+				_, _ = cache.Parse(testCase.path, []byte(testCase.src))
+			}
+			err := cache.Err(testCase.path)
+			if (err == nil) != (testCase.wantErr == "") {
+				t.Fatalf("Err = %v, want prefix %q", err, testCase.wantErr)
+			}
+			if err != nil && !strings.HasPrefix(err.Error(), testCase.wantErr) {
+				t.Fatalf("Err = %q, want prefix %q", err, testCase.wantErr)
+			}
+		})
 	}
 }
