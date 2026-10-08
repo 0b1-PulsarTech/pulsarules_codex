@@ -2,8 +2,6 @@ package host
 
 import (
 	"encoding/json"
-	"errors"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -166,51 +164,46 @@ func TestOpencodeInstall_PluginBackup(t *testing.T) {
 	}
 }
 
+type opencodeConfig struct {
+	Instructions []string `json:"instructions"`
+	Skills       struct {
+		Paths []string `json:"paths"`
+	} `json:"skills"`
+}
+
+func readOpencodeConfig(tb testing.TB, configPath string) opencodeConfig {
+	tb.Helper()
+	raw, err := os.ReadFile(configPath) //nolint:gosec // test fixture.
+	if err != nil {
+		tb.Fatalf("read opencode.json: %v", err)
+	}
+	var config opencodeConfig
+	if err = json.Unmarshal(raw, &config); err != nil {
+		tb.Fatalf("parse opencode.json: %v", err)
+	}
+	return config
+}
+
 func TestOpencodeInstall_LegacyAgents(t *testing.T) {
 	t.Parallel()
 
 	base := t.TempDir()
-	legacyDir := filepath.Join(base, ".opencode")
-	if err := os.MkdirAll(legacyDir, 0o750); err != nil {
-		t.Fatalf("mkdir .opencode: %v", err)
-	}
 	legacyContent := "# AGENTS.md - demo\n\n## Mandatory routing contract\n\nopencode has no " +
 		"SessionStart hook, so this contract is stated here instead: ...\n"
-	legacyPath := filepath.Join(legacyDir, "AGENTS.md")
-	if err := os.WriteFile(legacyPath, []byte(legacyContent), 0o600); err != nil {
-		t.Fatalf("seed legacy AGENTS.md: %v", err)
-	}
-	seedConfig := `{"instructions": [".opencode/AGENTS.md", ".opencode/skills/*/SKILL.md"]}`
+	legacyPath := filepath.Join(base, ".opencode", "AGENTS.md")
+	seedFile(t, legacyPath, legacyContent)
 	configPath := filepath.Join(base, "opencode.json")
-	if err := os.WriteFile(configPath, []byte(seedConfig), 0o600); err != nil {
-		t.Fatalf("seed opencode.json: %v", err)
-	}
+	seedConfig := `{"instructions": [".opencode/AGENTS.md", ".opencode/skills/*/SKILL.md"]}`
+	seedFile(t, configPath, seedConfig)
 
 	ctx := newTestContext(t, base, []string{"go-style"})
 	if _, err := (opencodeTarget{}).Install(ctx); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
-	if _, statErr := os.Stat(legacyPath); !errors.Is(statErr, fs.ErrNotExist) {
-		t.Errorf("expected legacy %q to be retired, stat err = %v", legacyPath, statErr)
-	}
-	if _, statErr := os.Stat(filepath.Join(base, "AGENTS.md")); statErr != nil {
-		t.Errorf("expected root AGENTS.md to exist: %v", statErr)
-	}
-
-	raw, err := os.ReadFile(configPath) //nolint:gosec // test fixture.
-	if err != nil {
-		t.Fatalf("read opencode.json: %v", err)
-	}
-	var config struct {
-		Instructions []string `json:"instructions"`
-		Skills       struct {
-			Paths []string `json:"paths"`
-		} `json:"skills"`
-	}
-	if err = json.Unmarshal(raw, &config); err != nil {
-		t.Fatalf("parse opencode.json: %v", err)
-	}
+	assertMissing(t, legacyPath)
+	assertPresent(t, filepath.Join(base, "AGENTS.md"))
+	config := readOpencodeConfig(t, configPath)
 	if slices.Contains(config.Instructions, ".opencode/AGENTS.md") {
 		t.Errorf("legacy instructions entry survived: %v", config.Instructions)
 	}
@@ -220,19 +213,15 @@ func TestOpencodeInstall_LegacyAgents(t *testing.T) {
 	if !slices.Contains(config.Skills.Paths, opencode.SkillsSubdir) {
 		t.Errorf("skills.paths missing %q, got %v", opencode.SkillsSubdir, config.Skills.Paths)
 	}
-	count := 0
-	for _, entry := range config.Instructions {
-		if entry == "AGENTS.md" {
-			count++
-		}
+	if count := countEntry(config.Instructions, "AGENTS.md"); count != 1 {
+		t.Errorf("AGENTS.md entry appears %d times, want 1: %v", count, config.Instructions)
 	}
-	if count != 1 {
-		t.Errorf(
-			"AGENTS.md instructions entry appears %d times, want 1: %v",
-			count,
-			config.Instructions,
-		)
-	}
+}
+
+func countEntry(entries []string, want string) int {
+	return len(slices.DeleteFunc(slices.Clone(entries), func(entry string) bool {
+		return entry != want
+	}))
 }
 
 func TestOpencodeTargetUninstall(t *testing.T) {
@@ -245,47 +234,21 @@ func TestOpencodeTargetUninstall(t *testing.T) {
 		t.Fatalf("Install: %v", err)
 	}
 	skillDoc := filepath.Join(base, ".opencode", "skills", "go-style", "SKILL.md")
-	if _, statErr := os.Stat(skillDoc); statErr != nil {
-		t.Fatalf("Install did not write %q: %v", skillDoc, statErr)
-	}
+	requirePresent(t, skillDoc)
 	agentsDoc := filepath.Join(base, "AGENTS.md")
-	if _, statErr := os.Stat(agentsDoc); statErr != nil {
-		t.Fatalf("Install did not write %q: %v", agentsDoc, statErr)
-	}
+	requirePresent(t, agentsDoc)
 
 	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
 	report, err := (opencodeTarget{}).Uninstall(uctx)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
-	if _, statErr := os.Stat(skillDoc); !errors.Is(statErr, fs.ErrNotExist) {
-		t.Errorf("expected %q to be removed, stat err = %v", skillDoc, statErr)
-	}
-	if _, statErr := os.Stat(agentsDoc); !errors.Is(statErr, fs.ErrNotExist) {
-		t.Errorf("expected %q to be removed, stat err = %v", agentsDoc, statErr)
-	}
-	if _, statErr := os.Stat(
-		filepath.Join(base, ".opencode", "plugins"),
-	); !errors.Is(
-		statErr,
-		fs.ErrNotExist,
-	) {
-		t.Errorf("expected the plugin dir to be removed, stat err = %v", statErr)
-	}
-	if !slices.ContainsFunc(report.Notes, func(note string) bool {
-		return strings.Contains(note, "unwired")
-	}) {
-		t.Errorf("Notes missing an 'unwired' entry: %v", report.Notes)
-	}
-	if !slices.ContainsFunc(report.Notes, func(note string) bool {
-		return strings.Contains(note, "removed opencode governance plugin")
-	}) {
-		t.Errorf("Notes missing the plugin removal note: %v", report.Notes)
-	}
-	opencodeDir := filepath.Join(base, ".opencode")
-	if _, statErr := os.Stat(opencodeDir); !errors.Is(statErr, fs.ErrNotExist) {
-		t.Errorf("expected %q to be reaped once empty, stat err = %v", opencodeDir, statErr)
-	}
+	assertMissing(t, skillDoc)
+	assertMissing(t, agentsDoc)
+	assertMissing(t, filepath.Join(base, ".opencode", "plugins"))
+	assertNote(t, report.Notes, "unwired")
+	assertNote(t, report.Notes, "removed opencode governance plugin")
+	assertMissing(t, filepath.Join(base, ".opencode"))
 
 	if _, err = (opencodeTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("second Uninstall: %v", err)

@@ -1,6 +1,11 @@
 package host
 
 import (
+	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
@@ -43,5 +48,43 @@ func TestReport_NoteAndWarn(t *testing.T) {
 	}
 	if len(report.Warnings) != 1 || report.Warnings[0] != "skipped: y" {
 		t.Fatalf("Warnings = %v, want [skipped: y]", report.Warnings)
+	}
+}
+
+func seedFile(tb testing.TB, filePath, content string) {
+	tb.Helper()
+	if err := os.MkdirAll(filepath.Dir(filePath), 0o750); err != nil {
+		tb.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filePath, []byte(content), 0o600); err != nil {
+		tb.Fatalf("seed %q: %v", filePath, err)
+	}
+}
+
+func assertPresent(tb testing.TB, filePath string) {
+	tb.Helper()
+	if _, err := os.Stat(filePath); err != nil {
+		tb.Errorf("expected %q to exist, stat err = %v", filePath, err)
+	}
+}
+
+func requirePresent(tb testing.TB, filePath string) {
+	tb.Helper()
+	if _, err := os.Stat(filePath); err != nil {
+		tb.Fatalf("expected %q to exist, stat err = %v", filePath, err)
+	}
+}
+
+func assertMissing(tb testing.TB, filePath string) {
+	tb.Helper()
+	if _, err := os.Stat(filePath); !errors.Is(err, fs.ErrNotExist) {
+		tb.Errorf("expected %q to be absent, stat err = %v", filePath, err)
+	}
+}
+
+func assertNote(tb testing.TB, entries []string, substr string) {
+	tb.Helper()
+	if !strings.Contains(strings.Join(entries, "\n"), substr) {
+		tb.Errorf("entries = %v, want one containing %q", entries, substr)
 	}
 }
