@@ -8,7 +8,7 @@ Usage:
   pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
   pulsarules_cli package [--root DIR] [--out FILE]
   pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-  pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit|changed] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
+  pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit|changed] [--config PATH] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
   pulsarules_cli clean [--project DIR] [--write]
   pulsarules_cli evals --artifact FILE [--scenario ID]
   pulsarules_cli hook <mode>
@@ -52,6 +52,13 @@ pre-commit hooks for fast checks.
 Flags must come before a positional argument: parsing stops at the first one, so
 `pulsarules_cli list --root DIR rules` honors --root and `list rules --root DIR`
 silently ignores it.
+
+--config names the project config file that turns analyzers on or off, sets their
+params and severity, scopes both to path globs and declares delegated commands.
+Without it, <project>/.pulsarules.yaml is used when present. An unknown key or
+param is an error, and an invalid file fails governance and the hooks. Precedence:
+built-ins, preset (--preset, else the file's, else recommended), the file, then
+the flags.
 
 --golangci-config overrides the golangci-lint config discovery path. When unset,
 the runner searches the project root, tools/, and build/ directories for

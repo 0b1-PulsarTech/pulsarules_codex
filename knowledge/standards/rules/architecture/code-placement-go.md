@@ -48,11 +48,11 @@ Applies to: a single-module Go project (one root `go.mod`). Composes with [[code
 6. Repositories export nothing beyond their constructor; non-API code stays under `internal/`, which
    the compiler enforces as the boundary (see [[code-placement]]).
 7. Register every new package's module in the root `go.mod`.
-8. Go enforcement of [[code-placement]] #5: `package-file-count` (default 10 in code; no
-   project-config surface yet). Not counted: generated files, an ent schema directory (a strict
-   majority of files embedding `ent.Schema`), files excluded by a `//go:build ignore` constraint,
-   files whose name starts with `_` or `.`, files of the minority package in a directory, and
-   directories Go ignores.
+8. Go enforcement of [[code-placement]] #5: `package-file-count` (default 10; `max_files` and
+   `exempt` are configurable in `.pulsarules.yaml`). Not counted: generated files, an ent schema
+   directory (a strict majority of files embedding `ent.Schema`), files excluded by a
+   `//go:build ignore` constraint, files whose name starts with `_` or `.`, files of the minority
+   package in a directory, and directories Go ignores.
 {{end}}
 
 {{define "forbidden"}}

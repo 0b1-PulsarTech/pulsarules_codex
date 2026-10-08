@@ -115,8 +115,14 @@ func bindGovernanceFlags(fs *flag.FlagSet, opts *Options) {
 	fs.StringVar(
 		&opts.Preset,
 		"preset",
-		"recommended",
-		"analyzer preset (recommended|strict|minimal)",
+		"",
+		"analyzer preset (recommended|strict|minimal); wins over the project config file",
+	)
+	fs.StringVar(
+		&opts.Config,
+		"config",
+		"",
+		"path to the project config file (default: <project>/.pulsarules.yaml if present)",
 	)
 	fs.StringVar(&opts.Scope, "scope", "full", "analysis scope (full|commit|changed)")
 	fs.StringVar(

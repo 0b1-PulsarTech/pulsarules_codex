@@ -75,3 +75,85 @@ func writeFile(t *testing.T, dir, name, content string) {
 		t.Fatalf("write %s: %v", name, err)
 	}
 }
+
+func runDirtyCheck(t *testing.T, configYAML string) (string, int) {
+	t.Helper()
+
+	dir := t.TempDir()
+	gitInit(t, dir)
+	writeFile(t, dir, "hand.go", "package demo\n\n// c \u2014 d\n")
+	if configYAML != "" {
+		writeFile(t, dir, ".pulsarules.yaml", configYAML)
+	}
+	repo, err := vcs.Open(dir)
+	if err != nil {
+		t.Fatalf("vcs.Open: %v", err)
+	}
+	status, err := repo.WorktreeStatus()
+	if err != nil {
+		t.Fatalf("WorktreeStatus: %v", err)
+	}
+	return RunGovernanceCheck(repo, status, nil, governance.ScopeChanged)
+}
+
+type projectConfigCase struct {
+	name       string
+	configYAML string
+	wantCount  int
+	wantConfig string
+	wantHand   bool
+}
+
+func projectConfigCases() []projectConfigCase {
+	return []projectConfigCase{
+		{"no file is unchanged", "", 1, "", true},
+		{
+			"valid file is applied",
+			"version: 1\nanalyzers: {typographic-markers: {enabled: false}}\n",
+			0, "", false,
+		},
+		{
+			"unknown key is one error and others still run",
+			"version: 1\nbogus: 1\n",
+			2, "line 2: bogus: unknown key", true,
+		},
+		{
+			"second document is one error",
+			"version: 1\n---\nversion: 1\n",
+			2, "only one YAML document is allowed", true,
+		},
+		{
+			"widening override is one error",
+			"version: 1\nanalyzers: {file-size: {enabled: false}}\n" +
+				"overrides: [{files: [a], analyzers: {file-size: {enabled: true}}}]\n",
+			2, "an override can only narrow it", true,
+		},
+	}
+}
+
+func TestRunGovernanceCheck_ProjectConfig(t *testing.T) {
+	t.Parallel()
+
+	for _, testCase := range projectConfigCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			block, count := runDirtyCheck(t, testCase.configYAML)
+			if count != testCase.wantCount {
+				t.Fatalf("count = %d, want %d:\n%s", count, testCase.wantCount, block)
+			}
+			wantErrors := 0
+			if testCase.wantConfig != "" {
+				wantErrors = 1
+			}
+			if got := strings.Count(block, "[error] config:"); got != wantErrors {
+				t.Errorf("config errors = %d, want %d:\n%s", got, wantErrors, block)
+			}
+			if !strings.Contains(block, testCase.wantConfig) {
+				t.Errorf("block lacks %q:\n%s", testCase.wantConfig, block)
+			}
+			if strings.Contains(block, "hand.go") != testCase.wantHand {
+				t.Errorf("hand.go finding wanted = %v:\n%s", testCase.wantHand, block)
+			}
+		})
+	}
+}

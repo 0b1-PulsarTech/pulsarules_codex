@@ -34,6 +34,7 @@ type Options struct {
 	Preset           string
 	Scope            string
 	GolangciConfig   string
+	Config           string
 	AllFiles         bool
 	IncludeGenerated bool
 
