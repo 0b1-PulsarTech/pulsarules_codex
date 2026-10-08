@@ -66,3 +66,20 @@ func TestDelegatedFormats(t *testing.T) {
 		t.Fatalf("DelegatedFormats() = %v, want dart-analyze-json", DelegatedFormats())
 	}
 }
+
+func TestInternalIDs(t *testing.T) {
+	t.Parallel()
+
+	listed := InternalIDs()
+	for _, spec := range specs() {
+		if got := slices.Contains(listed, spec.id); got != spec.internal {
+			t.Errorf("%q: listed = %v, internal flag = %v", spec.id, got, spec.internal)
+		}
+	}
+	want := []string{"rule-injection", "output", "delegated-command"}
+	slices.Sort(want)
+	slices.Sort(listed)
+	if !slices.Equal(listed, want) {
+		t.Fatalf("InternalIDs() = %v, want %v", listed, want)
+	}
+}

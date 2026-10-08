@@ -44,9 +44,19 @@ func pipelineSpecs() []analyzerSpec {
 			) pass.Analyzer {
 				return rulesummary.NewAnalyzer(index)
 			},
-			gate: GateStatic,
+			gate:     GateStatic,
+			internal: true,
 		},
-		staticSpec("output", output.NewAnalyzer),
+		{
+			id: "output",
+			build: func(
+				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
+			) pass.Analyzer {
+				return output.NewAnalyzer()
+			},
+			gate:     GateStatic,
+			internal: true,
+		},
 	})
 }
 
@@ -68,7 +78,8 @@ func delegationSpecs() []analyzerSpec {
 			) pass.Analyzer {
 				return command.NewAnalyzer(index)
 			},
-			gate: GateFullOnly,
+			gate:     GateFullOnly,
+			internal: true,
 		},
 	}
 }
