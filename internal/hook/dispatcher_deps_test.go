@@ -187,34 +187,34 @@ func governanceCases() []governanceCase {
 	return []governanceCase{
 		{
 			name: "a run that never returns", neverReturns: true,
-			wantBlock: notice, wantElapsed: stopGovernanceDeadline,
+			wantBlock: notice, wantElapsed: StopGovernanceDeadline,
 		},
 		{
 			name:      "a run one second past the deadline",
-			delay:     stopGovernanceDeadline + time.Second,
-			wantBlock: notice, wantElapsed: stopGovernanceDeadline,
+			delay:     StopGovernanceDeadline + time.Second,
+			wantBlock: notice, wantElapsed: StopGovernanceDeadline,
 		},
 		{
-			name: "findings just before the deadline", delay: stopGovernanceDeadline - time.Second,
+			name: "findings just before the deadline", delay: StopGovernanceDeadline - time.Second,
 			wantBlock: "\nfindings", wantCount: 2,
-			wantElapsed: stopGovernanceDeadline - time.Second,
+			wantElapsed: StopGovernanceDeadline - time.Second,
 		},
 		{name: "a fast run", wantBlock: "\nfindings", wantCount: 2},
 		{
 			name: "slow setup shortens the budget", consumed: 40 * time.Second, neverReturns: true,
-			wantBlock: notice, wantElapsed: stopGovernanceDeadline - 40*time.Second,
+			wantBlock: notice, wantElapsed: StopGovernanceDeadline - 40*time.Second,
 		},
 		{
 			name: "a run outlasting the shortened budget", consumed: 40 * time.Second,
 			delay: 25 * time.Second, wantBlock: notice,
-			wantElapsed: stopGovernanceDeadline - 40*time.Second,
+			wantElapsed: StopGovernanceDeadline - 40*time.Second,
 		},
 		{
-			name: "a budget spent exactly", consumed: stopGovernanceDeadline,
+			name: "a budget spent exactly", consumed: StopGovernanceDeadline,
 			neverReturns: true, wantBlock: notice, wantSkipped: true,
 		},
 		{
-			name: "a budget overspent", consumed: stopGovernanceDeadline + time.Minute,
+			name: "a budget overspent", consumed: StopGovernanceDeadline + time.Minute,
 			delay: time.Second, wantBlock: notice, wantSkipped: true,
 		},
 		{
@@ -322,7 +322,7 @@ func TestDispatchStop_GovernanceDeadline(t *testing.T) {
 	}{
 		{
 			name:       "a run past the deadline",
-			delay:      stopGovernanceDeadline + time.Minute,
+			delay:      StopGovernanceDeadline + time.Minute,
 			wantIn:     []string{"Governance did not finish within 60s", "slow.go"},
 			wantAbsent: []string{"Governance findings", "Governance checks:"},
 			wantLogged: true,
@@ -416,12 +416,12 @@ func TestDispatchStop_DeadlineFromEntry(t *testing.T) {
 	}{
 		{
 			name: "slow status shortens the budget", statusDelay: 40 * time.Second,
-			governanceDelay: time.Hour, wantNotice: true, wantElapsed: stopGovernanceDeadline,
+			governanceDelay: time.Hour, wantNotice: true, wantElapsed: StopGovernanceDeadline,
 		},
 		{
 			name: "slow open and status share the budget", openDelay: 5 * time.Second,
 			statusDelay: 40 * time.Second, governanceDelay: time.Hour, wantNotice: true,
-			wantElapsed: stopGovernanceDeadline,
+			wantElapsed: StopGovernanceDeadline,
 		},
 		{
 			name: "governance inside the shortened budget", statusDelay: 40 * time.Second,
@@ -429,9 +429,9 @@ func TestDispatchStop_DeadlineFromEntry(t *testing.T) {
 		},
 		{
 			name:            "status alone spends the budget",
-			statusDelay:     stopGovernanceDeadline + 10*time.Second,
+			statusDelay:     StopGovernanceDeadline + 10*time.Second,
 			governanceDelay: time.Second, wantNotice: true,
-			wantElapsed: stopGovernanceDeadline + 10*time.Second,
+			wantElapsed: StopGovernanceDeadline + 10*time.Second,
 		},
 	}
 	for _, testCase := range testCases {
@@ -452,7 +452,7 @@ func TestDispatchStop_DeadlineFromEntry(t *testing.T) {
 func TestStopGovernanceDeadline_DartBuild(t *testing.T) {
 	t.Parallel()
 
-	if dartsyntax.BuildTimeout >= stopGovernanceDeadline {
-		t.Fatalf("bound %s must stay below %s", dartsyntax.BuildTimeout, stopGovernanceDeadline)
+	if dartsyntax.BuildTimeout >= StopGovernanceDeadline {
+		t.Fatalf("bound %s must stay below %s", dartsyntax.BuildTimeout, StopGovernanceDeadline)
 	}
 }

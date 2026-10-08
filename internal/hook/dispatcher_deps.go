@@ -102,7 +102,7 @@ func (disp *Dispatcher) warnMissingProjectDir(session *sessionTracker) {
 	}
 }
 
-const stopGovernanceDeadline = 60 * time.Second
+const StopGovernanceDeadline = 60 * time.Second
 
 type governanceResult struct {
 	block    string
@@ -116,11 +116,12 @@ func (disp *Dispatcher) governanceWithin(
 	entered time.Time,
 ) governanceResult {
 	// The host discards output past its timeout, so the budget runs from Stop entry.
-	remaining := stopGovernanceDeadline - time.Since(entered)
+	remaining := StopGovernanceDeadline - time.Since(entered)
 	if remaining <= 0 {
 		return governanceResult{block: governanceTimeoutNotice(), timedOut: true}
 	}
 	done := make(chan governanceResult, 1)
+	// The hookwire test keeps StopTimeoutSeconds above this deadline by a margin.
 	// No context reaches the analysis: an expired run is abandoned to die with the process.
 	go func() {
 		block, count := disp.governance(repo, status)
@@ -140,6 +141,6 @@ func governanceTimeoutNotice() string {
 	return fmt.Sprintf(
 		"Governance did not finish within %ds; run `pulsarules_cli governance` "+
 			"before committing (the git hooks still check).\n",
-		int(stopGovernanceDeadline/time.Second),
+		int(StopGovernanceDeadline/time.Second),
 	)
 }
