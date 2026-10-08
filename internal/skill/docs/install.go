@@ -74,10 +74,10 @@ func installDocs(
 			continue
 		}
 		docBackups, writeErr := Write(filepath.Join(dest, id), docName, body)
+		result.BackedUp = append(result.BackedUp, docBackups...)
 		if writeErr != nil {
 			return result, fmt.Errorf("install %q: %w", id, writeErr)
 		}
-		result.BackedUp = append(result.BackedUp, docBackups...)
 		result.Installed = append(result.Installed, id)
 	}
 	return result, nil
