@@ -41,6 +41,7 @@ const (
 	NameSwitchBinding  NameKind = "type switch binding"
 	NameImportAlias    NameKind = "import alias"
 	NameCatchParameter NameKind = "catch parameter"
+	NameEnumValue      NameKind = "enum value"
 )
 
 type DocKind string

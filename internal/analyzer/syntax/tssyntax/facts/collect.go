@@ -21,6 +21,7 @@ type collector struct {
 	isTest bool
 	out    syntax.File
 	frames []int
+	locals map[string]bool
 	depth  int
 	stop   bool
 	each   ast.Visitor
@@ -39,6 +40,8 @@ func Collect(root *ast.SourceFile, text string, options Options) (syntax.File, e
 		return coll.stop
 	}
 	node := root.AsNode()
+	statements := node.Statements()
+	coll.locals = exportedLocals(statements)
 	node.ForEachChild(coll.each)
 	if coll.stop {
 		return syntax.File{}, errTooDeep
@@ -67,6 +70,7 @@ func (coll *collector) visit(node *ast.Node) {
 		coll.function(node)
 	default:
 		coll.complexity(node)
+		coll.names(node)
 		node.ForEachChild(coll.each)
 	}
 }

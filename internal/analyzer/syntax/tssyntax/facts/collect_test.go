@@ -75,4 +75,7 @@ func TestCollectCommonJSExportsAreCountedOnce(t *testing.T) {
 	if want := []string{"f", "g"}; !slices.Equal(names, want) {
 		t.Fatalf("functions %v, want %v", names, want)
 	}
+	if len(facts.Names) != 2 {
+		t.Fatalf("names %+v, want the two parameters once", facts.Names)
+	}
 }
