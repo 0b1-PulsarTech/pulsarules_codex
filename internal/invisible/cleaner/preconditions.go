@@ -73,6 +73,8 @@ func isFixture(root, path string) bool {
 	return slices.Contains(strings.Split(filepath.ToSlash(rel), "/"), "testdata")
 }
 
+func Handles(ext string) bool { return eligibleExt(strings.ToLower(ext)) }
+
 func eligibleExt(ext string) bool {
 	// The mutation blast radius: only Go and Markdown files are rewritten.
 	return ext == ".go" || ext == ".md"

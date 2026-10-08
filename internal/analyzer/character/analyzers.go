@@ -2,11 +2,11 @@ package character
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 type textReporters struct {
@@ -58,30 +58,33 @@ func (analyzer *TextAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 
 func checkCarriers(fc pass.FileChange, src string, reporters textReporters) []finding.Finding {
 	findings := frontmatterFindings(fc, src, reporters.frontmatter)
-	for _, found := range invisible.Scan(src) {
-		if found.Class == invisible.ClassTypographic {
-			continue
-		}
+	marks := marksOf(
+		src,
+		func(class invisible.Class) bool { return class != invisible.ClassTypographic },
+	)
+	if len(marks) == 0 {
+		return findings
+	}
+	literals := language.ScanLiterals(fc.Extension, src)
+	code := markdownCode(fc.Extension, src)
+	var hinted []hintedFinding
+	for _, found := range marks {
 		// The class picks the reporter: a carrier no context can justify blocks, while
 		// one that may be load-bearing only advises.
 		reporter := reporters.carrier
 		if found.Class == invisible.ClassContextual {
 			reporter = reporters.contextual
 		}
-		findings = append(findings, reporter.At(
-			fc.Path, found.Line,
-			fmt.Sprintf("%s (U+%04X)", found.Name, found.Rune),
-			carrierAdvice(found.Class),
-		))
+		advice := carrierAdvice(found, fc.Extension, literals, code)
+		hinted = append(hinted, hintedFinding{
+			finding: reporter.At(
+				fc.Path, found.Line, fmt.Sprintf("%s (U+%04X)", found.Name, found.Rune),
+				advice.text,
+			),
+			caution: advice.caution,
+		})
 	}
-	return findings
-}
-
-func carrierAdvice(class invisible.Class) string {
-	if class == invisible.ClassContextual {
-		return "it may be load-bearing here; judge it, then remove it by hand"
-	}
-	return "run `pulsarules_cli clean --write`, which removes this class"
+	return append(findings, settle(hinted)...)
 }
 
 type TypographicAnalyzer struct {
@@ -113,21 +116,39 @@ func (analyzer *TypographicAnalyzer) Analyze(ctx *pass.Context) []finding.Findin
 }
 
 func checkTypographic(fc pass.FileChange, src string, reporter finding.Reporter) []finding.Finding {
-	var code []region
-	if strings.EqualFold(fc.Extension, ".md") {
-		code = codeRegions(src)
+	marks := marksOf(
+		src,
+		func(class invisible.Class) bool { return class == invisible.ClassTypographic },
+	)
+	if len(marks) == 0 {
+		return nil
 	}
-
-	var findings []finding.Finding
-	for _, found := range invisible.Scan(src) {
-		if found.Class != invisible.ClassTypographic || inCode(code, found.Offset) {
+	literals := language.ScanLiterals(fc.Extension, src)
+	code := markdownCode(fc.Extension, src)
+	var hinted []hintedFinding
+	for _, found := range marks {
+		if code.Certain(found.Offset) {
 			continue
 		}
-		findings = append(findings, reporter.At(
-			fc.Path, found.Line,
-			fmt.Sprintf("%s (U+%04X)", found.Name, found.Rune),
-			"replace it with the ASCII form by hand",
-		))
+		advice := typographicAdvice(found, fc.Extension, literals, code)
+		hinted = append(hinted, hintedFinding{
+			finding: reporter.At(
+				fc.Path, found.Line, fmt.Sprintf("%s (U+%04X)", found.Name, found.Rune),
+				advice.text,
+			),
+			caution: advice.caution,
+		})
 	}
-	return findings
+	return settle(hinted)
+}
+
+func marksOf(src string, wanted func(invisible.Class) bool) []invisible.Mark {
+	var marks []invisible.Mark
+	// Lexing a file is the costly step, so a file with no mark of this kind is never lexed.
+	for _, found := range invisible.Scan(src) {
+		if wanted(found.Class) {
+			marks = append(marks, found)
+		}
+	}
+	return marks
 }
