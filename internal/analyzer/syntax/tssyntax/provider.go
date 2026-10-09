@@ -9,6 +9,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/sandbox"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax/pathalias"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/budget"
 )
 
@@ -46,15 +47,19 @@ func (provider *Provider) Handles(ext string) bool {
 func (provider *Provider) Summarize(
 	ctx context.Context, corpus syntax.Corpus,
 ) (map[string]*syntax.File, error) {
+	finder := pathalias.NewFinder(pathalias.DiskReader(corpus.Root, corpus.Read))
 	summaries := make(map[string]*syntax.File, len(corpus.Sources))
 	session := provider.runner.Open()
 	defer session.Close()
 	batch := batch{session: session, read: corpus.Read}
 	for _, source := range corpus.Sources {
+		aliases := finder.For(source.Path)
 		summary, err := batch.summarize(ctx, source)
 		if err != nil {
 			return summaries, fmt.Errorf("summarize typescript sources: %w", err)
 		}
+		home, _ := finder.Root(source.Path)
+		applyPrefer(summary, importSite{root: home, aliases: aliases})
 		summaries[source.Path] = summary
 	}
 	return summaries, nil
