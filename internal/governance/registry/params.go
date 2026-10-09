@@ -10,7 +10,7 @@ func Params() map[string][]string {
 	// Every key an analyzer reads through core.ParamSet; params_test.go scans for misses.
 	extensions := pass.ParamExtensions
 	return map[string][]string{
-		"file-size":           {"max_lines", extensions},
+		"file-size":           {"max_lines", "error_lines", extensions},
 		"big-comment":         {"max_lines", extensions},
 		"text-markers":        {extensions},
 		"typographic-markers": {extensions},
