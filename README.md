@@ -53,7 +53,10 @@ go run ./cmd/pulsarules_cli package     # zip all skills into build/
 With no `--root`, the binary reads the embedded snapshot. Pass `--root DIR` to read
 `<DIR>/knowledge` from disk, so you can edit a rule and re-run without rebuilding.
 
-See [INSTALL.md](INSTALL.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
+See [INSTALL.md](INSTALL.md) and [ARCHITECTURE.md](ARCHITECTURE.md). Governance guides:
+[configuration](docs/configuration.md) (`.pulsarules.yaml`), [languages](docs/languages.md) (Go,
+Dart, TypeScript, JavaScript, Svelte), [delegated commands](docs/delegated-commands.md) and the
+[analyzer reference](docs/analyzers.md).
 
 ## Repository layout
 

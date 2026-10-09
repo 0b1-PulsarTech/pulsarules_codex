@@ -32,7 +32,7 @@ pulsarules_cli install [--root DIR] (--global | --project PATH) [--target claude
 pulsarules_cli uninstall (--global | --project PATH) [--target claude|opencode|agents|cursor ...] [--hooks-scope project|local] [--keep-skills]
 pulsarules_cli package [--root DIR] [--out FILE]
 pulsarules_cli commitlint [--msg MSG | --file FILE] [--project DIR]
-pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit|changed] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
+pulsarules_cli governance [--project DIR] [--root DIR] [--preset recommended|strict|minimal] [--scope full|commit|changed] [--config PATH] [--golangci-config PATH] [--all-files] [--include-generated] [--typographic-severity error|warning|info] [--branch-extra-types a,b]
 pulsarules_cli clean [--project DIR] [--write]
 pulsarules_cli evals --artifact FILE [--scenario ID]
 pulsarules_cli version
@@ -228,12 +228,17 @@ change only (a file with only unstaged edits is skipped; a partially staged file
 disk; what the pre-commit hook uses); `--scope changed` adds the architecture analyzers over all
 changed files (what the Stop hook uses); `--scope full` (default) adds delegation and the
 `branch-name` check. An unrecognized value is rejected by name rather than silently running the full
-set. `--preset recommended|strict|minimal` selects analyzer thresholds. `--typographic-severity`
-overrides how hard a `typographic-markers` finding lands for this run; `--branch-extra-types` widens
-the branch-type prefixes `branch-name` accepts (see the install flags of the same name for the
-baked-in variants). Findings in generated files (detected by a generator banner such as
-`// Code generated ... DO NOT EDIT.`, or a `.sql` file in a directory with an Atlas `atlas.sum`) are
-suppressed by default; `--include-generated` turns that off.
+set. `--config PATH` loads only that project config file; without it `.pulsarules.yaml` and the
+private `<git-common-dir>/pulsarules.yaml` are layered (see `docs/configuration.md`; an invalid
+config exits 1). `--preset recommended|strict|minimal` selects analyzer thresholds.
+`--typographic-severity` overrides how hard a `typographic-markers` finding lands for this run;
+`--branch-extra-types` widens the branch-type prefixes `branch-name` accepts (see the install flags
+of the same name for the baked-in variants). Findings in generated files (detected by a generator
+banner such as `// Code generated ... DO NOT EDIT.`, or a `.sql` file in a directory with an Atlas
+`atlas.sum`) are suppressed by default; `--include-generated` turns that off.
+
+Project tuning, languages and delegated commands are documented in `docs/configuration.md`,
+`docs/languages.md` and `docs/delegated-commands.md`.
 
 ```sh
 # the exact governance gate task tools:governance / CI run:
