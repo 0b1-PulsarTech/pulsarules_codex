@@ -1,5 +1,3 @@
-// pulsarules_codex governance plugin for opencode.
-// Installed by pulsarules_cli; remove this file to disable.
 import { accessSync, constants as fsConstants } from "node:fs";
 
 function makeRunHook({ bin, root, $ }) {
@@ -80,3 +78,5 @@ export const PulsarulesGovernance = async ({ directory, worktree, $ }) => {
     },
   };
 };
+
+// Installed by pulsarules_cli. Uninstall removes only files carrying this marker.
