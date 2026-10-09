@@ -11,13 +11,26 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
+const aliasHint = "configure a project alias (package.json `imports` or tsconfig `paths`) " +
+	"and import through it"
+
 type Analyzer struct {
-	reporter finding.Reporter
+	reporter     finding.Reporter
+	pathReporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: finding.NewReporter("import-groups", finding.SeverityError, finding.CatSyntax),
+		reporter: finding.NewReporter(
+			"import-groups",
+			finding.SeverityError,
+			finding.CatSyntax,
+		),
+		pathReporter: finding.NewReporter(
+			"import-groups/path",
+			finding.SeverityWarning,
+			finding.CatSyntax,
+		),
 	}
 }
 
@@ -26,8 +39,11 @@ func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	pathReporter := pass.ResolveReporter(analyzer.pathReporter, ctx)
 	return syntaxfiles.Each(ctx, func(fc pass.FileChange, file *syntax.File) []finding.Finding {
-		return checkFile(fc, file, reporter)
+		return append(
+			checkFile(fc, file, reporter),
+			checkPaths(fc, file, pathReporter)...)
 	})
 }
 
@@ -54,6 +70,31 @@ func checkFile(fc pass.FileChange, file *syntax.File, reporter finding.Reporter)
 		prevGroup = spec.Group
 	}
 	return nil
+}
+
+func checkPaths(
+	fc pass.FileChange,
+	file *syntax.File,
+	reporter finding.Reporter,
+) []finding.Finding {
+	var findings []finding.Finding
+	for _, spec := range file.Imports {
+		switch {
+		case spec.Prefer != "":
+			findings = append(findings, reporter.At(fc.Path, spec.Line,
+				fmt.Sprintf("import %s has a better spelling", spec.Literal),
+				"write it as "+spec.Prefer))
+		case spec.Foreign:
+			findings = append(findings, reporter.At(fc.Path, spec.Line,
+				fmt.Sprintf("import %s climbs out of its package", spec.Literal),
+				"import it through its package name"))
+		case spec.Upward:
+			findings = append(findings, reporter.At(fc.Path, spec.Line,
+				fmt.Sprintf("import %s climbs out of its directory", spec.Literal),
+				aliasHint))
+		}
+	}
+	return findings
 }
 
 func suggestedOrder(file *syntax.File) string {
