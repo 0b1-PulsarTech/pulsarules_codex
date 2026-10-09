@@ -20,6 +20,7 @@ type format struct {
 	decode         func(output []byte) ([]diagnostic, error)
 	reportingExits []int
 	precheck       func(root, dir string, listed listing) string
+	codegen        func(found []diagnostic, where scope) (kept []diagnostic, notice string)
 }
 
 func formats() map[string]format {
@@ -33,6 +34,7 @@ func formats() map[string]format {
 			decode:         decodeDartAnalyze,
 			reportingExits: []int{dartExitInfos, dartExitWarnings, dartExitErrors},
 			precheck:       dartPrecheck,
+			codegen:        dartCodegen,
 		},
 	}
 }

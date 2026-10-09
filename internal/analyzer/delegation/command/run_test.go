@@ -104,17 +104,17 @@ func reportingCases() []runCase {
 	recordedIDs := []string{
 		entryID + "/inference_failure_on_untyped_parameter",
 		entryID + "/prefer_interpolation_to_compose_strings",
-		entryID + "/uri_has_not_been_generated",
+		entryID + "/unavailable",
 	}
 	recordedFiles := []string{
 		"packages/nucleon/test/l10n/messages_for_test.dart",
 		"packages/nucleon/test/settings/ai_config_scope_test.dart",
-		"packages/nucleon/lib/nucleon.dart",
+		"",
 	}
 	recordedSev := []finding.Severity{
 		finding.SeverityWarning,
 		finding.SeverityInfo,
-		finding.SeverityError,
+		finding.SeverityInfo,
 	}
 
 	return []runCase{

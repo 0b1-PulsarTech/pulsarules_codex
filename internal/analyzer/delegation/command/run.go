@@ -128,8 +128,14 @@ func decodeFindings(
 	if err != nil {
 		return []finding.Finding{inv.rep.failed("undecodable output: "+err.Error(), result.Stderr)}
 	}
+	notice := ""
+	if inv.kind.codegen != nil {
+		found, notice = inv.kind.codegen(found, where)
+	}
 	sorted := where.sortOut(inv.rep, found)
-	if reported != 0 && len(sorted.findings) == 0 && sorted.excluded == 0 {
+	if notice != "" {
+		sorted.findings = append(sorted.findings, inv.rep.notice(notice))
+	} else if reported != 0 && len(sorted.findings) == 0 && sorted.excluded == 0 {
 		reason := fmt.Sprintf("exit %d but no diagnostics inside the project", reported)
 		return []finding.Finding{inv.rep.failed(reason, result.Stderr)}
 	}
