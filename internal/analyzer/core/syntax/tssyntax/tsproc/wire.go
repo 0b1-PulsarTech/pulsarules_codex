@@ -6,6 +6,7 @@ type Request struct {
 	Seq    uint64
 	Path   string
 	Text   string
+	Local  []string
 	IsTest bool
 }
 
@@ -14,6 +15,6 @@ type Reply struct {
 	File syntax.File
 }
 
-const protocol = 1
+const protocol = 2
 
 type hello struct{ Protocol int }

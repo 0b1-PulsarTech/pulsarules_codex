@@ -8,9 +8,10 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax/tssyntax/svelte"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax/tssyntax/tsfacts"
 )
 
-func summarizeSvelte(summary *syntax.File, source syntax.Source, text string) {
+func summarizeSvelte(summary *syntax.File, options tsfacts.Options, text string) {
 	scripts, err := svelte.Extract(text)
 	partial := errors.Is(err, svelte.ErrDroppedScript) || errors.Is(err, svelte.ErrUnclosed)
 	if err != nil && !partial {
@@ -23,7 +24,7 @@ func summarizeSvelte(summary *syntax.File, source syntax.Source, text string) {
 			kind = core.ScriptKindTS
 		}
 		before := summary.ParseError
-		summarizeScript(summary, source, scriptBlock{text: script.Text, kind: kind, index: block})
+		summarizeScript(summary, options, scriptBlock{text: script.Text, kind: kind, index: block})
 		if before != "" {
 			summary.ParseError = before
 		}

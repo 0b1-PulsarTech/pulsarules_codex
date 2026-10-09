@@ -13,7 +13,7 @@ block line=26 depth=1
 import "node:fs/promises" line=1 group=0
 import "axios" line=2 group=1
 import "../config" line=3 group=2
-groups ["node:" "package" "relative"]
+groups ["node:" "external" "local"]
 name axios kind=import alias line=2 exported=false exempt=false
 name Settings kind=import alias line=3 exported=false exempt=false
 name Service kind=type line=6 exported=true exempt=false

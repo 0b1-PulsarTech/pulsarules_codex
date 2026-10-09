@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -16,12 +17,12 @@ func TestFrameRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	want := Request{Seq: 3, Path: "a.ts", Text: "let a;", IsTest: true}
+	want := Request{Seq: 3, Path: "a.ts", Text: "let a;", Local: []string{"#lib/*"}, IsTest: true}
 	if err := writeFrame(&buf, want); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 	var got Request
-	if err := readFrame(&buf, &got); err != nil || got != want {
+	if err := readFrame(&buf, &got); err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("read %+v, %v", got, err)
 	}
 	if err := readFrame(&buf, &got); !errors.Is(err, io.EOF) {
@@ -51,7 +52,7 @@ func TestFrameKeepsBytes(t *testing.T) {
 				t.Fatalf("write: %v", err)
 			}
 			var got Request
-			if err := readFrame(&buf, &got); err != nil || got != want {
+			if err := readFrame(&buf, &got); err != nil || !reflect.DeepEqual(got, want) {
 				t.Fatalf("read %+v, %v", got, err)
 			}
 		})

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax/tssyntax/tsproc"
 )
 
 type svelteScriptCase struct {
@@ -146,7 +147,7 @@ func groupCases() []groupCase {
 			name:       "one script keeps three groups",
 			text:       "<script>import 'a'; import './b';</script>",
 			wantGroups: []int{1, 2},
-			wantNames:  []string{"node:", "package", "relative"},
+			wantNames:  []string{"node:", "external", "local"},
 		},
 		{
 			name: "second script starts above the first",
@@ -154,21 +155,21 @@ func groupCases() []groupCase {
 				"'svelte';</script>",
 			wantGroups: []int{2, 4},
 			wantNames: []string{
-				"node:", "package", "relative",
-				"node: (script 2)", "package (script 2)", "relative (script 2)",
+				"node:", "external", "local",
+				"node: (script 2)", "external (script 2)", "local (script 2)",
 			},
 		},
 		{
 			name:       "second script without imports adds no groups",
 			text:       "<script module>import './helper';</script><script>let a;</script>",
 			wantGroups: []int{2},
-			wantNames:  []string{"node:", "package", "relative"},
+			wantNames:  []string{"node:", "external", "local"},
 		},
 		{
 			name:       "first script without imports leaves the second plain",
 			text:       "<script module>let a;</script><script>import 'svelte';</script>",
 			wantGroups: []int{1},
-			wantNames:  []string{"node:", "package", "relative"},
+			wantNames:  []string{"node:", "external", "local"},
 		},
 		{name: "no imports at all", text: "<script>let a;</script>"},
 	}
@@ -194,5 +195,23 @@ func TestSummarizeSvelteImportGroups(t *testing.T) {
 				t.Fatalf("group names %q, want %q", got.ImportGroups, testCase.wantNames)
 			}
 		})
+	}
+}
+
+func TestSummarizeSvelteLocalAliases(t *testing.T) {
+	t.Parallel()
+
+	got := handleRequest(tsproc.Request{
+		Path: "a.svelte",
+		Text: "<script module>import 'app/a';</script>" +
+			"<script>import 'app/b'; import 'x';</script>",
+		Local: []string{"app/*"},
+	})
+	groups := make([]int, 0, len(got.Imports))
+	for _, imported := range got.Imports {
+		groups = append(groups, imported.Group)
+	}
+	if want := []int{2, 5, 4}; !slices.Equal(groups, want) {
+		t.Fatalf("groups %v, want %v", groups, want)
 	}
 }

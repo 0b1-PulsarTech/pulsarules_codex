@@ -180,6 +180,28 @@ variable, field or interface method are reported.
 - Known limits: a `max_lines` at or below 0 falls back to the default 180 rather than disabling the
   check.
 
+## import-groups
+
+- Languages: Go, Dart, TypeScript, JavaScript, Svelte.
+- Go: standard library, then third party, then project. Dart: `dart:`, `package:`, relative.
+- TypeScript, JavaScript, Svelte: `node:`/`bun:` builtins, then external packages, then local
+  (`.`, `/`, `#`, `@/`, `~/`, `$lib` or any discovered alias). A wrong order is an ERROR.
+- Aliases are discovered from the nearest `package.json` upward: `imports` keys starting with `#`
+  whose target starts with `./`; `compilerOptions.paths` in `tsconfig.json` or `jsconfig.json`
+  (first target only, the `*` catch-all skipped, relative `extends` followed up to 4 hops,
+  `baseUrl` honoured, comments allowed; `paths` aliases do not serve `.js`, `.mjs`, `.cjs`
+  importers); SvelteKit `$lib` (`src/lib`) when `@sveltejs/kit` is a dependency, and the flat
+  literal `kit.alias` object of `svelte.config.js` (serves files under `src` only). Config files over
+  1 MiB are ignored, as are aliases targeting a `.d.ts` or `node_modules`.
+- Sub-finding `import-groups/path` (WARNING, TypeScript family): `./x` is fine;
+  an own-directory alias should be spelled `./x`; a `../` import should use an alias, choosing the
+  longest target; `../` with no alias covering it "climbs out of its directory" (configure an alias
+  in `package.json` `imports` or tsconfig `paths`); a target outside the nearest `package.json`
+  "climbs out of its package" (import it through its package name). A relative import at or below
+  the importer's directory is fine, even through `../`.
+- Known limits: re-exports are not checked; the `kit.alias` lookup matches the word "alias" in
+  comments too.
+
 ## text-markers and clean
 
 - Analyzers: `text-markers` (invisible and no-break characters) and `typographic-markers` (em dash,
