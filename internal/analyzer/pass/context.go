@@ -95,6 +95,7 @@ type Override struct {
 type OverrideConfig struct {
 	Enabled  *bool
 	Severity string
+	Params   map[string]any
 }
 
 type DelegatedCommand struct {

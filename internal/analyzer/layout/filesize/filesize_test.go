@@ -276,8 +276,13 @@ func runHardCapCases(t *testing.T, testCases []hardCapCase) {
 func TestAnalyze_HardCap(t *testing.T) {
 	t.Parallel()
 
-	goCapped := paramsConfig(map[string]any{"max_lines": 100, "error_lines": 250})
-	svelteOff := paramsConfig(map[string]any{"error_lines": 0})
+	svelteScoped := scopedConfig(
+		[]string{"**/*.svelte", "*.svelte"}, map[string]any{"max_lines": 150},
+	)
+	goCapped := scopedConfig(
+		[]string{"*.go"}, map[string]any{"max_lines": 100, "error_lines": 250},
+	)
+	svelteOff := scopedConfig([]string{"*.svelte"}, map[string]any{"error_lines": 0})
 	runHardCapCases(t, []hardCapCase{
 		{
 			name: "svelte at the default cap warns", file: "a.svelte", lines: 290,
@@ -297,11 +302,16 @@ func TestAnalyze_HardCap(t *testing.T) {
 			severity: finding.SeverityWarning, count: 1,
 		},
 		{
-			name: "the cap errors for go", file: "a.go", lines: 251, config: goCapped,
+			name: "scoped max_lines lowers the svelte limit", file: "a.svelte", lines: 160,
+			config: svelteScoped, severity: finding.SeverityWarning, count: 1,
+		},
+		{name: "scoped max_lines leaves go alone", file: "a.go", lines: 160, config: svelteScoped},
+		{
+			name: "scoped cap errors for go", file: "a.go", lines: 251, config: goCapped,
 			severity: finding.SeverityError, count: 1,
 		},
 		{
-			name: "the cap keeps the warning below it", file: "a.go", lines: 250,
+			name: "scoped cap keeps the warning below it", file: "a.go", lines: 250,
 			config: goCapped, severity: finding.SeverityWarning, count: 1,
 		},
 		{
@@ -314,8 +324,11 @@ func TestAnalyze_HardCap(t *testing.T) {
 func TestAnalyze_HardCapBelowTheSoftLimit(t *testing.T) {
 	t.Parallel()
 
-	lowCap := paramsConfig(map[string]any{"error_lines": 150})
-	projectSoft := paramsConfig(map[string]any{"max_lines": 200, "error_lines": 190})
+	lowCap := scopedConfig([]string{"*.svelte"}, map[string]any{"error_lines": 150})
+	projectSoft := scopedConfig([]string{"*.svelte"}, map[string]any{"error_lines": 190})
+	projectSoft.Analyzers = map[string]pass.AnalyzerConfig{
+		"file-size": {Enabled: true, Params: map[string]any{"max_lines": 200}},
+	}
 	runHardCapCases(t, []hardCapCase{
 		{
 			name: "cap under the inherited default max still errors", file: "a.svelte",
@@ -350,8 +363,9 @@ func TestAnalyze_CapMessages(t *testing.T) {
 	})
 }
 
-func paramsConfig(params map[string]any) *pass.AnalysisConfig {
-	return &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
-		"file-size": {Enabled: true, Params: params},
-	}}
+func scopedConfig(files []string, params map[string]any) *pass.AnalysisConfig {
+	return &pass.AnalysisConfig{Overrides: []pass.Override{{
+		Files:     files,
+		Analyzers: map[string]pass.OverrideConfig{"file-size": {Params: params}},
+	}}}
 }

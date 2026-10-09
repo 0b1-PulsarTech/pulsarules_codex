@@ -9,6 +9,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 )
 
+const fileSizeID = "file-size"
+
 func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 	if file.IncludeGenerated != nil {
 		govCfg.IncludeGenerated = *file.IncludeGenerated
@@ -82,7 +84,9 @@ func applyAnalyzer(govCfg *config.GovernanceConfig, id string, entry AnalyzerEnt
 func toCoreOverride(entry OverrideEntry) pass.Override {
 	analyzers := make(map[string]pass.OverrideConfig, len(entry.Analyzers))
 	for id, rules := range entry.Analyzers {
-		analyzers[id] = pass.OverrideConfig{Enabled: rules.Enabled, Severity: rules.Severity}
+		analyzers[id] = pass.OverrideConfig{
+			Enabled: rules.Enabled, Severity: rules.Severity, Params: maps.Clone(rules.Params),
+		}
 	}
 	return pass.Override{Files: slices.Clone(entry.Files), Analyzers: analyzers}
 }
@@ -103,9 +107,7 @@ func (val *validator) checkOverride(field *Field, override OverrideEntry) {
 		idField := field.key("analyzers").key(id)
 		val.checkOverrideAnalyzer(idField, id)
 		val.checkSeverity(idField.key("severity"), rules.Severity)
-		if rules.Params != nil {
-			val.fail(idField.key("params"), "per-path params are not supported")
-		}
+		val.checkOverrideParams(idField.key("params"), id, rules.Params)
 	}
 }
 
@@ -133,8 +135,23 @@ func (val *validator) checkGlobBudget(globs []string) bool {
 	return false
 }
 
+func (val *validator) checkOverrideParams(field *Field, id string, params map[string]any) {
+	if params == nil {
+		return
+	}
+	if id != fileSizeID {
+		val.fail(field, "per-path params are only supported for %s, not %s",
+			fileSizeID, clipValue(id))
+		return
+	}
+	val.checkAnalyzerParams(field, id, params)
+	if _, set := params[pass.ParamExtensions]; set {
+		val.fail(field.key(pass.ParamExtensions), "%s is not supported per path",
+			pass.ParamExtensions)
+	}
+}
+
 func (val *validator) checkAnalyzerParams(field *Field, id string, params map[string]any) {
-	const fileSizeID = "file-size"
 	val.checkParams(field, id, params)
 	if id == fileSizeID {
 		val.checkLimitParams(field, params)
