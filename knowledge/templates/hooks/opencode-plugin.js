@@ -2,26 +2,8 @@
 // Installed by pulsarules_cli; remove this file to disable.
 import { accessSync, constants as fsConstants } from "node:fs";
 
-// simplification: pre-edit stays unwired. tool.execute.before's output object is only
-// {args}: no field the model reads back, so calling pre-edit there would be the same
-// silently-inert bug this plugin exists to kill; register no handler until it has one.
-// stop and subagent-start have no opencode hook either (bus events never fire here).
-// Ceiling: no pre-edit reminder, no dirty-worktree nag, subtasks start with no contract.
-// Revisit when opencode adds a hook whose output the model reads back.
-export const PulsarulesGovernance = async ({ directory, worktree, $ }) => {
-  const root = worktree || directory;
-  // Must match internal/hook/install/opencodehook/opencodehook.go's binaryRel constant.
-  const bin = `${root}/.opencode/bin/pulsarules_cli`;
-
-  // .opencode/bin/ is gitignored, so a fresh clone has no binary yet; stay
-  // silent instead of shelling out to a path that may not exist.
-  try {
-    accessSync(bin, fsConstants.X_OK);
-  } catch {
-    return {};
-  }
-
-  async function runHook(mode, sessionId, filePath) {
+function makeRunHook({ bin, root, $ }) {
+  return async function runHook(mode, sessionId, filePath) {
     // The JSON payload shape (session_id, tool_input.file_path) must match
     // hookPayload in internal/hook/wire.go's decodeHookPayload.
     const payload = JSON.stringify({
@@ -41,12 +23,34 @@ export const PulsarulesGovernance = async ({ directory, worktree, $ }) => {
       if (!text) return;
       const parsed = JSON.parse(text);
       return parsed?.hookSpecificOutput?.additionalContext;
-    } catch (e) {
+    } catch (error) {
       // A hook must never break the user's turn, so a failed invocation is
       // logged and swallowed here - never rethrown.
-      console.error("pulsarules_codex: hook", mode, "failed:", e);
+      console.error("pulsarules_codex: hook", mode, "failed:", error);
     }
+  };
+}
+
+// simplification: pre-edit stays unwired. tool.execute.before's output object is only
+// {args}: no field the model reads back, so calling pre-edit there would be the same
+// silently-inert bug this plugin exists to kill; register no handler until it has one.
+// stop and subagent-start have no opencode hook either (bus events never fire here).
+// Ceiling: no pre-edit reminder, no dirty-worktree nag, subtasks start with no contract.
+// Revisit when opencode adds a hook whose output the model reads back.
+export const PulsarulesGovernance = async ({ directory, worktree, $ }) => {
+  const root = worktree || directory;
+  // Must match internal/hook/install/opencodehook/opencodehook.go's binaryRel constant.
+  const bin = `${root}/.opencode/bin/pulsarules_cli`;
+
+  // .opencode/bin/ is gitignored, so a fresh clone has no binary yet; stay
+  // silent instead of shelling out to a path that may not exist.
+  try {
+    accessSync(bin, fsConstants.X_OK);
+  } catch {
+    return {};
   }
+
+  const runHook = makeRunHook({ bin, root, $ });
 
   return {
     // "session-start" is OncePerSession-gated in the binary despite firing
