@@ -1,10 +1,10 @@
 # Comment and declaration analyzers
 
 Each analyzer below enforces a rule from `knowledge/standards/rules/`. Params are defaults in code
-and can be changed per project in `.pulsarules.yaml`. `extensions` is a common param name, read
-under each analyzer's own id. Findings in generated files are dropped unless `--include-generated`
-is passed; the Go AST analyzers documented here (`test-comment`, `doc-comment`,
-`body-header-comment`, `variadic-index`, `too-many-results`, `ungrouped-interfaces`,
+and can be changed per project in `.pulsarules.yaml` (see `docs/configuration.md`); `extensions` is
+a common param name, read under each analyzer's own id. Findings in generated files are dropped
+unless `--include-generated` is passed; the Go AST analyzers documented here (`test-comment`,
+`doc-comment`, `body-header-comment`, `variadic-index`, `too-many-results`, `ungrouped-interfaces`,
 `package-level-var`, `package-file-count` and `single-letter-name`) also skip generated files, even
 under `--include-generated`. `--preset minimal` disables `test-comment`, `single-use-declaration`,
 `doc-comment`, `body-header-comment`, `history-narration`, `variadic-index`, `too-many-results`,
@@ -221,6 +221,11 @@ variable, field or interface method are reported.
   remove it by hand". A typographic em dash in `.md` is reported to be replaced by hand.
 - `clean --write` edits only `.go` and `.md`, removes only removable carriers, and never rewrites
   inside a string literal or text that may be code.
+
+## `<lang>-syntax` and `config`
+
+`<lang>-syntax/unparsed` (WARNING) and `<lang>-syntax/unavailable` (INFO) are described in
+`docs/languages.md`; `config` findings in `docs/configuration.md`.
 
 ## big-comment
 
