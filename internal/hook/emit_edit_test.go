@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/projectroot"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -245,6 +246,170 @@ func TestDispatchPreEditPerFile_OncePerFile(t *testing.T) {
 						testCase.wantFires[step],
 					)
 				}
+			}
+		})
+	}
+}
+
+type throwCase struct {
+	name      string
+	file      string
+	body      string
+	installed []string
+	want      []string
+	absent    []string
+}
+
+func throwCases() []throwCase {
+	const tail = "return a result (the error last, or named) instead of throwing"
+	return []throwCase{
+		{
+			name: "ts throw without the skill installed",
+			file: "a.ts", body: "const a = 1\nthrow new Error('x')\n",
+			want:   []string{"`throw` at line 2 of a.ts: " + tail},
+			absent: []string{"ts-errors"},
+		},
+		{
+			name: "ts throw with the skill installed",
+			file: "a.ts", body: "const a = 1\nthrow new Error('x')\n",
+			installed: []string{"ts-errors"},
+			want:      []string{"`throw` at line 2 of a.ts", "See the ts-errors skill."},
+		},
+		{
+			name: "dart rethrow names the dart skill only",
+			file: "a.dart", body: "void f() {\n  rethrow;\n}\n",
+			installed: []string{"dart-errors"},
+			want:      []string{"`rethrow` at line 2 of a.dart", "See the dart-errors skill."},
+			absent:    []string{"ts-errors"},
+		},
+		{name: "throw only in a comment", file: "a.ts", body: "// throw x\n"},
+		{name: "go file", file: "a.go", body: "package a\n\nvar throw = 1\n"},
+		{
+			name: "svelte script only", file: "a.svelte",
+			body: "<p>throw</p>\n<script>\n  throw error(404)\n</script>\n",
+			want: []string{"`throw` at line 3 of a.svelte"},
+		},
+		{
+			name: "larger than the size cap", file: "big.ts",
+			body: "throw a\n" + strings.Repeat(" ", projectroot.MaxEditedFileBytes),
+		},
+		{
+			name: "alongside the checklist", file: "a.svelte",
+			body:      "<script>\n  throw error(404)\n</script>\n",
+			installed: []string{"atomic-design", "ts-errors"},
+			want: []string{
+				"`throw` at line 2 of a.svelte", "See the ts-errors skill.", "atomic-design",
+			},
+		},
+	}
+}
+
+func TestEmitPostEdit_ThrowNotice(t *testing.T) {
+	t.Parallel()
+
+	idx := preEditIndex(t)
+	for _, testCase := range throwCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			root, skillsDir := t.TempDir(), t.TempDir()
+			for _, id := range testCase.installed {
+				installSkillFixture(t, skillsDir, id)
+			}
+			path := filepath.Join(root, testCase.file)
+			if err := os.WriteFile(path, []byte(testCase.body), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			disp, out := dispatchCapture(Deps{Index: idx, ProjectDir: root, SkillsDir: skillsDir})
+			_ = disp.Dispatch("post-edit", postEditPayload(t, path, uniqueSessionID(t)))
+
+			if len(testCase.want) == 0 {
+				if strings.Contains(out.String(), "`throw` at") {
+					t.Errorf("unexpected throw notice in %q", out.String())
+				}
+				return
+			}
+			ctx := extractContext(t, out.String())
+			for _, want := range testCase.want {
+				if !strings.Contains(ctx, want) {
+					t.Errorf("context %q lacks %q", ctx, want)
+				}
+			}
+			for _, absent := range testCase.absent {
+				if strings.Contains(ctx, absent) {
+					t.Errorf("context %q should not mention %q", ctx, absent)
+				}
+			}
+		})
+	}
+}
+
+func TestEmitPostEdit_ThrowNoticeDedup(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	disp, out := dispatchCapture(Deps{Index: preEditIndex(t), ProjectDir: root})
+	sessionID := uniqueSessionID(t)
+	testCases := []struct {
+		name string
+		file string
+		body string
+		want string
+	}{
+		{"first edit announces", "a.ts", "throw a\n", "`throw` at line 1 of a.ts"},
+		{"same lines stay silent", "a.ts", "throw a\n", ""},
+		{"another file announces", "b.ts", "throw a\n", "`throw` at line 1 of b.ts"},
+		{"back to the first file stays silent", "a.ts", "throw a\n", ""},
+		{
+			"a new throw line announces again", "a.ts",
+			"throw a\nx()\nthrow b\n", "lines 1, 3 of a.ts",
+		},
+	}
+	for _, testCase := range testCases {
+		out.Reset()
+		path := filepath.Join(root, testCase.file)
+		if err := os.WriteFile(path, []byte(testCase.body), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		_ = disp.Dispatch("post-edit", postEditPayload(t, path, sessionID))
+		got := out.String()
+		if testCase.want == "" && strings.Contains(got, "`throw` at") {
+			t.Errorf("%s: unexpected notice in %q", testCase.name, got)
+		}
+		if testCase.want != "" && !strings.Contains(got, testCase.want) {
+			t.Errorf("%s: output %q lacks %q", testCase.name, got, testCase.want)
+		}
+	}
+}
+
+func TestEmitPostEdit_ThrowNoticeStaysInsideTheProject(t *testing.T) {
+	t.Parallel()
+
+	outside := filepath.Join(t.TempDir(), "outside.ts")
+	if err := os.WriteFile(outside, []byte("throw a\n"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	root := t.TempDir()
+	escapeLink := filepath.Join(root, "escape.ts")
+	if err := os.Symlink(outside, escapeLink); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	testCases := []struct {
+		name string
+		path string
+	}{
+		{"absolute path outside the root", outside},
+		{"symlink inside the root pointing out", escapeLink},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			disp, out := dispatchCapture(Deps{Index: preEditIndex(t), ProjectDir: root})
+			_ = disp.Dispatch("post-edit", postEditPayload(t, testCase.path, uniqueSessionID(t)))
+			if strings.Contains(out.String(), "`throw` at") {
+				t.Errorf("a file outside the project was scanned: %q", out.String())
 			}
 		})
 	}
