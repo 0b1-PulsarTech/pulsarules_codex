@@ -8,6 +8,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core"
 )
 
+const fileSizeID = "file-size"
+
 func (govCfg *GovernanceConfig) ApplyProject(file *ProjectFile) error {
 	if file.IncludeGenerated != nil {
 		govCfg.IncludeGenerated = *file.IncludeGenerated
@@ -130,4 +132,33 @@ func (val *validator) checkGlobBudget(globs []string) bool {
 		return true
 	}
 	return false
+}
+
+func (val *validator) checkAnalyzerParams(field *fieldPath, id string, params map[string]any) {
+	val.checkParams(field, id, params)
+	if id == fileSizeID {
+		val.checkLimitParams(field, params)
+	}
+}
+
+func (val *validator) checkLimitParams(field *fieldPath, params map[string]any) {
+	const maxLinesParam, errorLinesParam = "max_lines", "error_lines"
+	soft := val.limitParam(field, params, maxLinesParam, 1)
+	hard := val.limitParam(field, params, errorLinesParam, 0)
+	if soft > 0 && hard > 0 && hard <= soft {
+		val.fail(field.key(errorLinesParam), "must be above %s (%d)", maxLinesParam, soft)
+	}
+}
+
+func (val *validator) limitParam(at *fieldPath, params map[string]any, key string, floor int) int {
+	raw, set := params[key]
+	if !set {
+		return 0
+	}
+	number, ok := raw.(int)
+	if !ok || number < floor {
+		val.fail(at.key(key), "must be an integer of at least %d", floor)
+		return 0
+	}
+	return number
 }

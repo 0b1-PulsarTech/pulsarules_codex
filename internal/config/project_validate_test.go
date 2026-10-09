@@ -17,7 +17,7 @@ func testRules() Rules {
 	return Rules{
 		AnalyzerIDs:      []string{"file-size", "big-comment", "golangci-lint"},
 		ReservedIDs:      []string{"file-size", "big-comment", "golangci-lint", "output"},
-		Params:           map[string][]string{"file-size": {"max_lines"}},
+		Params:           map[string][]string{"file-size": {"max_lines", "error_lines"}},
 		DelegatedFormats: []string{"dart-analyze-json"},
 	}
 }
