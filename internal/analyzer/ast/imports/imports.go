@@ -46,7 +46,7 @@ func checkFile(fc core.FileChange, file *syntax.File, reporter core.Reporter) []
 						spec.Literal,
 						strings.Join(file.ImportGroups, " → "),
 					),
-					"reorder imports to follow: "+suggestedOrder(file.ImportGroups),
+					"reorder imports to follow: "+suggestedOrder(file),
 				),
 			}
 		}
@@ -55,8 +55,10 @@ func checkFile(fc core.FileChange, file *syntax.File, reporter core.Reporter) []
 	return nil
 }
 
-func suggestedOrder(groups []string) string {
-	names := slices.Clone(groups)
-	names[len(names)-1] = "this module"
+func suggestedOrder(file *syntax.File) string {
+	names := slices.Clone(file.ImportGroups)
+	if file.Language == syntax.LangGo {
+		names[len(names)-1] = "this module"
+	}
 	return strings.Join(names, ", ")
 }
