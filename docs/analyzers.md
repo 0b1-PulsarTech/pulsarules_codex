@@ -184,6 +184,9 @@ variable, field or interface method are reported.
   cap as well, since both findings share the id.
 - Raising `max_lines` above 290 without raising `error_lines` leaves the `.svelte` cap at 290,
   which then fires first; raise both. With both set, `error_lines` must exceed `max_lines`.
+- Per path: `overrides` may set `max_lines` and `error_lines` for matching files (nothing else
+  can vary per path). A global `error_lines` combined with a per-path `max_lines` is not
+  cross-checked.
 
 ## import-groups
 

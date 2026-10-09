@@ -179,6 +179,10 @@ func isReader(name string) bool {
 	return name == "ExtensionFilter" || slices.Contains(readers, name)
 }
 
+func isParamsSource(name string) bool {
+	return name == "AnalysisContext.Params" || name == "AnalysisContext.ParamsAt"
+}
+
 func isParamSetType(typ types.Type) bool {
 	named, isNamed := types.Unalias(typ).(*types.Named)
 	if !isNamed || named.Obj().Pkg() == nil {
@@ -202,7 +206,7 @@ func scanParams(packages []*typedPackage, dirIDs map[string][]string) scanResult
 				result.add(pkg.dir, nil, nil, err)
 			case isReader(name):
 				pkg.scanCall(site, name, dirIDs[pkg.dir], &result)
-			case name == "AnalysisContext.Params":
+			case isParamsSource(name):
 				pkg.scanParamsCall(site, &result)
 			}
 		}
@@ -254,7 +258,7 @@ func (pkg *typedPackage) paramsCall(receiver ast.Expr, fn *ast.FuncDecl) *ast.Ca
 		receiver = pkg.onlyAssignment(ident, fn)
 	}
 	call, isCall := receiver.(*ast.CallExpr)
-	if !isCall || coreName(pkg.info.Uses[calleeIdent(call)]) != "AnalysisContext.Params" {
+	if !isCall || !isParamsSource(coreName(pkg.info.Uses[calleeIdent(call)])) {
 		return nil
 	}
 	return call

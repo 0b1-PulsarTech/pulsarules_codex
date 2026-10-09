@@ -83,7 +83,9 @@ func (govCfg *GovernanceConfig) applyAnalyzer(id string, entry AnalyzerEntry) {
 func toCoreOverride(entry OverrideEntry) core.Override {
 	analyzers := make(map[string]core.OverrideConfig, len(entry.Analyzers))
 	for id, rules := range entry.Analyzers {
-		analyzers[id] = core.OverrideConfig{Enabled: rules.Enabled, Severity: rules.Severity}
+		analyzers[id] = core.OverrideConfig{
+			Enabled: rules.Enabled, Severity: rules.Severity, Params: maps.Clone(rules.Params),
+		}
 	}
 	return core.Override{Files: slices.Clone(entry.Files), Analyzers: analyzers}
 }
@@ -104,9 +106,7 @@ func (val *validator) checkOverride(field *fieldPath, override OverrideEntry) {
 		idField := field.key("analyzers").key(id)
 		val.checkOverrideAnalyzer(idField, id)
 		val.checkSeverity(idField.key("severity"), rules.Severity)
-		if rules.Params != nil {
-			val.fail(idField.key("params"), "per-path params are not supported")
-		}
+		val.checkOverrideParams(idField.key("params"), id, rules.Params)
 	}
 }
 
@@ -132,6 +132,22 @@ func (val *validator) checkGlobBudget(globs []string) bool {
 		return true
 	}
 	return false
+}
+
+func (val *validator) checkOverrideParams(field *fieldPath, id string, params map[string]any) {
+	if params == nil {
+		return
+	}
+	if id != fileSizeID {
+		val.fail(field, "per-path params are only supported for %s, not %s",
+			fileSizeID, clipValue(id))
+		return
+	}
+	val.checkAnalyzerParams(field, id, params)
+	if _, set := params[core.ParamExtensions]; set {
+		val.fail(field.key(core.ParamExtensions), "%s is not supported per path",
+			core.ParamExtensions)
+	}
 }
 
 func (val *validator) checkAnalyzerParams(field *fieldPath, id string, params map[string]any) {

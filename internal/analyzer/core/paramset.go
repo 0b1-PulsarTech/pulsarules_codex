@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/pathglob"
 )
 
 type ParamSet map[string]any
@@ -138,4 +140,27 @@ func (ctx *AnalysisContext) Params(analyzerID string) ParamSet {
 		return nil
 	}
 	return cfg.Params
+}
+
+func (ctx *AnalysisContext) ParamsAt(analyzerID, path string) ParamSet {
+	merged := maps.Clone(ctx.Params(analyzerID))
+	if ctx.Config == nil {
+		return merged
+	}
+	// Later matching overrides win key by key, the order severity and enabled resolve in.
+	for _, override := range ctx.Config.Overrides {
+		rules := override.Analyzers[analyzerID]
+		if len(rules.Params) == 0 || !override.covers(path) {
+			continue
+		}
+		if merged == nil {
+			merged = ParamSet{}
+		}
+		maps.Copy(merged, rules.Params)
+	}
+	return merged
+}
+
+func (override Override) covers(path string) bool {
+	return pathglob.CompileSet(override.Files).Match(path)
 }

@@ -249,8 +249,9 @@ func TestValidateOverrides(t *testing.T) {
 		},
 		{
 			"params",
-			head + "[{files: [a], analyzers: {file-size: {params: {max_lines: 1}}}}]\n",
-			"overrides[0].analyzers.file-size.params: per-path params are not supported",
+			head + "[{files: [a], analyzers: {big-comment: {params: {max_lines: 1}}}}]\n",
+			"overrides[0].analyzers.big-comment.params: " +
+				"per-path params are only supported for file-size",
 		},
 		{
 			"sub id",

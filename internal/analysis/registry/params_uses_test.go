@@ -54,7 +54,7 @@ func (pkg *typedPackage) foreignParams(receiver ast.Expr, fn *ast.FuncDecl) erro
 	for _, value := range values {
 		call, isCall := ast.Unparen(value).(*ast.CallExpr)
 		if !isCall || pkg.isConversion(call) || !pkg.isParamSet(call) ||
-			coreName(pkg.info.Uses[calleeIdent(call)]) == "AnalysisContext.Params" {
+			isParamsSource(coreName(pkg.info.Uses[calleeIdent(call)])) {
 			continue
 		}
 		return fmt.Errorf("params come from %s, not AnalysisContext.Params",
@@ -104,7 +104,7 @@ func (pkg *typedPackage) scanOtherParamIDs(result *scanResult, dirIDs []string) 
 	for _, file := range pkg.files {
 		ast.Inspect(file, func(node ast.Node) bool {
 			call, isCall := node.(*ast.CallExpr)
-			if !isCall || coreName(pkg.info.Uses[calleeIdent(call)]) != "AnalysisContext.Params" {
+			if !isCall || !isParamsSource(coreName(pkg.info.Uses[calleeIdent(call)])) {
 				return true
 			}
 			ids, err := pkg.resolve(call.Args[0])

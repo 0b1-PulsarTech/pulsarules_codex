@@ -1,6 +1,7 @@
 package core
 
 import (
+	"maps"
 	"slices"
 	"testing"
 )
@@ -181,49 +182,6 @@ func TestParamSetStrings(t *testing.T) {
 	}
 }
 
-func TestAnalysisContextParams(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name string
-		ctx  *AnalysisContext
-		id   string
-		want int
-	}{
-		{"nil config returns nil ParamSet", &AnalysisContext{}, "file-size", 300},
-		{
-			name: "missing analyzer returns nil ParamSet",
-			ctx: &AnalysisContext{
-				Config: &AnalysisConfig{Analyzers: map[string]AnalyzerConfig{}},
-			},
-			id:   "file-size",
-			want: 300,
-		},
-		{
-			name: "present analyzer returns its params",
-			ctx: &AnalysisContext{Config: &AnalysisConfig{Analyzers: map[string]AnalyzerConfig{
-				"file-size": {Params: map[string]any{"max_lines": 180}},
-			}}},
-			id:   "file-size",
-			want: 180,
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			got := testCase.ctx.Params(testCase.id).Int("max_lines", 300)
-			if got != testCase.want {
-				t.Errorf(
-					"Params(%q).Int(max_lines) = %d, want %d",
-					testCase.id,
-					got,
-					testCase.want,
-				)
-			}
-		})
-	}
-}
-
 func TestParamSetSeverity(t *testing.T) {
 	t.Parallel()
 
@@ -312,6 +270,121 @@ func TestParamSetNonNegativeInt(t *testing.T) {
 				t.Errorf("NonNegativeInt = %d, want %d", got, testCase.want)
 			}
 		})
+	}
+}
+
+func scopedOverride(files []string, params map[string]any) Override {
+	return Override{
+		Files:     files,
+		Analyzers: map[string]OverrideConfig{"file-size": {Params: params}},
+	}
+}
+
+type paramsAtCase struct {
+	name      string
+	base      map[string]any
+	overrides []Override
+	path      string
+	want      ParamSet
+}
+
+func runParamsAtCases(t *testing.T, testCases []paramsAtCase) {
+	t.Helper()
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := &AnalysisContext{Config: &AnalysisConfig{
+				Analyzers: map[string]AnalyzerConfig{"file-size": {Params: testCase.base}},
+				Overrides: testCase.overrides,
+			}}
+			got := ctx.ParamsAt("file-size", testCase.path)
+			if len(got) != len(testCase.want) || !maps.Equal(got, testCase.want) {
+				t.Errorf("ParamsAt(%q) = %v, want %v", testCase.path, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestAnalysisContextParamsAt(t *testing.T) {
+	t.Parallel()
+
+	svelte := []string{"**/*.svelte"}
+	runParamsAtCases(t, []paramsAtCase{
+		{
+			"no override keeps the base",
+			map[string]any{"max_lines": 180},
+			nil, "a/b.svelte",
+			ParamSet{"max_lines": 180},
+		},
+		{
+			"matching glob adds params", nil,
+			[]Override{scopedOverride(svelte, map[string]any{"max_lines": 150})},
+			"a/b.svelte",
+			ParamSet{"max_lines": 150},
+		},
+		{
+			"non matching glob is ignored",
+			map[string]any{"max_lines": 180},
+			[]Override{scopedOverride(svelte, map[string]any{"max_lines": 150})},
+			"a/b.go",
+			ParamSet{"max_lines": 180},
+		},
+		{
+			"override without params is skipped",
+			map[string]any{"max_lines": 180},
+			[]Override{scopedOverride(svelte, nil)},
+			"a/b.svelte",
+			ParamSet{"max_lines": 180},
+		},
+	})
+}
+
+func TestAnalysisContextParamsAt_Precedence(t *testing.T) {
+	t.Parallel()
+
+	runParamsAtCases(t, []paramsAtCase{
+		{
+			"later override wins per key",
+			map[string]any{"max_lines": 180},
+			[]Override{
+				scopedOverride([]string{"**/*.svelte"}, map[string]any{
+					"max_lines": 150, "error_lines": 300,
+				}),
+				scopedOverride([]string{"a/*.svelte"}, map[string]any{"max_lines": 100}),
+			},
+			"a/b.svelte",
+			ParamSet{"max_lines": 100, "error_lines": 300},
+		},
+		{
+			"no files matches everything", nil,
+			[]Override{scopedOverride(nil, map[string]any{"error_lines": 0})},
+			"x.go",
+			ParamSet{"error_lines": 0},
+		},
+		{
+			"invalid glob matches nothing", nil,
+			[]Override{scopedOverride([]string{""}, map[string]any{"max_lines": 1})},
+			"x.go",
+			nil,
+		},
+	})
+}
+
+func TestParamsAt_NilConfigAndBase(t *testing.T) {
+	t.Parallel()
+
+	if got := (&AnalysisContext{}).ParamsAt("file-size", "a.go"); len(got) != 0 {
+		t.Fatalf("nil config resolved %v, want empty", got)
+	}
+	base := map[string]any{"max_lines": 180}
+	ctx := &AnalysisContext{Config: &AnalysisConfig{
+		Analyzers: map[string]AnalyzerConfig{"file-size": {Params: base}},
+		Overrides: []Override{scopedOverride(nil, map[string]any{"max_lines": 50})},
+	}}
+	ctx.ParamsAt("file-size", "a.go")
+	if base["max_lines"] != 180 {
+		t.Fatalf("base params mutated: %v", base)
 	}
 }
 

@@ -28,11 +28,11 @@ func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	// A severity override on file-size downgrades the cap too, since both share one ID.
 	hardCap := core.NewReporter(analyzer.ID(), core.SeverityError, core.CatProject)
 	eligible := core.ExtensionFilter(ctx, analyzer.ID(), core.DefaultSourceExtensions())
-	params := ctx.Params(analyzer.ID())
 	return core.EachChangedFile(
 		ctx,
 		eligible,
 		func(fc core.FileChange, src []byte) []core.Finding {
+			params := ctx.ParamsAt(analyzer.ID(), fc.Path)
 			limits := newLineLimits(
 				params.Int(ParamMaxLines, analyzer.maxLines), errorLines(params, fc.Extension),
 			)
