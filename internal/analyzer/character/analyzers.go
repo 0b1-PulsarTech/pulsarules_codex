@@ -94,7 +94,7 @@ type TypographicAnalyzer struct {
 func NewTypographicAnalyzer() *TypographicAnalyzer {
 	return &TypographicAnalyzer{
 		// Blocks by default; a project that treats ASCII punctuation as house style
-		// lowers it through the analyzer's "severity" param.
+		// lowers it with the analyzer's "severity" key.
 		reporter: finding.NewReporter(
 			"typographic-markers",
 			finding.SeverityError,

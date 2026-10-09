@@ -45,8 +45,9 @@ Applies to: every governed source extension (e.g. `.go`, `.dart`, `.ts`, `.tsx`,
    the diff a reviewer reads is not the code the compiler sees. One that may be load-bearing - a
    joiner between emoji, a byte order mark - only advises, because this check cannot judge it.
    Typographic punctuation blocks by default; a project that treats ASCII punctuation as house style
-   rather than a defect lowers it through the analyzer's `severity` param (`error`, `warning`,
-   `info`), which `--typographic-severity` bakes into the generated hooks at install time.
+   rather than a defect lowers it with `analyzers.typographic-markers.severity` (`error`,
+   `warning`, `info`), or with `--typographic-severity`, which bakes it into the generated hooks
+   at install time.
 4. No AI provenance key in a markdown frontmatter block (`generator`, `ai_generated`, `claude`,
    `synthid`, `c2pa`, ...). Prose that merely names a vendor is not provenance and is not flagged.
 {{end}}
