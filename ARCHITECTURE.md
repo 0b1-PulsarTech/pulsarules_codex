@@ -127,14 +127,14 @@ when `vcs.Open` returned `vcs.ErrNoRepository` - the session then runs with no g
 changed-file discovery instead of failing), an optional commit message, the knowledge `*Index` (for
 rule-body injection), and a `*config.GovernanceConfig` (defaulted and preset-applied when nil).
 
-`Session.Analyze(scope, status, files)` runs three steps: `Discover` gathers changed files, git
-history, and staged renames with no AST parsing and returns a `Discovery`; `Load` turns that
-`Discovery` into a full `core.AnalysisContext`, pre-parsing changed Go files into an
-`astcache.Cache`; then a `StageRunner` is built, registered for `scope`, and run. Separating
-`Discover` from `Load` lets a caller inspect or edit the discovered state first; `status` is the
-already-computed `vcs.Status`, so a caller that read it already (a hook) does not pay for a second
-read. `files` is a `FileSet`: `FileSetChanged` analyzes the changed files, `FileSetAll` (the
-`--all-files` flag) walks every source file in the tree.
+`Session.Analyze(scope, status, files)` runs three steps: `Discover` gathers changed files, git history,
+and staged renames with no AST parsing and returns a `Discovery`; `Load` turns that `Discovery` into a
+full `core.AnalysisContext`, attaching the lazy `syntax.Cache` (the language providers) and the
+`astcache.Cache` of Go ASTs; then a `StageRunner`
+is built, registered for `scope`, and run. Separating `Discover` from `Load` lets a caller inspect or
+edit the discovered state first; `status` is the already-computed `vcs.Status`, so a caller that read it
+already (a hook) does not pay for a second read. `files` is a `FileSet`: `FileSetChanged` analyzes the
+changed files, `FileSetAll` (the `--all-files` flag) walks every source file in the tree.
 
 The file walk is git-listed: `Session.attachSources` asks the repository for `git ls-files -z --cached
 --others --exclude-standard` (`vcs.ListFiles`) and wraps the provider in `sources.NewListedProvider`, so
@@ -225,6 +225,23 @@ files. `core.InPlaceAnalyzer` marks the second contract - an analyzer that rewri
   summary, then sort findings by severity, file and line and drop adjacent duplicates.
 - `core/astcache` - a per-invocation cache of parsed Go ASTs, populated once in `Session.Load` so
   analyzers call `Get(path)` instead of each re-parsing the same file.
+- `core/syntax` - the language neutral syntax model and its providers. A `Provider` has a
+  `Language`, a `Handles` predicate and `Summarize`, which turns sources into per-file `File`
+  summaries (functions, blocks, imports with their group, declared names, or a `ParseError`).
+  `syntax.Cache` is lazy (a `sync.Once`), groups files by provider and records a missing provider
+  or failure as `Unavailable`. `LanguageForExtension` maps extensions to `go`, `dart`, `typescript`,
+  `javascript` and `svelte`. Providers are registered in `internal/analysis/boot.go`:
+  `gosyntax` (go/parser), `dartsyntax` (an AOT compiled Dart helper, cached under the user cache
+  dir, with a build failure backoff) and `tssyntax` (the typescript-go fork, run in a child
+  process: the same binary re-executed as `__tsproc_child` with `PULSARULES_TSPROC=1` and memory,
+  time and size guards). `main` calls `tssyntax.RunChild` first, so any test binary that
+  summarises TypeScript, JavaScript or Svelte needs a `TestMain` calling `RunChild` (see
+  `internal/analysis/main_test.go`). `ast/syntaxfiles.Each` skips files with a `ParseError`, and
+  `ast/syntaxreport` emits the `<lang>-syntax/unparsed` and `/unavailable` findings.
+- `core/testpolicy` - the per-language test file classification used by `file-size`, `complexity`,
+  magic numbers and `package-file-count`; the limit multipliers live in `static/filesize` (x2.6)
+  and `ast/complexity` (x1.5).
+- `core/pathglob` - the anchored, slash separated glob matcher used by `tests:` and `overrides`.
 - `core/lexical` - comment and header lexing shared by the comment analyzers: `CommentSyntax`, the
   directive grammar, `IsGeneratedSource` and header-line extraction.
 - `core/sources` - the file `Provider`, the skip-directory sets, and the git-listed provider wrapper.
