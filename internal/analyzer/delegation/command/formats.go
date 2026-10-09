@@ -19,6 +19,7 @@ type diagnostic struct {
 type format struct {
 	decode         func(output []byte) ([]diagnostic, error)
 	reportingExits []int
+	precheck       func(root, dir string, listed listing) string
 }
 
 func formats() map[string]format {
@@ -31,6 +32,7 @@ func formats() map[string]format {
 		"dart-analyze-json": {
 			decode:         decodeDartAnalyze,
 			reportingExits: []int{dartExitInfos, dartExitWarnings, dartExitErrors},
+			precheck:       dartPrecheck,
 		},
 	}
 }
