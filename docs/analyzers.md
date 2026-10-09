@@ -62,6 +62,10 @@ variable, field or interface method are reported.
   is upper case and names a function, method, type, constant, variable, field or interface method;
   type parameters, the package clause, labels, receivers, loop variables, parameters, results, type
   switch bindings and import aliases are skipped. `--preset minimal` sets it.
+  `allowed_names` (a list or comma string, default empty) exempts exact, case sensitive names
+  everywhere (`i`, `j`, ...); `t` is not exempt by default. It is a WARNING.
+- Languages: Go, Dart and TypeScript/JavaScript/Svelte. Only letters count (`_` and `$` are not
+  flagged), and the Svelte `$:` label is exempt.
 - Exemptions: `_`; `import . "x"` and `import _ "x"` are not aliases; a parameter typed
   `*testing.T`, `*testing.B`, `*testing.F`, `*testing.M` or `testing.TB`, where `testing` is the
   name the file imports "testing" under (every import of it counts, aliases included; a file

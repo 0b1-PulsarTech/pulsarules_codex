@@ -119,17 +119,45 @@ func TestFindingHint(t *testing.T) {
 	}
 }
 
-func TestAnalyzeExportedOnly(t *testing.T) {
+func allowedMessages(t *testing.T, params map[string]any) []string {
+	t.Helper()
+
+	const source = "package pkg\n\nconst X = 1\n\ntype T struct{}\n\nvar t = 3\n\n" +
+		"var y = 2\n\nfunc run(p int) { q := p; _ = q }\n"
+	cache := astcache.New()
+	if _, err := cache.Parse("pkg.go", []byte(source)); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	ctx := &core.AnalysisContext{
+		ASTCache:     cache,
+		Syntax:       summaries(cache),
+		ChangedFiles: []core.FileChange{{Path: "pkg.go", Extension: ".go"}},
+		Config: &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
+			"single-letter-name": {Enabled: true, Params: params},
+		}},
+	}
+	findings := NewAnalyzer().Analyze(ctx)
+	got := make([]string, 0, len(findings))
+	for _, finding := range findings {
+		got = append(got, finding.Message)
+	}
+	return got
+}
+
+func TestAnalyzeAllowedNamesAndExportedOnly(t *testing.T) {
 	t.Parallel()
 
-	const source = "package pkg\n\nconst X = 1\n\ntype T struct{}\n\nvar y = 2\n\n" +
-		"func run(p int) { q := p; _ = q }\n"
-	every := []string{
-		`constant "X" is a single letter`,
-		`type "T" is a single letter`,
-		`variable "y" is a single letter`,
-		`parameter "p" is a single letter`,
-		`variable "q" is a single letter`,
+	const (
+		constX = `constant "X" is a single letter`
+		typeT  = `type "T" is a single letter`
+		varT   = `variable "t" is a single letter`
+		varY   = `variable "y" is a single letter`
+		paramP = `parameter "p" is a single letter`
+		varQ   = `variable "q" is a single letter`
+	)
+	every := []string{constX, typeT, varT, varY, paramP, varQ}
+	allow := func(names ...string) map[string]any {
+		return map[string]any{"allowed_names": names}
 	}
 	testCases := []struct {
 		name   string
@@ -138,32 +166,23 @@ func TestAnalyzeExportedOnly(t *testing.T) {
 	}{
 		{"default flags every single letter", nil, every},
 		{"explicit false flags every", map[string]any{"exported_only": false}, every},
+		{"allowed t spares t but not T", allow("t"), []string{constX, typeT, varY, paramP, varQ}},
+		{"allowed names spares exact matches", allow("y", "p"), []string{
+			constX, typeT, varT, varQ,
+		}},
+		{"allowed names is case sensitive", allow("x"), every},
+		{"allowed names ignores non string entries", map[string]any{
+			"allowed_names": []any{1, "y"},
+		}, []string{constX, typeT, varT, paramP, varQ}},
 		{"exported only keeps upper case", map[string]any{"exported_only": true}, []string{
-			`constant "X" is a single letter`,
-			`type "T" is a single letter`,
+			constX, typeT,
 		}},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cache := astcache.New()
-			if _, err := cache.Parse("pkg.go", []byte(source)); err != nil {
-				t.Fatalf("parse: %v", err)
-			}
-			ctx := &core.AnalysisContext{
-				ASTCache:     cache,
-				Syntax:       summaries(cache),
-				ChangedFiles: []core.FileChange{{Path: "pkg.go", Extension: ".go"}},
-				Config: &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
-					"single-letter-name": {Enabled: true, Params: testCase.params},
-				}},
-			}
-			var got []string
-			for _, finding := range NewAnalyzer().Analyze(ctx) {
-				got = append(got, finding.Message)
-			}
-			if !slices.Equal(got, testCase.want) {
+			if got := allowedMessages(t, testCase.params); !slices.Equal(got, testCase.want) {
 				t.Fatalf("messages = %q, want %q", got, testCase.want)
 			}
 		})

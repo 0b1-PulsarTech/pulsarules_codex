@@ -2,6 +2,7 @@ package singleletter
 
 import (
 	"fmt"
+	"slices"
 	"unicode"
 	"unicode/utf8"
 
@@ -24,9 +25,11 @@ func (analyzer *Analyzer) reporter() core.Reporter {
 }
 
 func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
+	params := ctx.Params(analyzer.ID())
 	cfg := settings{
 		reporter:     analyzer.reporter().Resolved(ctx),
-		exportedOnly: ctx.Params(analyzer.ID()).Bool("exported_only", false),
+		exportedOnly: params.Bool("exported_only", false),
+		allowed:      params.Strings("allowed_names", nil),
 	}
 	return syntaxfiles.Each(ctx, func(fc core.FileChange, file *syntax.File) []core.Finding {
 		if fc.Generated {
@@ -39,12 +42,14 @@ func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 type settings struct {
 	reporter     core.Reporter
 	exportedOnly bool
+	allowed      []string
 }
 
 func checkFile(fc core.FileChange, file *syntax.File, cfg settings) []core.Finding {
 	findings := make([]core.Finding, 0, len(file.Names))
 	for _, name := range file.Names {
-		if name.Exempt || !isSingleLetter(name.Name) || (cfg.exportedOnly && !name.Exported) {
+		if name.Exempt || !isSingleLetter(name.Name) ||
+			(cfg.exportedOnly && !name.Exported) || slices.Contains(cfg.allowed, name.Name) {
 			continue
 		}
 		findings = append(findings, cfg.reporter.At(
