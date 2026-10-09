@@ -145,9 +145,91 @@ func TestDartPrecheckConfigIsADirectory(t *testing.T) {
 	}
 }
 
+func noticeOf(missing, dropped string) string {
+	return "generated code is missing (" + missing +
+		"); run `dart run build_runner build`; " + dropped + " dropped"
+}
+
+func codegenDiagnostics() map[string]diagnostic {
+	missing := func(code, uri string) diagnostic {
+		return diagnostic{
+			code: code, severity: core.SeverityError, file: "lib/x.dart",
+			message: "Target of URI hasn't been generated: '" + uri + "'.",
+		}
+	}
+	return map[string]diagnostic{
+		"notGenerated": missing(codegenMissing, "a.g.dart"),
+		"otherFile":    missing(codegenMissing, "b.g.dart"),
+		"absentMock":   missing(codeUnresolved, "a.mocks.dart"),
+		"absentPlain":  missing(codeUnresolved, "a.dart"),
+		"warning":      {code: "w", severity: core.SeverityWarning},
+		"failure":      {code: "undefined_identifier", severity: core.SeverityError},
+	}
+}
+
+type codegenCase struct {
+	name       string
+	found      []diagnostic
+	want       []diagnostic
+	wantNotice string
+}
+
+func codegenRows() []codegenCase {
+	byName := codegenDiagnostics()
+	warning, failure := byName["warning"], byName["failure"]
+	hint := diagnostic{code: "i", severity: core.SeverityInfo}
+	return []codegenCase{
+		{"none", []diagnostic{failure, warning}, []diagnostic{failure, warning}, ""},
+		{"empty", nil, nil, ""},
+		{
+			"errors dropped, lints kept",
+			[]diagnostic{warning, byName["notGenerated"], failure, hint},
+			[]diagnostic{warning, hint},
+			noticeOf("1 file: lib/a.g.dart", "2 derived errors"),
+		},
+		{
+			"distinct files are counted once each",
+			[]diagnostic{byName["notGenerated"], byName["notGenerated"], byName["otherFile"]},
+			[]diagnostic{},
+			noticeOf("2 files: lib/a.g.dart", "3 derived errors"),
+		},
+		{
+			"unresolved generated suffix counts",
+			[]diagnostic{byName["absentMock"], failure},
+			[]diagnostic{},
+			noticeOf("1 file: lib/a.mocks.dart", "2 derived errors"),
+		},
+		{
+			"unresolved plain file is a real error",
+			[]diagnostic{byName["absentPlain"], failure},
+			[]diagnostic{byName["absentPlain"], failure},
+			"",
+		},
+	}
+}
+
+func TestDartCodegen(t *testing.T) {
+	t.Parallel()
+
+	for _, testCase := range codegenRows() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, notice := dartCodegen(testCase.found, scope{root: "/r", dir: "/r"})
+			if notice != testCase.wantNotice {
+				t.Errorf("notice = %q, want %q", notice, testCase.wantNotice)
+			}
+			if !slices.Equal(got, testCase.want) {
+				t.Errorf("kept = %+v, want %+v", got, testCase.want)
+			}
+		})
+	}
+}
+
 type preconditionCase struct {
 	name     string
 	files    []string
+	sources  map[string]string
 	dir      string
 	report   string
 	exit     int
@@ -158,7 +240,9 @@ type preconditionCase struct {
 
 const (
 	unavailableID = entryID + "/unavailable"
-	lintInfo      = `{"code":"lint","severity":"INFO","location":{"file":"lib/a.dart"}}`
+	derivedErr    = `{"code":"undefined_identifier","severity":"ERROR",` +
+		`"location":{"file":"lib/a.dart"}}`
+	lintInfo = `{"code":"lint","severity":"INFO","location":{"file":"lib/a.dart"}}`
 )
 
 func wrapReport(items ...string) string {
@@ -193,10 +277,76 @@ func skipCases() []preconditionCase {
 	}
 }
 
+func codegenCases() []preconditionCase {
+	const generatedErr = `{"code":"uri_has_not_been_generated","severity":"ERROR",` +
+		`"problemMessage":"x","location":{"file":"lib/a.dart"}}`
+	withConfig := []string{"pubspec.yaml", configPath, "lib/a.dart", "m/pubspec.yaml"}
+	return []preconditionCase{
+		{
+			name: "missing codegen drops errors, keeps lints", files: withConfig,
+			report: wrapReport(generatedErr, derivedErr, lintInfo), exit: 3,
+			wantIDs: []string{entryID + "/lint", unavailableID}, wantRun: true,
+		},
+		{
+			name: "all dropped under exit 3 is no failure", files: withConfig,
+			report: wrapReport(generatedErr, derivedErr), exit: 3,
+			wantIDs: []string{unavailableID}, wantRun: true,
+		},
+		{
+			name: "errors without codegen are kept", files: withConfig,
+			report: wrapReport(derivedErr), exit: 3,
+			wantIDs: []string{entryID + "/undefined_identifier"}, wantRun: true,
+		},
+	}
+}
+
+func workspaceCases() []preconditionCase {
+	local := []string{
+		"packages/fiacao/pubspec.yaml", "packages/fiacao/" + configPath,
+		"packages/fiacao/lib/a.dart", "packages/other/lib/o.dart",
+	}
+	files := []string{
+		"pubspec.yaml", configPath, "packages/fiacao/lib/a.dart", "packages/fiacao/pubspec.yaml",
+		"packages/nucleon/lib/nucleon.dart",
+	}
+	sources := map[string]string{
+		"packages/nucleon/lib/nucleon.dart": "export 'src/catalog.g.dart';\n",
+	}
+	generated := map[string]string{
+		"packages/nucleon/lib/nucleon.dart":       "export 'src/catalog.g.dart';\n",
+		"packages/nucleon/lib/src/catalog.g.dart": "",
+	}
+	return []preconditionCase{
+		{
+			name: "codegen missing outside the entry workspace is ignored", files: local,
+			sources: map[string]string{"packages/other/lib/o.dart": "export 'x.g.dart';\n"},
+			dir:     "packages/fiacao", report: wrapReport(derivedErr, lintInfo), exit: 3,
+			wantIDs: []string{entryID + "/undefined_identifier", entryID + "/lint"},
+			wantRun: true,
+		},
+		{
+			name: "sibling package codegen missing drops the entry errors", files: files,
+			sources: sources, dir: "packages/fiacao",
+			report: wrapReport(derivedErr, lintInfo), exit: 3,
+			wantIDs: []string{entryID + "/lint", unavailableID}, wantRun: true,
+			wantText: "(1 file: packages/nucleon/lib/src/catalog.g.dart)",
+		},
+		{
+			name: "sibling package codegen present keeps the errors", files: files,
+			sources: generated, dir: "packages/fiacao",
+			report: wrapReport(derivedErr, lintInfo), exit: 3,
+			wantIDs: []string{entryID + "/undefined_identifier", entryID + "/lint"},
+			wantRun: true,
+		},
+	}
+}
+
 func TestRunEntryPrecondition(t *testing.T) {
 	t.Parallel()
 
 	testCases := skipCases()
+	testCases = append(testCases, codegenCases()...)
+	testCases = append(testCases, workspaceCases()...)
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
@@ -206,9 +356,23 @@ func TestRunEntryPrecondition(t *testing.T) {
 	}
 }
 
+func writeSources(t *testing.T, root string, sources map[string]string) {
+	t.Helper()
+	for name, text := range sources {
+		full := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(full), 0o700); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.WriteFile(full, []byte(text), 0o600); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+}
+
 func runPreconditionCase(t *testing.T, testCase preconditionCase) {
 	t.Helper()
 	root, listed := buildTree(t, testCase.files)
+	writeSources(t, root, testCase.sources)
 	marker := filepath.Join(t.TempDir(), "ran")
 	script := fmt.Sprintf("echo \"$@\" > %q\nprintf '%%s' '%s'\nexit %d\n",
 		marker, testCase.report, testCase.exit)

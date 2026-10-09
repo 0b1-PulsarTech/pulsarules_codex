@@ -37,6 +37,10 @@ func (rep reports) skipped(reason string) core.Finding {
 	return rep.plain("unavailable", core.SeverityInfo, reason+"; "+rep.id+" was skipped")
 }
 
+func (rep reports) notice(message string) core.Finding {
+	return rep.plain("unavailable", core.SeverityInfo, message)
+}
+
 func (rep reports) timeout(name string) core.Finding {
 	message := name + " timed out after " + commandTimeout.String()
 	return rep.plain("timeout", core.SeverityError, message)
