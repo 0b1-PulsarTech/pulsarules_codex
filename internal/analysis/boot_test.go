@@ -92,8 +92,8 @@ func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
 	static := []string{
 		"file-size", "text-markers", "typographic-markers", "import-groups", "naming",
 		"top-of-file", "big-comment", "simplification-path", "commit-lint",
-		"commit-move-purity", "control-flow", "shadowing", "complexity", "named-returns",
-		"test-comment", "single-use-declaration", "doc-comment",
+		"commit-move-purity", "go-syntax", "dart-syntax", "control-flow", "shadowing",
+		"complexity", "named-returns", "test-comment", "single-use-declaration", "doc-comment",
 		"body-header-comment", "history-narration", "single-letter-name", "variadic-index",
 		"too-many-results", "ungrouped-interfaces", "package-level-var",
 		"package-file-count", "time-discipline", "context-discipline", "pprof-labels",
