@@ -78,8 +78,9 @@ type Function struct {
 type Block struct{ Line, Depth int }
 
 type Import struct {
-	Literal     string
-	Line, Group int
+	Literal, Prefer string
+	Line, Group     int
+	Upward, Foreign bool
 }
 
 type Name struct {
