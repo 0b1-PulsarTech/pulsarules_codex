@@ -614,6 +614,23 @@ skills:
       - dart
     compose_rules:
       - dart-errors
+  - id: ts-errors
+    name: TypeScript errors
+    description: A TypeScript or JavaScript function that can fail returns a result, a tuple with the error last or an object { value, error }, and never throws or rejects to signal a recoverable failure; an API that throws is caught and converted at its boundary. throw stays for a broken invariant or a framework-mandated boundary such as SvelteKit's error() and redirect(). The TypeScript and JavaScript delivery counterpart to errors-logging's (T, error); the error type is a closed set of domain errors.
+    triggers:
+      - writing a TypeScript, JavaScript or Svelte function whose outcome can fail with a domain error
+      - deciding whether to throw, reject, or return an error
+      - wrapping an API that throws, such as fetch or JSON.parse
+      - consuming a result at a call site
+      - wiring a framework boundary that itself requires a throw
+    always_load: true
+    order: 20
+    languages:
+      - typescript
+      - javascript
+      - svelte
+    compose_rules:
+      - ts-errors
   - id: dart-placement
     name: Dart placement
     description: A pubspec workspace's packages/<name>/lib/src/** for internals, lib/<name>.dart as the sole public export barrel, an executable's bin/ kept separate from lib/, and one capability name reused across every package/transport it touches. The Dart concrete instantiation of code-placement for a project with no code-placement skill of its own (Dart is language-gated out of the Go one).

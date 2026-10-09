@@ -92,6 +92,7 @@ multi-language variants.
 | [config.md](domain/config.md)                                         | Typed `Config` via a config loader             |
 | [errors.md](domain/errors.md)                                         | Sentinel errors, `%w` wrapping                 |
 | [dart-errors.md](domain/dart-errors.md)                               | Dart: return a result, no recoverable throw    |
+| [ts-errors.md](domain/ts-errors.md)                                   | TS: return a result, no recoverable throw      |
 | [logging.md](domain/logging.md)                                       | `log/slog` structured logging                  |
 | [security.md](domain/security.md)                                     | Secrets, validation, JWT, SQL, containers      |
 | [startup.md](domain/startup.md)                                       | Zero side effects in `init()`                  |

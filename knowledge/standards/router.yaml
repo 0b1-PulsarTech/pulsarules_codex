@@ -13,6 +13,7 @@ router:
       - { skill: code-minimalism, note: "the minimum that works at function scope (never trims mandated patterns)." }
       - { skill: dart-style, note: "the Dart analogue of go-style; a Dart project's baseline load in place of it." }
       - { skill: dart-errors, note: "the Dart analogue of errors-logging: return a (value, error) result record, positional or named, never throw for a recoverable failure; a Dart project's baseline load in place of it." }
+      - { skill: ts-errors, note: "the TypeScript analogue of errors-logging: return a result (error last, or { value, error }), never throw or reject for a recoverable failure; a TypeScript, JavaScript or Svelte project's baseline load in place of it." }
       - { skill: dart-placement, note: "the Dart analogue of code-placement: lib/src for internals, lib/<name>.dart as the public barrel; a Dart project's baseline load in place of it." }
     commit_last:
       - { skill: verification-before-done, note: "definition of done - build, race tests, lint, governance green before you commit." }
@@ -101,6 +102,9 @@ router:
     - signal: A Dart function returning or wrapping an error
       skills: [ dart-errors ]
       note: dart-errors is already in the baseline above for a Dart project; this row is a reminder for a mixed-language repo
+    - signal: A TypeScript or JavaScript function returning or wrapping an error
+      skills: [ ts-errors ]
+      note: ts-errors is already in the baseline above for a TypeScript, JavaScript or Svelte project; this row is a reminder for a mixed-language repo
     - signal: Creating a Dart package, or deciding where a Dart file belongs
       skills: [ dart-placement ]
       note: dart-placement is already in the baseline above for a Dart project; this row is a reminder for a mixed-language repo
