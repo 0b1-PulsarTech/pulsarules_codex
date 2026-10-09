@@ -248,6 +248,22 @@ pulsarules_cli governance --project . --all-files
 pulsarules_cli governance --project . --scope full --all-files
 ```
 
+#### Hooks: who gates what
+
+- The git hooks are the gate. `commit-msg` runs `commitlint`; `pre-commit` runs
+  `governance --scope commit`. `install` sets up only those two by default; `pre-push`, which runs
+  the full `governance`, is opt-in: `install --git-hooks commit-msg,pre-commit,pre-push`. Delegated
+  commands and the `branch-name` gate run only there (or in a plain `governance` run). An invalid
+  project config fails the hooks.
+- The Claude Code `Stop` hook is notice-only. It runs `governance --scope changed` and reports
+  findings as `additionalContext`; it never blocks. It is registered with a 90 second timeout and
+  stops waiting after 60 seconds, emitting "Governance did not finish within 60s; run
+  `pulsarules_cli governance` before committing (the git hooks still check)." The run is
+  abandoned, not cancelled. Identical output is emitted once per session. A cold Dart helper build
+  (up to 45 seconds) plus a run (up to 30 seconds) can exceed the 60 second budget. Then the notice
+  says the run did not finish, the abandoned run may leave the helper process running and a
+  request file in the temp directory behind, and the git hooks still check.
+
 ### Clean
 
 Sweep the files the governance gate walks that lie inside `--project` (or the working directory) and
