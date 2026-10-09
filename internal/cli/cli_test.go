@@ -322,12 +322,7 @@ func TestRun_GovernanceReportsFindings(t *testing.T) {
 		want   string
 	}{
 		{name: "clean tree", source: "package alpha\n", want: "ok"},
-		{
-			name: "warnings do not fail the run",
-			source: "package alpha\n\nfunc f() {\n\t// one\n\t// two\n\t// three\n\t// four\n" +
-				"\t_ = 1\n}\n",
-			want: "ok",
-		},
+		{name: "warnings do not fail the run", source: "package alpha\n\nfunc {\n", want: "ok"},
 		{name: "errors exit 1", source: "package alpha\n\nvar _ = \"\u2014\"\n", want: "exit 1"},
 		{name: "invalid scope", scope: "fulll", want: "invalid --scope"},
 	}

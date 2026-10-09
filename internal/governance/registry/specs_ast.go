@@ -7,10 +7,20 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/shadowing"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/singleuse"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/signature/namedreturns"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntaxreport"
 )
+
+func syntaxReportSpec(language syntax.Language) analyzerSpec {
+	return staticSpec(string(language)+"-syntax", func() *syntaxreport.Analyzer {
+		return syntaxreport.NewAnalyzer(language)
+	})
+}
 
 func astSpecs() []analyzerSpec {
 	return []analyzerSpec{
+		syntaxReportSpec(syntax.LangGo),
+		syntaxReportSpec(syntax.LangDart),
 		staticSpec("control-flow", controlflow.NewAnalyzer),
 		staticSpec("shadowing", shadowing.NewAnalyzer),
 		staticSpec("complexity", complexity.NewAnalyzer),
