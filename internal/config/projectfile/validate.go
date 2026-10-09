@@ -46,7 +46,7 @@ func (file *File) check(rules Rules, root *Field, problems *Problems) {
 		field := val.root.key("analyzers").key(id)
 		val.checkAnalyzer(field, id)
 		val.checkSeverity(field.key("severity"), entry.Severity)
-		val.checkParams(field.key("params"), id, entry.Params)
+		val.checkAnalyzerParams(field.key("params"), id, entry.Params)
 	}
 	if inBudget {
 		val.checkOverrides(file.Overrides)
