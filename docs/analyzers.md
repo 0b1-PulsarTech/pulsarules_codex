@@ -176,10 +176,14 @@ variable, field or interface method are reported.
 - Rule: `effective-go`.
 - Flags: a changed source file with more lines than the limit, 180 by default (counted as newline
   bytes); a test file gets 2.6 times that (468).
-- Params: `max_lines` (default 180), `error_lines` (default 0 = off), plus `extensions`.
+- Params: `max_lines` (default 180), `error_lines` (default 0 = off, except `.svelte`, default 290),
+  plus `extensions`.
 - Hard cap: a file with more than `error_lines` lines is reported as an ERROR with "hard cap N".
-  Test files get the cap times 2.6. `error_lines: 0` turns the cap off. A `severity` override for
-  `file-size` downgrades the hard cap as well, since both findings share the id.
+  Test files get the cap times 2.6 (754 for Svelte). `error_lines: 0` turns the cap off; a global
+  `error_lines` applies to every extension. A `severity` override for `file-size` downgrades the hard
+  cap as well, since both findings share the id.
+- Raising `max_lines` above 290 without raising `error_lines` leaves the `.svelte` cap at 290,
+  which then fires first; raise both.
 - Known limits: a `max_lines` at or below 0 falls back to the default 180 rather than disabling the
   check.
 

@@ -276,9 +276,23 @@ func TestAnalyze_HardCap(t *testing.T) {
 	t.Parallel()
 
 	goCapped := paramsConfig(map[string]any{"max_lines": 100, "error_lines": 250})
+	svelteOff := paramsConfig(map[string]any{"error_lines": 0})
 	runHardCapCases(t, []hardCapCase{
 		{
-			name: "no cap without error_lines", file: "a.go", lines: 600,
+			name: "svelte at the default cap warns", file: "a.svelte", lines: 290,
+			severity: core.SeverityWarning, count: 1,
+		},
+		{
+			name: "svelte past the default cap errors", file: "a.svelte", lines: 291,
+			severity: core.SeverityError, count: 1,
+		},
+		{name: "svelte under the soft limit is clean", file: "a.svelte", lines: 180},
+		{
+			name: "uppercase extension gets the svelte cap", file: "A.SVELTE", lines: 291,
+			severity: core.SeverityError, count: 1,
+		},
+		{
+			name: "go has no default cap", file: "a.go", lines: 600,
 			severity: core.SeverityWarning, count: 1,
 		},
 		{
@@ -288,6 +302,10 @@ func TestAnalyze_HardCap(t *testing.T) {
 		{
 			name: "the cap keeps the warning below it", file: "a.go", lines: 250,
 			config: goCapped, severity: core.SeverityWarning, count: 1,
+		},
+		{
+			name: "zero error_lines turns the svelte cap off", file: "a.svelte", lines: 400,
+			config: svelteOff, severity: core.SeverityWarning, count: 1,
 		},
 	})
 }
@@ -317,11 +335,10 @@ func TestAnalyze_CapMessages(t *testing.T) {
 
 	runHardCapCases(t, []hardCapCase{
 		{
-			name: "hard cap names itself", file: "a.go", lines: 301,
-			config:   paramsConfig(map[string]any{"error_lines": 300}),
+			name: "hard cap names itself", file: "a.svelte", lines: 291,
 			severity: core.SeverityError, count: 1,
-			message: "file is 301 lines, hard cap 300",
-			hint:    "split into smaller files (hard cap 300 lines per file)",
+			message: "file is 291 lines, hard cap 290",
+			hint:    "split into smaller files (hard cap 290 lines per file)",
 		},
 		{
 			name: "soft limit names itself", file: "a.go", lines: 200,

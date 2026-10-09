@@ -29,13 +29,13 @@ func (analyzer *Analyzer) Analyze(ctx *core.AnalysisContext) []core.Finding {
 	hardCap := core.NewReporter(analyzer.ID(), core.SeverityError, core.CatProject)
 	eligible := core.ExtensionFilter(ctx, analyzer.ID(), core.DefaultSourceExtensions())
 	params := ctx.Params(analyzer.ID())
-	limits := newLineLimits(
-		params.Int(ParamMaxLines, analyzer.maxLines), params.NonNegativeInt(ParamErrorLines, 0),
-	)
 	return core.EachChangedFile(
 		ctx,
 		eligible,
 		func(fc core.FileChange, src []byte) []core.Finding {
+			limits := newLineLimits(
+				params.Int(ParamMaxLines, analyzer.maxLines), errorLines(params, fc.Extension),
+			)
 			lines := countLines(src)
 			limit, hardLimit := limits.forFile(fc), limits.hardFor(fc)
 			switch {
