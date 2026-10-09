@@ -10,6 +10,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/dartsyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -46,7 +47,7 @@ func maxGateFor(scope Scope) []registry.Gate {
 type providerFactory func(*astcache.Cache) []syntax.Provider
 
 func defaultProviders(cache *astcache.Cache) []syntax.Provider {
-	return []syntax.Provider{gosyntax.New(cache), dartsyntax.New()}
+	return []syntax.Provider{gosyntax.New(cache), dartsyntax.New(), tssyntax.New()}
 }
 
 func (sess *Session) attachSources(discovery *Request) {

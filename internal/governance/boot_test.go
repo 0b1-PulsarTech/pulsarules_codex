@@ -2,6 +2,7 @@ package governance
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
@@ -93,8 +94,9 @@ func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
 	static := []string{
 		"file-size", "text-markers", "typographic-markers", "import-groups", "naming",
 		"top-of-file", "big-comment", "simplification-path", "commit-lint",
-		"commit-move-purity", "go-syntax", "dart-syntax", "control-flow", "shadowing",
-		"complexity", "named-returns", "test-comment", "single-use-declaration", "doc-comment",
+		"commit-move-purity", "go-syntax", "dart-syntax", "typescript-syntax",
+		"javascript-syntax", "svelte-syntax", "control-flow", "shadowing", "complexity",
+		"named-returns", "test-comment", "single-use-declaration", "doc-comment",
 		"body-header-comment", "history-narration", "single-letter-name", "variadic-index",
 		"too-many-results", "ungrouped-interfaces", "package-level-var",
 		"package-file-count", "time-discipline", "context-discipline", "pprof-labels",
@@ -154,8 +156,10 @@ func TestDefaultProviders(t *testing.T) {
 		wantLangs []syntax.Language
 	}{
 		{
-			name:      "go and dart are registered",
-			wantLangs: []syntax.Language{syntax.LangGo, syntax.LangDart},
+			name: "go, dart and typescript are registered",
+			wantLangs: []syntax.Language{
+				syntax.LangGo, syntax.LangDart, syntax.LangTypeScript,
+			},
 		},
 	}
 	for _, testCase := range testCases {
@@ -169,6 +173,47 @@ func TestDefaultProviders(t *testing.T) {
 			}
 			if !slices.Equal(langs, testCase.wantLangs) {
 				t.Fatalf("defaultProviders() languages = %v, want %v", langs, testCase.wantLangs)
+			}
+		})
+	}
+}
+
+func TestSession_TypeScriptChildParser(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		path   string
+		source string
+		wantID string
+	}{
+		{
+			name: "single letter parameter is analysed", path: "src/a.ts",
+			source: "export function run(q: number): number {\n\treturn q;\n}\n",
+			wantID: "single-letter-name",
+		},
+		{
+			name: "broken file is reported once", path: "src/broken.ts",
+			source: "export function (\n", wantID: "typescript-syntax/unparsed",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			writeFileAtDir(t, dir, testCase.path, testCase.source)
+			findings, _ := analyzeTestPolicyRepo(t, dir, policyRun{fileSet: FileSetAll})
+			var got []string
+			for _, finding := range findings {
+				wanted := finding.AnalyzerID == testCase.wantID ||
+					strings.HasSuffix(finding.AnalyzerID, "/unparsed")
+				if finding.File == testCase.path && wanted {
+					got = append(got, finding.AnalyzerID)
+				}
+			}
+			if !slices.Equal(got, []string{testCase.wantID}) {
+				t.Fatalf("findings for %s = %v, want [%s]", testCase.path, got, testCase.wantID)
 			}
 		})
 	}

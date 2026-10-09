@@ -21,6 +21,9 @@ func astSpecs() []analyzerSpec {
 	return []analyzerSpec{
 		syntaxReportSpec(syntax.LangGo),
 		syntaxReportSpec(syntax.LangDart),
+		syntaxReportSpec(syntax.LangTypeScript),
+		syntaxReportSpec(syntax.LangJavaScript),
+		syntaxReportSpec(syntax.LangSvelte),
 		staticSpec("control-flow", controlflow.NewAnalyzer),
 		staticSpec("shadowing", shadowing.NewAnalyzer),
 		staticSpec("complexity", complexity.NewAnalyzer),
