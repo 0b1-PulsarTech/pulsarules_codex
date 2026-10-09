@@ -10,6 +10,7 @@ import (
 type importCase struct {
 	name       string
 	text       string
+	local      []string
 	want       []syntax.Import
 	wantGroups []string
 }
@@ -31,7 +32,41 @@ func importCases() []importCase {
 				{Literal: "'/abs'", Line: 6, Group: 2},
 				{Literal: "'.'", Line: 7, Group: 2},
 			},
-			wantGroups: []string{"node:", "package", "relative"},
+			wantGroups: []string{"node:", "external", "local"},
+		},
+		{
+			name: "builtins aliases and virtual modules",
+			text: "import a from 'bun:test';\nimport b from 'fs';\nimport c from '$app/x';\n" +
+				"import d from 'virtual:y';\nimport e from '#lib/e';\nimport f from '$lib';\n" +
+				"import g from '$lib/g';\nimport h from '@/h';\nimport i from '~/i';\n" +
+				"import j from '@scope/pkg';\nimport k from '$libx';\n",
+			want: []syntax.Import{
+				{Literal: "'bun:test'", Line: 1, Group: 0},
+				{Literal: "'fs'", Line: 2, Group: 1},
+				{Literal: "'$app/x'", Line: 3, Group: 1},
+				{Literal: "'virtual:y'", Line: 4, Group: 1},
+				{Literal: "'#lib/e'", Line: 5, Group: 2},
+				{Literal: "'$lib'", Line: 6, Group: 2},
+				{Literal: "'$lib/g'", Line: 7, Group: 2},
+				{Literal: "'@/h'", Line: 8, Group: 2},
+				{Literal: "'~/i'", Line: 9, Group: 2},
+				{Literal: "'@scope/pkg'", Line: 10, Group: 1},
+				{Literal: "'$libx'", Line: 11, Group: 1},
+			},
+			wantGroups: []string{"node:", "external", "local"},
+		},
+		{
+			name: "discovered aliases are local",
+			text: "import a from 'app/x';\nimport b from 'app';\nimport c from 'other/x';\n" +
+				"import d from '$app/state';\n",
+			local: []string{"app/*", "$app/*"},
+			want: []syntax.Import{
+				{Literal: "'app/x'", Line: 1, Group: 2},
+				{Literal: "'app'", Line: 2, Group: 1},
+				{Literal: "'other/x'", Line: 3, Group: 1},
+				{Literal: "'$app/state'", Line: 4, Group: 2},
+			},
+			wantGroups: []string{"node:", "external", "local"},
 		},
 		{
 			name: "import equals require and type imports",
@@ -41,7 +76,7 @@ func importCases() []importCase {
 				{Literal: "'./a'", Line: 2, Group: 2},
 				{Literal: "'types'", Line: 3, Group: 1},
 			},
-			wantGroups: []string{"node:", "package", "relative"},
+			wantGroups: []string{"node:", "external", "local"},
 		},
 		{
 			name: "re-exports and dynamic imports are not imports",
@@ -58,7 +93,7 @@ func TestImports(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			facts := collectOf(t, testCase.text, Options{})
+			facts := collectOf(t, testCase.text, Options{Local: testCase.local})
 			if !slices.Equal(facts.Imports, testCase.want) {
 				t.Fatalf("imports\n got %+v\nwant %+v", facts.Imports, testCase.want)
 			}

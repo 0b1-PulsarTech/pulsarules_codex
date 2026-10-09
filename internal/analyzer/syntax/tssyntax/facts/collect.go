@@ -19,6 +19,7 @@ type collector struct {
 	text    string
 	lines   tsparse.Lines
 	isTest  bool
+	local   []string
 	factory *ast.NodeFactory
 	out     syntax.File
 	frames  []int
@@ -28,13 +29,17 @@ type collector struct {
 	each    ast.Visitor
 }
 
-type Options struct{ IsTest bool }
+type Options struct {
+	Local  []string
+	IsTest bool
+}
 
 func Collect(root *ast.SourceFile, text string, options Options) (syntax.File, error) {
 	coll := &collector{
 		text:    text,
 		lines:   tsparse.NewLines(text),
 		isTest:  options.IsTest,
+		local:   options.Local,
 		factory: ast.NewNodeFactory(ast.NodeFactoryHooks{}),
 	}
 	coll.each = func(child *ast.Node) bool {

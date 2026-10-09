@@ -27,17 +27,17 @@ func guarded(summary *syntax.File, run func()) (result *syntax.File) {
 
 func handleRequest(request sandbox.Request) *syntax.File {
 	summary := newSummary(request.Path)
-	source := syntax.Source{Path: request.Path, IsTest: request.IsTest}
+	options := facts.Options{IsTest: request.IsTest, Local: request.Local}
 	ext := strings.ToLower(filepath.Ext(request.Path))
-	return guarded(summary, func() { dispatch(summary, source, ext, request.Text) })
+	return guarded(summary, func() { dispatch(summary, options, ext, request.Text) })
 }
 
-func dispatch(summary *syntax.File, source syntax.Source, ext, text string) {
+func dispatch(summary *syntax.File, options facts.Options, ext, text string) {
 	if ext == ".svelte" {
-		summarizeSvelte(summary, source, text)
+		summarizeSvelte(summary, options, text)
 		return
 	}
-	summarizeScript(summary, source, scriptBlock{text: text, kind: scriptKind(ext)})
+	summarizeScript(summary, options, scriptBlock{text: text, kind: scriptKind(ext)})
 }
 
 func scriptKind(ext string) core.ScriptKind {
@@ -58,14 +58,14 @@ type scriptBlock struct {
 	index int
 }
 
-func summarizeScript(summary *syntax.File, source syntax.Source, script scriptBlock) {
+func summarizeScript(summary *syntax.File, options facts.Options, script scriptBlock) {
 	text := script.text
 	if reason := budget.Check(text); reason != "" {
 		summary.ParseError = reason
 		return
 	}
 	root := tsparse.Parse(text, script.kind)
-	facts, err := facts.Collect(root, text, facts.Options{IsTest: source.IsTest})
+	facts, err := facts.Collect(root, text, options)
 	if err != nil {
 		summary.ParseError = fmt.Sprintf("skipped: %v", err)
 		return

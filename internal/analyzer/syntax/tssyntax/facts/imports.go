@@ -1,17 +1,19 @@
 package facts
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/Zzzen/typescript-go/use-at-your-own-risk/ast"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax/pathalias"
 )
 
 const (
 	groupBuiltin = iota
-	groupPackage
-	groupRelative
+	groupExternal
+	groupLocal
 )
 
 func (coll *collector) imports(statements []*ast.Node) {
@@ -23,7 +25,7 @@ func (coll *collector) imports(statements []*ast.Node) {
 		coll.out.Imports = append(coll.out.Imports, syntax.Import{
 			Literal: coll.sourceOf(spec),
 			Line:    coll.lineAt(stmt.Pos()),
-			Group:   importGroup(spec),
+			Group:   coll.importGroup(spec),
 		})
 	}
 	if len(coll.out.Imports) > 0 {
@@ -45,23 +47,37 @@ func importSpecifier(stmt *ast.Node) *ast.Node {
 }
 
 func importGroupNames() []string {
-	names := make([]string, groupRelative+1)
+	names := make([]string, groupLocal+1)
 	names[groupBuiltin] = "node:"
-	names[groupPackage] = "package"
-	names[groupRelative] = "relative"
+	names[groupExternal] = "external"
+	names[groupLocal] = "local"
 	return names
 }
 
-func importGroup(spec *ast.Node) int {
+func (coll *collector) importGroup(spec *ast.Node) int {
 	if spec.Kind != ast.KindStringLiteral {
-		return groupPackage
+		return groupExternal
 	}
 	path := spec.Text()
 	switch {
-	case strings.HasPrefix(path, "node:"):
+	case strings.HasPrefix(path, "node:"), strings.HasPrefix(path, "bun:"):
 		return groupBuiltin
 	case strings.HasPrefix(path, "."), strings.HasPrefix(path, "/"):
-		return groupRelative
+		return groupLocal
+	case isAliasSpelling(path), coll.matchesLocal(path):
+		return groupLocal
 	}
-	return groupPackage
+	return groupExternal
+}
+
+func isAliasSpelling(path string) bool {
+	return strings.HasPrefix(path, "#") || strings.HasPrefix(path, "@/") ||
+		strings.HasPrefix(path, "~/") || path == "$lib" || strings.HasPrefix(path, "$lib/")
+}
+
+func (coll *collector) matchesLocal(path string) bool {
+	return slices.ContainsFunc(coll.local, func(pattern string) bool {
+		_, ok := pathalias.Match(pattern, path)
+		return ok
+	})
 }

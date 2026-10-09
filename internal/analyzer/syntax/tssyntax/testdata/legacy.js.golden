@@ -10,7 +10,7 @@ block line=14 depth=2
 block line=18 depth=1
 import "fs" line=2 group=1
 import "./utils.js" line=3 group=2
-groups ["node:" "package" "relative"]
+groups ["node:" "external" "local"]
 name path kind=constant line=1 exported=false exempt=false
 name fs kind=import alias line=2 exported=false exempt=false
 name utils kind=import alias line=3 exported=false exempt=false

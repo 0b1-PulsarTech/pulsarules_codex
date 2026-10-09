@@ -5,7 +5,7 @@ fn closure kind=closure line=11 body=11-11 params=0 named=0 cx=1 test=false nest
 fn closure kind=closure line=15 body=15-15 params=1 named=0 cx=1 test=false nested=true
 import "react" line=1 group=1
 import "./hooks" line=2 group=2
-groups ["node:" "package" "relative"]
+groups ["node:" "external" "local"]
 name React kind=import alias line=1 exported=false exempt=false
 name PanelProps kind=type line=4 exported=false exempt=false
 name title kind=field line=5 exported=false exempt=false

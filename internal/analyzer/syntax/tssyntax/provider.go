@@ -54,7 +54,7 @@ func (provider *Provider) Summarize(
 	batch := batch{session: session, read: corpus.Read}
 	for _, source := range corpus.Sources {
 		aliases := finder.For(source.Path)
-		summary, err := batch.summarize(ctx, source)
+		summary, err := batch.summarize(ctx, source, pathalias.Specs(aliases))
 		if err != nil {
 			return summaries, fmt.Errorf("summarize typescript sources: %w", err)
 		}
@@ -71,7 +71,7 @@ type batch struct {
 }
 
 func (batch batch) summarize(
-	ctx context.Context, source syntax.Source,
+	ctx context.Context, source syntax.Source, local []string,
 ) (*syntax.File, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("check context: %w", err)
@@ -86,7 +86,9 @@ func (batch batch) summarize(
 		summary.ParseError = reason
 		return summary, nil
 	}
-	request := sandbox.Request{Path: source.Path, Text: string(content), IsTest: source.IsTest}
+	request := sandbox.Request{
+		Path: source.Path, Text: string(content), Local: local, IsTest: source.IsTest,
+	}
 	outcome, err := batch.session.Do(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("parse in child: %w", err)

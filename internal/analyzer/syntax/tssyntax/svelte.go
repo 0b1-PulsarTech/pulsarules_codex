@@ -7,10 +7,11 @@ import (
 	"github.com/Zzzen/typescript-go/use-at-your-own-risk/core"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax/facts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/sfc"
 )
 
-func summarizeSvelte(summary *syntax.File, source syntax.Source, text string) {
+func summarizeSvelte(summary *syntax.File, options facts.Options, text string) {
 	scripts, err := sfc.Extract(text)
 	partial := errors.Is(err, sfc.ErrDroppedScript) || errors.Is(err, sfc.ErrUnclosed)
 	if err != nil && !partial {
@@ -23,7 +24,7 @@ func summarizeSvelte(summary *syntax.File, source syntax.Source, text string) {
 			kind = core.ScriptKindTS
 		}
 		before := summary.ParseError
-		summarizeScript(summary, source, scriptBlock{text: script.Text, kind: kind, index: block})
+		summarizeScript(summary, options, scriptBlock{text: script.Text, kind: kind, index: block})
 		if before != "" {
 			summary.ParseError = before
 		}

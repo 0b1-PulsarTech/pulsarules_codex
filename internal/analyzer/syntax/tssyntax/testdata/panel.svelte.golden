@@ -4,7 +4,7 @@ fn pick kind=function line=18 body=18-22 params=1 named=0 cx=2 test=false nested
 block line=19 depth=1
 import "$app/paths" line=2 group=1
 import "./Row.svelte" line=11 group=5
-groups ["node:" "package" "relative" "node: (script 2)" "package (script 2)" "relative (script 2)"]
+groups ["node:" "external" "local" "node: (script 2)" "external (script 2)" "local (script 2)"]
 name link kind=function line=5 exported=true exempt=false
 name target kind=parameter line=5 exported=false exempt=false
 name Row kind=import alias line=11 exported=false exempt=false

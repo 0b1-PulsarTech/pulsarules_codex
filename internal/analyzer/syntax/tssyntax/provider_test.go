@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -360,6 +361,68 @@ func TestProviderChildCannotStart(t *testing.T) {
 			}
 			if reason := got[0].Reason; !strings.Contains(reason, sandbox.ErrUnavailable.Error()) {
 				t.Fatalf("reason %q does not name the sticky failure", reason)
+			}
+		})
+	}
+}
+
+func TestProviderSummarizeAliases(t *testing.T) {
+	t.Parallel()
+
+	files := map[string]string{
+		"web/package.json":  `{"imports": {"#lib/*": "./src/lib/*"}}`,
+		"web/tsconfig.json": `{"compilerOptions": {"paths": {"@app/*": ["./src/app/*"]}}}`,
+		"web/src/lib/a.ts": "import 'pkg';\nimport '#lib/b';\nimport '../x';\n" +
+			"import './c';\nimport '../../../out';\n",
+		"web/src/routes/p.ts": "import '#lib/q';\nimport '../lib/b';\nimport '@app/q';\n",
+		"free/f.ts":           "import '../g';\nimport './h';\n",
+	}
+	read := func(path string) ([]byte, bool) {
+		text, ok := files[path]
+		return []byte(text), ok
+	}
+	sources := []syntax.Source{
+		{Path: "web/src/lib/a.ts"}, {Path: "web/src/routes/p.ts"}, {Path: "free/f.ts"},
+	}
+	got, err := New().Summarize(context.Background(), syntax.Corpus{Sources: sources, Read: read})
+	if err != nil {
+		t.Fatalf("summarize: %v", err)
+	}
+	type outcome struct {
+		prefer  string
+		group   int
+		upward  bool
+		foreign bool
+	}
+	testCases := []struct {
+		path string
+		want []outcome
+	}{
+		{path: "web/src/lib/a.ts", want: []outcome{
+			{group: 1},
+			{prefer: "./b", group: 2},
+			{group: 2, upward: true},
+			{group: 2},
+			{group: 2, foreign: true},
+		}},
+		{path: "web/src/routes/p.ts", want: []outcome{
+			{group: 2}, {prefer: "#lib/b", group: 2}, {group: 2},
+		}},
+		{path: "free/f.ts", want: []outcome{{group: 2, upward: true}, {group: 2}}},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.path, func(t *testing.T) {
+			t.Parallel()
+
+			var have []outcome
+			for _, imported := range got[testCase.path].Imports {
+				have = append(
+					have,
+					outcome{imported.Prefer, imported.Group, imported.Upward, imported.Foreign},
+				)
+			}
+			if !slices.Equal(have, testCase.want) {
+				t.Fatalf("imports %+v, want %+v", have, testCase.want)
 			}
 		})
 	}
