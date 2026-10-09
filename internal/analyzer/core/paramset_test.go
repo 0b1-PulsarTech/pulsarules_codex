@@ -287,6 +287,34 @@ func TestParamSetSeverity(t *testing.T) {
 	}
 }
 
+func TestParamSetNonNegativeInt(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		params   ParamSet
+		fallback int
+		want     int
+	}{
+		{"nil params keeps fallback", nil, 290, 290},
+		{"missing key keeps fallback", ParamSet{}, 290, 290},
+		{"explicit zero is kept", ParamSet{"error_lines": 0}, 290, 0},
+		{"positive value wins", ParamSet{"error_lines": 400}, 290, 400},
+		{"numeric string wins", ParamSet{"error_lines": "400"}, 290, 400},
+		{"negative value keeps fallback", ParamSet{"error_lines": -1}, 290, 290},
+		{"wrong type keeps fallback", ParamSet{"error_lines": true}, 290, 290},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := testCase.params.NonNegativeInt("error_lines", testCase.fallback)
+			if got != testCase.want {
+				t.Errorf("NonNegativeInt = %d, want %d", got, testCase.want)
+			}
+		})
+	}
+}
+
 func TestValidateSeverityName(t *testing.T) {
 	t.Parallel()
 

@@ -172,7 +172,10 @@ func coreName(obj types.Object) string {
 }
 
 func isReader(name string) bool {
-	readers := []string{"ParamSet.Int", "ParamSet.Bool", "ParamSet.Strings", "ParamSet.String"}
+	readers := []string{
+		"ParamSet.Int", "ParamSet.NonNegativeInt", "ParamSet.Bool", "ParamSet.Strings",
+		"ParamSet.String",
+	}
 	return name == "ExtensionFilter" || slices.Contains(readers, name)
 }
 

@@ -10,21 +10,34 @@ import (
 
 type ParamSet map[string]any
 
-func (params ParamSet) Int(key string, fallback int) int {
-	value, ok := 0, false
+func (params ParamSet) number(key string) (int, bool) {
 	switch val := params[key].(type) {
 	case int:
-		value, ok = val, true
+		return val, true
 	case int64:
-		value, ok = int(val), true
+		return int(val), true
 	case float64:
-		value, ok = int(val), true
+		return int(val), true
 	case string:
 		parsed, err := strconv.Atoi(val)
-		value, ok = parsed, err == nil
+		return parsed, err == nil
 	}
+	return 0, false
+}
+
+func (params ParamSet) Int(key string, fallback int) int {
+	value, ok := params.number(key)
 	// Callers read limits and counts; zero or below falls back to the default.
 	if !ok || value <= 0 {
+		return fallback
+	}
+	return value
+}
+
+func (params ParamSet) NonNegativeInt(key string, fallback int) int {
+	value, ok := params.number(key)
+	// For a limit where an explicit zero means off and so must not fall back.
+	if !ok || value < 0 {
 		return fallback
 	}
 	return value

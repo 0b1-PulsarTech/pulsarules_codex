@@ -73,7 +73,7 @@ func TestLineLimits(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			change := core.FileChange{Path: "foo.go", IsTest: testCase.isTest}
-			got := newLineLimits(testCase.maxLines).forFile(change)
+			got := newLineLimits(testCase.maxLines, 0).forFile(change)
 			if got != testCase.want {
 				t.Errorf("limit for maxLines=%d isTest=%v = %d, want %d",
 					testCase.maxLines, testCase.isTest, got, testCase.want)
@@ -215,4 +215,125 @@ func TestCountLines(t *testing.T) {
 	if count != 0 {
 		t.Fatalf("expected 0 for empty content, got %d", count)
 	}
+}
+
+func analyzeHardCap(
+	t *testing.T, name string, lines int, config *core.AnalysisConfig,
+) []core.Finding {
+	t.Helper()
+
+	dir := t.TempDir()
+	body := strings.Repeat("// filler\n", lines)
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(body), fsperm.File); err != nil {
+		t.Fatalf("write %s: %v", name, err)
+	}
+	return NewAnalyzer().Analyze(&core.AnalysisContext{
+		ProjectDir:   dir,
+		Config:       config,
+		Sources:      sources.NewProvider(dir, sources.NewSkipSet(sources.DefaultSkipDirs())),
+		ChangedFiles: []core.FileChange{{Path: name, Extension: filepath.Ext(name)}},
+	})
+}
+
+type hardCapCase struct {
+	name     string
+	file     string
+	lines    int
+	config   *core.AnalysisConfig
+	severity core.Severity
+	count    int
+	message  string
+	hint     string
+}
+
+func runHardCapCases(t *testing.T, testCases []hardCapCase) {
+	t.Helper()
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := analyzeHardCap(t, testCase.file, testCase.lines, testCase.config)
+			if len(got) != testCase.count {
+				t.Fatalf("got %d findings, want %d: %+v", len(got), testCase.count, got)
+			}
+			if testCase.count == 0 {
+				return
+			}
+			if got[0].Severity != testCase.severity {
+				t.Errorf("severity = %v, want %v: %+v", got[0].Severity, testCase.severity, got[0])
+			}
+			if testCase.message != "" && got[0].Message != testCase.message {
+				t.Errorf("message = %q, want %q", got[0].Message, testCase.message)
+			}
+			if testCase.hint != "" && got[0].Suggestion != testCase.hint {
+				t.Errorf("hint = %q, want %q", got[0].Suggestion, testCase.hint)
+			}
+		})
+	}
+}
+
+func TestAnalyze_HardCap(t *testing.T) {
+	t.Parallel()
+
+	goCapped := paramsConfig(map[string]any{"max_lines": 100, "error_lines": 250})
+	runHardCapCases(t, []hardCapCase{
+		{
+			name: "no cap without error_lines", file: "a.go", lines: 600,
+			severity: core.SeverityWarning, count: 1,
+		},
+		{
+			name: "the cap errors for go", file: "a.go", lines: 251, config: goCapped,
+			severity: core.SeverityError, count: 1,
+		},
+		{
+			name: "the cap keeps the warning below it", file: "a.go", lines: 250,
+			config: goCapped, severity: core.SeverityWarning, count: 1,
+		},
+	})
+}
+
+func TestAnalyze_HardCapBelowTheSoftLimit(t *testing.T) {
+	t.Parallel()
+
+	lowCap := paramsConfig(map[string]any{"error_lines": 150})
+	projectSoft := paramsConfig(map[string]any{"max_lines": 200, "error_lines": 190})
+	runHardCapCases(t, []hardCapCase{
+		{
+			name: "cap under the inherited default max still errors", file: "a.svelte",
+			lines: 170, config: lowCap, severity: core.SeverityError, count: 1,
+			message: "file is 170 lines, hard cap 150",
+		},
+		{
+			name: "cap under the project max still errors", file: "a.svelte", lines: 195,
+			config: projectSoft, severity: core.SeverityError, count: 1,
+			message: "file is 195 lines, hard cap 190",
+		},
+		{name: "a file under both caps is clean", file: "a.svelte", lines: 140, config: lowCap},
+	})
+}
+
+func TestAnalyze_CapMessages(t *testing.T) {
+	t.Parallel()
+
+	runHardCapCases(t, []hardCapCase{
+		{
+			name: "hard cap names itself", file: "a.go", lines: 301,
+			config:   paramsConfig(map[string]any{"error_lines": 300}),
+			severity: core.SeverityError, count: 1,
+			message: "file is 301 lines, hard cap 300",
+			hint:    "split into smaller files (hard cap 300 lines per file)",
+		},
+		{
+			name: "soft limit names itself", file: "a.go", lines: 200,
+			severity: core.SeverityWarning, count: 1,
+			message: "file is 200 lines, max 180",
+			hint:    "split into smaller files (max 180 lines per file)",
+		},
+	})
+}
+
+func paramsConfig(params map[string]any) *core.AnalysisConfig {
+	return &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
+		"file-size": {Enabled: true, Params: params},
+	}}
 }
