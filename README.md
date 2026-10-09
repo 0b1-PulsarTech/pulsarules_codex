@@ -130,6 +130,20 @@ since Cursor injects every `alwaysApply: true` rule into every request rather th
 session like the Claude hook. Use `--no-hooks` to skip the Claude hook script and settings wiring
 (git hooks: `--no-git-hooks`), or `--print-hooks` to print the resolved hooks block.
 
+## Credits and licences
+
+This project is licensed under the terms in `LICENSE`. The binary links these third party modules:
+
+- `github.com/Zzzen/typescript-go` (a fork of `microsoft/typescript-go`), Apache-2.0: the
+  TypeScript, JavaScript and Svelte parser.
+- `github.com/go-json-experiment/json` (BSD-3-Clause).
+- `github.com/wrapped-owls/goremy-di` (dependency injection).
+- `golang.org/x/sync` and `golang.org/x/text` (BSD-3-Clause).
+- `gopkg.in/yaml.v3` (MIT and Apache-2.0).
+
+Run `go version -m <binary>` for the exact versions. The Apache-2.0 licence text of typescript-go
+is available in its repository.
+
 ## Origin
 
 This repository is the source of truth for these standards. It was initially seeded from the
