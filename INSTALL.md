@@ -7,6 +7,11 @@ The installer is a single Go binary, `cmd/pulsarules_cli`. It embeds the knowled
 ## Prerequisites
 
 - Go 1.27+ (the module pins `go 1.27`).
+- No Node, npm or bun is needed or run, ever: TypeScript, JavaScript and Svelte are parsed by Go code
+  linked into the binary.
+- Optional: `dart` on PATH for Dart projects' syntax based checks. Without it one INFO
+  `dart-syntax/unavailable` is printed and only those checks are skipped; everything text based
+  still runs. The first Dart build needs a populated pub cache or network (see `docs/languages.md`).
 - Optional: [Taskfile](https://taskfile.dev/) for the convenience targets.
 - Optional but recommended: `gopls` on PATH (`go install golang.org/x/tools/gopls@latest`) for a Go
   project, and/or `dart` on PATH for a Dart project. `install` detects the project's language(s) (see
@@ -21,6 +26,9 @@ The installer is a single Go binary, `cmd/pulsarules_cli`. It embeds the knowled
 go build -o build/bin/pulsarules_cli ./cmd/pulsarules_cli
 # or: task build:bin
 ```
+
+The binary is about 44 MB (it embeds the knowledge snapshot and the TypeScript parser) and needs
+no cgo.
 
 ## Commands
 
