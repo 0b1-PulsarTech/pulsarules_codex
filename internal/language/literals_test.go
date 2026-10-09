@@ -253,3 +253,100 @@ func TestLiterals_UnreadFrom(t *testing.T) {
 		})
 	}
 }
+
+func TestLiterals_InComment(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		ext    string
+		src    string
+		marker string
+		want   bool
+	}{
+		{"go line comment", ".go", "x := 1 // hit", "hit", true},
+		{"ts block comment", ".ts", "/* hit */ x()", "hit", true},
+		{"dart nested block", ".dart", "/* a /* b */ hit */ x()", "hit", true},
+		{"ts code after comment", ".ts", "// c\nhit()", "hit", false},
+		{"ts string with slashes", ".ts", "x = '// hit'", "hit", false},
+		{"svelte script comment", ".svelte", "<script>// hit\n</script>", "hit", true},
+		{"svelte markup", ".svelte", "<p>hit</p><script>x()</script>", "hit", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			offset := strings.Index(testCase.src, testCase.marker)
+			got := ScanLiterals(testCase.ext, testCase.src).InComment(offset)
+			if got != testCase.want {
+				t.Errorf("InComment = %v, want %v for %q", got, testCase.want, testCase.src)
+			}
+		})
+	}
+}
+
+func TestScanLiterals_BothOptions(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		ext        string
+		src        string
+		marker     string
+		withOption bool
+		inside     bool
+	}{
+		{"default: an open string hides later lines", ".ts", "a = 'x\n/*\nm\n", "m", false, false},
+		{"option: the next line is read again", ".ts", "a = 'x\n/*\nm\n", "m", true, true},
+		{"option: the comment is read", ".ts", "a = 'x\n/* m */\n", "m", true, true},
+		{"default: an open string is trimmed", ".ts", "a = 'x\nb = 'm'\n", "m", false, false},
+		{"option: a later string is kept", ".ts", "a = 'x\nb = 'm'\n", "m", true, true},
+		{"option: dart apostrophe line", ".dart", "a = 'x\nb = \"m\"\n", "m", true, true},
+		{"option: after an unclosed ${", ".ts", "a = `x ${b\nm\n", "m", true, true},
+		{"option: dart after an unclosed ${", ".dart", "a = '${b\nm\n", "m", true, true},
+		{"default: after an unclosed ${", ".ts", "a = `x ${b\nm\n", "m", false, false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			var options []ScanOption
+			if testCase.withOption {
+				options = append(options, StringsEndAtNewline(), KeepSpansAtEOF())
+			}
+			found := ScanLiterals(testCase.ext, testCase.src, options...)
+			offset := strings.Index(testCase.src, testCase.marker)
+			if got := found.Contains(offset) || found.InComment(offset); got != testCase.inside {
+				t.Errorf("hidden = %v, want %v for %q", got, testCase.inside, testCase.src)
+			}
+		})
+	}
+}
+
+func TestScanLiterals_KeepSpansAtEOF(t *testing.T) {
+	t.Parallel()
+
+	const src = "/* a */ x = 'y'\n/* open\nm"
+	found := ScanLiterals(".ts", src, StringsEndAtNewline(), KeepSpansAtEOF())
+	for _, marker := range []string{"a */", "'y'", "open", "m"} {
+		offset := strings.Index(src, marker)
+		if !found.Contains(offset) && !found.InComment(offset) {
+			t.Errorf("%q is not hidden, want hidden", marker)
+		}
+	}
+	if found.Incomplete() {
+		t.Errorf("Incomplete = true, want false: the EOF run is read as one comment")
+	}
+}
+
+func TestScanLiterals_StringsEndAtNewlineAloneTrimsAtEOF(t *testing.T) {
+	t.Parallel()
+
+	const src = "/* a */ x = 'y'\n/* open\nm"
+	found := ScanLiterals(".ts", src, StringsEndAtNewline())
+	if !found.Incomplete() {
+		t.Errorf("Incomplete = false, want true: an EOF run is not kept without KeepSpansAtEOF")
+	}
+	if offset := strings.Index(src, "m"); found.Contains(offset) || found.InComment(offset) {
+		t.Errorf("the open comment is hidden, want it trimmed")
+	}
+}

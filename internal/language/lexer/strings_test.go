@@ -203,6 +203,20 @@ func TestLiterals_HostileInputStaysLinear(t *testing.T) {
 	}
 }
 
+func TestLiterals_EndAtNewlineStaysLinear(t *testing.T) {
+	t.Parallel()
+
+	comments, strs := testSyntax()
+	strs.EndAtNewline = true
+	const line = "<p>Don't panic</p>\n"
+	src := strings.Repeat(line, (1<<20)/len(line))
+	scan := &literalScan{src: src, comments: comments, syntax: strs}
+	scan.run()
+	if limit := 3 * len(src); scan.work > limit {
+		t.Errorf("work = %d for %d bytes, limit %d", scan.work, len(src), limit)
+	}
+}
+
 func TestLiterals_ContinuationIsPerLanguage(t *testing.T) {
 	t.Parallel()
 
@@ -274,6 +288,51 @@ func TestLiterals_CutVouchesOnlyForALineCut(t *testing.T) {
 					got.Complete, got.Cut, got.ToEOF,
 					testCase.done, testCase.want, testCase.eof, testCase.src,
 				)
+			}
+		})
+	}
+}
+
+func TestLiterals_EndAtNewline(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		src  string
+		want []string
+		done bool
+	}{
+		{"a quote ends at its line", "a = 'x\nb = 'y'\n", []string{"'x", "'y'"}, true},
+		{"a double quote ends at its line", "<p>say \"hi\n</p>\n", []string{"\"hi"}, true},
+		{"a continuation stays in the string", "a = 'x\\\ny'\nb\n", []string{"'x\\\ny'"}, true},
+		{"a template still spans lines", "a = `x\ny`\n", []string{"`x\ny`"}, true},
+		{"a comment after the open string", "a = 'x\n/* y */\n", []string{"'x"}, true},
+		{"an unclosed template runs to EOF", "a = 'x'\nb = `y\n", []string{"'x'", "`y\n"}, false},
+		{
+			"an unclosed interpolation hides the rest", "a = `x ${b\nthrow e\n",
+			[]string{"`x ", "${b\nthrow e\n"},
+			false,
+		},
+		{
+			"a nested unclosed interpolation hides from the outermost",
+			"a = `x ${ `y ${z\nw\n",
+			[]string{"`x ", "${ `y ${z\nw\n"},
+			false,
+		},
+	}
+	comments, strs := testSyntax()
+	strs.EndAtNewline = true
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := Literals(testCase.src, comments, strs)
+			if texts := spanTexts(testCase.src, got.Spans); !slices.Equal(texts, testCase.want) {
+				t.Errorf("Literals(%q) = %q, want %q", testCase.src, texts, testCase.want)
+			}
+			if got.Complete != testCase.done {
+				t.Errorf("Complete = %v, want %v for %q",
+					got.Complete, testCase.done, testCase.src)
 			}
 		})
 	}

@@ -166,3 +166,35 @@ func TestLiterals_EOFInsideARegionIsFlagged(t *testing.T) {
 		t.Errorf("Complete, Cut, ToEOF = %v, %d, %v", got.Complete, got.Cut, got.ToEOF)
 	}
 }
+
+func TestLiterals_CommentSpans(t *testing.T) {
+	t.Parallel()
+
+	comments, strs := testSyntax()
+	within := strs
+	within.Within = BlockDelim{Open: "<script", Close: "</script>"}
+	testCases := []struct {
+		name   string
+		src    string
+		syntax StringSyntax
+		want   []string
+	}{
+		{"line and block", "a // one\nb /* two */ c", strs, []string{"// one", "/* two */"}},
+		{"comment marker inside a string", `a = "// no"`, strs, nil},
+		{
+			"script comment keeps absolute offsets",
+			"<p>// no</p><script>x // yes\n</script>", within,
+			[]string{"// yes"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			found := Literals(testCase.src, comments, testCase.syntax)
+			got := spanTexts(testCase.src, found.Comments)
+			if !slices.Equal(got, testCase.want) {
+				t.Errorf("Comments of %q = %q, want %q", testCase.src, got, testCase.want)
+			}
+		})
+	}
+}

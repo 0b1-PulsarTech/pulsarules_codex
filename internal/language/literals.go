@@ -10,16 +10,30 @@ import (
 
 type Literals struct {
 	spans      []lexer.Span
+	comments   []lexer.Span
 	regions    []lexer.Span
 	astral     string
 	incomplete bool
 	unreadFrom int
 }
 
-func ScanLiterals(ext, src string) Literals {
+type ScanOption func(*literalSpec)
+
+func StringsEndAtNewline() ScanOption {
+	return func(spec *literalSpec) { spec.Strings.EndAtNewline = true }
+}
+
+func KeepSpansAtEOF() ScanOption {
+	return func(spec *literalSpec) { spec.keepAtEOF = true }
+}
+
+func ScanLiterals(ext, src string, options ...ScanOption) Literals {
 	ext = strings.ToLower(ext)
 	for _, spec := range literalSpecs() {
 		if slices.Contains(spec.Extensions, ext) {
+			for _, option := range options {
+				option(&spec)
+			}
 			return spec.scan(src)
 		}
 	}
@@ -33,6 +47,8 @@ func (found Literals) Incomplete() bool { return found.incomplete }
 func (found Literals) UnreadFrom() int { return found.unreadFrom }
 
 func (found Literals) Contains(offset int) bool { return lexer.InSpans(found.spans, offset) }
+
+func (found Literals) InComment(offset int) bool { return lexer.InSpans(found.comments, offset) }
 
 func (found Literals) Raw(offset int) bool {
 	span, inside := lexer.SpanAt(found.spans, offset)
