@@ -172,24 +172,53 @@ func writeSource(tb testing.TB, path, body string) {
 	}
 }
 
-func TestCheckFile_SummaryFromAnyLanguage(t *testing.T) {
-	t.Parallel()
+type languageCase struct {
+	name           string
+	file           syntax.File
+	wantMessage    string
+	wantSuggestion string
+}
 
+func languageCases() []languageCase {
 	groups := []string{"stdlib", "external", "example.com/app"}
-	testCases := []struct {
-		name           string
-		file           syntax.File
-		wantMessage    string
-		wantSuggestion string
-	}{
+	return []languageCase{
 		{
-			name: "out of order import",
-			file: syntax.File{ImportGroups: groups, Imports: []syntax.Import{
-				{Literal: `"a.com/x"`, Line: 3, Group: 1},
-				{Literal: `"fmt"`, Line: 4, Group: 0},
-			}},
+			name: "go out of order import",
+			file: syntax.File{
+				Language: syntax.LangGo, ImportGroups: groups,
+				Imports: []syntax.Import{
+					{Literal: `"a.com/x"`, Line: 3, Group: 1},
+					{Literal: `"fmt"`, Line: 4, Group: 0},
+				},
+			},
 			wantMessage:    `import "fmt" out of order (stdlib → external → example.com/app)`,
 			wantSuggestion: "reorder imports to follow: stdlib, external, this module",
+		},
+		{
+			name: "dart keeps its own group names",
+			file: syntax.File{
+				Language:     syntax.LangDart,
+				ImportGroups: []string{"dart:", "package:", "relative"},
+				Imports: []syntax.Import{
+					{Literal: `'package:a/a.dart'`, Line: 3, Group: 1},
+					{Literal: `'dart:io'`, Line: 4, Group: 0},
+				},
+			},
+			wantMessage:    `import 'dart:io' out of order (dart: → package: → relative)`,
+			wantSuggestion: "reorder imports to follow: dart:, package:, relative",
+		},
+		{
+			name: "typescript keeps its own group names",
+			file: syntax.File{
+				Language:     syntax.LangTypeScript,
+				ImportGroups: []string{"node:", "external", "local"},
+				Imports: []syntax.Import{
+					{Literal: `'./a'`, Line: 3, Group: 2},
+					{Literal: `'pkg'`, Line: 4, Group: 1},
+				},
+			},
+			wantMessage:    `import 'pkg' out of order (node: → external → local)`,
+			wantSuggestion: "reorder imports to follow: node:, external, local",
 		},
 		{
 			name: "ordered imports",
@@ -206,12 +235,18 @@ func TestCheckFile_SummaryFromAnyLanguage(t *testing.T) {
 		},
 		{name: "no imports", file: syntax.File{ImportGroups: groups}},
 	}
+}
+
+func TestCheckFile_SummaryFromAnyLanguage(t *testing.T) {
+	t.Parallel()
+
+	testCases := languageCases()
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
 			got := checkFile(
-				pass.FileChange{Path: "a.go"}, &testCase.file, NewAnalyzer().reporter,
+				pass.FileChange{Path: "a.dart"}, &testCase.file, NewAnalyzer().reporter,
 			)
 			if testCase.wantMessage == "" {
 				if len(got) != 0 {
