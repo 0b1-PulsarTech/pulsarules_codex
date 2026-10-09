@@ -14,6 +14,7 @@ type Span struct {
 
 type Result struct {
 	Spans    []Span
+	Comments []Span
 	Regions  []Span
 	Complete bool
 	Cut      int
@@ -21,6 +22,38 @@ type Result struct {
 }
 
 const cutAtEOF = -1
+
+func (scan *literalScan) cut(at int) {
+	// Only a literal cut at a newline vouches for the text before it.
+	if !scan.cutOff {
+		scan.cutAt = at
+	}
+	scan.cutOff = true
+}
+
+func (scan *literalScan) endFrames() {
+	// An embedded-code frame still open at EOF means a "${" never found its "}".
+	if len(scan.frames) == 0 {
+		return
+	}
+	scan.cut(cutAtEOF)
+	if !scan.syntax.EndAtNewline {
+		return
+	}
+	// The caller keeps an EOF cut, so the open literal must hide the rest like any EOF run.
+	from := scan.frames[0].from
+	for len(scan.spans) > 0 && scan.spans[len(scan.spans)-1].Start >= from {
+		scan.spans = scan.spans[:len(scan.spans)-1]
+	}
+	scan.spans = append(scan.spans, Span{Start: from, End: len(scan.src)})
+}
+
+func (scan *literalScan) cutAtLine(at int) {
+	// A string that hit its newline loses the scan's place unless the syntax ends it there.
+	if !scan.syntax.EndAtNewline {
+		scan.cut(at)
+	}
+}
 
 func InSpans(spans []Span, offset int) bool {
 	_, found := SpanAt(spans, offset)
@@ -52,6 +85,11 @@ func Literals(src string, comments CommentSyntax, syntax StringSyntax) Result {
 			span.Start += start
 			span.End += start
 			found.Spans = append(found.Spans, span)
+		}
+		for _, span := range region.Comments {
+			span.Start += start
+			span.End += start
+			found.Comments = append(found.Comments, span)
 		}
 		found.Regions = append(found.Regions, Span{Start: start, End: end})
 		if !region.Complete {

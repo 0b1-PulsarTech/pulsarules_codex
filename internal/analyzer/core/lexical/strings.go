@@ -15,14 +15,16 @@ type StringDelim struct {
 }
 
 type StringSyntax struct {
-	Delims     []StringDelim
-	RegexAfter RegexContext
-	Within     BlockDelim
+	Delims       []StringDelim
+	RegexAfter   RegexContext
+	Within       BlockDelim
+	EndAtNewline bool
 }
 
 type codeFrame struct {
 	delim *StringDelim
 	depth int
+	from  int
 }
 
 type literalScan struct {
@@ -30,6 +32,7 @@ type literalScan struct {
 	comments  CommentSyntax
 	syntax    StringSyntax
 	spans     []Span
+	commented []Span
 	pos       int
 	frames    []codeFrame
 	work      int
@@ -45,7 +48,8 @@ func scanLiterals(src string, comments CommentSyntax, syntax StringSyntax) Resul
 	scan := &literalScan{src: src, comments: comments, syntax: syntax}
 	spans := scan.run()
 	return Result{
-		Spans: spans, Complete: !scan.cutOff, Cut: max(scan.cutAt, 0), ToEOF: scan.cutAt < 0,
+		Spans: spans, Comments: scan.commented,
+		Complete: !scan.cutOff, Cut: max(scan.cutAt, 0), ToEOF: scan.cutAt < 0,
 	}
 }
 
@@ -53,10 +57,7 @@ func (scan *literalScan) run() []Span {
 	for scan.pos < len(scan.src) {
 		scan.step()
 	}
-	// An embedded-code frame still open at EOF means a "${" never found its "}".
-	if len(scan.frames) > 0 {
-		scan.cut(cutAtEOF)
-	}
+	scan.endFrames()
 	return scan.spans
 }
 
@@ -64,6 +65,7 @@ func (scan *literalScan) step() {
 	scan.work++
 	rest := scan.src[scan.pos:]
 	if skip := scan.commentLen(rest); skip > 0 {
+		scan.commented = append(scan.commented, Span{Start: scan.pos, End: scan.pos + skip})
 		scan.pos += skip
 		return
 	}
@@ -125,11 +127,11 @@ func (scan *literalScan) literal(delim *StringDelim, start int) {
 			return
 		case delim.Interp != "" && strings.HasPrefix(rest, delim.Interp):
 			scan.emit(start, delim)
+			scan.frames = append(scan.frames, codeFrame{delim: delim, from: scan.pos})
 			scan.pos += len(delim.Interp)
-			scan.frames = append(scan.frames, codeFrame{delim: delim})
 			return
 		case !delim.Multiline && rest[0] == '\n':
-			scan.cut(start)
+			scan.cutAtLine(start)
 			scan.emit(start, delim)
 			return
 		default:
@@ -139,14 +141,6 @@ func (scan *literalScan) literal(delim *StringDelim, start int) {
 	// Running to EOF says nothing about where the scan lost its place.
 	scan.cut(cutAtEOF)
 	scan.emit(start, delim)
-}
-
-func (scan *literalScan) cut(at int) {
-	// Only a literal cut at a newline vouches for the text before it.
-	if !scan.cutOff {
-		scan.cutAt = at
-	}
-	scan.cutOff = true
 }
 
 func (scan *literalScan) emit(start int, delim *StringDelim) {

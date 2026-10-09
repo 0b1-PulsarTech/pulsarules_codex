@@ -11,16 +11,25 @@ type literalSpec struct {
 	Extensions []string
 	Strings    lexical.StringSyntax
 	Astral     string
+	keepAtEOF  bool
 }
 
 func (spec literalSpec) scan(src string) Literals {
 	found := lexical.Literals(src, spec.Comments, spec.Strings)
-	if found.Complete {
-		return Literals{spans: found.Spans, regions: found.Regions, astral: spec.Astral}
+	// With keepAtEOF a literal that ran to EOF, or an unclosed "${", already hides the rest
+	// of the file, and the spans before it are as sure as any.
+	if found.Complete || (spec.keepAtEOF && found.ToEOF) {
+		return Literals{
+			spans:    found.Spans,
+			comments: found.Comments,
+			regions:  found.Regions,
+			astral:   spec.Astral,
+		}
 	}
 	// A literal or comment that never ended hides where every later literal ends.
 	return Literals{
 		spans:      trimSpans(found.Spans, found.Cut),
+		comments:   trimSpans(found.Comments, found.Cut),
 		regions:    trimRegions(found.Regions, found.Cut),
 		astral:     spec.Astral,
 		incomplete: true,
