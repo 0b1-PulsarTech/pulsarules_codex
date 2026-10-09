@@ -12,6 +12,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax/dartsyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax/gosyntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/core/syntax/tssyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/langspec"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -46,7 +47,7 @@ func gatesFor(scope Scope) []registry.Gate {
 type providerFactory func(*astcache.Cache) []syntax.Provider
 
 func defaultProviders(cache *astcache.Cache) []syntax.Provider {
-	return []syntax.Provider{gosyntax.New(cache), dartsyntax.New()}
+	return []syntax.Provider{gosyntax.New(cache), dartsyntax.New(), tssyntax.New()}
 }
 
 func (sess *Session) attachSources(discovery *Discovery) {
