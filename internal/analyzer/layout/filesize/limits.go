@@ -2,6 +2,7 @@ package filesize
 
 import (
 	"math"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
@@ -46,4 +47,16 @@ func (limits lineLimits) hardFor(fc pass.FileChange) int {
 		return limits.hardTest
 	}
 	return limits.hardProduction
+}
+
+func errorLines(params pass.ParamSet, extension string) int {
+	return params.NonNegativeInt(ParamErrorLines, defaultErrorLines(extension))
+}
+
+func defaultErrorLines(extension string) int {
+	const svelteErrorLines = 290
+	if strings.EqualFold(extension, ".svelte") {
+		return svelteErrorLines
+	}
+	return 0
 }
