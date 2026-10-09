@@ -261,3 +261,115 @@ func TestCheckFile_SummaryFromAnyLanguage(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckPaths(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name           string
+		imports        []syntax.Import
+		wantMessage    string
+		wantSuggestion string
+	}{
+		{
+			name:           "alias into the own directory",
+			imports:        []syntax.Import{{Literal: `'#lib/x'`, Line: 2, Prefer: "./x"}},
+			wantMessage:    "import '#lib/x' has a better spelling",
+			wantSuggestion: "write it as ./x",
+		},
+		{
+			name:           "parent import covered by an alias",
+			imports:        []syntax.Import{{Literal: `'../x'`, Line: 2, Prefer: "#lib/x"}},
+			wantMessage:    "import '../x' has a better spelling",
+			wantSuggestion: "write it as #lib/x",
+		},
+		{
+			name:           "parent import with no alias",
+			imports:        []syntax.Import{{Literal: `'../x'`, Line: 2, Upward: true}},
+			wantMessage:    "import '../x' climbs out of its directory",
+			wantSuggestion: aliasHint,
+		},
+		{
+			name:           "parent import out of its package",
+			imports:        []syntax.Import{{Literal: `'../../x'`, Line: 2, Foreign: true}},
+			wantMessage:    "import '../../x' climbs out of its package",
+			wantSuggestion: "import it through its package name",
+		},
+		{
+			name:    "plain imports stay silent",
+			imports: []syntax.Import{{Literal: `'./x'`}, {Literal: `'pkg'`}},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			file := syntax.File{Imports: testCase.imports}
+			got := checkPaths(core.FileChange{Path: "a.ts"}, &file, NewAnalyzer().pathReporter)
+			if testCase.wantMessage == "" {
+				if len(got) != 0 {
+					t.Fatalf("findings = %+v, want none", got)
+				}
+				return
+			}
+			if len(got) != 1 || got[0].Message != testCase.wantMessage ||
+				got[0].Suggestion != testCase.wantSuggestion ||
+				got[0].AnalyzerID != "import-groups/path" ||
+				got[0].Severity != core.SeverityWarning || got[0].Line != 2 {
+				t.Fatalf("findings = %+v", got)
+			}
+		})
+	}
+}
+
+type pathProvider struct{}
+
+func (pathProvider) Language() syntax.Language { return syntax.LangTypeScript }
+
+func (pathProvider) Handles(ext string) bool { return ext == ".ts" }
+
+func (pathProvider) Summarize(
+	_ context.Context, _ syntax.Corpus,
+) (map[string]*syntax.File, error) {
+	file := &syntax.File{
+		Language: syntax.LangTypeScript,
+		Imports:  []syntax.Import{{Literal: `'#lib/x'`, Line: 2, Prefer: "./x"}},
+	}
+	return map[string]*syntax.File{"a.ts": file}, nil
+}
+
+func TestAnalyze_PathSeverityFromConfig(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		config *core.AnalysisConfig
+		want   core.Severity
+	}{
+		{name: "default severity is warning", want: core.SeverityWarning},
+		{
+			name: "configured severity overrides the default",
+			config: &core.AnalysisConfig{Analyzers: map[string]core.AnalyzerConfig{
+				"import-groups/path": {Params: map[string]any{"severity": "error"}},
+			}},
+			want: core.SeverityError,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			read := func(string) ([]byte, bool) { return nil, true }
+			corpus := syntax.Corpus{Sources: []syntax.Source{{Path: "a.ts"}}, Read: read}
+			providers := []syntax.Provider{pathProvider{}}
+			got := NewAnalyzer().Analyze(&core.AnalysisContext{
+				Syntax:       syntax.NewCache(context.Background(), providers, corpus),
+				ChangedFiles: []core.FileChange{{Path: "a.ts", Extension: ".ts"}},
+				Config:       testCase.config,
+			})
+			if len(got) != 1 || got[0].Severity != testCase.want {
+				t.Fatalf("findings = %+v, want one at severity %v", got, testCase.want)
+			}
+		})
+	}
+}
