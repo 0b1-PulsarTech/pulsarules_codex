@@ -20,16 +20,16 @@ frontmatter; the fourth is generated.
 | Profile  | `knowledge/standards/profiles.yaml`     | Install-time customization that overrides a skill's composition       |
 | Router   | `knowledge/standards/router.yaml`       | The router's baseline, dispatch table, and order as filterable data   |
 
-A **skill** is never authored directly. `knowledge/standards/skills.yaml` declares the 45 skills,
+A **skill** is never authored directly. `knowledge/standards/skills.yaml` declares the 46 skills,
 each naming the rules, patterns, and workflows it composes (`compose_rules`, `compose_patterns`,
 `compose_workflows`), plus triggers, load policy (`always_load`), composition `order`, and
 skill-level dependencies (`compose_skills`). The installer renders a skill by transcluding the
 markdown body of its **sidecar** (`knowledge/standards/skills/<id>.md`) as the skill head -
-orientation only, saying what the skill governs and when to reach for it - then **transcluding** the
-markdown bodies of its composed rules, patterns, and workflows under `###` sub-headings as the
-reference detail, wrapped in a frontmatter + activation + composition shell. A sidecar is required
-for every non-router skill (validate enforces it); `project-router` renders from its own template
-and carries no sidecar.
+orientation only, saying what the skill governs and when to reach for it - then **transcluding**
+the markdown bodies of its composed rules,
+patterns, and workflows under `###` sub-headings as the reference detail, wrapped in a frontmatter +
+activation + composition shell. A sidecar is required for every non-router skill (validate enforces
+it); `project-router` renders from its own template and carries no sidecar.
 
 Edit a rule's or sidecar's markdown, rebuild, and every skill that composes it updates - skills never
 drift from the knowledge.
@@ -398,10 +398,10 @@ skills to load, in composition order; the rows live in `knowledge/standards/rout
 `knowledge/templates/skills/router.md.tmpl` renders them. The rows include engineering tasks such as
 new app, bootstrap/DI, use case, REST/gRPC endpoint, entity/migration, sqlc query, multi-write tx,
 outbox event, worker, permission, external provider, test, module boundary, refactoring and
-architecture review, and others for the Dart, Svelte, l10n and agent-delegation areas. The vertical
-Dependency Rule (`dependency-rule`) and architecture fitness functions (`fitness-functions`) govern
-layer direction and CI enforcement; an `architecture-decision-records` workflow records significant
-decisions.
+architecture review, and others for the Dart, TypeScript, Svelte, l10n and agent-delegation areas.
+The vertical Dependency Rule (`dependency-rule`) and architecture fitness functions
+(`fitness-functions`) govern layer direction and CI enforcement; an `architecture-decision-records`
+workflow records significant decisions.
 
 ## Skill-effectiveness evals
 
