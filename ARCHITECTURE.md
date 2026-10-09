@@ -284,19 +284,26 @@ the edited file's language, any skill whose trigger names its extension, the tes
 fitting Go for `_test.go` files) instead of a hardcoded per-extension map, so a new skill trigger
 routes with no Go change. `SessionTracker` (`session.go`) writes per-session marker files under the
 OS temp dir, keyed by event and session ID (an ID that is not a plain token is hashed first), so
-`OncePerSession` and content-hashed `FirstEmission` deduplicate repeat emissions within one session;
-`Cleanup` scans and removes them at `session-end`. The `checklist` subpackage's `Typed` builds the
-per-extension post-edit checklist bullets from the worktree status, and `checks.go`'s
-`RunGovernanceCheck` is what the `stop` handler calls into the governance pipeline through: it opens
-a `Session`, runs it over the changed files at the scope the caller passes (the `Stop` hook passes
-`analysis.ScopeChanged`), and formats findings with `analysis.StyleHook`. `Router.Routes` gates
-`pre-edit` and `post-edit`: a `.go` file, or one a skill trigger names by extension; the baseline
-alone never fires them for a Dart or TypeScript file. The post-edit verify line names Go commands
-only for a `.go` file. `drift.go` runs once per session at `session-start`: it compares
-`knowledge.Fingerprint()` (the digest of the standards the binary embeds, see
-`knowledge/fingerprint.go`) against the project's `knowledge/` tree on disk and warns when the
-binary trails the source it was built from. This is a guard for the development repo itself - a
-consumer project has no `knowledge/` tree and stays silent.
+`OncePerSession` and content-hashed `FirstEmission` deduplicate repeat emissions within one
+session; `Cleanup` scans and removes them at `session-end`. The `checklist` subpackage's `Typed`
+builds the per-extension post-edit checklist bullets from the worktree status, and `checks.go`'s
+`RunGovernanceCheck` is what the `stop` handler calls into the governance pipeline through: it
+opens a `Session`, runs it over the changed files at the scope the caller passes (the `Stop` hook
+passes `analysis.ScopeChanged`), and formats findings with `analysis.StyleHook`. After an edit to a
+Dart, TypeScript, JavaScript or Svelte file, `emit_edit.go` also reminds the agent of the lines
+holding a `throw`, `rethrow`, `Future.error(` or `Promise.reject(` in code, as a best-effort
+reminder: the `throwscan` subpackage skips the comments and string and template literals the lexer
+sees, but JSX text is not lexed, so a stray backtick or apostrophe in it can shift what counts as
+code; a `'` or `"` string ends at its line, and a multi-line comment or literal left open stops the
+search there. `emit_edit.go` names `dart-errors` or `ts-errors` only when that skill is installed,
+and dedupes per file by the notice text; it skips a file that is not regular or is over the size
+cap `fsx.StatGate` applies to `clean` too. `Router.Routes` gates `pre-edit` and `post-edit`: a `.go`
+file, or one a skill trigger names by extension; the baseline alone never fires them for a Dart or
+TypeScript file. The post-edit verify line names Go commands only for a `.go` file. `drift.go` runs
+once per session at `session-start`: it compares `knowledge.Fingerprint()` (the digest of the
+standards the binary embeds, see `knowledge/fingerprint.go`) against the project's `knowledge/`
+tree on disk and warns when the binary trails the source it was built from. This is a guard for the
+development repo itself - a consumer project has no `knowledge/` tree and stays silent.
 
 ### internal/config
 
@@ -382,7 +389,7 @@ The governance pipeline (see above) adds its own package set:
 | `internal/execx`                  | `Run` - the one external-process seam (timeout, env, captured stderr, typed `*execx.Error`)          |
 | `internal/report`                 | `Report{Notes,Warnings}` with `Note`/`Warn`/`Merge` - the one install/uninstall report value         |
 | `internal/jsonconfig`             | `Read` - read a JSON config file, tolerating an absent one, shared by every merge/unmerge site       |
-| `internal/hook`                   | `hook.go`/`dispatcher_deps.go` (`Dispatcher`), `router.go` (`Router`), `session.go` (`SessionTracker`), `checks.go` (`RunGovernanceCheck`), `checklist/`, `install/*` (per-target hook installers) |
+| `internal/hook`                   | `hook.go`/`dispatcher_deps.go` (`Dispatcher`), `router.go` (`Router`), `session.go` (`SessionTracker`), `checks.go` (`RunGovernanceCheck`), `checklist/`, `throwscan/` (post-edit throw reminder), `install/*` (per-target hook installers) |
 | `internal/text`                   | `escape` (control-character escaping for printed output), `clean`/`mark` (invisible-text cleaning)    |
 | `internal/config`                 | `GovernanceConfig` and its sub-configs, `presets.go`                                                 |
 | `internal/obs`                    | `New` (off-by-default `slog.Logger`), tail-truncating log rotation                                   |

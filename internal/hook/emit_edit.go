@@ -5,10 +5,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/fsx"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/throwscan"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/text/escape"
 )
 
@@ -26,11 +29,13 @@ func (disp *Dispatcher) emitPreEdit(session *SessionTracker, in hookPayload) err
 	return disp.emitContext("hooks/pre-edit.txt", "PreToolUse")
 }
 
-func preEditFileEvent(filePath string) string {
+func preEditFileEvent(filePath string) string { return fileEvent("pre-edit-file-", filePath) }
+
+func fileEvent(prefix, filePath string) string {
 	const eventKeyBytes = 16
 	sum := sha256.Sum256([]byte(filePath))
 	// Half the sha256 sum; plenty to avoid collisions among edited files.
-	return "pre-edit-file-" + hex.EncodeToString(sum[:eventKeyBytes])
+	return prefix + hex.EncodeToString(sum[:eventKeyBytes])
 }
 
 func (disp *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) error {
@@ -38,7 +43,7 @@ func (disp *Dispatcher) emitPostEdit(session *SessionTracker, in hookPayload) er
 
 	// Before the skills gate below, which returns early for any extension
 	// that routes no skill; no trigger names .md, where most markers live.
-	notice := disp.autoCleanEdited(filePath)
+	notice := joinNotice(disp.autoCleanEdited(filePath), disp.throwNotice(session, filePath))
 
 	if !disp.router.Routes(filePath) {
 		if notice == "" {
@@ -88,6 +93,9 @@ func joinNotice(notice, text string) string {
 	if notice == "" {
 		return text
 	}
+	if text == "" {
+		return notice
+	}
 	return notice + "\n\n" + text
 }
 
@@ -114,4 +122,52 @@ func renderPostEditChecklist(templates fs.FS, doc postEditChecklist) (string, er
 		return "", fmt.Errorf("render %s: %w", asset, execErr)
 	}
 	return strings.TrimSpace(buf.String()), nil
+}
+
+func (disp *Dispatcher) installedSkill(id string) string {
+	skillsDir := disp.resolveSkillsDir()
+	if skillsDir == "" || len(filterInstalled([]string{id}, skillsDir)) == 0 {
+		return ""
+	}
+	return id
+}
+
+func (disp *Dispatcher) throwNotice(session *SessionTracker, filePath string) string {
+	root := disp.resolveProjectDir()
+	ext := filepath.Ext(filePath)
+	if root == "" || !throwscan.Handles(ext) {
+		return ""
+	}
+	resolved, err := fsx.ResolveInside(root, filePath)
+	if err != nil {
+		disp.debugThrowSkip(filePath, err.Error())
+		return ""
+	}
+	if reason := fsx.StatGate(resolved); reason != "" {
+		disp.debugThrowSkip(filePath, reason)
+		return ""
+	}
+	src, err := os.ReadFile(resolved) //nolint:gosec // resolved by ResolveInside.
+	if err != nil {
+		disp.debugThrowSkip(filePath, err.Error())
+		return ""
+	}
+	hits := throwscan.Scan(ext, string(src))
+	if len(hits) == 0 {
+		return ""
+	}
+	// A skill that is not installed here must not be named, as in the checklist.
+	skill := disp.installedSkill(throwscan.SkillFor(ext))
+	text := throwscan.Notice(escape.Path(filepath.Base(filePath)), hits, skill)
+	// Per file, so editing another file between two edits does not re-announce this one.
+	if !session.FirstEmission(fileEvent("post-edit-throw-", filePath), text) {
+		return ""
+	}
+	return text
+}
+
+func (disp *Dispatcher) debugThrowSkip(filePath, reason string) {
+	if disp.logger != nil {
+		disp.logger.Debug("throw scan skipped", "path", filePath, "reason", reason)
+	}
 }
