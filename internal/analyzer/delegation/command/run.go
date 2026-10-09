@@ -30,6 +30,11 @@ func (analyzer *Analyzer) runEntry(
 	if fault != "" {
 		return []finding.Finding{rep.config(fault)}
 	}
+	if kind.precheck != nil {
+		if reason := kind.precheck(root, dir, listed); reason != "" {
+			return []finding.Finding{rep.skipped(reason)}
+		}
+	}
 	name := entry.Run[0]
 	if _, err := exec.LookPath(resolveInDir(dir, name)); err != nil {
 		return []finding.Finding{rep.unavailable(name)}
