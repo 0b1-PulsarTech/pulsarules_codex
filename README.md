@@ -137,6 +137,12 @@ since Cursor injects every `alwaysApply: true` rule into every request rather th
 session like the Claude hook. Use `--no-hooks` to skip the Claude hook script and settings wiring
 (git hooks: `--no-git-hooks`), or `--print-hooks` to print the resolved hooks block.
 
+## Credits
+
+The TypeScript, JavaScript and Svelte parser is the typescript-go fork
+`github.com/Zzzen/typescript-go` (Apache-2.0), linked into the binary; no Node is needed. Other
+dependencies and their licences are listed in [INSTALL.md](INSTALL.md#credits-and-licences).
+
 ## Origin
 
 This repository is the source of truth for these standards. It was initially seeded from the

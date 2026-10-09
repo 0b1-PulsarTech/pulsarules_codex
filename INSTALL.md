@@ -334,3 +334,17 @@ task gen:validate       # validate the embedded knowledge
 task gen:emoji          # regenerate the commit emoji catalog
 task list               # list skills
 ```
+
+## Credits and licences
+
+This project is licensed under the terms in `LICENSE`. The binary links these third party modules:
+
+- `github.com/Zzzen/typescript-go` (a fork of `microsoft/typescript-go`), Apache-2.0: the
+  TypeScript, JavaScript and Svelte parser.
+- `github.com/go-json-experiment/json` (BSD-3-Clause).
+- `github.com/wrapped-owls/goremy-di` (dependency injection).
+- `golang.org/x/sync` and `golang.org/x/text` (BSD-3-Clause).
+- `gopkg.in/yaml.v3` (MIT and Apache-2.0).
+
+Run `go version -m <binary>` for the exact versions. The Apache-2.0 licence text of typescript-go
+is available in its repository.
