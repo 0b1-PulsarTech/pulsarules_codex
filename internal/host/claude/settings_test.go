@@ -6,14 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func TestRenderHooksBlock(t *testing.T) {
 	t.Parallel()
 
-	block, err := RenderHooksBlock(fakeTemplates())
+	block, err := RenderHooksBlock()
 	if err != nil {
 		t.Fatalf("RenderHooksBlock: %v", err)
 	}
@@ -31,11 +29,7 @@ func TestRenderHooksBlock(t *testing.T) {
 func TestRenderHooksBlock_SubagentStart(t *testing.T) {
 	t.Parallel()
 
-	_, templates, err := knowledge.Load("")
-	if err != nil {
-		t.Fatalf("knowledge.Load: %v", err)
-	}
-	block, err := RenderHooksBlock(templates)
+	block, err := RenderHooksBlock()
 	if err != nil {
 		t.Fatalf("RenderHooksBlock: %v", err)
 	}
@@ -68,12 +62,12 @@ func TestWireSettings_FreshFile(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			claudeDir := filepath.Join(t.TempDir(), ".claude")
-			if err := WireSettings(fakeTemplates(), claudeDir, testCase.settingsFile); err != nil {
+			if err := WireSettings(claudeDir, testCase.settingsFile); err != nil {
 				t.Fatalf("WireSettings: %v", err)
 			}
 			hooks := readHooks(t, claudeDir, testCase.settingsFile)
-			if len(hooks["SessionStart"]) != 1 || len(hooks["PreToolUse"]) != 1 {
-				t.Fatalf("expected one group per event, got %+v", hooks)
+			if len(hooks["SessionStart"]) != 1 || len(hooks["PreToolUse"]) != 2 {
+				t.Fatalf("want one SessionStart and two PreToolUse groups, got %+v", hooks)
 			}
 		})
 	}
@@ -83,7 +77,7 @@ func wireTwice(tb testing.TB, claudeDir, settingsFile string) {
 	tb.Helper()
 
 	for range 2 {
-		if err := WireSettings(fakeTemplates(), claudeDir, settingsFile); err != nil {
+		if err := WireSettings(claudeDir, settingsFile); err != nil {
 			tb.Fatalf("WireSettings: %v", err)
 		}
 	}
@@ -131,8 +125,8 @@ func TestWireSettings_PreservesNotificationHook(t *testing.T) {
 	if len(hooks["SessionStart"]) != 1 {
 		t.Errorf("SessionStart groups = %d, want 1", len(hooks["SessionStart"]))
 	}
-	if len(hooks["PreToolUse"]) != 1 {
-		t.Errorf("PreToolUse groups = %d, want 1", len(hooks["PreToolUse"]))
+	if len(hooks["PreToolUse"]) != 2 {
+		t.Errorf("PreToolUse groups = %d, want 2", len(hooks["PreToolUse"]))
 	}
 	cmd := hooks["SessionStart"][0].Hooks[0].Command
 	if !strings.Contains(cmd, `$CLAUDE_PROJECT_DIR`) {
@@ -165,7 +159,7 @@ func TestWireSettings_ThirdPartyCommand(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := WireSettings(fakeTemplates(), claudeDir, settingsFile); err != nil {
+	if err := WireSettings(claudeDir, settingsFile); err != nil {
 		t.Fatalf("WireSettings: %v", err)
 	}
 
@@ -255,7 +249,7 @@ func TestWireSettings_KeepsAnyUserHookTimeoutValue(t *testing.T) {
 			if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
 				t.Fatalf("seed: %v", err)
 			}
-			if err := WireSettings(fakeTemplates(), claudeDir, "settings.json"); err != nil {
+			if err := WireSettings(claudeDir, "settings.json"); err != nil {
 				t.Fatalf("WireSettings must accept any user timeout: %v", err)
 			}
 			if got := userStopTimeout(t, claudeDir); got != testCase.timeout {

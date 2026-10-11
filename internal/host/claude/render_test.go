@@ -2,22 +2,18 @@ package claude
 
 import (
 	"encoding/json"
+	"os"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
-	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func renderedHooks(t *testing.T) map[string][]hookGroup {
 	t.Helper()
 
-	_, templates, err := knowledge.Load("")
-	if err != nil {
-		t.Fatalf("templates: %v", err)
-	}
-	raw, err := RenderHooksBlock(templates)
+	raw, err := RenderHooksBlock()
 	if err != nil {
 		t.Fatalf("RenderHooksBlock: %v", err)
 	}
@@ -73,5 +69,21 @@ func TestRenderHooksBlock_StopTimeout(t *testing.T) {
 	if hostTimeout < hook.StopGovernanceDeadline+minimumMargin {
 		t.Errorf("Stop timeout %s must exceed the governance deadline %s by %s",
 			hostTimeout, hook.StopGovernanceDeadline, minimumMargin)
+	}
+}
+
+func TestRenderHooksBlock_MatchesTemplateOutput(t *testing.T) {
+	t.Parallel()
+
+	want, err := os.ReadFile("testdata/hooks_block.golden.json")
+	if err != nil {
+		t.Fatalf("read golden: %v", err)
+	}
+	got, err := RenderHooksBlock()
+	if err != nil {
+		t.Fatalf("RenderHooksBlock: %v", err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("hooks block differs from the former template output:\n%s", got)
 	}
 }

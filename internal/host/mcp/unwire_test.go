@@ -19,7 +19,6 @@ func TestRemoveMCP_DeletesOurFile(t *testing.T) {
 
 	repoDir := t.TempDir()
 	if _, _, err := Write(
-		fakeTemplates(),
 		repoDir,
 		detect.NewSet(detect.Go),
 	); err != nil {
@@ -92,7 +91,6 @@ func TestRemoveMCP_StripsGitignore(t *testing.T) {
 	}
 
 	if _, _, err := Write(
-		fakeTemplates(),
 		repoDir,
 		detect.NewSet(detect.Go),
 	); err != nil {
@@ -204,7 +202,6 @@ func TestRemoveMCP_Idempotent(t *testing.T) {
 
 	repoDir := t.TempDir()
 	if _, _, err := Write(
-		fakeTemplates(),
 		repoDir,
 		detect.NewSet(detect.Go),
 	); err != nil {

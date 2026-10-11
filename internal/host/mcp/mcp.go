@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"maps"
 	"os/exec"
 	"path/filepath"
-	"text/template"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
@@ -29,17 +27,14 @@ func managedServersByLanguage() map[detect.Language][]server {
 	}
 }
 
-type templateData struct {
-	RepoDir string
-	Servers []server
-}
-
-type mcpConfig struct {
-	MCPServers map[string]json.RawMessage `json:"mcpServers"`
+type serverEntry struct {
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
+	Cwd     string   `json:"cwd"`
 }
 
 func Write(
-	templates fs.FS, repoDir string, languages detect.Set,
+	repoDir string, languages detect.Set,
 ) (wired, skipped []string, err error) {
 	var available []server
 	available, skipped = availableServers(languages)
@@ -48,7 +43,7 @@ func Write(
 	}
 
 	var rendered map[string]json.RawMessage
-	rendered, err = renderServers(templates, repoDir, available)
+	rendered, err = renderServers(repoDir, available)
 	if err != nil {
 		return nil, skipped, fmt.Errorf("render servers: %w", err)
 	}
@@ -96,23 +91,16 @@ func availableServers(languages detect.Set) (available []server, skippedNames []
 	return available, skippedNames
 }
 
-func renderServers(
-	templates fs.FS, repoDir string, servers []server,
-) (map[string]json.RawMessage, error) {
-	tmpl, err := template.ParseFS(templates, "mcp/mcp.json.tmpl")
-	if err != nil {
-		return nil, fmt.Errorf("parse mcp template: %w", err)
+func renderServers(repoDir string, servers []server) (map[string]json.RawMessage, error) {
+	rendered := make(map[string]json.RawMessage, len(servers))
+	for _, srv := range servers {
+		raw, err := json.Marshal(serverEntry{Command: srv.Command, Args: srv.Args, Cwd: repoDir})
+		if err != nil {
+			return nil, fmt.Errorf("marshal mcp server %q: %w", srv.Name, err)
+		}
+		rendered[srv.Name] = raw
 	}
-	var buf bytes.Buffer
-	vars := templateData{RepoDir: repoDir, Servers: servers}
-	if err = tmpl.Execute(&buf, vars); err != nil {
-		return nil, fmt.Errorf("render mcp config (repo dir %q): %w", repoDir, err)
-	}
-	var cfg mcpConfig
-	if err = json.Unmarshal(buf.Bytes(), &cfg); err != nil {
-		return nil, fmt.Errorf("decode rendered mcp config: %w", err)
-	}
-	return cfg.MCPServers, nil
+	return rendered, nil
 }
 
 func mergeServers(

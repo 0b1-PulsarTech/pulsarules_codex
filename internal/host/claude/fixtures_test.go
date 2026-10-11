@@ -19,25 +19,5 @@ func fakeTemplates() fstest.MapFS {
 		"hooks/README.md": {
 			Data: []byte("<!-- Installed by pulsarules_cli -->\n# why\n"),
 		},
-		"hooks/settings.hooks.json.tmpl": {Data: []byte(`{
-  "hooks": {
-    "SessionStart": [
-      {"hooks": [` + routerHook("session-start") + `]}
-    ],
-    "PreToolUse": [
-      {"matcher": "Write|Edit|MultiEdit", "hooks": [` + routerHook("pre-edit") + `]}
-    ],
-    "PostToolUse": [
-      {"matcher": "Write|Edit|MultiEdit", "hooks": [` + routerHook("post-edit") + `]}
-    ],
-    "UserPromptSubmit": [
-      {"hooks": [` + routerHook("user-prompt") + `]}
-    ],
-    "Stop": [
-      {"hooks": [` + routerHook("stop") + `]}
-    ]
-  }
-}
-`)},
 	}
 }

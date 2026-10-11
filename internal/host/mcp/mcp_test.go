@@ -16,7 +16,7 @@ func TestWriteMCP_FreshFile(t *testing.T) {
 	fakeOnPath(t, "gopls")
 	repoDir := t.TempDir()
 
-	wired, skipped, err := Write(fakeTemplates(), repoDir, detect.NewSet(detect.Go))
+	wired, skipped, err := Write(repoDir, detect.NewSet(detect.Go))
 	if err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
@@ -32,6 +32,40 @@ func TestWriteMCP_FreshFile(t *testing.T) {
 	}
 	if gopls.Cwd != repoDir {
 		t.Errorf("cwd = %q, want %q", gopls.Cwd, repoDir)
+	}
+}
+
+func TestRenderServers_EscapesRepoDir(t *testing.T) {
+	t.Parallel()
+
+	servers := []server{{Name: "gopls", Command: "gopls", Args: []string{"mcp"}}}
+	testCases := []struct {
+		name    string
+		repoDir string
+	}{
+		{name: "plain path", repoDir: "/home/dev/p"},
+		{name: "windows backslashes", repoDir: `C:\Users\dev\p`},
+		{name: "embedded quote", repoDir: `a"b`},
+		{name: "html characters", repoDir: "a<b>&c"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			rendered, err := renderServers(testCase.repoDir, servers)
+			if err != nil {
+				t.Fatalf("renderServers: %v", err)
+			}
+			var got mcpServer
+			if err = json.Unmarshal(rendered["gopls"], &got); err != nil {
+				t.Fatalf("rendered entry is not valid JSON: %v", err)
+			}
+			if got.Cwd != testCase.repoDir {
+				t.Errorf("cwd = %q, want %q", got.Cwd, testCase.repoDir)
+			}
+			if got.Command != "gopls" || !slices.Equal(got.Args, []string{"mcp"}) {
+				t.Errorf("entry = %+v, want gopls mcp", got)
+			}
+		})
 	}
 }
 
@@ -51,10 +85,10 @@ func TestWriteMCP_PreservesExisting(t *testing.T) {
 	}
 
 	languages := detect.NewSet(detect.Go)
-	if _, _, err := Write(fakeTemplates(), repoDir, languages); err != nil {
+	if _, _, err := Write(repoDir, languages); err != nil {
 		t.Fatalf("WriteMCP #1: %v", err)
 	}
-	if _, _, err := Write(fakeTemplates(), repoDir, languages); err != nil {
+	if _, _, err := Write(repoDir, languages); err != nil {
 		t.Fatalf("WriteMCP #2: %v", err)
 	}
 
@@ -88,7 +122,6 @@ func TestWriteMCP_GitignoresMCPJSON(t *testing.T) {
 	repoDir := t.TempDir()
 
 	if _, _, err := Write(
-		fakeTemplates(),
 		repoDir,
 		detect.NewSet(detect.Go),
 	); err != nil {
@@ -131,7 +164,7 @@ func TestWriteMCP_LanguageAware(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			repoDir := t.TempDir()
-			wired, _, err := Write(fakeTemplates(), repoDir, testCase.languages)
+			wired, _, err := Write(repoDir, testCase.languages)
 			if err != nil {
 				t.Fatalf("WriteMCP: %v", err)
 			}
@@ -153,7 +186,7 @@ func TestWriteMCP_SkipsMissingCommand(t *testing.T) {
 	t.Setenv("PATH", "")
 	repoDir := t.TempDir()
 
-	wired, skipped, err := Write(fakeTemplates(), repoDir, detect.NewSet(detect.Go))
+	wired, skipped, err := Write(repoDir, detect.NewSet(detect.Go))
 	if err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
@@ -169,8 +202,9 @@ func TestWriteMCP_SkipsMissingCommand(t *testing.T) {
 }
 
 type mcpServer struct {
-	Command string `json:"command"`
-	Cwd     string `json:"cwd"`
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
+	Cwd     string   `json:"cwd"`
 }
 
 func readServer(tb testing.TB, repoDir, name string) mcpServer {

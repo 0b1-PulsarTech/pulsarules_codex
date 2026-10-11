@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -14,8 +13,8 @@ import (
 
 const hookScript = "skill-router-reminder.sh"
 
-func WireSettings(templates fs.FS, claudeDir, settingsFile string) error {
-	block, err := renderBlock(templates)
+func WireSettings(claudeDir, settingsFile string) error {
+	block, err := renderBlock()
 	if err != nil {
 		return fmt.Errorf("render block: %w", err)
 	}
@@ -38,8 +37,8 @@ func WireSettings(templates fs.FS, claudeDir, settingsFile string) error {
 	return nil
 }
 
-func renderBlock(templates fs.FS) (hooksBlock, error) {
-	raw, err := RenderHooksBlock(templates)
+func renderBlock() (hooksBlock, error) {
+	raw, err := RenderHooksBlock()
 	if err != nil {
 		return hooksBlock{}, err
 	}

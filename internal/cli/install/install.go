@@ -2,7 +2,6 @@ package install
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +25,7 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	}
 
 	if opts.PrintHooks {
-		return printHooksBlock(deps.templates)
+		return printHooksBlock()
 	}
 
 	if err = applySelectedLayout(opts, deps.idx); err != nil {
@@ -54,8 +53,8 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	return installPostTargets(opts, cfg, deps)
 }
 
-func printHooksBlock(templates fs.FS) error {
-	block, err := claude.RenderHooksBlock(templates)
+func printHooksBlock() error {
+	block, err := claude.RenderHooksBlock()
 	if err != nil {
 		return fmt.Errorf("render hooks block: %w", err)
 	}

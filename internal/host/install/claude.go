@@ -27,7 +27,7 @@ func (claudeInstaller) Install(ctx Context) (report.Report, error) {
 	for _, msg := range backedUp {
 		rpt.Warn("%s", msg)
 	}
-	if err = claude.WireSettings(ctx.Templates, claudeDir, settingsFile); err != nil {
+	if err = claude.WireSettings(claudeDir, settingsFile); err != nil {
 		return rpt, fmt.Errorf("wire claude settings: %w", err)
 	}
 	if err = gitignore.Ensure(claudeDir, "/bin/", "/hooks/"); err != nil {

@@ -1,11 +1,9 @@
 package claude
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/fs"
-	"text/template"
+	"strconv"
 )
 
 type hookCommand struct {
@@ -47,39 +45,18 @@ func hookRegistrations() []hookRegistration {
 	}
 }
 
-type hookEventGroup struct {
-	Name string
-	Rows []hookRegistration
-}
-
-func groupHookRegistrations(rows []hookRegistration) []hookEventGroup {
-	groups := make([]hookEventGroup, 0, len(rows))
-	// JSON forbids a repeated key, so registrations sharing an Event land in one group.
-	index := make(map[string]int, len(rows))
-	for _, row := range rows {
-		pos, ok := index[row.Event]
-		if !ok {
-			pos = len(groups)
-			index[row.Event] = pos
-			groups = append(groups, hookEventGroup{Name: row.Event})
+func RenderHooksBlock() ([]byte, error) {
+	block := hooksBlock{Hooks: map[string][]hookGroup{}}
+	for _, row := range hookRegistrations() {
+		command := hookCommand{
+			Type:    "command",
+			Command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/` + hookScript + `" ` + row.Mode,
 		}
-		groups[pos].Rows = append(groups[pos].Rows, row)
-	}
-	return groups
-}
-
-func RenderHooksBlock(templates fs.FS) ([]byte, error) {
-	tmpl, err := template.ParseFS(templates, "hooks/settings.hooks.json.tmpl")
-	if err != nil {
-		return nil, fmt.Errorf("parse hooks settings template: %w", err)
-	}
-	var rendered bytes.Buffer
-	if err = tmpl.Execute(&rendered, groupHookRegistrations(hookRegistrations())); err != nil {
-		return nil, fmt.Errorf("render hooks settings template: %w", err)
-	}
-	var block hooksBlock
-	if err = json.Unmarshal(rendered.Bytes(), &block); err != nil {
-		return nil, fmt.Errorf("render hooks block: %w", err)
+		if row.Timeout > 0 {
+			command.Timeout = json.RawMessage(strconv.Itoa(row.Timeout))
+		}
+		block.Hooks[row.Event] = append(block.Hooks[row.Event],
+			hookGroup{Matcher: row.Matcher, Hooks: []hookCommand{command}})
 	}
 	out, err := json.MarshalIndent(block, "", "  ")
 	if err != nil {

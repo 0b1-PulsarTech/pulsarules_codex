@@ -15,7 +15,7 @@ import (
 )
 
 func wireClaudeMCP(ctx Context, skillsDir string, report *Report) error {
-	wired, skipped, err := mcp.Write(ctx.Templates, ctx.Base, ctx.Languages)
+	wired, skipped, err := mcp.Write(ctx.Base, ctx.Languages)
 	if err != nil {
 		return fmt.Errorf("write mcp: %w", err)
 	}

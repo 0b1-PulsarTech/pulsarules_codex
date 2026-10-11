@@ -63,7 +63,7 @@ func TestUnwireSettings_DropsEmptyContainers(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := t.TempDir()
-	if err := WireSettings(fakeTemplates(), claudeDir, "settings.json"); err != nil {
+	if err := WireSettings(claudeDir, "settings.json"); err != nil {
 		t.Fatalf("seed via WireSettings: %v", err)
 	}
 
@@ -292,7 +292,7 @@ func TestUnwireSettings_IdempotentSecondRunIsNoOp(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := t.TempDir()
-	if err := WireSettings(fakeTemplates(), claudeDir, "settings.json"); err != nil {
+	if err := WireSettings(claudeDir, "settings.json"); err != nil {
 		t.Fatalf("seed via WireSettings: %v", err)
 	}
 	firstChanged, err := UnwireSettings(claudeDir, "settings.json")
