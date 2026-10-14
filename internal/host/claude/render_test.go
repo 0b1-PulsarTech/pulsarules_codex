@@ -72,7 +72,7 @@ func TestRenderHooksBlock_StopTimeout(t *testing.T) {
 	}
 }
 
-func TestRenderHooksBlock_MatchesTemplateOutput(t *testing.T) {
+func TestRenderHooksBlock_MatchesGolden(t *testing.T) {
 	t.Parallel()
 
 	want, err := os.ReadFile("testdata/hooks_block.golden.json")
@@ -84,6 +84,6 @@ func TestRenderHooksBlock_MatchesTemplateOutput(t *testing.T) {
 		t.Fatalf("RenderHooksBlock: %v", err)
 	}
 	if string(got) != string(want) {
-		t.Errorf("hooks block differs from the former template output:\n%s", got)
+		t.Errorf("hooks block differs from the golden:\n%s", got)
 	}
 }

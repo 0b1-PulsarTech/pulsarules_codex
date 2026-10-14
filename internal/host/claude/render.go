@@ -45,7 +45,7 @@ func hookRegistrations() []hookRegistration {
 	}
 }
 
-func RenderHooksBlock() ([]byte, error) {
+func buildHooksBlock() hooksBlock {
 	block := hooksBlock{Hooks: map[string][]hookGroup{}}
 	for _, row := range hookRegistrations() {
 		command := hookCommand{
@@ -58,7 +58,11 @@ func RenderHooksBlock() ([]byte, error) {
 		block.Hooks[row.Event] = append(block.Hooks[row.Event],
 			hookGroup{Matcher: row.Matcher, Hooks: []hookCommand{command}})
 	}
-	out, err := json.MarshalIndent(block, "", "  ")
+	return block
+}
+
+func RenderHooksBlock() ([]byte, error) {
+	out, err := json.MarshalIndent(buildHooksBlock(), "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("marshal hooks block: %w", err)
 	}

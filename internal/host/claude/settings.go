@@ -14,11 +14,7 @@ import (
 const hookScript = "skill-router-reminder.sh"
 
 func WireSettings(claudeDir, settingsFile string) error {
-	block, err := renderBlock()
-	if err != nil {
-		return fmt.Errorf("render block: %w", err)
-	}
-	if err = os.MkdirAll(claudeDir, disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(claudeDir, disk.DirPrivate); err != nil {
 		return fmt.Errorf("mkdir %q: %w", claudeDir, err)
 	}
 	path := filepath.Join(claudeDir, settingsFile)
@@ -27,7 +23,7 @@ func WireSettings(claudeDir, settingsFile string) error {
 		return err
 	}
 
-	merged, err := mergeSettings(existing, block)
+	merged, err := mergeSettings(existing, buildHooksBlock())
 	if err != nil {
 		return fmt.Errorf("merge settings: %w", err)
 	}
@@ -35,18 +31,6 @@ func WireSettings(claudeDir, settingsFile string) error {
 		return fmt.Errorf("save %q: %w", path, err)
 	}
 	return nil
-}
-
-func renderBlock() (hooksBlock, error) {
-	raw, err := RenderHooksBlock()
-	if err != nil {
-		return hooksBlock{}, err
-	}
-	var block hooksBlock
-	if unmarshalErr := json.Unmarshal(raw, &block); unmarshalErr != nil {
-		return hooksBlock{}, fmt.Errorf("decode rendered hooks block: %w", unmarshalErr)
-	}
-	return block, nil
 }
 
 func mergeSettings(existing []byte, block hooksBlock) (map[string]json.RawMessage, error) {

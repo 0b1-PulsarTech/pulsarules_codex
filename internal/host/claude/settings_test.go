@@ -8,46 +8,6 @@ import (
 	"testing"
 )
 
-func TestRenderHooksBlock(t *testing.T) {
-	t.Parallel()
-
-	block, err := RenderHooksBlock()
-	if err != nil {
-		t.Fatalf("RenderHooksBlock: %v", err)
-	}
-	var parsed hooksBlock
-	if err = json.Unmarshal(block, &parsed); err != nil {
-		t.Fatalf("rendered block is not valid JSON: %v", err)
-	}
-	got := parsed.Hooks["SessionStart"][0].Hooks[0].Command
-	want := `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh" session-start`
-	if got != want {
-		t.Errorf("session-start command = %q, want %q", got, want)
-	}
-}
-
-func TestRenderHooksBlock_SubagentStart(t *testing.T) {
-	t.Parallel()
-
-	block, err := RenderHooksBlock()
-	if err != nil {
-		t.Fatalf("RenderHooksBlock: %v", err)
-	}
-	var parsed hooksBlock
-	if err = json.Unmarshal(block, &parsed); err != nil {
-		t.Fatalf("rendered block is not valid JSON: %v", err)
-	}
-	groups := parsed.Hooks["SubagentStart"]
-	if len(groups) != 1 || len(groups[0].Hooks) != 1 {
-		t.Fatalf("expected exactly one SubagentStart hook group, got %+v", groups)
-	}
-	got := groups[0].Hooks[0].Command
-	want := `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh" subagent-start`
-	if got != want {
-		t.Errorf("subagent-start command = %q, want %q", got, want)
-	}
-}
-
 func TestWireSettings_FreshFile(t *testing.T) {
 	t.Parallel()
 
