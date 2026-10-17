@@ -1,10 +1,10 @@
 package golangcilint
 
 import (
-	"bufio"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
 )
 
 func hasGoWork(projectDir string) bool {
@@ -13,25 +13,14 @@ func hasGoWork(projectDir string) bool {
 }
 
 func parseGoWorkModules(projectDir string) []string {
-	const goWorkUsePrefix = "use "
-
 	//nolint:gosec // G304: projectDir is the analyzed project root, not user input.
-	file, err := os.Open(filepath.Join(projectDir, "go.work"))
+	src, err := os.ReadFile(filepath.Join(projectDir, "go.work"))
 	if err != nil {
 		return nil
 	}
-	defer func() { _ = file.Close() }()
-
-	var modules []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if rest, ok := strings.CutPrefix(line, goWorkUsePrefix); ok {
-			mod := strings.Trim(strings.TrimSpace(rest), "\"")
-			if mod != "" {
-				modules = append(modules, mod)
-			}
-		}
+	modules, err := gomod.WorkUses(src)
+	if err != nil {
+		return nil
 	}
 	return modules
 }

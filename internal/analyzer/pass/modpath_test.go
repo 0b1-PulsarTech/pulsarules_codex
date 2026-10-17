@@ -30,6 +30,18 @@ func TestResolveModulePath(t *testing.T) {
 			want:       "example.com/other",
 		},
 		{
+			name:       "syntax error elsewhere keeps the path",
+			writeGoMod: true,
+			goModBody:  "module example.com/x\n\nrequire (\n",
+			want:       "example.com/x",
+		},
+		{
+			name:       "bare module line",
+			writeGoMod: true,
+			goModBody:  "module\n",
+			wantErr:    ErrNoModuleDirective,
+		},
+		{
 			name:       "missing go.mod",
 			writeGoMod: false,
 			wantErr:    os.ErrNotExist,

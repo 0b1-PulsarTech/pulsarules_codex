@@ -2,8 +2,9 @@ package gosrc
 
 import (
 	"path"
-	"strconv"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
 )
 
 type Module struct {
@@ -14,25 +15,12 @@ type Module struct {
 func WalkModule(dir string, read func(string) (string, error)) Module {
 	for current := dir; ; current = path.Dir(current) {
 		if src, err := read(path.Join(current, "go.mod")); err == nil {
-			return Module{path: modulePath(src), root: current}
+			return Module{path: gomod.ModulePath([]byte(src)), root: current}
 		}
 		if current == "." || current == "/" {
 			return Module{}
 		}
 	}
-}
-
-func modulePath(goMod string) string {
-	for line := range strings.SplitSeq(goMod, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) == 2 && fields[0] == "module" {
-			if unquoted, err := strconv.Unquote(fields[1]); err == nil {
-				return unquoted
-			}
-			return fields[1]
-		}
-	}
-	return ""
 }
 
 func (mod Module) ImportPath(dir string) string {

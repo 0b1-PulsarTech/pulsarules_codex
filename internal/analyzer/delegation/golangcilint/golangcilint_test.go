@@ -3,6 +3,7 @@ package golangcilint
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -123,38 +124,42 @@ func containsPair(args []string, flag, value string) bool {
 func TestParseGoWorkModules(t *testing.T) {
 	t.Parallel()
 
-	dir := t.TempDir()
-	content := `go 1.22.0
-
-use ./internal/foo
-
-use ./cmd/bar
-
-replace example.com/old => ../local/new
-`
-	if err := os.WriteFile(filepath.Join(dir, "go.work"), []byte(content), 0o600); err != nil {
-		t.Fatal(err)
+	testCases := []struct {
+		name    string
+		content string
+		write   bool
+		want    []string
+	}{
+		{
+			name:    "single lines",
+			content: "go 1.22.0\n\nuse ./internal/foo\n\nuse ./cmd/bar\n\nreplace example.com/old => ../local/new\n",
+			write:   true,
+			want:    []string{"./internal/foo", "./cmd/bar"},
+		},
+		{
+			name:    "block",
+			content: "go 1.22.0\n\nuse (\n\t./a // first\n\t\"./b\"\n)\n",
+			write:   true,
+			want:    []string{"./a", "./b"},
+		},
+		{name: "missing file"},
+		{name: "malformed falls back to nil", content: "bogus directive\n", write: true},
 	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 
-	modules := parseGoWorkModules(dir)
-	if len(modules) != 2 {
-		t.Fatalf("expected 2 modules, got %d: %v", len(modules), modules)
-	}
-	if modules[0] != "./internal/foo" {
-		t.Errorf("module[0] = %q, want ./internal/foo", modules[0])
-	}
-	if modules[1] != "./cmd/bar" {
-		t.Errorf("module[1] = %q, want ./cmd/bar", modules[1])
-	}
-}
-
-func TestParseGoWorkModules_MissingFile(t *testing.T) {
-	t.Parallel()
-
-	dir := t.TempDir()
-	modules := parseGoWorkModules(dir)
-	if modules != nil {
-		t.Errorf("expected nil for missing go.work, got %v", modules)
+			dir := t.TempDir()
+			if testCase.write {
+				path := filepath.Join(dir, "go.work")
+				if err := os.WriteFile(path, []byte(testCase.content), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if got := parseGoWorkModules(dir); !slices.Equal(got, testCase.want) {
+				t.Fatalf("parseGoWorkModules() = %q, want %q", got, testCase.want)
+			}
+		})
 	}
 }
 

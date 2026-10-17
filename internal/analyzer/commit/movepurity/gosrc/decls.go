@@ -73,7 +73,7 @@ func hasIgnoreConstraint(file *ast.File) bool {
 				continue
 			}
 			expr, err := constraint.Parse(comment.Text)
-			if err == nil && excludedWithoutIgnore(expr) {
+			if err == nil && requiresIgnore(expr) {
 				return true
 			}
 		}
@@ -81,13 +81,14 @@ func hasIgnoreConstraint(file *ast.File) bool {
 	return false
 }
 
-func excludedWithoutIgnore(expr constraint.Expr) bool {
-	for _, others := range []bool{false, true} {
-		if expr.Eval(func(tag string) bool { return others && tag != "ignore" }) {
-			return false
-		}
+func requiresIgnore(expr constraint.Expr) bool {
+	switch typed := expr.(type) {
+	case *constraint.TagExpr:
+		return typed.Tag == "ignore"
+	case *constraint.AndExpr:
+		return requiresIgnore(typed.X) || requiresIgnore(typed.Y)
 	}
-	return true
+	return false
 }
 
 func exampleBodies(file *ast.File, tokFile *token.File) [][2]int {

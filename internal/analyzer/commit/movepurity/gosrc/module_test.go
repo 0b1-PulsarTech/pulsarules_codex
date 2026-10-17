@@ -2,7 +2,7 @@ package gosrc
 
 import "testing"
 
-func TestModulePath(t *testing.T) {
+func TestWalkModule_Path(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -14,13 +14,15 @@ func TestModulePath(t *testing.T) {
 		{"quoted", "module \"example.com/q\"\n", "example.com/q"},
 		{"missing directive", "go 1.25\n", ""},
 		{"empty", "", ""},
+		{"syntax error elsewhere", "module example.com/x\n\nrequire (\n", "example.com/x"},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := modulePath(testCase.goMod); got != testCase.want {
-				t.Fatalf("modulePath() = %q, want %q", got, testCase.want)
+			read := func(string) (string, error) { return testCase.goMod, nil }
+			if got := WalkModule(".", read).ImportPath("."); got != testCase.want {
+				t.Fatalf("WalkModule().ImportPath() = %q, want %q", got, testCase.want)
 			}
 		})
 	}

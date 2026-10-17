@@ -5,6 +5,7 @@ go 1.27
 require (
 	github.com/Zzzen/typescript-go v0.0.2-0.20251116002939-712898d9674b
 	github.com/wrapped-owls/goremy-di/remy v1.17.0
+	golang.org/x/mod v0.42.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
