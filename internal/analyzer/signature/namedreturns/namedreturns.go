@@ -37,10 +37,10 @@ func checkFile(
 	var findings []finding.Finding
 
 	ast.Inspect(file, func(node ast.Node) bool {
-		var sites []goast.ResultSite
+		var sites []goast.FuncSite
 		switch typed := node.(type) {
 		case *ast.FuncDecl:
-			sites = []goast.ResultSite{goast.FuncDeclSite(typed)}
+			sites = []goast.FuncSite{goast.FuncDeclSite(typed)}
 		case *ast.InterfaceType:
 			sites = goast.InterfaceMethodSites(typed)
 		}
@@ -54,7 +54,7 @@ func checkFile(
 }
 
 func checkResults(
-	fset *token.FileSet, fc pass.FileChange, site goast.ResultSite, reporter finding.Reporter,
+	fset *token.FileSet, fc pass.FileChange, site goast.FuncSite, reporter finding.Reporter,
 ) []finding.Finding {
 	dup, found := duplicateResultType(site.Results)
 	if !found {

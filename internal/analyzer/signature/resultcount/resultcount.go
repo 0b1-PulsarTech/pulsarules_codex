@@ -65,20 +65,18 @@ func (rule rule) check(fset *token.FileSet, fc pass.FileChange, file *ast.File) 
 	return findings
 }
 
-func sitesOf(decl ast.Node) []goast.ResultSite {
+func sitesOf(decl ast.Node) []goast.FuncSite {
 	switch node := decl.(type) {
 	case *ast.FuncDecl:
-		return []goast.ResultSite{goast.FuncDeclSite(node)}
+		return []goast.FuncSite{goast.FuncDeclSite(node)}
 	case *ast.FuncLit:
-		return []goast.ResultSite{
-			{Name: "function literal", Pos: node.Pos(), Results: node.Type.Results},
-		}
+		return []goast.FuncSite{goast.FuncLitSite(node)}
 	case *ast.TypeSpec:
 		funcType, ok := node.Type.(*ast.FuncType)
 		if !ok {
 			return nil
 		}
-		return []goast.ResultSite{
+		return []goast.FuncSite{
 			{Name: node.Name.Name, Pos: node.Pos(), Results: funcType.Results},
 		}
 	case *ast.InterfaceType:

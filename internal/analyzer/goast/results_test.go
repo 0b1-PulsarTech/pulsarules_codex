@@ -51,7 +51,28 @@ func TestFuncDeclSite(t *testing.T) {
 
 	fn := firstFunc(t, parse(t, "func run() (int, error) { return 0, nil }"))
 	site := FuncDeclSite(fn)
-	if site.Name != "run" || site.Pos != fn.Pos() || site.Results != fn.Type.Results {
+	if site.Name != "run" || site.Pos != fn.Pos() || site.Results != fn.Type.Results ||
+		site.Body != fn.Body {
 		t.Fatalf("site = %+v, want run at %v with the declared results", site, fn.Pos())
+	}
+}
+
+func TestFuncLitSite(t *testing.T) {
+	t.Parallel()
+
+	var lit *ast.FuncLit
+	ast.Inspect(parse(t, "var run = func() int { return 0 }"), func(node ast.Node) bool {
+		if typed, ok := node.(*ast.FuncLit); ok {
+			lit = typed
+		}
+		return true
+	})
+	if lit == nil {
+		t.Fatal("no function literal parsed")
+	}
+	site := FuncLitSite(lit)
+	if site.Name != "function literal" || site.Pos != lit.Pos() ||
+		site.Results != lit.Type.Results || site.Body != lit.Body {
+		t.Fatalf("site = %+v, want the literal's own results and body", site)
 	}
 }

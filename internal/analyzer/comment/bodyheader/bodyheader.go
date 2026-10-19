@@ -38,11 +38,6 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	})
 }
 
-type bodySite struct {
-	name string
-	body *ast.BlockStmt
-}
-
 type check struct {
 	fset     *token.FileSet
 	reporter finding.Reporter
@@ -52,7 +47,7 @@ type check struct {
 func (settings check) file(fc pass.FileChange, file *ast.File) []finding.Finding {
 	var findings []finding.Finding
 	for _, site := range bodySites(fc, file) {
-		groups := headerGroups(file.Comments, site.body)
+		groups := headerGroups(file.Comments, site.Body)
 		lines := 0
 		for _, group := range groups {
 			lines += goast.ProseLines(group)
@@ -63,7 +58,7 @@ func (settings check) file(fc pass.FileChange, file *ast.File) []finding.Finding
 		findings = append(findings, settings.reporter.At(
 			fc.Path,
 			settings.fset.Position(groups[0].Pos()).Line,
-			fmt.Sprintf("%s opens with a %d-line comment block", site.name, lines),
+			fmt.Sprintf("%s opens with a %d-line comment block", site.Name, lines),
 			"delete it; a removed doc comment is never moved into the body, "+
 				"keep only a one-line why at the statement it explains",
 		))
@@ -71,8 +66,8 @@ func (settings check) file(fc pass.FileChange, file *ast.File) []finding.Finding
 	return findings
 }
 
-func bodySites(fc pass.FileChange, file *ast.File) []bodySite {
-	var sites []bodySite
+func bodySites(fc pass.FileChange, file *ast.File) []goast.FuncSite {
+	var sites []goast.FuncSite
 	ast.Inspect(file, func(node ast.Node) bool {
 		switch fn := node.(type) {
 		case *ast.FuncDecl:
@@ -80,10 +75,10 @@ func bodySites(fc pass.FileChange, file *ast.File) []bodySite {
 				return false
 			}
 			if fn.Body != nil {
-				sites = append(sites, bodySite{name: fn.Name.Name, body: fn.Body})
+				sites = append(sites, goast.FuncDeclSite(fn))
 			}
 		case *ast.FuncLit:
-			sites = append(sites, bodySite{name: "function literal", body: fn.Body})
+			sites = append(sites, goast.FuncLitSite(fn))
 		}
 		return true
 	})
