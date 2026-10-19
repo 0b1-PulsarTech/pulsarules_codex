@@ -37,15 +37,15 @@ type lintPos struct {
 	Line     int    `json:"Line"`
 }
 
-func (runner *Runner) parseOutput(result process.Result, cmdErr error) []finding.Finding {
-	if failure := runner.exitFailure(result, cmdErr); failure != nil {
+func (analyzer *Analyzer) parseOutput(result process.Result, cmdErr error) []finding.Finding {
+	if failure := analyzer.exitFailure(result, cmdErr); failure != nil {
 		return failure
 	}
 
 	var parsed lintReport
 	if parseErr := json.Unmarshal(extractJSON([]byte(result.Stdout)), &parsed); parseErr != nil {
 		return []finding.Finding{
-			runner.failure.New(
+			analyzer.failure.New(
 				fmt.Sprintf("failed to parse golangci-lint output: %s", parseErr),
 			),
 		}
@@ -55,12 +55,12 @@ func (runner *Runner) parseOutput(result process.Result, cmdErr error) []finding
 	// A stale cache is the environment's problem, not the code's, so it
 	// warns instead of failing the gate the way a real lint finding does.
 	if escaped > 0 {
-		findings = append(findings, runner.escapedWarning(escaped))
+		findings = append(findings, analyzer.escapedWarning(escaped))
 	}
 	return findings
 }
 
-func (runner *Runner) exitFailure(result process.Result, cmdErr error) []finding.Finding {
+func (analyzer *Analyzer) exitFailure(result process.Result, cmdErr error) []finding.Finding {
 	const (
 		issuesFound    = 1
 		errorWasLogged = 7 // pkg/exitcodes: "ran fine, found something", not a failure
@@ -71,29 +71,29 @@ func (runner *Runner) exitFailure(result process.Result, cmdErr error) []finding
 		return nil
 	case command.Exited, command.TimedOut:
 		if unavailable(result.Stderr) {
-			return []finding.Finding{runner.warning.New(
+			return []finding.Finding{analyzer.warning.New(
 				"golangci-lint was busy elsewhere; its checks did not run",
 			)}
 		}
-		return []finding.Finding{runner.failed("golangci-lint failed", result.Stderr)}
+		return []finding.Finding{analyzer.failed("golangci-lint failed", result.Stderr)}
 	case command.OutputExceeded:
 		reason := fmt.Sprintf(
 			"golangci-lint failed: output exceeded %d bytes", command.MaxOutputBytes,
 		)
-		return []finding.Finding{runner.failed(reason, result.Stderr)}
+		return []finding.Finding{analyzer.failed(reason, result.Stderr)}
 	}
 	// Otherwise the command never produced stdout to parse; report the real
 	// cause, not a JSON parse failure on empty output.
-	return []finding.Finding{runner.failure.New(
+	return []finding.Finding{analyzer.failure.New(
 		"golangci-lint failed: " + printable.Head(cmdErr.Error(), maxMessageBytes),
 	)}
 }
 
-func (runner *Runner) failed(reason, stderr string) finding.Finding {
+func (analyzer *Analyzer) failed(reason, stderr string) finding.Finding {
 	if detail := printable.Tail(stderr, maxMessageBytes); detail != "" {
 		reason += ": " + detail
 	}
-	return runner.failure.New(reason)
+	return analyzer.failure.New(reason)
 }
 
 func issueFindings(issues []lintIssue) (findings []finding.Finding, escaped int) {
@@ -118,8 +118,8 @@ func issueFindings(issues []lintIssue) (findings []finding.Finding, escaped int)
 	return findings, escaped
 }
 
-func (runner *Runner) escapedWarning(escaped int) finding.Finding {
-	return runner.warning.NewWithSuggestion(
+func (analyzer *Analyzer) escapedWarning(escaped int) finding.Finding {
+	return analyzer.warning.NewWithSuggestion(
 		fmt.Sprintf("dropped %d finding(s) naming files outside the analysed project", escaped),
 		"run `golangci-lint cache clean`; a stale cache reports paths from "+
 			"a directory that is gone",

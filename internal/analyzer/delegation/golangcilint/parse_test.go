@@ -36,7 +36,7 @@ func TestParseOutput_LockContention(t *testing.T) {
 			t.Parallel()
 
 			result := process.Result{Stderr: testCase.stderr}
-			got := NewRunner("").parseOutput(result, &exec.ExitError{})
+			got := NewAnalyzer("").parseOutput(result, &exec.ExitError{})
 			if len(got) != 1 {
 				t.Fatalf("got %d findings, want 1: %+v", len(got), got)
 			}
@@ -162,7 +162,7 @@ func TestParseOutput_Results(t *testing.T) {
 				stderr = testCase.stderr
 			}
 			result := process.Result{Stdout: testCase.stdout, Stderr: stderr}
-			got := NewRunner("").parseOutput(result, testCase.cmdErr)
+			got := NewAnalyzer("").parseOutput(result, testCase.cmdErr)
 			if len(got) != len(testCase.wantMessages) {
 				t.Fatalf("got %d findings, want %d: %+v",
 					len(got), len(testCase.wantMessages), got)
@@ -204,7 +204,7 @@ func TestParseOutput_BoundsMessage(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := NewRunner("").parseOutput(process.Result{Stderr: huge}, testCase.cmdErr)
+			got := NewAnalyzer("").parseOutput(process.Result{Stderr: huge}, testCase.cmdErr)
 			if len(got) != 1 {
 				t.Fatalf("got %d findings, want 1", len(got))
 			}
@@ -239,7 +239,7 @@ func TestParseOutput_EmptyStderrHasNoDanglingColon(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := NewRunner("").parseOutput(process.Result{}, testCase.cmdErr)
+			got := NewAnalyzer("").parseOutput(process.Result{}, testCase.cmdErr)
 			if len(got) != 1 || got[0].Message != testCase.want {
 				t.Fatalf("got %+v, want one message %q", got, testCase.want)
 			}

@@ -9,14 +9,14 @@ import (
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/command"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
 func TestRun_NoBinary(t *testing.T) {
 	t.Parallel()
 
-	runner := NewRunner("")
-	findings := runner.Run(".", "")
+	findings := NewAnalyzer("").Analyze(&pass.Context{ProjectDir: "."})
 	if len(findings) != 0 {
 		t.Fatalf("expected 0 findings with empty path, got %d", len(findings))
 	}
@@ -25,8 +25,8 @@ func TestRun_NoBinary(t *testing.T) {
 func TestRun_MissingBinary(t *testing.T) {
 	t.Parallel()
 
-	runner := NewRunner("/nonexistent/golangci-lint")
-	findings := runner.Run(".", "")
+	analyzer := NewAnalyzer("/nonexistent/golangci-lint")
+	findings := analyzer.Analyze(&pass.Context{ProjectDir: "."})
 	if len(findings) != 0 {
 		t.Fatalf("expected 0 findings for a missing binary, got %d: %+v", len(findings), findings)
 	}
@@ -36,11 +36,11 @@ func TestRun_TimeoutIsARealFailureNotASilentSkip(t *testing.T) {
 	t.Parallel()
 
 	script := writeExecSleepScriptNoGrandchild(t)
-	runner := NewRunner(script)
-	runner.timeout = 50 * time.Millisecond
+	analyzer := NewAnalyzer(script)
+	analyzer.timeout = 50 * time.Millisecond
 
 	start := time.Now()
-	findings := runner.Run(t.TempDir(), "")
+	findings := analyzer.Analyze(&pass.Context{ProjectDir: t.TempDir()})
 	elapsed := time.Since(start)
 
 	if elapsed > 2*time.Second {
@@ -66,7 +66,7 @@ func TestRun_BoundsOutput(t *testing.T) {
 		t.Fatalf("write noisy script: %v", err)
 	}
 
-	findings := NewRunner(path).Run(t.TempDir(), "")
+	findings := NewAnalyzer(path).Analyze(&pass.Context{ProjectDir: t.TempDir()})
 	if len(findings) != 1 {
 		t.Fatalf("got %d findings, want 1: %+v", len(findings), findings)
 	}
@@ -253,7 +253,7 @@ func TestParseOutput_Raw(t *testing.T) {
   "FromLinter": "errcheck", "Text": "unchecked error", "Severity": "warning",
   "Pos": {"Filename": "foo.go", "Line": 42}
 }]}`
-	findings := NewRunner("").parseOutput(process.Result{Stdout: out}, nil)
+	findings := NewAnalyzer("").parseOutput(process.Result{Stdout: out}, nil)
 	if len(findings) != 1 {
 		t.Fatalf("expected 1 finding, got %d", len(findings))
 	}

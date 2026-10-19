@@ -97,7 +97,7 @@ func TestForcedBaselineFindings_ConfigDisable(t *testing.T) {
 				}
 			}
 
-			findings := NewRunner("").forcedBaselineFindings(configPath)
+			findings := NewAnalyzer("").forcedBaselineFindings(configPath)
 			if len(findings) != testCase.wantCount {
 				t.Fatalf(
 					"findings = %d, want %d: %+v", len(findings), testCase.wantCount, findings,
@@ -120,7 +120,7 @@ func TestForcedBaselineFindings_ConfigDisable(t *testing.T) {
 func TestForcedBaselineFindings_UnreadableConfig(t *testing.T) {
 	t.Parallel()
 
-	findings := NewRunner("").forcedBaselineFindings(filepath.Join(t.TempDir(), "absent.yml"))
+	findings := NewAnalyzer("").forcedBaselineFindings(filepath.Join(t.TempDir(), "absent.yml"))
 	if len(findings) != 0 {
 		t.Errorf("findings = %+v, want none", findings)
 	}

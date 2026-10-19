@@ -2,9 +2,7 @@ package golangcilint
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
-	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
@@ -23,73 +21,43 @@ func forcedLinters() []string {
 	}
 }
 
-type Runner struct {
-	path    string
-	timeout time.Duration
-	failure finding.Reporter
-	warning finding.Reporter
-}
-
-func NewRunner(golangciLintPath string) *Runner {
-	const golangciLintTimeout = 2 * time.Minute
-	return &Runner{
-		path: golangciLintPath,
-		// Per call, not aggregated over runPerModule's loop: modules vary in size,
-		// so sharing one budget would starve a large one.
-		timeout: golangciLintTimeout,
-		failure: finding.NewReporter("golangci-lint", finding.SeverityError, finding.CatSyntax),
-		warning: finding.NewReporter("golangci-lint", finding.SeverityWarning, finding.CatSyntax),
-	}
-}
-
-func (runner *Runner) Run(projectDir, configPath string) []finding.Finding {
-	if runner.path == "" {
-		return nil
-	}
-	// A missing binary is an environment fact, not a finding.
-	if _, err := exec.LookPath(runner.path); err != nil {
-		return nil
-	}
-	return runner.runLint(projectDir, configPath)
-}
-
-func (runner *Runner) runLint(projectDir, configPath string) []finding.Finding {
+func (analyzer *Analyzer) runLint(projectDir, configPath string) []finding.Finding {
 	if hasGoWork(projectDir) {
-		return runner.runPerModule(projectDir, configPath)
+		return analyzer.runPerModule(projectDir, configPath)
 	}
 
-	return runner.runSingle(projectDir, configPath)
+	return analyzer.runSingle(projectDir, configPath)
 }
 
-func (runner *Runner) runPerModule(projectDir, configPath string) []finding.Finding {
+func (analyzer *Analyzer) runPerModule(projectDir, configPath string) []finding.Finding {
 	modules := parseGoWorkModules(projectDir)
 	if len(modules) == 0 {
-		return runner.runSingle(projectDir, configPath)
+		return analyzer.runSingle(projectDir, configPath)
 	}
 
 	configFlag := resolvedConfigFlag(projectDir, configPath)
 
-	allFindings := runner.forcedBaselineFindings(configFlag)
+	allFindings := analyzer.forcedBaselineFindings(configFlag)
 	for _, mod := range modules {
 		modDir := filepath.Join(projectDir, mod)
-		result, err := runner.run(projectDir, lintArgs(modDir+"/...", configFlag))
-		allFindings = append(allFindings, runner.parseOutput(result, err)...)
+		result, err := analyzer.run(projectDir, lintArgs(modDir+"/...", configFlag))
+		allFindings = append(allFindings, analyzer.parseOutput(result, err)...)
 	}
 	return allFindings
 }
 
-func (runner *Runner) runSingle(projectDir, configPath string) []finding.Finding {
+func (analyzer *Analyzer) runSingle(projectDir, configPath string) []finding.Finding {
 	configFlag := resolvedConfigFlag(projectDir, configPath)
-	result, err := runner.run(projectDir, lintArgs("./...", configFlag))
-	return append(runner.forcedBaselineFindings(configFlag), runner.parseOutput(result, err)...)
+	result, err := analyzer.run(projectDir, lintArgs("./...", configFlag))
+	return append(analyzer.forcedBaselineFindings(configFlag), analyzer.parseOutput(result, err)...)
 }
 
-func (runner *Runner) run(projectDir string, args []string) (process.Result, error) {
+func (analyzer *Analyzer) run(projectDir string, args []string) (process.Result, error) {
 	result, err := command.Execute(process.Command{
-		Name:    runner.path,
+		Name:    analyzer.path,
 		Args:    args,
 		Dir:     projectDir,
-		Timeout: runner.timeout,
+		Timeout: analyzer.timeout,
 	})
 	if err != nil {
 		// %w keeps *execx.Error (and the *exec.ExitError it wraps) reachable through
