@@ -421,3 +421,28 @@ func scriptFamilyCases() []languageCase {
 		clean("bom use strict", "a.js", "\xef\xbb\xbf'use strict'\n"),
 	}
 }
+
+func TestLeadingCommentLine_Vue(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		src      string
+		wantLine int
+		wantOK   bool
+	}{
+		{"markup comment at line 1", "<!-- a note -->\n<template></template>\n", 1, true},
+		{"slash text at line 1 is markup text", "// text\n<template></template>\n", 1, false},
+		{"star text at line 1 is markup text", "/* text */\n<template></template>\n", 1, false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			gotLine, gotOK := leadingCommentLine(".vue", []byte(testCase.src))
+			if gotLine != testCase.wantLine || gotOK != testCase.wantOK {
+				t.Fatalf("leadingCommentLine(.vue) = (%d, %v), want (%d, %v)",
+					gotLine, gotOK, testCase.wantLine, testCase.wantOK)
+			}
+		})
+	}
+}

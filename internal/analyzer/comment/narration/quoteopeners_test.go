@@ -141,6 +141,12 @@ func tomlCases() []scanCase {
 			0,
 		},
 		{
+			"toml literal string ends at a backslash",
+			"toml",
+			"a = 'x\\' # it's the old code\n",
+			1,
+		},
+		{
 			"toml single quote value then comment",
 			"toml",
 			"a = 'x' # it's the old code\n",
