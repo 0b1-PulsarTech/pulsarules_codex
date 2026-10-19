@@ -14,7 +14,7 @@ func skillNormativeSections(idx *knowledge.Index) []string {
 		// The project-router skill renders from router.yaml, not from composed rules or
 		// patterns (skillSidecars/routerPresent already treat it specially),
 		// so it legitimately carries no normative section of its own.
-		if skill.ID == "project-router" {
+		if skill.ID == knowledge.RouterSkillID {
 			continue
 		}
 		has, problem := skillHasNormativeSection(idx, skill)
@@ -36,7 +36,8 @@ func skillNormativeSections(idx *knowledge.Index) []string {
 				// profileOverrides; do not double-report it here.
 				continue
 			}
-			overridden := applyOverride(skill, override)
+			overridden := skill
+			override.Apply(&overridden)
 			has, problem := skillHasNormativeSection(idx, overridden)
 			switch {
 			case problem != "":
@@ -69,15 +70,4 @@ func skillHasNormativeSection(
 	default:
 		return has, ""
 	}
-}
-
-func applyOverride(skill knowledge.Skill, override knowledge.SkillOverride) knowledge.Skill {
-	// A nil list leaves that dimension unchanged, as ApplyProfiles does.
-	if override.ComposeRules != nil {
-		skill.ComposeRules = override.ComposeRules
-	}
-	if override.ComposePatterns != nil {
-		skill.ComposePatterns = override.ComposePatterns
-	}
-	return skill
 }

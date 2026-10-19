@@ -19,7 +19,7 @@ type DependencyPull struct {
 
 func (sel Choice) Resolve(idx *knowledge.Index) (ids []string, pulled []DependencyPull) {
 	if sel.RouterOnly {
-		return []string{"project-router"}, nil
+		return []string{knowledge.RouterSkillID}, nil
 	}
 
 	byID := make(map[string]knowledge.Skill, len(idx.Skills))
@@ -94,7 +94,7 @@ func pullDependencies(
 	visited := make(map[string]bool, len(byID))
 	var walk func(id string)
 	walk = func(id string) {
-		if visited[id] || id == "project-router" {
+		if visited[id] || id == knowledge.RouterSkillID {
 			return
 		}
 		visited[id] = true

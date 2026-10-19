@@ -34,7 +34,7 @@ func (renderer *Renderer) renderCursorRule(
 func (renderer *Renderer) renderSkill(
 	idx *knowledge.Index, skill knowledge.Skill, tmplName string,
 ) (string, error) {
-	sidecar, err := renderSidecar(idx.Body("skills", skill.ID))
+	sidecar, err := renderSidecar(idx.Body(knowledge.KindSkill, skill.ID))
 	if err != nil {
 		return "", fmt.Errorf("skill %q sidecar: %w", skill.ID, err)
 	}
@@ -72,7 +72,7 @@ func (renderer *Renderer) RenderSkill(
 	skill knowledge.Skill,
 	installed []string,
 ) (string, error) {
-	if skill.ID == "project-router" {
+	if skill.ID == knowledge.RouterSkillID {
 		return renderer.renderRouterDoc(idx, installed)
 	}
 	return renderer.renderBody(idx, skill)
@@ -83,7 +83,7 @@ func (renderer *Renderer) RenderSkillCursor(
 	skill knowledge.Skill,
 	installed []string,
 ) (string, error) {
-	if skill.ID == "project-router" {
+	if skill.ID == knowledge.RouterSkillID {
 		return renderer.renderCursorRouter(idx, installed)
 	}
 	return renderer.renderCursorRule(idx, skill)
@@ -95,7 +95,7 @@ func (renderer *Renderer) RenderWorkflow(
 	doc := workflowDoc{
 		ID: wf.ID, Name: wf.Name, Description: wf.Description,
 		Steps: wf.Steps,
-		Body:  idx.Body("workflows", wf.ID),
+		Body:  idx.Body(knowledge.KindWorkflow, wf.ID),
 	}
 	for _, entry := range wf.ComposesRules {
 		id := entryID(entry)
@@ -103,7 +103,7 @@ func (renderer *Renderer) RenderWorkflow(
 		if !ok {
 			return "", fmt.Errorf("workflow %q: composed rule %q not found", wf.ID, id)
 		}
-		body, bodyErr := wholeBody(idx.Body("rules", id))
+		body, bodyErr := wholeBody(idx.Body(knowledge.KindRule, id))
 		if bodyErr != nil {
 			return "", fmt.Errorf("workflow %q: %w", wf.ID, bodyErr)
 		}
@@ -115,7 +115,7 @@ func (renderer *Renderer) RenderWorkflow(
 		if !ok {
 			return "", fmt.Errorf("workflow %q: composed pattern %q not found", wf.ID, id)
 		}
-		body, bodyErr := wholeBody(idx.Body("patterns", id))
+		body, bodyErr := wholeBody(idx.Body(knowledge.KindPattern, id))
 		if bodyErr != nil {
 			return "", fmt.Errorf("workflow %q: %w", wf.ID, bodyErr)
 		}

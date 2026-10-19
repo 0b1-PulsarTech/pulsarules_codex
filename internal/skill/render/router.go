@@ -24,9 +24,9 @@ func (renderer *Renderer) renderCursorRouter(
 func (renderer *Renderer) renderRouter(
 	idx *knowledge.Index, installed []string, tmplName string,
 ) (string, error) {
-	router, ok := idx.Skill("project-router")
+	router, ok := idx.Skill(knowledge.RouterSkillID)
 	if !ok {
-		return "", errors.New("missing project-router skill")
+		return "", errors.New("missing " + knowledge.RouterSkillID + " skill")
 	}
 	keep := installFilter(installed)
 	doc := routerDoc{

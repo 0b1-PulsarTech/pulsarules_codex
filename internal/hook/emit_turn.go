@@ -2,7 +2,6 @@ package hook
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/checklist"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
 func (disp *Dispatcher) emitPreSearch(session *sessionTracker, in hookPayload) error {
@@ -104,11 +104,11 @@ func (disp *Dispatcher) stopHeader(result governanceResult) (string, error) {
 	if result.timedOut {
 		return strings.TrimSpace(result.block), nil
 	}
-	text, err := fs.ReadFile(disp.templates, "hooks/stop.txt")
+	text, err := templates.New(disp.templates).Text("hooks/stop.txt")
 	if err != nil {
-		return "", fmt.Errorf("read stop.txt: %w", err)
+		return "", err
 	}
-	return strings.TrimSpace(string(text)) + result.block, nil
+	return text + result.block, nil
 }
 
 func cappedStatus(status vcs.Status) string {

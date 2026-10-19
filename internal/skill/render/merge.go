@@ -59,7 +59,7 @@ func bodySections(body string) (map[string]string, error) {
 
 func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error) {
 	var sources []source
-	add := func(kind, entry, name string) error {
+	add := func(kind knowledge.Kind, entry, name string) error {
 		id := entryID(entry)
 		sections, err := bodySections(idx.Body(kind, id))
 		if err != nil {
@@ -76,7 +76,7 @@ func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error)
 				"%w: skill %q composes unknown rule %q", ErrUnknownComposition, skill.ID, id,
 			)
 		}
-		if err := add("rules", entry, rule.Name); err != nil {
+		if err := add(knowledge.KindRule, entry, rule.Name); err != nil {
 			return nil, err
 		}
 	}
@@ -88,7 +88,7 @@ func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error)
 				"%w: skill %q composes unknown pattern %q", ErrUnknownComposition, skill.ID, id,
 			)
 		}
-		if err := add("patterns", entry, pattern.Name); err != nil {
+		if err := add(knowledge.KindPattern, entry, pattern.Name); err != nil {
 			return nil, err
 		}
 	}

@@ -51,13 +51,13 @@ func TestBaselineFor(t *testing.T) {
 		languages []string
 		want      []string
 	}{
-		{"go", idx, []string{"go"}, []string{"go-style", "code-minimalism", "unlisted"}},
-		{"dart", idx, []string{"dart"}, []string{"dart-style", "code-minimalism", "unlisted"}},
-		{"svelte", idx, []string{"svelte"}, []string{"ts-errors", "code-minimalism", "unlisted"}},
+		{"go", idx, []string{"go"}, []string{"go-style", "code-minimalism"}},
+		{"dart", idx, []string{"dart"}, []string{"dart-style", "code-minimalism"}},
+		{"svelte", idx, []string{"svelte"}, []string{"ts-errors", "code-minimalism"}},
 		{"two languages", idx, []string{"go", "dart"}, []string{
-			"go-style", "dart-style", "code-minimalism", "unlisted",
+			"go-style", "dart-style", "code-minimalism",
 		}},
-		{"no language keeps the neutral ones", idx, nil, []string{"code-minimalism", "unlisted"}},
+		{"no language keeps the neutral ones", idx, nil, []string{"code-minimalism"}},
 		{"nil index", nil, []string{"go"}, nil},
 	}
 	for _, testCase := range testCases {
@@ -66,6 +66,36 @@ func TestBaselineFor(t *testing.T) {
 			got := testCase.index.BaselineFor(testCase.languages...)
 			if !slices.Equal(got, testCase.want) {
 				t.Errorf("BaselineFor(%v) = %v, want %v", testCase.languages, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestFits(t *testing.T) {
+	t.Parallel()
+
+	idx := &Index{Skills: []Skill{
+		{ID: "go-style", Languages: []string{"go"}},
+		{ID: "code-minimalism"},
+	}}
+	testCases := []struct {
+		name      string
+		id        string
+		languages []string
+		want      bool
+	}{
+		{"language match", "go-style", []string{"go"}, true},
+		{"language mismatch", "go-style", []string{"dart"}, false},
+		{"neutral skill fits any project", "code-minimalism", []string{"dart"}, true},
+		{"neutral skill fits no language", "code-minimalism", nil, true},
+		{"unknown id fits nothing", "unlisted", []string{"go"}, false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := idx.Fits(testCase.id, testCase.languages...); got != testCase.want {
+				t.Errorf("Fits(%q, %v) = %v, want %v",
+					testCase.id, testCase.languages, got, testCase.want)
 			}
 		})
 	}

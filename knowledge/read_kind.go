@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/catalog"
 )
 
 func ruleID(rule Rule) string             { return rule.ID }
@@ -15,14 +17,14 @@ func workflowID(workflow Workflow) string { return workflow.ID }
 
 type kindSink[Item any] struct {
 	items     *[]Item
-	byID      map[string]Item
+	byID      *catalog.Catalog[Item]
 	bodies    map[string]string
 	summaries map[string]string
 	idOf      func(Item) string
 }
 
-func readKind[Item any](standards fs.FS, kind string, sink kindSink[Item]) error {
-	paths, pathsErr := markdownPaths(standards, kind)
+func readKind[Item any](standards fs.FS, kind Kind, sink kindSink[Item]) error {
+	paths, pathsErr := markdownPaths(standards, string(kind))
 	if pathsErr != nil {
 		return pathsErr
 	}
@@ -35,13 +37,12 @@ func readKind[Item any](standards fs.FS, kind string, sink kindSink[Item]) error
 		if id == "" {
 			return fmt.Errorf("%s file %q has empty id", kind, path)
 		}
-		if _, dup := sink.byID[id]; dup {
+		if sink.byID.Has(id) {
 			return fmt.Errorf("duplicate %s id %q", kind, id)
 		}
 		*sink.items = append(*sink.items, item)
-		sink.byID[id] = item
-		// The key format is "<kind>:<id>", the one Index.Body and Index.Summary look up.
-		key := kind + ":" + id
+		sink.byID.Put(id, item)
+		key := kind.key(id)
 		sink.bodies[key] = body
 		sink.summaries[key] = firstBlockquote(body)
 	}
@@ -95,10 +96,10 @@ func readSkills(standards fs.FS, idx *Index) error {
 		return fmt.Errorf("parse skills.yaml: %w", err)
 	}
 	for _, skill := range loaded.Skills {
-		if _, dup := idx.skillByID[skill.ID]; dup {
+		if idx.skills.Has(skill.ID) {
 			return fmt.Errorf("duplicate skill id %q", skill.ID)
 		}
-		idx.skillByID[skill.ID] = skill
+		idx.skills.Put(skill.ID, skill)
 		idx.Skills = append(idx.Skills, skill)
 	}
 	return nil

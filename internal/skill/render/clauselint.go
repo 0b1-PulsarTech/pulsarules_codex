@@ -30,15 +30,18 @@ func LintSections(idx *knowledge.Index) []string {
 	return problems
 }
 
-type host struct{ kind, id string }
+type host struct {
+	kind knowledge.Kind
+	id   string
+}
 
 func allHosts(idx *knowledge.Index) []host {
 	hosts := make([]host, 0, len(idx.Rules)+len(idx.Patterns))
 	for _, rule := range idx.Rules {
-		hosts = append(hosts, host{"rules", rule.ID})
+		hosts = append(hosts, host{knowledge.KindRule, rule.ID})
 	}
 	for _, pattern := range idx.Patterns {
-		hosts = append(hosts, host{"patterns", pattern.ID})
+		hosts = append(hosts, host{knowledge.KindPattern, pattern.ID})
 	}
 	return hosts
 }

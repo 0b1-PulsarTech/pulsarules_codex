@@ -23,6 +23,7 @@ func Validate(idx *knowledge.Index, extra ...Check) Result {
 		skillNormativeSections,
 		profileOverrides,
 		routerPresent,
+		routerSkillIDs,
 		emojiThemeShortcodes,
 	}
 	var result Result

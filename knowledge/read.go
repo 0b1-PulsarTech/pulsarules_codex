@@ -12,38 +12,29 @@ var (
 )
 
 func newIndex() *Index {
-	return &Index{
-		ruleByID:      map[string]Rule{},
-		patternByID:   map[string]Pattern{},
-		workflowByID:  map[string]Workflow{},
-		skillByID:     map[string]Skill{},
-		profileByID:   map[string]Profile{},
-		referenceByID: map[string]Reference{},
-		bodies:        map[string]string{},
-		summaries:     map[string]string{},
-	}
+	return &Index{bodies: map[string]string{}, summaries: map[string]string{}}
 }
 
 func loadKinds(standards fs.FS, idx *Index) error {
 	kindLoaders := []struct {
-		kind string
+		kind Kind
 		load func(fs.FS) error
 	}{
-		{"rules", func(fsys fs.FS) error {
-			return readKind(fsys, "rules", kindSink[Rule]{
-				items: &idx.Rules, byID: idx.ruleByID,
+		{KindRule, func(fsys fs.FS) error {
+			return readKind(fsys, KindRule, kindSink[Rule]{
+				items: &idx.Rules, byID: &idx.rules,
 				bodies: idx.bodies, summaries: idx.summaries, idOf: ruleID,
 			})
 		}},
-		{"patterns", func(fsys fs.FS) error {
-			return readKind(fsys, "patterns", kindSink[Pattern]{
-				items: &idx.Patterns, byID: idx.patternByID,
+		{KindPattern, func(fsys fs.FS) error {
+			return readKind(fsys, KindPattern, kindSink[Pattern]{
+				items: &idx.Patterns, byID: &idx.patterns,
 				bodies: idx.bodies, summaries: idx.summaries, idOf: patternID,
 			})
 		}},
-		{"workflows", func(fsys fs.FS) error {
-			return readKind(fsys, "workflows", kindSink[Workflow]{
-				items: &idx.Workflows, byID: idx.workflowByID,
+		{KindWorkflow, func(fsys fs.FS) error {
+			return readKind(fsys, KindWorkflow, kindSink[Workflow]{
+				items: &idx.Workflows, byID: &idx.workflows,
 				bodies: idx.bodies, summaries: idx.summaries, idOf: workflowID,
 			})
 		}},

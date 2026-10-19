@@ -174,10 +174,10 @@ func TestMinOrientationChars_ShortestSidecar(t *testing.T) {
 	}
 	shortest, shortestID := 0, ""
 	for _, skill := range idx.Skills {
-		if skill.ID == "project-router" {
+		if skill.ID == knowledge.RouterSkillID {
 			continue
 		}
-		chars := len(orientationProse(idx.Body("skills", skill.ID)))
+		chars := len(orientationProse(idx.Body(knowledge.KindSkill, skill.ID)))
 		if shortestID == "" || chars < shortest {
 			shortest, shortestID = chars, skill.ID
 		}

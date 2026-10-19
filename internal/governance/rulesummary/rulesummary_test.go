@@ -208,7 +208,8 @@ func TestLookupRule(t *testing.T) {
 					testCase.wantRuleID,
 				)
 			}
-			if testCase.wantRuleID != "" && idx.Summary("rules", testCase.wantRuleID) == "" {
+			if testCase.wantRuleID != "" &&
+				idx.Summary(knowledge.KindRule, testCase.wantRuleID) == "" {
 				t.Fatalf("rule %q has no summary in the knowledge base", testCase.wantRuleID)
 			}
 		})

@@ -438,7 +438,7 @@ func TestDispatchStop_MissingStopTemplate(t *testing.T) {
 	if strings.TrimSpace(out.String()) != "" {
 		t.Errorf("expected no hook output, got %q", out.String())
 	}
-	if !strings.Contains(logBuf.String(), "read stop.txt") {
+	if !strings.Contains(logBuf.String(), "read hooks/stop.txt") {
 		t.Errorf("log missing stop.txt read failure:\n%s", logBuf.String())
 	}
 }

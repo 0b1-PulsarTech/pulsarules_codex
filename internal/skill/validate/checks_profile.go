@@ -21,14 +21,14 @@ func profileOverrides(idx *knowledge.Index) []string {
 				{
 					refs: override.ComposeRules,
 					resolve: func(id string) bool {
-						return idx.RuleExists(id) && idx.Body("rules", id) != ""
+						return idx.RuleExists(id) && idx.Body(knowledge.KindRule, id) != ""
 					},
 					missing: profileMissing(profile.ID, skillID, "rule"),
 				},
 				{
 					refs: override.ComposePatterns,
 					resolve: func(id string) bool {
-						return idx.PatternExists(id) && idx.Body("patterns", id) != ""
+						return idx.PatternExists(id) && idx.Body(knowledge.KindPattern, id) != ""
 					},
 					missing: profileMissing(profile.ID, skillID, "pattern"),
 				},
@@ -48,22 +48,15 @@ func profileMissing(profileID, skillID, kind string) func(string) string {
 	}
 }
 
-func routerPresent(idx *knowledge.Index) []string {
-	if idx.SkillExists("project-router") {
-		return nil
-	}
-	return []string{"missing mandatory project-router skill"}
-}
-
 const minOrientationChars = 120
 
 func skillSidecars(idx *knowledge.Index) []string {
 	var problems []string
 	for _, skill := range idx.Skills {
-		if skill.ID == "project-router" {
+		if skill.ID == knowledge.RouterSkillID {
 			continue
 		}
-		body := idx.Body("skills", skill.ID)
+		body := idx.Body(knowledge.KindSkill, skill.ID)
 		if body == "" {
 			problems = append(problems, fmt.Sprintf(
 				"skill %q has no curated sidecar under standards/skills/%s.md", skill.ID, skill.ID,
@@ -106,6 +99,6 @@ func emptyBody(ownerID, kind string) func(string) string {
 	}
 }
 
-func hasBody(idx *knowledge.Index, kind string) func(string) bool {
+func hasBody(idx *knowledge.Index, kind knowledge.Kind) func(string) bool {
 	return func(id string) bool { return idx.Body(kind, id) != "" }
 }

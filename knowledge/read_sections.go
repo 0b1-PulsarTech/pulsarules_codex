@@ -8,70 +8,62 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func readRouter(standards fs.FS, idx *Index) error {
-	raw, err := fs.ReadFile(standards, "router.yaml")
+func readOptionalYAML[Doc any](standards fs.FS, name string) (Doc, bool, error) {
+	var loaded Doc
+	raw, err := fs.ReadFile(standards, name)
 	if err != nil {
-		// The file is optional; its absence leaves the router prose-only.
+		// Each of these files is optional; its absence is not an error.
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil
+			return loaded, false, nil
 		}
-		return fmt.Errorf("read router.yaml: %w", err)
+		return loaded, false, fmt.Errorf("read %s: %w", name, err)
 	}
-	var loaded routerFile
 	if err = yaml.Unmarshal(raw, &loaded); err != nil {
-		return fmt.Errorf("parse router.yaml: %w", err)
+		return loaded, false, fmt.Errorf("parse %s: %w", name, err)
+	}
+	return loaded, true, nil
+}
+
+func readRouter(standards fs.FS, idx *Index) error {
+	loaded, _, err := readOptionalYAML[routerFile](standards, "router.yaml")
+	if err != nil {
+		return err
 	}
 	idx.Router = loaded.Router
 	return nil
 }
 
 func readReferences(standards fs.FS, idx *Index) error {
-	raw, err := fs.ReadFile(standards, "references.yaml")
+	loaded, _, err := readOptionalYAML[referencesFile](standards, "references.yaml")
 	if err != nil {
-		// The file is optional; without it citations fail validation but a base with none renders.
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("read references.yaml: %w", err)
-	}
-	var loaded referencesFile
-	if err = yaml.Unmarshal(raw, &loaded); err != nil {
-		return fmt.Errorf("parse references.yaml: %w", err)
+		return err
 	}
 	for _, reference := range loaded.References {
 		if reference.ID == "" {
 			return errors.New("reference with empty id")
 		}
-		if _, dup := idx.referenceByID[reference.ID]; dup {
+		if idx.references.Has(reference.ID) {
 			return fmt.Errorf("duplicate reference id %q", reference.ID)
 		}
-		idx.referenceByID[reference.ID] = reference
+		idx.references.Put(reference.ID, reference)
 		idx.References = append(idx.References, reference)
 	}
 	return nil
 }
 
 func readProfiles(standards fs.FS, idx *Index) error {
-	raw, err := fs.ReadFile(standards, "profiles.yaml")
+	loaded, _, err := readOptionalYAML[profilesFile](standards, "profiles.yaml")
 	if err != nil {
-		// The file is optional; without it no layout variants are offered.
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("read profiles.yaml: %w", err)
-	}
-	var loaded profilesFile
-	if err = yaml.Unmarshal(raw, &loaded); err != nil {
-		return fmt.Errorf("parse profiles.yaml: %w", err)
+		return err
 	}
 	for _, profile := range loaded.Profiles {
 		if profile.ID == "" {
 			return errors.New("profile with empty id")
 		}
-		if _, dup := idx.profileByID[profile.ID]; dup {
+		if idx.profiles.Has(profile.ID) {
 			return fmt.Errorf("duplicate profile id %q", profile.ID)
 		}
-		idx.profileByID[profile.ID] = profile
+		idx.profiles.Put(profile.ID, profile)
 		idx.Profiles = append(idx.Profiles, profile)
 	}
 	return nil
@@ -96,7 +88,7 @@ func readSkillSidecars(standards fs.FS, idx *Index) error {
 		if sidecar.ID == "" {
 			return fmt.Errorf("skills file %q has empty id", path)
 		}
-		if _, ok := idx.skillByID[sidecar.ID]; !ok {
+		if _, ok := idx.skills.Get(sidecar.ID); !ok {
 			return fmt.Errorf(
 				"sidecar %q references unknown skill %q: %w",
 				path,
@@ -104,7 +96,7 @@ func readSkillSidecars(standards fs.FS, idx *Index) error {
 				errUnknownSkill,
 			)
 		}
-		bodyKey := "skills:" + sidecar.ID
+		bodyKey := KindSkill.key(sidecar.ID)
 		if _, dup := idx.bodies[bodyKey]; dup {
 			return fmt.Errorf("duplicate skill sidecar id %q: %w", sidecar.ID, errDuplicateSkill)
 		}

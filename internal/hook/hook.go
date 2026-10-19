@@ -2,14 +2,13 @@ package hook
 
 import (
 	"fmt"
-	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/contract"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
 func (disp *Dispatcher) Dispatch(mode string, payload []byte) error {
@@ -74,11 +73,11 @@ func (disp *Dispatcher) emitContext(asset, event string) error {
 }
 
 func (disp *Dispatcher) emitContextWithNotice(asset, event, notice string) error {
-	text, err := fs.ReadFile(disp.templates, asset)
+	text, err := templates.New(disp.templates).Text(asset)
 	if err != nil {
-		return fmt.Errorf("read %s: %w", asset, err)
+		return err
 	}
-	disp.emitOutput(event, joinNotice(notice, strings.TrimSpace(string(text))))
+	disp.emitOutput(event, joinNotice(notice, text))
 	return nil
 }
 

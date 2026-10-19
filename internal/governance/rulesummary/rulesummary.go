@@ -111,7 +111,7 @@ func injectRuleSummaries(findings []finding.Finding, index *knowledge.Index) {
 			finding.RuleID = rules.resolve(finding.AnalyzerID, finding.File)
 		}
 		if finding.RuleID != "" {
-			finding.RuleSummary = index.Summary("rules", finding.RuleID)
+			finding.RuleSummary = index.Summary(knowledge.KindRule, finding.RuleID)
 		}
 	}
 }

@@ -18,7 +18,7 @@ func (renderer *Renderer) composeWorkflows(
 		}
 		refs = append(refs, ref{
 			Name: workflow.Name,
-			Body: bodyWithoutH1(idx.Body("workflows", id)),
+			Body: bodyWithoutH1(idx.Body(knowledge.KindWorkflow, id)),
 		})
 	}
 	return refs, nil

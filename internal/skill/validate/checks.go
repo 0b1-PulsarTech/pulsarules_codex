@@ -28,7 +28,7 @@ func ruleSummaries(idx *knowledge.Index) []string {
 	problems := make([]string, 0, len(idx.Rules))
 	for _, rule := range idx.Rules {
 		// StageRuleInjection attaches this summary; the CLI prints its first sentence as rule:.
-		if idx.Summary("rules", rule.ID) == "" {
+		if idx.Summary(knowledge.KindRule, rule.ID) == "" {
 			problems = append(problems, fmt.Sprintf("rule %q has no blockquote summary", rule.ID))
 		}
 	}
@@ -116,17 +116,17 @@ func skillBodies(idx *knowledge.Index) []string {
 		comps := []composition{
 			{
 				refs:    skill.ComposeRules,
-				resolve: hasBody(idx, "rules"),
+				resolve: hasBody(idx, knowledge.KindRule),
 				missing: emptyBody(skill.ID, "rule"),
 			},
 			{
 				refs:    skill.ComposePatterns,
-				resolve: hasBody(idx, "patterns"),
+				resolve: hasBody(idx, knowledge.KindPattern),
 				missing: emptyBody(skill.ID, "pattern"),
 			},
 			{
 				refs:    skill.ComposeWorkflows,
-				resolve: hasBody(idx, "workflows"),
+				resolve: hasBody(idx, knowledge.KindWorkflow),
 				missing: emptyBody(skill.ID, "workflow"),
 			},
 		}

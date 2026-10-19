@@ -28,7 +28,7 @@ func assertSkillBody(t *testing.T, idx *knowledge.Index, skill knowledge.Skill, 
 	if !strings.HasPrefix(body, "---\nname: "+skill.ID+"\n") {
 		t.Errorf("%q: missing frontmatter name", skill.ID)
 	}
-	if skill.ID == "project-router" {
+	if skill.ID == knowledge.RouterSkillID {
 		return
 	}
 	has, normErr := HasNormativeSection(idx, skill)

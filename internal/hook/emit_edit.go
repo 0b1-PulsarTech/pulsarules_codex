@@ -3,16 +3,15 @@ package hook
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/throwsite"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/projectroot"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
 func (disp *Dispatcher) emitPreEdit(session *sessionTracker, in hookPayload) error {
@@ -107,21 +106,8 @@ type postEditChecklist struct {
 
 func isGoFile(filePath string) bool { return strings.ToLower(filepath.Ext(filePath)) == ".go" }
 
-func renderPostEditChecklist(templates fs.FS, doc postEditChecklist) (string, error) {
-	asset := "hooks/post-edit-checklist.txt.tmpl"
-	body, err := fs.ReadFile(templates, asset)
-	if err != nil {
-		return "", fmt.Errorf("read %s: %w", asset, err)
-	}
-	tmpl, err := template.New(asset).Parse(string(body))
-	if err != nil {
-		return "", fmt.Errorf("parse %s: %w", asset, err)
-	}
-	var buf strings.Builder
-	if execErr := tmpl.Execute(&buf, doc); execErr != nil {
-		return "", fmt.Errorf("render %s: %w", asset, execErr)
-	}
-	return strings.TrimSpace(buf.String()), nil
+func renderPostEditChecklist(templatesItem fs.FS, doc postEditChecklist) (string, error) {
+	return templates.New(templatesItem).Render("hooks/post-edit-checklist.txt.tmpl", doc)
 }
 
 func (disp *Dispatcher) installedSkill(id string) string {

@@ -87,6 +87,15 @@ type SkillOverride struct {
 	ComposePatterns []string `yaml:"compose_patterns,omitempty"`
 }
 
+func (override SkillOverride) Apply(skill *Skill) {
+	if override.ComposeRules != nil {
+		skill.ComposeRules = override.ComposeRules
+	}
+	if override.ComposePatterns != nil {
+		skill.ComposePatterns = override.ComposePatterns
+	}
+}
+
 type Profile struct {
 	ID          string                   `yaml:"id"`
 	Axis        string                   `yaml:"axis"`
