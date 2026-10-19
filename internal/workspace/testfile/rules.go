@@ -1,6 +1,6 @@
 package testfile
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 
 type rule struct {
 	suffixes  []string
@@ -10,7 +10,7 @@ type rule struct {
 	routePlus bool
 }
 
-func languageRules() map[syntax.Language]rule {
+func languageRules() map[language.ID]rule {
 	web := rule{
 		markers:   []string{".test.", ".spec."},
 		dirs:      []string{"test", "tests", "__tests__"},
@@ -18,15 +18,15 @@ func languageRules() map[syntax.Language]rule {
 	}
 	// A SvelteKit route directory may be named test, so only the file markers count.
 	svelte := rule{markers: web.markers}
-	return map[syntax.Language]rule{
-		syntax.LangGo: {suffixes: []string{"_test.go"}},
-		syntax.LangDart: {
+	return map[language.ID]rule{
+		language.Go: {suffixes: []string{"_test.go"}},
+		language.Dart: {
 			suffixes:  []string{"_test.dart"},
 			exactDirs: []string{"test", "integration_test"},
 		},
-		syntax.LangTypeScript: web,
-		syntax.LangJavaScript: web,
-		syntax.LangSvelte:     svelte,
+		language.TypeScript: web,
+		language.JavaScript: web,
+		language.Svelte:     svelte,
 	}
 }
 

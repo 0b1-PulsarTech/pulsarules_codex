@@ -4,22 +4,17 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
-type Language string
-
-const (
-	Go         Language = "go"
-	Dart       Language = "dart"
-	JavaScript Language = "javascript"
-	TypeScript Language = "typescript"
-	Svelte     Language = "svelte"
-	Rust       Language = "rust"
-	Python     Language = "python"
-)
+type Language = language.ID
 
 func All() []Language {
-	return []Language{Go, Dart, JavaScript, TypeScript, Svelte, Rust, Python}
+	return []Language{
+		language.Go, language.Dart, language.JavaScript, language.TypeScript,
+		language.Svelte, language.Rust, language.Python,
+	}
 }
 
 func ParseLanguage(raw string) (Language, error) {

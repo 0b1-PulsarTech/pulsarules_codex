@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
@@ -53,19 +54,19 @@ func markerLanguage(name string) (Language, bool) {
 	// A language may have more than one marker (go.mod, go.work).
 	switch name {
 	case "go.mod", "go.work":
-		return Go, true
+		return language.Go, true
 	case "pubspec.yaml":
-		return Dart, true
+		return language.Dart, true
 	case "package.json":
-		return JavaScript, true
+		return language.JavaScript, true
 	case "tsconfig.json":
-		return TypeScript, true
+		return language.TypeScript, true
 	case "svelte.config.js":
-		return Svelte, true
+		return language.Svelte, true
 	case "Cargo.toml":
-		return Rust, true
+		return language.Rust, true
 	case "pyproject.toml":
-		return Python, true
+		return language.Python, true
 	}
 	return "", false
 }

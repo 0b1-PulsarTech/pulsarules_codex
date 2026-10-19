@@ -7,15 +7,15 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 type Analyzer struct {
-	language syntax.Language
+	language language.ID
 }
 
-func NewAnalyzer(language syntax.Language) *Analyzer {
+func NewAnalyzer(language language.ID) *Analyzer {
 	return &Analyzer{language: language}
 }
 

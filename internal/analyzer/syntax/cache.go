@@ -7,12 +7,14 @@ import (
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 const notSummarised = "not summarised"
 
 type Unavailable struct {
-	Language Language
+	Language language.ID
 	Files    int
 	Reason   string
 }
@@ -75,7 +77,7 @@ func (cache *Cache) summarize(ctx context.Context, provider Provider, corpus Cor
 			continue
 		}
 		if file.Language == "" {
-			file.Language = LanguageForExtension(filepath.Ext(source.Path))
+			file.Language = language.ForExtension(filepath.Ext(source.Path)).ID
 		}
 		if file.Language == "" {
 			file.Language = provider.Language()
@@ -86,18 +88,18 @@ func (cache *Cache) summarize(ctx context.Context, provider Provider, corpus Cor
 	cache.recordMissing(provider.Language(), missing, reason)
 }
 
-func (cache *Cache) recordMissing(fallback Language, missing []string, reason string) {
-	counts := map[Language]int{}
+func (cache *Cache) recordMissing(fallback language.ID, missing []string, reason string) {
+	counts := map[language.ID]int{}
 	for _, path := range missing {
-		language := LanguageForExtension(filepath.Ext(path))
-		if language == "" {
-			language = fallback
+		id := language.ForExtension(filepath.Ext(path)).ID
+		if id == "" {
+			id = fallback
 		}
-		counts[language]++
+		counts[id]++
 	}
-	for _, language := range slices.Sorted(maps.Keys(counts)) {
+	for _, id := range slices.Sorted(maps.Keys(counts)) {
 		cache.unavailable = append(cache.unavailable, Unavailable{
-			Language: language, Files: counts[language], Reason: reason,
+			Language: id, Files: counts[id], Reason: reason,
 		})
 	}
 }

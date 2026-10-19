@@ -3,6 +3,7 @@ package narration
 import (
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
@@ -21,8 +22,8 @@ type scanner struct {
 	segments []segment
 }
 
-func scanSegments(src []byte, syntax lexer.CommentSyntax, ext string) []segment {
-	sc := &scanner{syntax: syntax, rules: rulesFor(syntax, ext)}
+func scanSegments(src []byte, lang language.Language) []segment {
+	sc := &scanner{syntax: lang.Comments, rules: rulesFor(lang)}
 	sc.region = regionScript
 	if sc.rules.sfc {
 		sc.region = regionMarkup

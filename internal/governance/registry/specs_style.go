@@ -16,7 +16,7 @@ func styleSpecs() []analyzerSpec {
 	return []analyzerSpec{
 		staticSpec("doc-comment", doc.NewAnalyzer),
 		staticSpec("body-header-comment", bodyheader.NewAnalyzer),
-		langSpec("history-narration", narration.NewAnalyzer),
+		staticSpec("history-narration", narration.NewAnalyzer),
 		staticSpec("single-letter-name", singleletter.NewAnalyzer),
 		staticSpec("variadic-index", variadicindex.NewAnalyzer),
 		staticSpec("too-many-results", resultcount.NewAnalyzer),

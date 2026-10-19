@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func TestResolve_Autodetects(t *testing.T) {
@@ -30,7 +32,7 @@ func TestResolve_TrustsPersistedConfig(t *testing.T) {
 	t.Parallel()
 
 	repoDir := t.TempDir()
-	if err := SaveConfig(repoDir, NewSet(Go)); err != nil {
+	if err := SaveConfig(repoDir, NewSet(language.Go)); err != nil {
 		t.Fatalf("SaveConfig: %v", err)
 	}
 	writeMarker(t, repoDir, "pubspec.yaml")
@@ -49,7 +51,7 @@ func TestResolve_OverrideBeatsEverything(t *testing.T) {
 	t.Parallel()
 
 	repoDir := t.TempDir()
-	if err := SaveConfig(repoDir, NewSet(Go)); err != nil {
+	if err := SaveConfig(repoDir, NewSet(language.Go)); err != nil {
 		t.Fatalf("SaveConfig: %v", err)
 	}
 	writeMarker(t, repoDir, "go.mod")

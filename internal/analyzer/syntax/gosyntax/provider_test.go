@@ -9,6 +9,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func parseSource(t *testing.T, content string) (*astcache.Cache, *ast.File) {
@@ -46,7 +47,7 @@ func TestProviderIdentity(t *testing.T) {
 		{ext: ""},
 	}
 	provider := New(nil)
-	if provider.Language() != syntax.LangGo {
+	if provider.Language() != language.Go {
 		t.Fatalf("Language() = %q", provider.Language())
 	}
 	for _, testCase := range testCases {
@@ -146,7 +147,7 @@ func runSummarize(root string, testCase summarizeCase) (map[string]*syntax.File,
 func assertSummary(t *testing.T, file *syntax.File, testCase summarizeCase) {
 	t.Helper()
 
-	if file == nil || file.Language != syntax.LangGo {
+	if file == nil || file.Language != language.Go {
 		t.Fatalf("file = %+v", file)
 	}
 	if file.ParseError != testCase.wantParse {

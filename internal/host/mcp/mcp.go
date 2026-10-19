@@ -10,6 +10,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/gitignore"
 )
@@ -22,8 +23,8 @@ type server struct {
 
 func managedServersByLanguage() map[detect.Language][]server {
 	return map[detect.Language][]server{
-		detect.Go:   {{Name: "gopls", Command: "gopls", Args: []string{"mcp"}}},
-		detect.Dart: {{Name: "dart", Command: "dart", Args: []string{"mcp-server"}}},
+		language.Go:   {{Name: "gopls", Command: "gopls", Args: []string{"mcp"}}},
+		language.Dart: {{Name: "dart", Command: "dart", Args: []string{"mcp-server"}}},
 	}
 }
 

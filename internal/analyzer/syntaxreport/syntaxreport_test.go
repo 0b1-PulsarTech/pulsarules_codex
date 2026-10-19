@@ -11,6 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 type stubProvider struct {
@@ -18,7 +19,7 @@ type stubProvider struct {
 	fail        error
 }
 
-func (stubProvider) Language() syntax.Language { return syntax.LangGo }
+func (stubProvider) Language() language.ID { return language.Go }
 
 func (stubProvider) Handles(string) bool { return true }
 
@@ -32,7 +33,7 @@ func (provider stubProvider) Summarize(
 	for _, source := range corpus.Sources {
 		files[source.Path] = &syntax.File{
 			Path:       source.Path,
-			Language:   syntax.LanguageForExtension(filepath.Ext(source.Path)),
+			Language:   language.ForExtension(filepath.Ext(source.Path)).ID,
 			ParseError: provider.parseErrors[source.Path],
 		}
 	}
@@ -76,7 +77,7 @@ func summarise(findings []finding.Finding) []row {
 
 type analyzeCase struct {
 	name      string
-	language  syntax.Language
+	language  language.ID
 	provider  stubProvider
 	paths     []string
 	generated string
@@ -88,7 +89,7 @@ func unparsedCases() []analyzeCase {
 	warn := finding.SeverityWarning
 	return []analyzeCase{
 		{
-			name: "go file with a position in the reason", language: syntax.LangGo,
+			name: "go file with a position in the reason", language: language.Go,
 			provider: stubProvider{parseErrors: map[string]string{
 				"a.go": "parse a.go: a.go:7:3: expected ';'",
 			}},
@@ -99,7 +100,7 @@ func unparsedCases() []analyzeCase {
 			}},
 		},
 		{
-			name: "dart file with a line in the reason", language: syntax.LangDart,
+			name: "dart file with a line in the reason", language: language.Dart,
 			provider: stubProvider{parseErrors: map[string]string{"a.dart": "line 12: bad token"}},
 			paths:    []string{"a.dart"},
 			want: []row{{
@@ -108,7 +109,7 @@ func unparsedCases() []analyzeCase {
 			}},
 		},
 		{
-			name: "typescript file without a line", language: syntax.LangTypeScript,
+			name: "typescript file without a line", language: language.TypeScript,
 			provider: stubProvider{parseErrors: map[string]string{
 				"a.ts": "skipped: parse exceeded the 10s time limit",
 			}},
@@ -119,7 +120,7 @@ func unparsedCases() []analyzeCase {
 			}},
 		},
 		{
-			name: "javascript file", language: syntax.LangJavaScript,
+			name: "javascript file", language: language.JavaScript,
 			provider: stubProvider{parseErrors: map[string]string{"a.mjs": "line x: bad"}},
 			paths:    []string{"a.mjs"},
 			want: []row{{
@@ -128,7 +129,7 @@ func unparsedCases() []analyzeCase {
 			}},
 		},
 		{
-			name: "svelte file", language: syntax.LangSvelte,
+			name: "svelte file", language: language.Svelte,
 			provider: stubProvider{parseErrors: map[string]string{"a.svelte": "line 3: bad"}},
 			paths:    []string{"a.svelte"},
 			want: []row{{
@@ -143,31 +144,31 @@ func quietCases() []analyzeCase {
 	goBad := map[string]string{"a.go": "parse a.go: a.go:1:1: bad"}
 	return []analyzeCase{
 		{
-			name: "another language is ignored", language: syntax.LangDart,
+			name: "another language is ignored", language: language.Dart,
 			provider: stubProvider{parseErrors: goBad}, paths: []string{"a.go"},
 		},
 		{
-			name: "generated file is ignored", language: syntax.LangGo,
+			name: "generated file is ignored", language: language.Go,
 			provider:  stubProvider{parseErrors: map[string]string{"gen.go": "bad"}},
 			paths:     []string{"gen.go"},
 			generated: "gen.go",
 		},
 		{
-			name: "clean file reports nothing", language: syntax.LangGo,
+			name: "clean file reports nothing", language: language.Go,
 			provider: stubProvider{}, paths: []string{"a.go"},
 		},
 		{
-			name: "unavailable for another language is ignored", language: syntax.LangGo,
+			name: "unavailable for another language is ignored", language: language.Go,
 			provider: stubProvider{fail: errors.New("boom")}, paths: []string{"a.dart"},
 		},
-		{name: "nil cache reports nothing", language: syntax.LangGo, noCache: true},
+		{name: "nil cache reports nothing", language: language.Go, noCache: true},
 	}
 }
 
 func unavailableCases() []analyzeCase {
 	return []analyzeCase{
 		{
-			name: "unavailable language reports one info", language: syntax.LangDart,
+			name: "unavailable language reports one info", language: language.Dart,
 			provider: stubProvider{fail: errors.New("locate dart:\n  no dart on PATH")},
 			paths:    []string{"a.dart", "b.dart"},
 			want: []row{{
@@ -176,7 +177,7 @@ func unavailableCases() []analyzeCase {
 			}},
 		},
 		{
-			name: "long reason is clipped", language: syntax.LangDart,
+			name: "long reason is clipped", language: language.Dart,
 			provider: stubProvider{fail: errors.New(strings.Repeat("\u00e9", 300))},
 			paths:    []string{"a.dart"},
 			want: []row{{
@@ -211,14 +212,14 @@ func TestIdentity(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		language syntax.Language
+		language language.ID
 		wantID   string
 	}{
-		{syntax.LangGo, "go-syntax"},
-		{syntax.LangDart, "dart-syntax"},
-		{syntax.LangTypeScript, "typescript-syntax"},
-		{syntax.LangJavaScript, "javascript-syntax"},
-		{syntax.LangSvelte, "svelte-syntax"},
+		{language.Go, "go-syntax"},
+		{language.Dart, "dart-syntax"},
+		{language.TypeScript, "typescript-syntax"},
+		{language.JavaScript, "javascript-syntax"},
+		{language.Svelte, "svelte-syntax"},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.wantID, func(t *testing.T) {

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func TestCollectRequests(t *testing.T) {
@@ -92,7 +93,7 @@ func assertFirst(t *testing.T, first *syntax.File) {
 		Name: "run", Kind: syntax.FuncMethod, Line: 3, BodyStart: 3, BodyEnd: 9,
 		Params: 2, NamedParams: 1, Complexity: 4, Nested: true,
 	}
-	if first.Path != "lib/a.dart" || first.Language != syntax.LangDart {
+	if first.Path != "lib/a.dart" || first.Language != language.Dart {
 		t.Errorf("path/language = %q/%q", first.Path, first.Language)
 	}
 	if !reflect.DeepEqual(first.Functions, []syntax.Function{wantFunc}) {

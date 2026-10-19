@@ -5,17 +5,16 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 type Analyzer struct {
-	langs    *pass.LanguageRegistry
 	reporter finding.Reporter
 }
 
-func NewAnalyzer(langs *pass.LanguageRegistry) *Analyzer {
+func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		langs: langs,
 		reporter: finding.NewReporter(
 			"simplification-path", finding.SeverityWarning, finding.CatSyntax,
 		),
@@ -26,19 +25,16 @@ func (analyzer *Analyzer) ID() string             { return "simplification-path"
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	if analyzer.langs == nil {
-		return nil
-	}
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	extFilter := pass.ExtensionFilter(ctx, analyzer.ID(), pass.DefaultSourceExtensions())
+	extFilter := pass.ExtensionFilter(ctx, analyzer.ID(), language.SourceExtensions())
 	eligible := func(fc pass.FileChange) bool {
-		return extFilter(fc) && analyzer.langs.Lookup(fc.Extension) != nil
+		return extFilter(fc) && language.ForExtension(fc.Extension).ID != ""
 	}
 	return pass.EachChangedFile(
 		ctx,
 		eligible,
 		func(fc pass.FileChange, src []byte) []finding.Finding {
-			return scanFile(src, fc.Path, analyzer.langs.Lookup(fc.Extension), reporter)
+			return scanFile(src, fc.Path, language.ForExtension(fc.Extension), reporter)
 		},
 	)
 }
@@ -46,14 +42,14 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 func scanFile(
 	src []byte,
 	path string,
-	lang pass.Language,
+	lang language.Language,
 	reporter finding.Reporter,
 ) []finding.Finding {
 	var findings []finding.Finding
 	lines := strings.Split(string(src), "\n")
 	// A block is the marker line plus every comment line immediately after it. One
 	// scanner runs in file order first, so continuations match big-comment's reading.
-	syntax := lang.CommentSyntax()
+	syntax := lang.Comments
 	isComment := scanComments(lines, syntax)
 	marker := lexer.CommentSyntax{Line: []string{lang.CommentPrefix()}}
 	for lineIdx := 0; lineIdx < len(lines); lineIdx++ {

@@ -2,9 +2,11 @@ package hook
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 	"unicode"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -70,13 +72,10 @@ func (router *fileRouter) triggered(filePath, ext string) []string {
 }
 
 func fileLanguages(ext string) []string {
-	switch ext {
-	case ".go":
-		return []string{"go"}
-	case ".dart":
-		return []string{"dart"}
-	case ".svelte":
-		return []string{"svelte"}
+	id := language.ForExtension(ext).ID
+	// Only these carry a baseline of their own; a TypeScript file routes by trigger alone.
+	if slices.Contains([]language.ID{language.Go, language.Dart, language.Svelte}, id) {
+		return []string{string(id)}
 	}
 	return nil
 }

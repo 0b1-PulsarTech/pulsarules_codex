@@ -2,8 +2,6 @@ package language
 
 import (
 	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
@@ -28,16 +26,16 @@ func KeepSpansAtEOF() ScanOption {
 }
 
 func ScanLiterals(ext, src string, options ...ScanOption) Literals {
-	ext = strings.ToLower(ext)
-	for _, spec := range literalSpecs() {
-		if slices.Contains(spec.Extensions, ext) {
-			for _, option := range options {
-				option(&spec)
-			}
-			return spec.scan(src)
-		}
+	lang := ForExtension(ext)
+	grammar, ok := stringGrammarOf(lang.ID)
+	if !ok {
+		return Literals{}
 	}
-	return Literals{}
+	spec := literalSpec{Comments: lang.Comments, Strings: grammar.syntax, Astral: grammar.astral}
+	for _, option := range options {
+		option(&spec)
+	}
+	return spec.scan(src)
 }
 
 func (found Literals) Covers(offset int) bool { return lexer.InSpans(found.regions, offset) }
@@ -66,12 +64,4 @@ func (found Literals) Escape(char rune) string {
 		return fmt.Sprintf(`\u%04X`, char)
 	}
 	return fmt.Sprintf(found.astral, char)
-}
-
-func goStrings() lexer.StringSyntax {
-	return lexer.StringSyntax{Delims: []lexer.StringDelim{
-		{Open: `"`, Close: `"`, Escapes: true},
-		{Open: "`", Close: "`", Multiline: true, Raw: true},
-		{Open: `'`, Close: `'`, Escapes: true},
-	}}
 }

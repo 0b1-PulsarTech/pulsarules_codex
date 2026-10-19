@@ -3,7 +3,7 @@ package testfile
 import (
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func TestLanguageRulesCoverEveryLanguage(t *testing.T) {
@@ -13,11 +13,11 @@ func TestLanguageRulesCoverEveryLanguage(t *testing.T) {
 		name string
 		rule rule
 	}{
-		{"go", languageRules()[syntax.LangGo]},
-		{"dart", languageRules()[syntax.LangDart]},
-		{"typescript", languageRules()[syntax.LangTypeScript]},
-		{"javascript", languageRules()[syntax.LangJavaScript]},
-		{"svelte", languageRules()[syntax.LangSvelte]},
+		{"go", languageRules()[language.Go]},
+		{"dart", languageRules()[language.Dart]},
+		{"typescript", languageRules()[language.TypeScript]},
+		{"javascript", languageRules()[language.JavaScript]},
+		{"svelte", languageRules()[language.Svelte]},
 		{"fallback", fallbackRule()},
 	}
 	for _, testCase := range testCases {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 type Analyzer struct {
@@ -28,7 +29,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	warning := pass.ResolveReporter(analyzer.reporter, ctx)
 	// A severity override on file-size downgrades the cap too, since both share one ID.
 	hardCap := finding.NewReporter(analyzer.ID(), finding.SeverityError, finding.CatProject)
-	eligible := pass.ExtensionFilter(ctx, analyzer.ID(), pass.DefaultSourceExtensions())
+	eligible := pass.ExtensionFilter(ctx, analyzer.ID(), language.SourceExtensions())
 	return pass.EachChangedFile(
 		ctx,
 		eligible,

@@ -9,6 +9,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 const aliasHint = "configure a project alias (package.json `imports` or tsconfig `paths`) " +
@@ -99,7 +100,7 @@ func checkPaths(
 
 func suggestedOrder(file *syntax.File) string {
 	names := slices.Clone(file.ImportGroups)
-	if file.Language == syntax.LangGo {
+	if file.Language == language.Go {
 		names[len(names)-1] = "this module"
 	}
 	return strings.Join(names, ", ")

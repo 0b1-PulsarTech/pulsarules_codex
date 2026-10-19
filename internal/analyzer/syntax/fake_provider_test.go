@@ -3,10 +3,12 @@ package syntax
 import (
 	"context"
 	"slices"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 type fakeProvider struct {
-	language  Language
+	language  language.ID
 	exts      []string
 	err       error
 	omit      []string
@@ -21,7 +23,7 @@ type fakeProvider struct {
 	gotRead   func(string) ([]byte, bool)
 }
 
-func (fake *fakeProvider) Language() Language { return fake.language }
+func (fake *fakeProvider) Language() language.ID { return fake.language }
 
 func (fake *fakeProvider) Handles(ext string) bool { return slices.Contains(fake.exts, ext) }
 

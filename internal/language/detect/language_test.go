@@ -3,6 +3,8 @@ package detect
 import (
 	"slices"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func TestParseLanguage(t *testing.T) {
@@ -14,10 +16,10 @@ func TestParseLanguage(t *testing.T) {
 		want    Language
 		wantErr bool
 	}{
-		{name: "go", raw: "go", want: Go},
-		{name: "dart", raw: "dart", want: Dart},
-		{name: "uppercase is normalized", raw: "Go", want: Go},
-		{name: "surrounding space is trimmed", raw: " rust ", want: Rust},
+		{name: "go", raw: "go", want: language.Go},
+		{name: "dart", raw: "dart", want: language.Dart},
+		{name: "uppercase is normalized", raw: "Go", want: language.Go},
+		{name: "surrounding space is trimmed", raw: " rust ", want: language.Rust},
 		{name: "unknown language is rejected", raw: "cobol", wantErr: true},
 		{name: "empty token is rejected", raw: "", wantErr: true},
 	}

@@ -6,15 +6,13 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
-type Analyzer struct {
-	langs *pass.LanguageRegistry
-}
+type Analyzer struct{}
 
-func NewAnalyzer(langs *pass.LanguageRegistry) *Analyzer {
-	return &Analyzer{langs: langs}
+func NewAnalyzer() *Analyzer {
+	return &Analyzer{}
 }
 
 func (analyzer *Analyzer) ID() string             { return "history-narration" }
@@ -25,20 +23,19 @@ func (analyzer *Analyzer) reporter() finding.Reporter {
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	if analyzer.langs == nil {
-		return nil
-	}
 	reporter := pass.ResolveReporter(analyzer.reporter(), ctx)
-	extFilter := pass.ExtensionFilter(ctx, analyzer.ID(), pass.DefaultSourceExtensions())
+	extFilter := pass.ExtensionFilter(ctx, analyzer.ID(), language.SourceExtensions())
 	eligible := func(fc pass.FileChange) bool {
-		return extFilter(fc) && analyzer.langs.Lookup(fc.Extension) != nil
+		return extFilter(fc) && language.ForExtension(fc.Extension).ID != ""
 	}
 	return pass.EachChangedFile(
 		ctx,
 		eligible,
 		func(fc pass.FileChange, src []byte) []finding.Finding {
-			syntax := analyzer.langs.Lookup(fc.Extension).CommentSyntax()
-			source := commentSource{syntax: syntax, parsed: analyzer.cachedGo(ctx, fc)}
+			source := commentSource{
+				lang:   language.ForExtension(fc.Extension),
+				parsed: analyzer.cachedGo(ctx, fc),
+			}
 			return scanFile(src, fc, reporter, source)
 		},
 	)
@@ -57,7 +54,7 @@ func (analyzer *Analyzer) cachedGo(ctx *pass.Context, fc pass.FileChange) parsed
 }
 
 func commentBlocks(
-	src []byte, fc pass.FileChange, syntax lexer.CommentSyntax, parsed parsedGo,
+	src []byte, fc pass.FileChange, lang language.Language, parsed parsedGo,
 ) [][]segment {
 	if parsed.file != nil {
 		return blocks(fileSegments(parsed.file, parsed.fset))
@@ -67,11 +64,11 @@ func commentBlocks(
 			return blocks(segments)
 		}
 	}
-	return blocks(scanSegments(src, syntax, fc.Extension))
+	return blocks(scanSegments(src, lang))
 }
 
 type commentSource struct {
-	syntax lexer.CommentSyntax
+	lang   language.Language
 	parsed parsedGo
 }
 
@@ -80,7 +77,7 @@ func scanFile(
 ) []finding.Finding {
 	var findings []finding.Finding
 	phrases := narrationPhrases()
-	for _, block := range commentBlocks(src, fc, source.syntax, source.parsed) {
+	for _, block := range commentBlocks(src, fc, source.lang, source.parsed) {
 		for _, found := range findHits(wordsOf(block), phrases) {
 			findings = append(findings, reporter.At(
 				fc.Path,

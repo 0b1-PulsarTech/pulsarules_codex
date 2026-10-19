@@ -3,21 +3,22 @@ package banner
 import (
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
-func leadingCommentLine(lang pass.Language, extension string, src []byte) (int, bool) {
+func leadingCommentLine(extension string, src []byte) (int, bool) {
+	lang := language.ForExtension(extension)
 	lines := strings.Split(string(lexer.TrimBOM(src)), "\n")
 	var skip func(string) bool
-	if isScriptExtension(extension) {
+	if isScript(lang.ID) {
 		skip = isToolPragma
 	}
 	pos, ok := firstContentLine(lines, skip)
 	if !ok {
 		return 0, false
 	}
-	if isAnnotationExtension(extension) {
+	if lang.ID == language.JavaScript {
 		offset, exempt := annotationBannerLine(lines[pos:])
 		if exempt {
 			return 0, false
@@ -26,28 +27,20 @@ func leadingCommentLine(lang pass.Language, extension string, src []byte) (int, 
 			return pos + offset + 1, true
 		}
 	}
-	return pos + 1, isComment(lang, extension, lines[pos])
+	return pos + 1, isComment(lang, lines[pos])
 }
 
-func isScriptExtension(extension string) bool {
-	return isAnnotationExtension(extension) || extension == ".ts" || extension == ".tsx"
+func isScript(id language.ID) bool {
+	return id == language.JavaScript || id == language.TypeScript
 }
 
-func isAnnotationExtension(extension string) bool {
-	switch extension {
-	case ".js", ".mjs", ".cjs", ".jsx":
-		return true
-	}
-	return false
-}
-
-func isComment(lang pass.Language, extension, line string) bool {
-	switch strings.ToLower(extension) {
-	case ".svelte", ".vue":
+func isComment(lang language.Language, line string) bool {
+	switch lang.ID {
+	case language.Svelte, language.Vue:
 		// Markup has no "//" or "/* */" comment; only HTML's counts at line 1.
 		return strings.HasPrefix(strings.TrimSpace(line), "<!--")
 	}
 	// A fresh scanner is correct: no earlier line can have left a block open.
-	scanner := lexer.NewCommentScanner(lang.CommentSyntax())
-	return scanner.IsCommentLine(line) && !lang.IsPackageDeclaration(line)
+	scanner := lexer.NewCommentScanner(lang.Comments)
+	return scanner.IsCommentLine(line) && !lang.IsPackageClause(line)
 }

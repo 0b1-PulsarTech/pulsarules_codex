@@ -7,10 +7,10 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
@@ -135,8 +135,7 @@ func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			langs := pass.NewLanguageRegistry()
-			built := registry.Analyzers(nil, langs, nil, maxGateFor(testCase.scope))
+			built := registry.Analyzers(nil, nil, maxGateFor(testCase.scope))
 			got := make([]string, len(built))
 			for idx, analyzer := range built {
 				got[idx] = analyzer.ID()
@@ -153,12 +152,12 @@ func TestDefaultProviders(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		wantLangs []syntax.Language
+		wantLangs []language.ID
 	}{
 		{
 			name: "go, dart and typescript are registered",
-			wantLangs: []syntax.Language{
-				syntax.LangGo, syntax.LangDart, syntax.LangTypeScript,
+			wantLangs: []language.ID{
+				language.Go, language.Dart, language.TypeScript,
 			},
 		},
 	}
@@ -167,7 +166,7 @@ func TestDefaultProviders(t *testing.T) {
 			t.Parallel()
 
 			got := defaultProviders(astcache.New())
-			langs := make([]syntax.Language, 0, len(got))
+			langs := make([]language.ID, 0, len(got))
 			for _, provider := range got {
 				langs = append(langs, provider.Language())
 			}

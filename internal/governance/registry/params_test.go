@@ -17,8 +17,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 const (
@@ -29,7 +27,7 @@ const (
 func analyzerDirs() map[string][]string {
 	gates := []Gate{GateStatic, GateArch, GateFullOnly}
 	dirs := map[string][]string{}
-	for _, analyzer := range Analyzers(nil, pass.NewLanguageRegistry(), nil, gates) {
+	for _, analyzer := range Analyzers(nil, nil, gates) {
 		pkgPath := reflect.Indirect(reflect.ValueOf(analyzer)).Type().PkgPath()
 		dir := treeDir(pkgPath)
 		dirs[dir] = append(dirs[dir], analyzer.ID())

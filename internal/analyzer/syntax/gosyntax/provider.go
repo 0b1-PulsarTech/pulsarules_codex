@@ -11,6 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/names"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 type Provider struct {
@@ -21,7 +22,7 @@ func New(cache *astcache.Cache) *Provider {
 	return &Provider{cache: cache}
 }
 
-func (provider *Provider) Language() syntax.Language { return syntax.LangGo }
+func (provider *Provider) Language() language.ID { return language.Go }
 
 func (provider *Provider) Handles(ext string) bool { return strings.EqualFold(ext, ".go") }
 
@@ -52,7 +53,7 @@ func (provider *Provider) summarizeSource(
 	if file == nil {
 		return &syntax.File{
 			Path:       source.Path,
-			Language:   syntax.LangGo,
+			Language:   language.Go,
 			ParseError: provider.parseError(source.Path, read),
 		}
 	}
@@ -77,7 +78,7 @@ func summarizeFile(
 ) *syntax.File {
 	summary := &syntax.File{
 		Path:      source.Path,
-		Language:  syntax.LangGo,
+		Language:  language.Go,
 		Functions: functions(fset, file),
 		Blocks:    blocks(fset, file),
 		Names:     names.Collect(fset, file),

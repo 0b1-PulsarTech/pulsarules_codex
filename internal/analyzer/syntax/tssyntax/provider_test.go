@@ -15,6 +15,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/sandbox"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/budget"
 )
 
@@ -55,7 +56,7 @@ func TestProviderHandles(t *testing.T) {
 func TestProviderLanguage(t *testing.T) {
 	t.Parallel()
 
-	if got := New().Language(); got != syntax.LangTypeScript {
+	if got := New().Language(); got != language.TypeScript {
 		t.Fatalf("language %q", got)
 	}
 }
@@ -92,14 +93,14 @@ func TestProviderSummarize(t *testing.T) {
 
 	testCases := []struct {
 		path      string
-		language  syntax.Language
+		language  language.ID
 		wantFns   int
 		wantError string
 	}{
-		{path: "src/a.ts", language: syntax.LangTypeScript, wantFns: 1},
-		{path: "src/b.mjs", language: syntax.LangJavaScript, wantFns: 1},
-		{path: "src/c.svelte", language: syntax.LangSvelte, wantFns: 1},
-		{path: "src/gone.ts", language: syntax.LangTypeScript, wantError: "file is not readable"},
+		{path: "src/a.ts", language: language.TypeScript, wantFns: 1},
+		{path: "src/b.mjs", language: language.JavaScript, wantFns: 1},
+		{path: "src/c.svelte", language: language.Svelte, wantFns: 1},
+		{path: "src/gone.ts", language: language.TypeScript, wantError: "file is not readable"},
 	}
 	got := summarizeFixture(t)
 	if len(got) != len(testCases)+1 {
@@ -124,7 +125,7 @@ func TestProviderSummarizeBroken(t *testing.T) {
 	t.Parallel()
 
 	file := summarizeFixture(t)["src/broken.tsx"]
-	if file == nil || file.Language != syntax.LangTypeScript || file.ParseError == "" {
+	if file == nil || file.Language != language.TypeScript || file.ParseError == "" {
 		t.Fatalf("broken file summary %+v", file)
 	}
 }

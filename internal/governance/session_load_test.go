@@ -9,6 +9,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -19,7 +20,7 @@ type recordingProvider struct {
 	read    func(string) ([]byte, bool)
 }
 
-func (recorder *recordingProvider) Language() syntax.Language { return syntax.LangGo }
+func (recorder *recordingProvider) Language() language.ID { return language.Go }
 
 func (recorder *recordingProvider) Handles(ext string) bool { return ext == ".go" }
 
@@ -31,7 +32,7 @@ func (recorder *recordingProvider) Summarize(
 	recorder.root, recorder.read = corpus.Root, corpus.Read
 	files := map[string]*syntax.File{}
 	for _, source := range corpus.Sources {
-		files[source.Path] = &syntax.File{Path: source.Path, Language: syntax.LangGo}
+		files[source.Path] = &syntax.File{Path: source.Path, Language: language.Go}
 	}
 	return files, nil
 }

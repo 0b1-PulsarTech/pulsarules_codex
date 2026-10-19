@@ -8,7 +8,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
@@ -25,9 +24,7 @@ func TestBigComment_SmallComment(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	langs := pass.NewLanguageRegistry()
-	langs.Register(language.Lookup("go"))
-	analyzer := NewAnalyzer(langs)
+	analyzer := NewAnalyzer()
 	findings := analyzer.Analyze(&pass.Context{
 		ProjectDir: dir,
 		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -58,9 +55,7 @@ func TestBigComment_LargeBlock(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	langs := pass.NewLanguageRegistry()
-	langs.Register(language.Lookup("go"))
-	analyzer := NewAnalyzer(langs)
+	analyzer := NewAnalyzer()
 	findings := analyzer.Analyze(&pass.Context{
 		ProjectDir: dir,
 		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -105,9 +100,7 @@ func TestBigComment_Boundary(t *testing.T) {
 				t.Fatalf("write fixture: %v", err)
 			}
 
-			langs := pass.NewLanguageRegistry()
-			langs.Register(language.Lookup("go"))
-			analyzer := NewAnalyzer(langs)
+			analyzer := NewAnalyzer()
 			findings := analyzer.Analyze(&pass.Context{
 				ProjectDir: dir,
 				Sources: source.NewProvider(
@@ -136,8 +129,7 @@ func TestBigComment_NoLanguage(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	langs := pass.NewLanguageRegistry()
-	analyzer := NewAnalyzer(langs)
+	analyzer := NewAnalyzer()
 	findings := analyzer.Analyze(&pass.Context{
 		ProjectDir: dir,
 		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -165,9 +157,7 @@ func TestBigComment_GeneratedFileExempt(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	langs := pass.NewLanguageRegistry()
-	langs.Register(language.Lookup("go"))
-	analyzer := NewAnalyzer(langs)
+	analyzer := NewAnalyzer()
 	findings := analyzer.Analyze(&pass.Context{
 		ProjectDir: dir,
 		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -200,9 +190,7 @@ func TestBigComment_SkipsTestdata(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	langs := pass.NewLanguageRegistry()
-	langs.Register(language.Lookup("go"))
-	analyzer := NewAnalyzer(langs)
+	analyzer := NewAnalyzer()
 	findings := analyzer.Analyze(&pass.Context{
 		ProjectDir: dir,
 		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -232,9 +220,7 @@ func TestBigComment_ReportsOnADartFileJustLikeGo(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	langs := pass.NewLanguageRegistry()
-	langs.Register(language.Lookup("clike"))
-	analyzer := NewAnalyzer(langs)
+	analyzer := NewAnalyzer()
 	findings := analyzer.Analyze(&pass.Context{
 		ProjectDir: dir,
 		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -263,9 +249,7 @@ func TestBigComment_SvelteCSSSelector(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	langs := pass.NewLanguageRegistry()
-	langs.Register(language.Lookup("sfc"))
-	analyzer := NewAnalyzer(langs)
+	analyzer := NewAnalyzer()
 	findings := analyzer.Analyze(&pass.Context{
 		ProjectDir: dir,
 		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -298,9 +282,7 @@ func TestBigComment_MultilineBlock(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	langs := pass.NewLanguageRegistry()
-	langs.Register(language.Lookup("go"))
-	analyzer := NewAnalyzer(langs)
+	analyzer := NewAnalyzer()
 	findings := analyzer.Analyze(&pass.Context{
 		ProjectDir: dir,
 		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -329,9 +311,7 @@ func TestBigComment_ReportsOnAMultilineHTMLComment(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	langs := pass.NewLanguageRegistry()
-	langs.Register(language.Lookup("markup"))
-	analyzer := NewAnalyzer(langs)
+	analyzer := NewAnalyzer()
 	findings := analyzer.Analyze(&pass.Context{
 		ProjectDir: dir,
 		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -360,9 +340,7 @@ func TestBigComment_ReportsOnAMultilineLuaComment(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	langs := pass.NewLanguageRegistry()
-	langs.Register(language.Lookup("lua"))
-	analyzer := NewAnalyzer(langs)
+	analyzer := NewAnalyzer()
 	findings := analyzer.Analyze(&pass.Context{
 		ProjectDir: dir,
 		Sources:    source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),

@@ -11,6 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func TestAnalyze(t *testing.T) {
@@ -186,7 +187,7 @@ func languageCases() []languageCase {
 		{
 			name: "go out of order import",
 			file: syntax.File{
-				Language: syntax.LangGo, ImportGroups: groups,
+				Language: language.Go, ImportGroups: groups,
 				Imports: []syntax.Import{
 					{Literal: `"a.com/x"`, Line: 3, Group: 1},
 					{Literal: `"fmt"`, Line: 4, Group: 0},
@@ -198,7 +199,7 @@ func languageCases() []languageCase {
 		{
 			name: "dart keeps its own group names",
 			file: syntax.File{
-				Language:     syntax.LangDart,
+				Language:     language.Dart,
 				ImportGroups: []string{"dart:", "package:", "relative"},
 				Imports: []syntax.Import{
 					{Literal: `'package:a/a.dart'`, Line: 3, Group: 1},
@@ -211,7 +212,7 @@ func languageCases() []languageCase {
 		{
 			name: "typescript keeps its own group names",
 			file: syntax.File{
-				Language:     syntax.LangTypeScript,
+				Language:     language.TypeScript,
 				ImportGroups: []string{"node:", "external", "local"},
 				Imports: []syntax.Import{
 					{Literal: `'./a'`, Line: 3, Group: 2},
@@ -325,7 +326,7 @@ func TestCheckPaths(t *testing.T) {
 
 type pathProvider struct{}
 
-func (pathProvider) Language() syntax.Language { return syntax.LangTypeScript }
+func (pathProvider) Language() language.ID { return language.TypeScript }
 
 func (pathProvider) Handles(ext string) bool { return ext == ".ts" }
 
@@ -333,7 +334,7 @@ func (pathProvider) Summarize(
 	_ context.Context, _ syntax.Corpus,
 ) (map[string]*syntax.File, error) {
 	file := &syntax.File{
-		Language: syntax.LangTypeScript,
+		Language: language.TypeScript,
 		Imports:  []syntax.Import{{Literal: `'#lib/x'`, Line: 2, Prefer: "./x"}},
 	}
 	return map[string]*syntax.File{"a.ts": file}, nil

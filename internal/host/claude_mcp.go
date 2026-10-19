@@ -11,7 +11,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func wireClaudeMCP(ctx Context, skillsDir string, report *Report) error {
@@ -78,7 +78,7 @@ func generateGoplsSkill(templates fs.FS, skillsDir, instructions string, report 
 
 func goplsSkill(ctx Context, dest string, report *Report) (generated bool, err error) {
 	switch {
-	case !ctx.Languages.Has(detect.Go):
+	case !ctx.Languages.Has(language.Go):
 		// No Go detected: neither the server nor its navigation skill applies.
 		return false, nil
 	case mcp.GoplsOnPath():

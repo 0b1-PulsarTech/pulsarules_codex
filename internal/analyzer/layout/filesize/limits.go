@@ -2,9 +2,9 @@ package filesize
 
 import (
 	"math"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 const (
@@ -55,7 +55,7 @@ func errorLines(params pass.ParamSet, extension string) int {
 
 func defaultErrorLines(extension string) int {
 	const svelteErrorLines = 290
-	if strings.EqualFold(extension, ".svelte") {
+	if language.ForExtension(extension).ID == language.Svelte {
 		return svelteErrorLines
 	}
 	return 0

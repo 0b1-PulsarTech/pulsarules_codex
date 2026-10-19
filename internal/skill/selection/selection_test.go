@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -117,17 +118,17 @@ func TestSelectionResolve_LanguageAware(t *testing.T) {
 	}{
 		{
 			name:      "go-only project selects go-style, not dart-style",
-			languages: detect.NewSet(detect.Go),
+			languages: detect.NewSet(language.Go),
 			wantIDs:   []string{"project-router", "go-style", "code-minimalism"},
 		},
 		{
 			name:      "dart-only project selects dart-style, not go-style",
-			languages: detect.NewSet(detect.Dart),
+			languages: detect.NewSet(language.Dart),
 			wantIDs:   []string{"project-router", "dart-style", "code-minimalism"},
 		},
 		{
 			name:      "a go+dart monorepo selects both baselines",
-			languages: detect.NewSet(detect.Go, detect.Dart),
+			languages: detect.NewSet(language.Go, language.Dart),
 			wantIDs:   []string{"project-router", "go-style", "dart-style", "code-minimalism"},
 		},
 		{

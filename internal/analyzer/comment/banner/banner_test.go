@@ -7,7 +7,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
@@ -102,9 +101,7 @@ func analyzeChange(
 	if err := os.WriteFile(filepath.Join(dir, file), []byte(src), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
-	langs := pass.NewLanguageRegistry()
-	language.RegisterAll(langs)
-	return NewAnalyzer(langs).Analyze(&pass.Context{
+	return NewAnalyzer().Analyze(&pass.Context{
 		ProjectDir:   dir,
 		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
 		Config:       config,

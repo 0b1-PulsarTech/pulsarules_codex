@@ -10,6 +10,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/sandbox"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax/pathalias"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/budget"
 )
 
@@ -34,7 +35,7 @@ func RunChild(args []string, exit func(int)) bool {
 	return sandbox.Child(args, handleRequest, exit)
 }
 
-func (provider *Provider) Language() syntax.Language { return syntax.LangTypeScript }
+func (provider *Provider) Language() language.ID { return language.TypeScript }
 
 func (provider *Provider) Handles(ext string) bool {
 	switch strings.ToLower(ext) {
@@ -102,5 +103,5 @@ func (batch batch) summarize(
 
 func newSummary(path string) *syntax.File {
 	ext := strings.ToLower(filepath.Ext(path))
-	return &syntax.File{Path: path, Language: syntax.LanguageForExtension(ext)}
+	return &syntax.File{Path: path, Language: language.ForExtension(ext).ID}
 }

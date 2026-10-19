@@ -1,7 +1,6 @@
 package pass
 
 import (
-	"slices"
 	"testing"
 )
 
@@ -72,24 +71,5 @@ func TestExtensionFilter(t *testing.T) {
 				t.Errorf("filter(%+v) = %v, want %v", testCase.fc, got, testCase.want)
 			}
 		})
-	}
-}
-
-func TestDefaultSourceExtensions_ClonedEachCall(t *testing.T) {
-	t.Parallel()
-
-	first := DefaultSourceExtensions()
-	first[0] = "mutated"
-	second := DefaultSourceExtensions()
-	if second[0] == "mutated" {
-		t.Fatal("DefaultSourceExtensions must clone, not share, its backing slice")
-	}
-}
-
-func TestDefaultSourceExtensions_IncludesNix(t *testing.T) {
-	t.Parallel()
-
-	if !slices.Contains(DefaultSourceExtensions(), ".nix") {
-		t.Fatal("DefaultSourceExtensions must include .nix, which langspec registers")
 	}
 }

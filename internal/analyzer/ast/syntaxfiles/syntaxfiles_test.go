@@ -8,12 +8,13 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 type stubProvider struct{}
 
-func (stubProvider) Language() syntax.Language { return syntax.LangGo }
+func (stubProvider) Language() language.ID { return language.Go }
 
 func (stubProvider) Handles(ext string) bool { return ext == ".go" }
 

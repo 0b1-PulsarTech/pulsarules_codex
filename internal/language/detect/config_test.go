@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func TestConfigRoundTrip(t *testing.T) {
@@ -17,10 +19,10 @@ func TestConfigRoundTrip(t *testing.T) {
 	}{
 		{name: "no config written yet", write: false},
 		{name: "empty set persists as empty", set: NewSet(), write: true},
-		{name: "single language", set: NewSet(Go), write: true},
+		{name: "single language", set: NewSet(language.Go), write: true},
 		{
 			name:  "multi-language set",
-			set:   NewSet(Dart, Svelte, TypeScript),
+			set:   NewSet(language.Dart, language.Svelte, language.TypeScript),
 			write: true,
 		},
 	}
@@ -73,7 +75,7 @@ func TestRemoveConfig(t *testing.T) {
 
 			repoDir := t.TempDir()
 			if testCase.write {
-				if err := SaveConfig(repoDir, NewSet(Go)); err != nil {
+				if err := SaveConfig(repoDir, NewSet(language.Go)); err != nil {
 					t.Fatalf("SaveConfig: %v", err)
 				}
 			}
@@ -100,10 +102,10 @@ func TestSaveConfig_Overwrites(t *testing.T) {
 	t.Parallel()
 
 	repoDir := t.TempDir()
-	if err := SaveConfig(repoDir, NewSet(Go)); err != nil {
+	if err := SaveConfig(repoDir, NewSet(language.Go)); err != nil {
 		t.Fatalf("SaveConfig #1: %v", err)
 	}
-	if err := SaveConfig(repoDir, NewSet(Dart)); err != nil {
+	if err := SaveConfig(repoDir, NewSet(language.Dart)); err != nil {
 		t.Fatalf("SaveConfig #2: %v", err)
 	}
 

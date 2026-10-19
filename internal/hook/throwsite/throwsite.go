@@ -7,17 +7,17 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
-func patternFor(ext string) string {
-	switch ext {
-	case ".dart":
+func patternFor(id language.ID) string {
+	switch id {
+	case language.Dart:
 		return `rethrow|throw|Future\.error`
-	case ".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".svelte":
+	case language.TypeScript, language.JavaScript, language.Svelte:
 		return `throw|Promise\.reject`
 	}
 	return ""
 }
 
-func Handles(ext string) bool { return patternFor(strings.ToLower(ext)) != "" }
+func Handles(ext string) bool { return patternFor(language.ForExtension(ext).ID) != "" }
 
 type Hit struct {
 	Line int
@@ -25,12 +25,12 @@ type Hit struct {
 }
 
 func Scan(ext, src string) []Hit {
-	ext = strings.ToLower(ext)
-	pattern := patternFor(ext)
+	id := language.ForExtension(ext).ID
+	pattern := patternFor(id)
 	if pattern == "" {
 		return nil
 	}
-	if ext == ".svelte" {
+	if id == language.Svelte {
 		src = maskMarkupComments(src)
 	}
 	literals := language.ScanLiterals(

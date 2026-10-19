@@ -5,6 +5,8 @@ import (
 	"errors"
 	"slices"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 type routingCase struct {
@@ -65,9 +67,9 @@ func TestNewCache_Routing(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			goProvider := &fakeProvider{language: LangGo, exts: []string{".go"}}
-			dartProvider := &fakeProvider{language: LangDart, exts: []string{".dart"}}
-			overlap := &fakeProvider{language: LangJavaScript, exts: []string{".go"}}
+			goProvider := &fakeProvider{language: language.Go, exts: []string{".go"}}
+			dartProvider := &fakeProvider{language: language.Dart, exts: []string{".dart"}}
+			overlap := &fakeProvider{language: language.JavaScript, exts: []string{".go"}}
 			providers := []Provider{goProvider, dartProvider, overlap}
 			if testCase.noProviders {
 				providers = nil
@@ -113,7 +115,7 @@ type resultCase struct {
 	wantGet         []string
 	wantMissing     []string
 	wantUnavailable []Unavailable
-	wantLanguage    map[string]Language
+	wantLanguage    map[string]language.ID
 }
 
 func resultCases() []resultCase {
@@ -125,32 +127,53 @@ func failureCases() []resultCase {
 	goExts := []string{".go"}
 	return []resultCase{
 		{
-			name:     "total failure keeps no files",
-			provider: &fakeProvider{language: LangGo, exts: goExts, err: failure, noResults: true},
-			paths:    []string{"a.go", "b.go"}, wantMissing: []string{"a.go", "b.go"},
-			wantUnavailable: []Unavailable{{Language: LangGo, Files: 2, Reason: "parser down"}},
+			name: "total failure keeps no files",
+			provider: &fakeProvider{
+				language:  language.Go,
+				exts:      goExts,
+				err:       failure,
+				noResults: true,
+			},
+			paths:       []string{"a.go", "b.go"},
+			wantMissing: []string{"a.go", "b.go"},
+			wantUnavailable: []Unavailable{
+				{Language: language.Go, Files: 2, Reason: "parser down"},
+			},
 		},
 		{
 			name: "partial results survive an error",
 			provider: &fakeProvider{
-				language: LangGo, exts: goExts, err: failure, omit: []string{"b.go"},
+				language: language.Go, exts: goExts, err: failure, omit: []string{"b.go"},
 			},
-			paths:   []string{"a.go", "b.go"},
-			wantGet: []string{"a.go"}, wantMissing: []string{"b.go"},
-			wantUnavailable: []Unavailable{{Language: LangGo, Files: 1, Reason: "parser down"}},
+			paths:       []string{"a.go", "b.go"},
+			wantGet:     []string{"a.go"},
+			wantMissing: []string{"b.go"},
+			wantUnavailable: []Unavailable{
+				{Language: language.Go, Files: 1, Reason: "parser down"},
+			},
 		},
 		{
-			name:     "omitted path is not summarised",
-			provider: &fakeProvider{language: LangGo, exts: goExts, omit: []string{"b.go"}},
-			paths:    []string{"a.go", "b.go"},
-			wantGet:  []string{"a.go"}, wantMissing: []string{"b.go"},
-			wantUnavailable: []Unavailable{{Language: LangGo, Files: 1, Reason: notSummarised}},
+			name:        "omitted path is not summarised",
+			provider:    &fakeProvider{language: language.Go, exts: goExts, omit: []string{"b.go"}},
+			paths:       []string{"a.go", "b.go"},
+			wantGet:     []string{"a.go"},
+			wantMissing: []string{"b.go"},
+			wantUnavailable: []Unavailable{
+				{Language: language.Go, Files: 1, Reason: notSummarised},
+			},
 		},
 		{
-			name:     "nil file counts as omitted",
-			provider: &fakeProvider{language: LangGo, exts: goExts, nilFiles: []string{"a.go"}},
-			paths:    []string{"a.go"}, wantMissing: []string{"a.go"},
-			wantUnavailable: []Unavailable{{Language: LangGo, Files: 1, Reason: notSummarised}},
+			name: "nil file counts as omitted",
+			provider: &fakeProvider{
+				language: language.Go,
+				exts:     goExts,
+				nilFiles: []string{"a.go"},
+			},
+			paths:       []string{"a.go"},
+			wantMissing: []string{"a.go"},
+			wantUnavailable: []Unavailable{
+				{Language: language.Go, Files: 1, Reason: notSummarised},
+			},
 		},
 	}
 }
@@ -160,27 +183,27 @@ func shapeCases() []resultCase {
 	return []resultCase{
 		{
 			name:     "unrequested entry is dropped",
-			provider: &fakeProvider{language: LangGo, exts: goExts, extra: []string{"x.go"}},
+			provider: &fakeProvider{language: language.Go, exts: goExts, extra: []string{"x.go"}},
 			paths:    []string{"a.go"}, wantGet: []string{"a.go"}, wantMissing: []string{"x.go"},
 		},
 		{
 			name:     "blank language filled from the extension",
-			provider: &fakeProvider{language: LangGo, exts: goExts, blankLang: true},
+			provider: &fakeProvider{language: language.Go, exts: goExts, blankLang: true},
 			paths:    []string{"a.go"}, wantGet: []string{"a.go"},
-			wantLanguage: map[string]Language{"a.go": LangGo},
+			wantLanguage: map[string]language.ID{"a.go": language.Go},
 		},
 		{
 			name: "blank language of an unknown extension uses the provider",
 			provider: &fakeProvider{
-				language: LangTypeScript, exts: []string{".mts"}, blankLang: true,
+				language: language.TypeScript, exts: []string{".mts"}, blankLang: true,
 			},
 			paths: []string{"a.mts"}, wantGet: []string{"a.mts"},
-			wantLanguage: map[string]Language{"a.mts": LangTypeScript},
+			wantLanguage: map[string]language.ID{"a.mts": language.TypeScript},
 		},
 		{
 			name: "absolute path from the provider is replaced",
 			provider: &fakeProvider{
-				language: LangGo, exts: goExts,
+				language: language.Go, exts: goExts,
 				pathFor: func(path string) string { return "/abs/" + path },
 			},
 			paths: []string{"a.go"}, wantGet: []string{"a.go"},
@@ -188,7 +211,7 @@ func shapeCases() []resultCase {
 		{
 			name: "empty path from the provider is replaced",
 			provider: &fakeProvider{
-				language: LangGo, exts: goExts, pathFor: func(string) string { return "" },
+				language: language.Go, exts: goExts, pathFor: func(string) string { return "" },
 			},
 			paths: []string{"a.go"}, wantGet: []string{"a.go"},
 		},
@@ -201,24 +224,26 @@ func splitCases() []resultCase {
 		{
 			name: "failure splits by the actual language",
 			provider: &fakeProvider{
-				language: LangTypeScript, exts: []string{".ts", ".js", ".svelte"},
+				language: language.TypeScript, exts: []string{".ts", ".js", ".svelte"},
 				err: failure, noResults: true,
 			},
 			paths: []string{"a.ts", "b.svelte", "c.js", "d.js"},
 			wantUnavailable: []Unavailable{
-				{Language: LangJavaScript, Files: 2, Reason: "parser down"},
-				{Language: LangSvelte, Files: 1, Reason: "parser down"},
-				{Language: LangTypeScript, Files: 1, Reason: "parser down"},
+				{Language: language.JavaScript, Files: 2, Reason: "parser down"},
+				{Language: language.Svelte, Files: 1, Reason: "parser down"},
+				{Language: language.TypeScript, Files: 1, Reason: "parser down"},
 			},
 			wantMissing: []string{"a.ts"},
 		},
 		{
 			name: "unknown extension falls back to the provider language",
 			provider: &fakeProvider{
-				language: LangDart, exts: []string{".txt"}, err: failure, noResults: true,
+				language: language.Dart, exts: []string{".txt"}, err: failure, noResults: true,
 			},
-			paths:           []string{"a.txt"},
-			wantUnavailable: []Unavailable{{Language: LangDart, Files: 1, Reason: "parser down"}},
+			paths: []string{"a.txt"},
+			wantUnavailable: []Unavailable{
+				{Language: language.Dart, Files: 1, Reason: "parser down"},
+			},
 		},
 	}
 }
@@ -279,7 +304,7 @@ func TestNewCache_ProviderInputs(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			provider := &fakeProvider{language: LangGo, exts: []string{".go"}}
+			provider := &fakeProvider{language: language.Go, exts: []string{".go"}}
 			read := func(path string) ([]byte, bool) { return []byte("src:" + path), true }
 			ctx := context.WithValue(context.Background(), ctxKey{}, "marker")
 			cache := NewCache(
@@ -318,7 +343,7 @@ func TestNewCache_Lazy(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			provider := &fakeProvider{language: LangGo, exts: []string{".go"}}
+			provider := &fakeProvider{language: language.Go, exts: []string{".go"}}
 			cache := NewCache(
 				context.Background(), []Provider{provider},
 				Corpus{Root: "root", Sources: toSources("a.go"), Read: allRead},

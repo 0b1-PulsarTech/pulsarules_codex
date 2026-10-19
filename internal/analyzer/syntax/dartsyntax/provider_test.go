@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func TestMain(m *testing.M) {
@@ -45,7 +46,7 @@ func fixture(t *testing.T, name string) string {
 func TestProviderIdentity(t *testing.T) {
 	t.Parallel()
 	provider := New()
-	if provider.Language() != syntax.LangDart {
+	if provider.Language() != language.Dart {
 		t.Errorf("Language = %q", provider.Language())
 	}
 	for ext, want := range map[string]bool{".dart": true, ".go": false, ".svelte": false} {

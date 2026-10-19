@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -166,10 +167,10 @@ func TestClaudeInstall_GoplsLanguages(t *testing.T) {
 		wantSkill bool
 		wantWarn  bool
 	}{
-		{name: "dart project gets no gopls skill", languages: detect.NewSet(detect.Dart)},
+		{name: "dart project gets no gopls skill", languages: detect.NewSet(language.Dart)},
 		{
 			name:      "go project gets the skill when gopls is on PATH",
-			languages: detect.NewSet(detect.Go),
+			languages: detect.NewSet(language.Go),
 			wantSkill: mcp.GoplsOnPath(),
 			wantWarn:  !mcp.GoplsOnPath(),
 		},
@@ -221,16 +222,16 @@ func TestGoplsSkill_Branches(t *testing.T) {
 		wantGenerated bool
 		wantWarn      bool
 	}{
-		{name: "no go detected", languages: detect.NewSet(detect.Dart), hasGopls: true},
+		{name: "no go detected", languages: detect.NewSet(language.Dart), hasGopls: true},
 		{
 			name:          "go with gopls on PATH",
-			languages:     detect.NewSet(detect.Go),
+			languages:     detect.NewSet(language.Go),
 			hasGopls:      true,
 			wantGenerated: true,
 		},
 		{
 			name:      "go without gopls on PATH",
-			languages: detect.NewSet(detect.Go),
+			languages: detect.NewSet(language.Go),
 			wantWarn:  true,
 		},
 	}
@@ -266,7 +267,7 @@ func TestWireClaudeMCP_NotesWiredServers(t *testing.T) {
 	fakeGoplsOnPath(t)
 	base := t.TempDir()
 	ctx := newTestContext(t, base, []string{"go-style"})
-	ctx.Languages = detect.NewSet(detect.Go)
+	ctx.Languages = detect.NewSet(language.Go)
 
 	var report Report
 	if err := wireClaudeMCP(ctx, filepath.Join(base, ".claude", "skills"), &report); err != nil {

@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
@@ -24,18 +25,19 @@ type rules struct {
 	verbatim  bool
 }
 
-func rulesFor(syntax lexer.CommentSyntax, ext string) rules {
+func rulesFor(lang language.Language) rules {
+	syntax := lang.Comments
 	hasBlock := func(open string) bool {
 		return slices.ContainsFunc(syntax.Blocks, func(block lexer.BlockDelim) bool {
 			return block.Open == open
 		})
 	}
 	switch {
-	case ext == ".rs":
+	case lang.ID == language.Rust:
 		return rules{open: openRust, backslash: true}
-	case slices.Contains([]string{".yaml", ".yml", ".toml"}, ext):
+	case lang.ID == language.YAML, lang.ID == language.TOML:
 		return rules{open: openScalar, backslash: true, rawSingle: true}
-	case slices.Contains([]string{".sh", ".bash", ".zsh"}, ext):
+	case lang.ID == language.Shell:
 		return rules{open: openAlways, backslash: true, rawSingle: true}
 	case slices.Contains(syntax.Line, "--") && hasBlock("/*"):
 		return rules{open: openAlways}
@@ -44,7 +46,7 @@ func rulesFor(syntax lexer.CommentSyntax, ext string) rules {
 	case slices.Contains(syntax.Line, "//"):
 		return rules{
 			open: openCLike, backslash: true, backtick: true, sfc: hasBlock("<!--"),
-			verbatim: ext == ".cs",
+			verbatim: lang.ID == language.CSharp,
 		}
 	}
 	return rules{open: openNone}

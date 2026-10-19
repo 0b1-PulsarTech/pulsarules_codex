@@ -11,6 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
@@ -350,11 +351,11 @@ func TestOpencodeInstall_GoplsLanguages(t *testing.T) {
 		languages detect.Set
 		wantGopls bool
 	}{
-		{name: "dart project gets no gopls", languages: detect.NewSet(detect.Dart)},
+		{name: "dart project gets no gopls", languages: detect.NewSet(language.Dart)},
 		{name: "unknown languages get no gopls", languages: detect.Set{}},
 		{
 			name:      "go project gets gopls when it is on PATH",
-			languages: detect.NewSet(detect.Go),
+			languages: detect.NewSet(language.Go),
 			wantGopls: mcp.GoplsOnPath(),
 		},
 	}

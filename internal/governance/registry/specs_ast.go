@@ -7,11 +7,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/shadowing"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/singleuse"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/signature/namedreturns"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntaxreport"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
-func syntaxReportSpec(language syntax.Language) analyzerSpec {
+func syntaxReportSpec(language language.ID) analyzerSpec {
 	return staticSpec(string(language)+"-syntax", func() *syntaxreport.Analyzer {
 		return syntaxreport.NewAnalyzer(language)
 	})
@@ -19,11 +19,11 @@ func syntaxReportSpec(language syntax.Language) analyzerSpec {
 
 func astSpecs() []analyzerSpec {
 	return []analyzerSpec{
-		syntaxReportSpec(syntax.LangGo),
-		syntaxReportSpec(syntax.LangDart),
-		syntaxReportSpec(syntax.LangTypeScript),
-		syntaxReportSpec(syntax.LangJavaScript),
-		syntaxReportSpec(syntax.LangSvelte),
+		syntaxReportSpec(language.Go),
+		syntaxReportSpec(language.Dart),
+		syntaxReportSpec(language.TypeScript),
+		syntaxReportSpec(language.JavaScript),
+		syntaxReportSpec(language.Svelte),
 		staticSpec("control-flow", controlflow.NewAnalyzer),
 		staticSpec("shadowing", shadowing.NewAnalyzer),
 		staticSpec("complexity", complexity.NewAnalyzer),

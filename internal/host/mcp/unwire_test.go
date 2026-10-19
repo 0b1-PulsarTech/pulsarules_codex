@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
@@ -20,7 +21,7 @@ func TestRemoveMCP_DeletesOurFile(t *testing.T) {
 	repoDir := t.TempDir()
 	if _, _, err := Write(
 		repoDir,
-		detect.NewSet(detect.Go),
+		detect.NewSet(language.Go),
 	); err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
@@ -92,7 +93,7 @@ func TestRemoveMCP_StripsGitignore(t *testing.T) {
 
 	if _, _, err := Write(
 		repoDir,
-		detect.NewSet(detect.Go),
+		detect.NewSet(language.Go),
 	); err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
@@ -203,7 +204,7 @@ func TestRemoveMCP_Idempotent(t *testing.T) {
 	repoDir := t.TempDir()
 	if _, _, err := Write(
 		repoDir,
-		detect.NewSet(detect.Go),
+		detect.NewSet(language.Go),
 	); err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -374,19 +374,19 @@ func TestFitsRejectsLanguageMismatch(t *testing.T) {
 	testCases := []struct {
 		name     string
 		ruleID   string
-		language syntax.Language
+		language language.ID
 		want     bool
 	}{
-		{"go rule on go", "naming", syntax.LangGo, true},
-		{"go rule on dart", "naming", syntax.LangDart, false},
+		{"go rule on go", "naming", language.Go, true},
+		{"go rule on dart", "naming", language.Dart, false},
 		{"go rule on no language", "naming", "", false},
-		{"dart rule on dart", "dart-style", syntax.LangDart, true},
-		{"dart rule on go", "dart-style", syntax.LangGo, false},
-		{"svelte rule on svelte", "atomic-design", syntax.LangSvelte, true},
-		{"svelte rule on ts", "atomic-design", syntax.LangTypeScript, false},
-		{"neutral on dart", "comments", syntax.LangDart, true},
+		{"dart rule on dart", "dart-style", language.Dart, true},
+		{"dart rule on go", "dart-style", language.Go, false},
+		{"svelte rule on svelte", "atomic-design", language.Svelte, true},
+		{"svelte rule on ts", "atomic-design", language.TypeScript, false},
+		{"neutral on dart", "comments", language.Dart, true},
 		{"neutral on no language", "source-files", "", true},
-		{"unknown rule", "no-such-rule", syntax.LangDart, true},
+		{"unknown rule", "no-such-rule", language.Dart, true},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

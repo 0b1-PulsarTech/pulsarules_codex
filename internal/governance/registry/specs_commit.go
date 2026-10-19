@@ -16,7 +16,7 @@ func commitSpecs() []analyzerSpec {
 		{
 			id: "commit-lint",
 			build: func(
-				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
+				_ *knowledge.Index, _ vcs.Repository,
 			) pass.Analyzer {
 				catalog, err := emoji.NewCatalog()
 				if err != nil {
@@ -33,7 +33,7 @@ func commitSpecs() []analyzerSpec {
 		{
 			id: "commit-move-purity",
 			build: func(
-				_ *knowledge.Index, _ *pass.LanguageRegistry, repo vcs.Repository,
+				_ *knowledge.Index, repo vcs.Repository,
 			) pass.Analyzer {
 				return movepurity.NewAnalyzer(repo)
 			},

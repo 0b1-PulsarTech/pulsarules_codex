@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
@@ -16,7 +17,7 @@ func TestWriteMCP_FreshFile(t *testing.T) {
 	fakeOnPath(t, "gopls")
 	repoDir := t.TempDir()
 
-	wired, skipped, err := Write(repoDir, detect.NewSet(detect.Go))
+	wired, skipped, err := Write(repoDir, detect.NewSet(language.Go))
 	if err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
@@ -84,7 +85,7 @@ func TestWriteMCP_PreservesExisting(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	languages := detect.NewSet(detect.Go)
+	languages := detect.NewSet(language.Go)
 	if _, _, err := Write(repoDir, languages); err != nil {
 		t.Fatalf("WriteMCP #1: %v", err)
 	}
@@ -123,7 +124,7 @@ func TestWriteMCP_GitignoresMCPJSON(t *testing.T) {
 
 	if _, _, err := Write(
 		repoDir,
-		detect.NewSet(detect.Go),
+		detect.NewSet(language.Go),
 	); err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}
@@ -147,16 +148,16 @@ func TestWriteMCP_LanguageAware(t *testing.T) {
 	}{
 		{
 			name:      "dart only wires dart, not gopls",
-			languages: detect.NewSet(detect.Dart),
+			languages: detect.NewSet(language.Dart),
 			want:      []string{"dart"},
 		},
 		{
 			name:      "a language with no managed server wires nothing",
-			languages: detect.NewSet(detect.Rust),
+			languages: detect.NewSet(language.Rust),
 		},
 		{
 			name:      "go+dart wires both",
-			languages: detect.NewSet(detect.Go, detect.Dart),
+			languages: detect.NewSet(language.Go, language.Dart),
 			want:      []string{"dart", "gopls"},
 		},
 	}
@@ -186,7 +187,7 @@ func TestWriteMCP_SkipsMissingCommand(t *testing.T) {
 	t.Setenv("PATH", "")
 	repoDir := t.TempDir()
 
-	wired, skipped, err := Write(repoDir, detect.NewSet(detect.Go))
+	wired, skipped, err := Write(repoDir, detect.NewSet(language.Go))
 	if err != nil {
 		t.Fatalf("WriteMCP: %v", err)
 	}

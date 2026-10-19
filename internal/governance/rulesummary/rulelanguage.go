@@ -4,14 +4,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func languageRules() map[string]map[syntax.Language]string {
-	return map[string]map[syntax.Language]string{
-		"import-groups": {syntax.LangDart: "dart-style"},
+func languageRules() map[string]map[language.ID]string {
+	return map[string]map[language.ID]string{
+		"import-groups": {language.Dart: "dart-style"},
 	}
 }
 
@@ -23,11 +22,13 @@ func neutralFallbacks() map[string]string {
 }
 
 func languageTags() map[string]bool {
-	tags := map[string]bool{}
-	for _, extension := range pass.DefaultSourceExtensions() {
-		if language := syntax.LanguageForExtension(extension); language != "" {
-			tags[string(language)] = true
-		}
+	// The languages a syntax provider parses; a rule tag outside the set is a topic.
+	ids := []language.ID{
+		language.Go, language.Dart, language.TypeScript, language.JavaScript, language.Svelte,
+	}
+	tags := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		tags[string(id)] = true
 	}
 	return tags
 }
@@ -39,7 +40,7 @@ func goPinned(analyzerID string) bool {
 type resolver struct {
 	index     *knowledge.Index
 	defaults  map[string]string
-	languages map[string]map[syntax.Language]string
+	languages map[string]map[language.ID]string
 	fallbacks map[string]string
 	known     map[string]bool
 }
@@ -58,21 +59,21 @@ func (resolver resolver) resolve(analyzerID, file string) string {
 	if file == "" || goPinned(analyzerID) {
 		return lookupRule(resolver.defaults, analyzerID)
 	}
-	language := syntax.LanguageForExtension(filepath.Ext(file))
-	candidate, ok := resolver.languages[analyzerID][language]
+	lang := language.ForExtension(filepath.Ext(file)).ID
+	candidate, ok := resolver.languages[analyzerID][lang]
 	if !ok {
 		candidate = lookupRule(resolver.defaults, analyzerID)
 	}
-	if candidate == "" || resolver.fits(candidate, language) {
+	if candidate == "" || resolver.fits(candidate, lang) {
 		return candidate
 	}
 	return resolver.fallbacks[analyzerID]
 }
 
-func (resolver resolver) fits(ruleID string, language syntax.Language) bool {
+func (resolver resolver) fits(ruleID string, lang language.ID) bool {
 	rule, ok := resolver.index.Rule(ruleID)
 	if !ok {
 		return true
 	}
-	return rule.FitsLanguages(resolver.known, []string{string(language)})
+	return rule.FitsLanguages(resolver.known, []string{string(lang)})
 }

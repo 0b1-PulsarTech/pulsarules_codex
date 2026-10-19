@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 const BuildTimeout = 45 * time.Second
@@ -16,7 +17,7 @@ type Provider struct{}
 
 func New() *Provider { return &Provider{} }
 
-func (provider *Provider) Language() syntax.Language { return syntax.LangDart }
+func (provider *Provider) Language() language.ID { return language.Dart }
 
 func (provider *Provider) Handles(ext string) bool { return ext == ".dart" }
 

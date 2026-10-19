@@ -28,7 +28,7 @@ func pipelineSpecs() []analyzerSpec {
 			// would block work that a rename before pushing fixes.
 			id: "branch-name",
 			build: func(
-				_ *knowledge.Index, _ *pass.LanguageRegistry, repo vcs.Repository,
+				_ *knowledge.Index, repo vcs.Repository,
 			) pass.Analyzer {
 				return branch.NewAnalyzer(repo)
 			},
@@ -40,7 +40,7 @@ func pipelineSpecs() []analyzerSpec {
 		{
 			id: "rule-injection",
 			build: func(
-				index *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
+				index *knowledge.Index, _ vcs.Repository,
 			) pass.Analyzer {
 				return rulesummary.NewAnalyzer(index)
 			},
@@ -50,7 +50,7 @@ func pipelineSpecs() []analyzerSpec {
 		{
 			id: "output",
 			build: func(
-				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
+				_ *knowledge.Index, _ vcs.Repository,
 			) pass.Analyzer {
 				return output.NewAnalyzer()
 			},
@@ -65,7 +65,7 @@ func delegationSpecs() []analyzerSpec {
 		{
 			id: "golangci-lint",
 			build: func(
-				_ *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
+				_ *knowledge.Index, _ vcs.Repository,
 			) pass.Analyzer {
 				return golangcilint.NewAnalyzer("golangci-lint")
 			},
@@ -74,7 +74,7 @@ func delegationSpecs() []analyzerSpec {
 		{
 			id: command.ID,
 			build: func(
-				index *knowledge.Index, _ *pass.LanguageRegistry, _ vcs.Repository,
+				index *knowledge.Index, _ vcs.Repository,
 			) pass.Analyzer {
 				return command.NewAnalyzer(index)
 			},

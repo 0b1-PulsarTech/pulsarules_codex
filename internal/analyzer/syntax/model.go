@@ -1,15 +1,9 @@
 package syntax
 
-import "context"
+import (
+	"context"
 
-type Language string
-
-const (
-	LangGo         Language = "go"
-	LangDart       Language = "dart"
-	LangTypeScript Language = "typescript"
-	LangJavaScript Language = "javascript"
-	LangSvelte     Language = "svelte"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 type FunctionKind string
@@ -57,7 +51,7 @@ const (
 
 type File struct {
 	Path, ParseError string
-	Language         Language
+	Language         language.ID
 	Functions        []Function
 	Blocks           []Block
 	Imports          []Import
@@ -103,7 +97,7 @@ type Source struct {
 }
 
 type Provider interface {
-	Language() Language
+	Language() language.ID
 	Handles(ext string) bool
 	Summarize(ctx context.Context, corpus Corpus) (map[string]*File, error)
 }

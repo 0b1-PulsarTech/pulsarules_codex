@@ -3,6 +3,8 @@ package detect
 import (
 	"slices"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func TestSet(t *testing.T) {
@@ -15,26 +17,26 @@ func TestSet(t *testing.T) {
 		wantNoHas Language
 		want      []string
 	}{
-		{name: "empty set", languages: nil, wantNoHas: Go, want: nil},
+		{name: "empty set", languages: nil, wantNoHas: language.Go, want: nil},
 		{
 			name:      "single language",
-			languages: []Language{Go},
-			wantHas:   Go,
-			wantNoHas: Dart,
+			languages: []Language{language.Go},
+			wantHas:   language.Go,
+			wantNoHas: language.Dart,
 			want:      []string{"go"},
 		},
 		{
 			name:      "multiple languages sorted regardless of input order",
-			languages: []Language{TypeScript, Dart, Svelte},
-			wantHas:   Svelte,
-			wantNoHas: Go,
+			languages: []Language{language.TypeScript, language.Dart, language.Svelte},
+			wantHas:   language.Svelte,
+			wantNoHas: language.Go,
 			want:      []string{"dart", "svelte", "typescript"},
 		},
 		{
 			name:      "duplicates are deduplicated",
-			languages: []Language{Go, Go, Go},
-			wantHas:   Go,
-			wantNoHas: Rust,
+			languages: []Language{language.Go, language.Go, language.Go},
+			wantHas:   language.Go,
+			wantNoHas: language.Rust,
 			want:      []string{"go"},
 		},
 	}
@@ -66,8 +68,8 @@ func TestSetEmpty(t *testing.T) {
 	}{
 		{name: "zero value", set: Set{}, want: true},
 		{name: "constructed with nothing", set: NewSet(), want: true},
-		{name: "one language", set: NewSet(Go), want: false},
-		{name: "several languages", set: NewSet(Dart, Svelte), want: false},
+		{name: "one language", set: NewSet(language.Go), want: false},
+		{name: "several languages", set: NewSet(language.Dart, language.Svelte), want: false},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

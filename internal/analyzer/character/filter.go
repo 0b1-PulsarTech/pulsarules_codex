@@ -3,6 +3,7 @@ package character
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
 func eachMarkedFile(
@@ -20,5 +21,5 @@ func eachMarkedFile(
 
 func markedExtensions() []string {
 	// Markdown too: an invisible carrier is as much a defect in a README as in code.
-	return append(pass.DefaultSourceExtensions(), ".md")
+	return append(language.SourceExtensions(), ".md")
 }

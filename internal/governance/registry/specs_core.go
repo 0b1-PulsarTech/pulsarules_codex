@@ -17,8 +17,8 @@ func coreSpecs() []analyzerSpec {
 		staticSpec("typographic-markers", character.NewTypographicAnalyzer),
 		staticSpec("import-groups", importgroup.NewAnalyzer),
 		staticSpec("naming", identifier.NewAnalyzer),
-		langSpec("top-of-file", banner.NewAnalyzer),
-		langSpec("big-comment", blocksize.NewAnalyzer),
-		langSpec("simplification-path", simplification.NewAnalyzer),
+		staticSpec("top-of-file", banner.NewAnalyzer),
+		staticSpec("big-comment", blocksize.NewAnalyzer),
+		staticSpec("simplification-path", simplification.NewAnalyzer),
 	}
 }

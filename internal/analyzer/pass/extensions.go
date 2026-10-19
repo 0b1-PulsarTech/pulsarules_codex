@@ -6,19 +6,6 @@ import (
 
 const ParamExtensions = "extensions"
 
-func DefaultSourceExtensions() []string {
-	// YAML, TOML and XML stay out: flagging config prose trains people to ignore the gate.
-	return []string{
-		".go",
-		".dart",
-		".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".svelte", ".vue",
-		".java", ".kt", ".kts", ".scala", ".swift",
-		".rs", ".c", ".h", ".cpp", ".hpp", ".cs",
-		".py", ".rb", ".php", ".sh", ".bash", ".zsh",
-		".sql", ".proto", ".lua", ".html", ".nix",
-	}
-}
-
 func ExtensionFilter(
 	ctx *Context, analyzerID string, fallback []string,
 ) func(FileChange) bool {

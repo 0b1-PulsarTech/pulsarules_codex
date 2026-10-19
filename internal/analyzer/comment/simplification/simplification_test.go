@@ -10,15 +10,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
-func testLangs() *pass.LanguageRegistry {
-	langs := pass.NewLanguageRegistry()
-	langs.Register(language.Lookup("go"))
-	langs.Register(language.Lookup("clike"))
-	langs.Register(language.Lookup("markup"))
-	langs.Register(language.Lookup("lua"))
-	return langs
-}
-
 type analyzeCase struct {
 	name    string
 	file    string
@@ -108,7 +99,6 @@ func TestAnalyze(t *testing.T) {
 
 	dir := t.TempDir()
 	srcs := source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs()))
-	langs := testLangs()
 
 	for _, testCase := range analyzeCases() {
 		if err := os.WriteFile(
@@ -119,7 +109,7 @@ func TestAnalyze(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := NewAnalyzer(langs).Analyze(&pass.Context{
+			got := NewAnalyzer().Analyze(&pass.Context{
 				ProjectDir: dir,
 				Sources:    srcs,
 				ChangedFiles: []pass.FileChange{
@@ -133,22 +123,10 @@ func TestAnalyze(t *testing.T) {
 	}
 }
 
-func TestAnalyze_NoLangs(t *testing.T) {
-	t.Parallel()
-
-	analyzer := NewAnalyzer(nil)
-	got := analyzer.Analyze(
-		&pass.Context{ChangedFiles: []pass.FileChange{{Path: "x.go", Extension: ".go"}}},
-	)
-	if got != nil {
-		t.Fatalf("expected nil findings with no language registry, got %+v", got)
-	}
-}
-
 func TestAnalyze_NoSources(t *testing.T) {
 	t.Parallel()
 
-	analyzer := NewAnalyzer(testLangs())
+	analyzer := NewAnalyzer()
 	got := analyzer.Analyze(
 		&pass.Context{ChangedFiles: []pass.FileChange{{Path: "x.go", Extension: ".go"}}},
 	)
@@ -166,7 +144,7 @@ func TestAnalyze_UnknownLanguageSkipped(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	analyzer := NewAnalyzer(testLangs())
+	analyzer := NewAnalyzer()
 	got := analyzer.Analyze(&pass.Context{
 		ProjectDir:   dir,
 		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -181,7 +159,7 @@ func TestAnalyze_NonexistentFileSkipped(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	analyzer := NewAnalyzer(testLangs())
+	analyzer := NewAnalyzer()
 	got := analyzer.Analyze(&pass.Context{
 		ProjectDir:   dir,
 		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -208,7 +186,7 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	analyzer := NewAnalyzer(testLangs())
+	analyzer := NewAnalyzer()
 	got := analyzer.Analyze(&pass.Context{
 		ProjectDir:   dir,
 		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
@@ -222,7 +200,7 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 func TestBlockNamesUpgradePath_Wrapped(t *testing.T) {
 	t.Parallel()
 
-	lang := language.Lookup("go")
+	lang := language.ForExtension(".go")
 	testCases := []struct {
 		name  string
 		lines []string
@@ -245,7 +223,7 @@ func TestBlockNamesUpgradePath_Wrapped(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			if got := blockNamesUpgradePath(
-				lang.CommentSyntax(),
+				lang.Comments,
 				testCase.lines,
 			); got != testCase.want {
 				t.Errorf(

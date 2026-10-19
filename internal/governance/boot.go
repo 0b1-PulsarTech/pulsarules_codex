@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/dartsyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -23,10 +21,7 @@ func (runner *StageRunner) registerForScope(
 	repo vcs.Repository,
 	scope Scope,
 ) {
-	langs := pass.NewLanguageRegistry()
-	language.RegisterAll(langs)
-
-	for _, analyzer := range registry.Analyzers(index, langs, repo, maxGateFor(scope)) {
+	for _, analyzer := range registry.Analyzers(index, repo, maxGateFor(scope)) {
 		runner.Register(analyzer)
 	}
 }

@@ -7,12 +7,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
 type Classifier struct {
-	rules    map[syntax.Language]rule
+	rules    map[language.ID]rule
 	fallback rule
 	globs    []glob.Pattern
 }
@@ -47,7 +47,7 @@ func (policy Classifier) ruleFor(ext string) rule {
 	if rules == nil {
 		rules, fallback = languageRules(), fallbackRule()
 	}
-	if selected, found := rules[syntax.LanguageForExtension(ext)]; found {
+	if selected, found := rules[language.ForExtension(ext).ID]; found {
 		return selected
 	}
 	return fallback
