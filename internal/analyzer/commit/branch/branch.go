@@ -105,14 +105,13 @@ func validExtraTypes(spec string) bool {
 		if entry == "" {
 			return false
 		}
-		for _, char := range entry {
-			isAllowed := char == '-' ||
-				(char >= 'a' && char <= 'z') ||
-				(char >= '0' && char <= '9')
-			if !isAllowed {
-				return false
-			}
+		if strings.ContainsFunc(entry, func(char rune) bool { return !isExtraTypeChar(char) }) {
+			return false
 		}
 	}
 	return true
+}
+
+func isExtraTypeChar(char rune) bool {
+	return char == '-' || (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9')
 }

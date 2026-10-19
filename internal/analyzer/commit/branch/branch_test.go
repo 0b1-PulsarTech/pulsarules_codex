@@ -30,7 +30,7 @@ func TestAnalyze(t *testing.T) {
 			t.Parallel()
 
 			ctx := &pass.Context{}
-			if testCase.extraTypes != "" {
+			if testCase.extraTypes != nil {
 				ctx.Config = &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
 					ID: {
 						Enabled: true,
@@ -64,7 +64,7 @@ type analyzeCase struct {
 	name        string
 	branch      string
 	repoErr     error
-	extraTypes  string
+	extraTypes  any
 	wantFinding bool
 }
 
@@ -94,6 +94,11 @@ func analyzeCases() []analyzeCase {
 			name:       "an unknown type passes once the project adds it",
 			branch:     "spike/idea",
 			extraTypes: "spike,experiment",
+		},
+		{
+			name:       "a YAML list of extra types is honoured",
+			branch:     "spike/idea",
+			extraTypes: []any{"spike", "experiment"},
 		},
 		{
 			name:        "an extra type does not whitelist everything",
