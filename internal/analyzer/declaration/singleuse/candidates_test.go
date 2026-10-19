@@ -2,16 +2,16 @@ package singleuse
 
 import "testing"
 
-type exemptionsTestCase struct {
+type eligibleTestCase struct {
 	name string
 	decl Declaration
 	want bool
 }
 
-func TestExemptions_Eligible(t *testing.T) {
+func TestEligible(t *testing.T) {
 	t.Parallel()
 
-	for _, testCase := range exemptionsTestCases() {
+	for _, testCase := range eligibleTestCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -22,12 +22,12 @@ func TestExemptions_Eligible(t *testing.T) {
 	}
 }
 
-func exemptionsTestCases() []exemptionsTestCase {
-	return append(exemptionsBasicCases(), exemptionsHoistCases()...)
+func eligibleTestCases() []eligibleTestCase {
+	return append(eligibleBasicCases(), eligibleHoistCases()...)
 }
 
-func exemptionsBasicCases() []exemptionsTestCase {
-	return []exemptionsTestCase{
+func eligibleBasicCases() []eligibleTestCase {
+	return []eligibleTestCase{
 		{
 			name: "unexported literal var is eligible",
 			decl: Declaration{
@@ -74,8 +74,8 @@ func exemptionsBasicCases() []exemptionsTestCase {
 	}
 }
 
-func exemptionsHoistCases() []exemptionsTestCase {
-	return []exemptionsTestCase{
+func eligibleHoistCases() []eligibleTestCase {
+	return []eligibleTestCase{
 		{
 			name: "call-initialised var is hoist-exempt",
 			decl: Declaration{Name: "pattern", Kind: DeclVar, Init: InitCall},

@@ -110,12 +110,8 @@ func TestDiscoverPackages(t *testing.T) {
 			provider := source.NewProvider(projectDir, source.NewSkipSet(nil))
 			pkgs := discoverPackages(provider, module)
 
-			got := make(map[string][]string, len(pkgs))
-			for key, info := range pkgs {
-				got[key] = info.Imports
-			}
-			if !reflect.DeepEqual(got, testCase.want) {
-				t.Fatalf("got %v, want %v", got, testCase.want)
+			if !reflect.DeepEqual(pkgs, testCase.want) {
+				t.Fatalf("got %v, want %v", pkgs, testCase.want)
 			}
 		})
 	}
@@ -124,10 +120,10 @@ func TestDiscoverPackages(t *testing.T) {
 func TestBuildGraph(t *testing.T) {
 	t.Parallel()
 
-	pkgs := map[string]*pkgImports{
-		"example.com/a": {Imports: []string{"fmt", "example.com/b"}},
-		"example.com/b": {Imports: []string{"example.com/c"}},
-		"example.com/c": {Imports: []string{"os"}},
+	pkgs := map[string][]string{
+		"example.com/a": {"fmt", "example.com/b"},
+		"example.com/b": {"example.com/c"},
+		"example.com/c": {"os"},
 	}
 	graph := buildGraph(pkgs, "example.com")
 	if len(graph) != 3 {
@@ -361,4 +357,18 @@ func writeFile(t *testing.T, dir, path, content string) {
 //nolint:ireturn // test helper mirrors the provider factory
 func newSources(dir string) source.Provider {
 	return source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs()))
+}
+
+func TestLoadDepGraph(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "foo.go", "package foo\n")
+	writeFile(t, projectDir, "bar/baz.go", "package bar\nimport \"example.com/mod/foo\"\n")
+
+	got := loadDepGraph(newSources(projectDir), "example.com/mod")
+	want := depGraph{"example.com/mod": nil, "example.com/mod/bar": {"example.com/mod/foo"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
 }

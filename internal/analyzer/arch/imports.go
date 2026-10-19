@@ -13,12 +13,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
-type pkgImports struct {
-	Imports []string
-}
-
-func discoverPackages(provider source.Provider, modulePath string) map[string]*pkgImports {
-	pkgMap := make(map[string]*pkgImports)
+func discoverPackages(provider source.Provider, modulePath string) map[string][]string {
+	pkgMap := make(map[string][]string)
 
 	provider.Walk(func(file string, ext string) bool {
 		if ext != ".go" || strings.HasSuffix(file, "_test.go") || inSkippedDir(file) {
@@ -39,16 +35,13 @@ func discoverPackages(provider source.Provider, modulePath string) map[string]*p
 		if dir != "." {
 			pkgImport = modulePath + "/" + dir
 		}
-		pkg, exists := pkgMap[pkgImport]
-		if !exists {
-			pkg = &pkgImports{}
-			pkgMap[pkgImport] = pkg
-		}
+		known := pkgMap[pkgImport]
 		for _, imp := range imports {
-			if !slices.Contains(pkg.Imports, imp) {
-				pkg.Imports = append(pkg.Imports, imp)
+			if !slices.Contains(known, imp) {
+				known = append(known, imp)
 			}
 		}
+		pkgMap[pkgImport] = known
 		return true
 	})
 

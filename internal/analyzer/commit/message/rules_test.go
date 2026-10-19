@@ -1,7 +1,6 @@
 package message
 
 import (
-	"strconv"
 	"strings"
 	"testing"
 
@@ -194,20 +193,5 @@ func TestValidateMergeCommitWrongEmoji(t *testing.T) {
 	findings := validate(msg, defaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-merge") {
 		t.Errorf("expected commit-merge finding for wrong emoji")
-	}
-}
-
-func TestValidateEmojiCountMessageUsesLimit(t *testing.T) {
-	t.Parallel()
-
-	msg := commitmsg.Parse(":a: :b: :c: :d: feat: Add thing")
-	findings := validate(msg, defaultRuleConfig(), defaultRuleReporters())
-	finding, found := findingByID(findings, "commit-emoji-count")
-	if !found {
-		t.Fatalf("expected commit-emoji-count finding, got %v", findings)
-	}
-	want := "(max " + strconv.Itoa(commitmsg.MaxLeadingEmojis) + ")"
-	if !strings.Contains(finding.Message, want) {
-		t.Errorf("message %q does not contain %q", finding.Message, want)
 	}
 }

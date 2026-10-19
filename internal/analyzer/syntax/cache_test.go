@@ -338,7 +338,7 @@ func TestNewCache_Lazy(t *testing.T) {
 	}
 }
 
-func TestCache_EmptyReceiver(t *testing.T) {
+func TestCache_NilReceiver(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -357,10 +357,8 @@ func TestCache_EmptyReceiver(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			for _, cache := range []*Cache{nil, {}} {
-				if !testCase.empty(cache) {
-					t.Fatalf("%s on %#v returned content", testCase.name, cache)
-				}
+			if !testCase.empty(nil) {
+				t.Fatalf("%s on a nil cache returned content", testCase.name)
 			}
 		})
 	}

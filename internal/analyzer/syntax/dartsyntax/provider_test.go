@@ -339,6 +339,9 @@ func TestProviderPrepareHonorsContextDeadline(t *testing.T) {
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("prepare error = %v, want context deadline exceeded", err)
 	}
+	if _, marked := loadMarker(currentDir(t, base)); marked {
+		t.Error("a parent deadline wrote a failure marker")
+	}
 }
 
 func TestSummarizeReadOnlyCache(t *testing.T) {

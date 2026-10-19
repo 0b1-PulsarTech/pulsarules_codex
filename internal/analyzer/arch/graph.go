@@ -5,14 +5,20 @@ import (
 	"maps"
 	"slices"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
 type depGraph map[string][]string
 
-func buildGraph(pkgs map[string]*pkgImports, modulePath string) depGraph {
+func loadDepGraph(provider source.Provider, modulePath string) depGraph {
+	return buildGraph(discoverPackages(provider, modulePath), modulePath)
+}
+
+func buildGraph(pkgs map[string][]string, modulePath string) depGraph {
 	graph := make(depGraph, len(pkgs))
-	for pkg, info := range pkgs {
-		graph[pkg] = localImports(modulePath, info.Imports)
+	for pkg, imports := range pkgs {
+		graph[pkg] = localImports(modulePath, imports)
 	}
 	return graph
 }
