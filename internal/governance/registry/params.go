@@ -19,10 +19,6 @@ func Params() map[string][]string {
 		"history-narration":   {extensions},
 		"package-file-count":  {"max_files", "exempt", extensions},
 		"complexity":          {"max_complexity", "max_func_lines", "max_params"},
-		"single-use-declaration": {
-			"check_const", "check_var", "pinned_annotations",
-			"stateful_type_prefixes", "hoisted_init_kinds",
-		},
 		"single-letter-name":  {"exported_only", "allowed_names"},
 		"too-many-results":    {"max_results"},
 		"body-header-comment": {"min_lines"},

@@ -203,67 +203,6 @@ func singleUseCrossFileCases() []singleUseCase {
 	}
 }
 
-func TestAnalyze_ParamsDisableEachKind(t *testing.T) {
-	t.Parallel()
-
-	files := map[string]string{
-		"p.go": "package p\n\nconst c = 1\nvar v = 1\n\n" +
-			"func UseBoth() int { return c + v }\n",
-	}
-
-	testCases := []struct {
-		name      string
-		params    pass.ParamSet
-		wantConst bool
-		wantVar   bool
-	}{
-		{name: "both enabled by default", params: nil, wantConst: true, wantVar: true},
-		{
-			name:      "const disabled",
-			params:    pass.ParamSet{"check_const": false},
-			wantConst: false, wantVar: true,
-		},
-		{
-			name:      "var disabled",
-			params:    pass.ParamSet{"check_var": false},
-			wantConst: true, wantVar: false,
-		},
-		{
-			name:      "both disabled",
-			params:    pass.ParamSet{"check_const": false, "check_var": false},
-			wantConst: false, wantVar: false,
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctx := buildCtx(t, files, []string{"p.go"})
-			if testCase.params != nil {
-				ctx.Config = &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
-					"single-use-declaration": {Params: testCase.params},
-				}}
-			}
-			got := NewAnalyzer().Analyze(ctx)
-			gotConst, gotVar := false, false
-			for _, finding := range got {
-				switch finding.Message {
-				case "c is referenced only inside UseBoth":
-					gotConst = true
-				case "v is referenced only inside UseBoth":
-					gotVar = true
-				}
-			}
-			if gotConst != testCase.wantConst || gotVar != testCase.wantVar {
-				t.Fatalf(
-					"const flagged = %v (want %v), var flagged = %v (want %v): %+v",
-					gotConst, testCase.wantConst, gotVar, testCase.wantVar, got,
-				)
-			}
-		})
-	}
-}
-
 func TestAnalyze_NoContext(t *testing.T) {
 	t.Parallel()
 
