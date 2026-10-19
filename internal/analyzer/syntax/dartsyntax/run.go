@@ -11,7 +11,6 @@ import (
 	"os"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
@@ -82,8 +81,6 @@ func decodeFiles(raw []byte, requests []request) (map[string]*syntax.File, error
 		if file == nil {
 			continue
 		}
-		file.Path = item.Path
-		file.Language = language.Dart
 		files[item.Path] = file
 	}
 	return files, nil

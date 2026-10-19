@@ -283,9 +283,6 @@ func TestProviderSkips(t *testing.T) {
 			if err != nil || file == nil || !strings.Contains(file.ParseError, testCase.want) {
 				t.Fatalf("summary %+v, %v", file, err)
 			}
-			if file.Language == "" {
-				t.Fatal("skipped file lost its language")
-			}
 		})
 	}
 }

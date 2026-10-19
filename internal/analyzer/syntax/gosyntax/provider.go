@@ -43,11 +43,7 @@ func (provider *Provider) summarizeSource(
 ) *syntax.File {
 	file := provider.cache.Get(source.Path)
 	if file == nil {
-		return &syntax.File{
-			Path:       source.Path,
-			Language:   language.Go,
-			ParseError: provider.parseError(source.Path),
-		}
+		return &syntax.File{ParseError: provider.parseError(source.Path)}
 	}
 	return summarizeFile(provider.cache.FileSet(), source, file, modulePath)
 }
@@ -66,8 +62,6 @@ func summarizeFile(
 	modulePath string,
 ) *syntax.File {
 	summary := &syntax.File{
-		Path:      source.Path,
-		Language:  language.Go,
 		Functions: functions(fset, file),
 		Blocks:    blocks(fset, file),
 		Names:     names.Collect(fset, file),

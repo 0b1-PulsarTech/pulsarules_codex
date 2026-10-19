@@ -64,7 +64,7 @@ func summarize(
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("check context: %w", err)
 	}
-	summary := newSummary(source.Path)
+	summary := &syntax.File{}
 	text := string(source.Content)
 	if reason := budget.CheckSize(text); reason != "" {
 		summary.ParseError = reason

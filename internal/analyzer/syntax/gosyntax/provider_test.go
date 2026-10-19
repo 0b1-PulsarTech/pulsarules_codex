@@ -114,7 +114,7 @@ func runSummarize(testCase summarizeCase) (map[string]*syntax.File, error) {
 func assertSummary(t *testing.T, file *syntax.File, testCase summarizeCase) {
 	t.Helper()
 
-	if file == nil || file.Language != language.Go {
+	if file == nil {
 		t.Fatalf("file = %+v", file)
 	}
 	if file.ParseError != testCase.wantParse {
