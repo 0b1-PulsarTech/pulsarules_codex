@@ -8,15 +8,13 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
-var ErrUnavailable = errors.New("parser process unavailable")
+var errUnavailable = errors.New("parser process unavailable")
 
 type Session struct {
 	runner  Runner
 	live    *worker
 	failure error
-	started int
 	sent    uint64
-	reaped  int
 }
 
 func (runner Runner) Open() *Session { return &Session{runner: runner} }
@@ -32,13 +30,13 @@ func (session *Session) Do(ctx context.Context, request Request) (Outcome, error
 	}
 	if session.live == nil {
 		if err := session.launch(ctx); err != nil {
-			session.failure = fmt.Errorf("%w: %w", ErrUnavailable, err)
+			session.failure = fmt.Errorf("%w: %w", errUnavailable, err)
 			return Outcome{}, session.failure
 		}
 	}
 	session.sent++
 	request.Seq = session.sent
-	file, fired, err := session.live.exchange(request, session.runner.Wall)
+	file, fired, err := session.live.exchange(request, session.runner.wall)
 	if err == nil && fired {
 		return session.acceptLate(file), nil
 	}
@@ -54,8 +52,7 @@ func (session *Session) launch(ctx context.Context) error {
 		return err
 	}
 	session.live = live
-	session.started++
-	if err = live.greet(session.runner.Wall); err != nil {
+	if err = live.greet(session.runner.wall); err != nil {
 		return fmt.Errorf("%s: %w", session.retire(), err)
 	}
 	return nil
@@ -67,6 +64,7 @@ func (session *Session) acceptLate(file *syntax.File) Outcome {
 }
 
 func (session *Session) failed(ctx context.Context, cause error) (Outcome, error) {
+	const mib = 1 << 20
 	expired := session.live.expired.Load()
 	status := session.retire()
 	if err := ctx.Err(); err != nil {
@@ -75,10 +73,10 @@ func (session *Session) failed(ctx context.Context, cause error) (Outcome, error
 	switch {
 	case expired:
 		return Outcome{Skip: fmt.Sprintf(
-			"skipped: parse exceeded the %s time limit", session.runner.Wall)}, nil
+			"skipped: parse exceeded the %s time limit", session.runner.wall)}, nil
 	case status.code == exitMemory:
 		return Outcome{Skip: fmt.Sprintf(
-			"skipped: parse exceeded the %d MiB memory limit", session.runner.Memory/MiB)}, nil
+			"skipped: parse exceeded the %d MiB memory limit", session.runner.memory/mib)}, nil
 	}
 	return Outcome{Skip: fmt.Sprintf(
 		"skipped: parser process failed (%s): %v", status, cause)}, nil
@@ -90,9 +88,5 @@ func (session *Session) retire() exitStatus {
 		return exitStatus{}
 	}
 	session.live = nil
-	status, waited := live.stop()
-	if waited {
-		session.reaped++
-	}
-	return status
+	return live.stop()
 }

@@ -201,11 +201,11 @@ func TestSummarizeSvelteImportGroups(t *testing.T) {
 func TestSummarizeSvelteLocalAliases(t *testing.T) {
 	t.Parallel()
 
+	text := "<script module>import 'app/a';</script>" +
+		"<script>import 'app/b'; import 'x';</script>"
 	got := handleRequest(sandbox.Request{
-		Path: "a.svelte",
-		Text: "<script module>import 'app/a';</script>" +
-			"<script>import 'app/b'; import 'x';</script>",
-		Local: []string{"app/*"},
+		Source: syntax.Source{Path: "a.svelte", Content: []byte(text)},
+		Local:  []string{"app/*"},
 	})
 	groups := make([]int, 0, len(got.Imports))
 	for _, imported := range got.Imports {

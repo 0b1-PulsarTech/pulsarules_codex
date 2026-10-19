@@ -33,14 +33,14 @@ func (hold gate) Read([]byte) (int, error) {
 	return 0, io.EOF
 }
 
-func echo(request Request) *syntax.File { return &syntax.File{Path: request.Path} }
+func echo(request Request) *syntax.File { return &syntax.File{Path: request.Source.Path} }
 
 func seedFrames(t *testing.T, paths ...string) []byte {
 	t.Helper()
 
 	var input bytes.Buffer
 	for _, path := range paths {
-		if err := writeFrame(&input, Request{Path: path}); err != nil {
+		if err := writeFrame(&input, Request{Source: syntax.Source{Path: path}}); err != nil {
 			t.Fatalf("seed: %v", err)
 		}
 	}
@@ -119,7 +119,8 @@ func TestServeOrphan(t *testing.T) {
 	defer reader.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	middle := exec.CommandContext(ctx, os.Args[0], "middle")
+	middle := exec.CommandContext(ctx, os.Args[0])
+	middle.Env = append(os.Environ(), helperEnv+"=middle\n\n")
 	middle.Stdout = writer
 	if err = middle.Start(); err != nil {
 		t.Fatalf("start: %v", err)

@@ -11,18 +11,15 @@ import (
 )
 
 const (
-	ChildArg     = "__tsproc_child"
+	childArg     = "__tsproc_child"
 	exitMemory   = 75
 	exitProtocol = 76
-	MiB          = 1 << 20
 )
 
 var errNoCeiling = errors.New("missing memory ceiling")
 
-type Handler func(Request) *syntax.File
-
-func Child(args []string, handle Handler, exit func(int)) bool {
-	if len(args) < 2 || args[1] != ChildArg {
+func Child(args []string, handle func(Request) *syntax.File, exit func(int)) bool {
+	if len(args) < 2 || args[1] != childArg {
 		return false
 	}
 	ceiling, err := parseCeiling(args[2:])

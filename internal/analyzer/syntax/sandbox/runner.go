@@ -8,11 +8,11 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"slices"
 	"strconv"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
 var (
@@ -22,10 +22,12 @@ var (
 )
 
 type Runner struct {
-	Exe    string
-	Args   []string
-	Memory uint64
-	Wall   time.Duration
+	memory uint64
+	wall   time.Duration
+}
+
+func NewRunner(memory uint64, wall time.Duration) Runner {
+	return Runner{memory: memory, wall: wall}
 }
 
 type Outcome struct {
@@ -38,17 +40,15 @@ func (runner Runner) spawn(ctx context.Context) (*worker, error) {
 	if os.Getenv(envMarker) != "" {
 		return nil, errNested
 	}
-	exe := runner.Exe
-	if exe == "" {
-		var err error
-		if exe, err = os.Executable(); err != nil {
-			return nil, fmt.Errorf("locate executable: %w", err)
-		}
+	exe, err := os.Executable()
+	if err != nil {
+		return nil, fmt.Errorf("locate executable: %w", err)
 	}
-	args := append(slices.Clone(runner.Args), strconv.FormatUint(runner.Memory, 10))
+	args := []string{childArg, strconv.FormatUint(runner.memory, 10)}
 	workCtx, cancel := context.WithCancel(ctx)
 	cmd := exec.CommandContext(workCtx, exe, args...) //nolint:gosec // Re-executes this binary.
 	cmd.WaitDelay = time.Second
+	process.KillGroupOnCancel(cmd)
 	cmd.Env = append(os.Environ(), envMarker+"=1")
 	stderr := &tail{}
 	cmd.Stderr = stderr

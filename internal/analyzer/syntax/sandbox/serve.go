@@ -7,6 +7,8 @@ import (
 	"io"
 	"sync"
 	"sync/atomic"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
 type feed struct {
@@ -20,7 +22,7 @@ type serveLimits struct {
 	Exit    func(int)
 }
 
-func serve(in io.Reader, out io.Writer, handle Handler, limits serveLimits) int {
+func serve(in io.Reader, out io.Writer, handle func(Request) *syntax.File, limits serveLimits) int {
 	ctx, cancel := context.WithCancel(context.Background())
 	var workers sync.WaitGroup
 	workers.Go(func() { watch(ctx, limits) })

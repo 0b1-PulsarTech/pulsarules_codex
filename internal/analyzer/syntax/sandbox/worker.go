@@ -84,15 +84,15 @@ func (live *worker) roundTrip(request Request) (*syntax.File, error) {
 	return &answer.File, nil
 }
 
-func (live *worker) stop() (status exitStatus, waited bool) {
+func (live *worker) stop() (status exitStatus) {
 	_ = live.stdin.Close()
 	live.cancel()
 	_ = live.cmd.Wait()
 	status.stderr = live.stderr.String()
 	if live.cmd.ProcessState == nil {
 		status.code = -1
-		return status, false
+		return status
 	}
 	status.code = live.cmd.ProcessState.ExitCode()
-	return status, true
+	return status
 }

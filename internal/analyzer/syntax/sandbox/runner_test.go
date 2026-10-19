@@ -46,24 +46,39 @@ func TestOpenPipes(t *testing.T) {
 	_ = stdout.Close()
 }
 
+func cancelled() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	return ctx
+}
+
 func TestSpawnFailures(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name   string
-		runner Runner
-		want   string
+		name string
+		ctx  func() context.Context
+		want string
 	}{
-		{name: "missing binary", runner: Runner{Exe: "/nonexistent/parser"}, want: "start parser"},
+		{name: "cancelled before start", ctx: cancelled, want: "start parser"},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			live, err := testCase.runner.spawn(context.Background())
+			live, err := NewRunner(1<<30, time.Second).spawn(testCase.ctx())
 			if live != nil || err == nil || !strings.Contains(err.Error(), testCase.want) {
 				t.Fatalf("spawn %v, %v, want %q", live, err, testCase.want)
 			}
 		})
+	}
+}
+
+func TestNewRunner(t *testing.T) {
+	t.Parallel()
+
+	runner := NewRunner(64<<20, 3*time.Second)
+	if runner.memory != 64<<20 || runner.wall != 3*time.Second {
+		t.Fatalf("runner %+v", runner)
 	}
 }

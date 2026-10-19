@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	memoryCeiling = 256 * sandbox.MiB
+	memoryCeiling = 256 << 20
 	fileWall      = 10 * time.Second
 )
 
@@ -23,11 +23,7 @@ type Provider struct{ runner sandbox.Runner }
 func New() *Provider { return newProvider(memoryCeiling, fileWall) }
 
 func newProvider(memory uint64, wall time.Duration) *Provider {
-	return &Provider{runner: sandbox.Runner{
-		Args:   []string{sandbox.ChildArg},
-		Memory: memory,
-		Wall:   wall,
-	}}
+	return &Provider{runner: sandbox.NewRunner(memory, wall)}
 }
 
 func RunChild(args []string, exit func(int)) bool {
@@ -69,9 +65,7 @@ func summarize(
 		summary.ParseError = reason
 		return summary, nil
 	}
-	request := sandbox.Request{
-		Path: source.Path, Text: text, Local: local, IsTest: source.IsTest,
-	}
+	request := sandbox.Request{Source: source, Local: local}
 	outcome, err := session.Do(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("parse in child: %w", err)

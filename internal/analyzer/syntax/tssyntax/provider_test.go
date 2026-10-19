@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -176,7 +177,9 @@ func TestProviderKeepsBytes(t *testing.T) {
 			if err != nil {
 				t.Fatalf("summarize: %v", err)
 			}
-			want := handleRequest(sandbox.Request{Path: testCase.path, Text: testCase.text})
+			want := handleRequest(sandbox.Request{
+				Source: syntax.Source{Path: testCase.path, Content: []byte(testCase.text)},
+			})
 			if fmt.Sprintf("%+v", got[testCase.path]) != fmt.Sprintf("%+v", want) {
 				t.Fatalf("child summary %+v, direct %+v", got[testCase.path], want)
 			}
@@ -188,16 +191,9 @@ func TestProviderKeepsBytes(t *testing.T) {
 }
 
 func TestProviderClosesSession(t *testing.T) {
-	t.Parallel()
-
-	exe, err := os.Executable()
-	if err != nil {
-		t.Fatalf("executable: %v", err)
-	}
 	pidFile := filepath.Join(t.TempDir(), "pid")
+	t.Setenv(pidFileEnv, pidFile)
 	provider := newProvider(memoryCeiling, fileWall)
-	provider.runner.Exe = exe
-	provider.runner.Args = []string{"probechild", pidFile}
 	read := func(string) ([]byte, bool) { return []byte("let a;"), true }
 	sources := []syntax.Source{{Path: "a.ts"}}
 	got, err := provider.Summarize(
@@ -228,13 +224,9 @@ func TestProviderClosesSession(t *testing.T) {
 func TestNewLimits(t *testing.T) {
 	t.Parallel()
 
-	runner := New().runner
-	if memoryCeiling != 256<<20 || fileWall != 10*time.Second ||
-		runner.Memory != memoryCeiling || runner.Wall != fileWall {
-		t.Fatalf("limits %d bytes, %s", runner.Memory, runner.Wall)
-	}
-	if len(runner.Args) != 1 || runner.Args[0] != sandbox.ChildArg || runner.Exe != "" {
-		t.Fatalf("command %q %v", runner.Exe, runner.Args)
+	want := sandbox.NewRunner(256<<20, 10*time.Second)
+	if got := New().runner; !reflect.DeepEqual(got, want) {
+		t.Fatalf("New runner %+v, want %+v", got, want)
 	}
 }
 
@@ -288,8 +280,6 @@ func TestProviderSkips(t *testing.T) {
 }
 
 func TestProviderChildCannotStart(t *testing.T) {
-	t.Parallel()
-
 	testCases := []struct {
 		name  string
 		paths []string
@@ -299,10 +289,8 @@ func TestProviderChildCannotStart(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
+			t.Setenv("PULSARULES_TSPROC", "1")
 			provider := New()
-			provider.runner.Exe = "/nonexistent/parser"
 			sources := make([]syntax.Source, 0, len(testCase.paths))
 			for _, path := range testCase.paths {
 				sources = append(sources, syntax.Source{Path: path})
@@ -319,7 +307,7 @@ func TestProviderChildCannotStart(t *testing.T) {
 			if len(got) != len(testCase.paths) {
 				t.Fatalf("unavailable = %+v, want one entry per language", got)
 			}
-			if reason := got[0].Reason; !strings.Contains(reason, sandbox.ErrUnavailable.Error()) {
+			if reason := got[0].Reason; !strings.Contains(reason, "parser process unavailable") {
 				t.Fatalf("reason %q does not name the sticky failure", reason)
 			}
 		})

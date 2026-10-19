@@ -5,20 +5,17 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
-func helperRunner(t *testing.T, wall time.Duration, memory uint64) Runner {
-	t.Helper()
-
-	exe, err := os.Executable()
-	if err != nil {
-		t.Fatalf("executable: %v", err)
-	}
-	return Runner{Exe: exe, Args: []string{ChildArg}, Memory: memory, Wall: wall}
+func request(path string) Request {
+	return Request{Source: syntax.Source{Path: path, Content: []byte("x")}}
 }
 
 func checkOutcome(t *testing.T, path string, outcome Outcome, wantSkip string) {
@@ -69,37 +66,31 @@ func outcomeCases() []outcomeCase {
 }
 
 func TestSessionOutcomes(t *testing.T) {
-	t.Parallel()
-
 	testCases := outcomeCases()
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
-			session := helperRunner(t, testCase.wall, testCase.memory).Open()
+			log := pidLogOf(t)
+			t.Setenv(helperEnv, helperSpec("serve", log, ""))
+			runner := NewRunner(testCase.memory, testCase.wall)
+			session := runner.Open()
 			for idx, path := range testCase.paths {
-				outcome, err := session.Do(ctx, Request{Path: path, Text: "x"})
+				outcome, err := session.Do(ctx, request(path))
 				if err != nil {
 					t.Fatalf("%s: %v", path, err)
 				}
 				checkOutcome(t, path, outcome, testCase.wantSkips[idx])
 			}
 			session.Close()
-			if session.started != testCase.wantStarted || session.reaped != session.started {
-				t.Fatalf("started %d reaped %d", session.started, session.reaped)
-			}
+			assertStartedAndReaped(t, log, testCase.wantStarted)
 		})
 	}
 }
 
 func TestSessionBrokenChildren(t *testing.T) {
-	t.Parallel()
-
 	testCases := []struct {
 		name string
-		exe  string
 		mode string
 		wall time.Duration
 		want string
@@ -111,30 +102,24 @@ func TestSessionBrokenChildren(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			runner := helperRunner(t, time.Minute, 1<<30)
-			runner.Args = []string{testCase.mode}
+			log := pidLogOf(t)
+			t.Setenv(helperEnv, helperSpec(testCase.mode, log, ""))
+			runner := NewRunner(1<<30, time.Minute)
 			session := runner.Open()
-			outcome, err := session.Do(context.Background(), Request{Path: "a"})
+			outcome, err := session.Do(context.Background(), request("a"))
 			session.Close()
 			if err != nil {
 				t.Fatalf("error %v", err)
 			}
 			checkOutcome(t, "a", outcome, testCase.want)
-			if session.reaped != session.started {
-				t.Fatalf("started %d reaped %d", session.started, session.reaped)
-			}
+			assertStartedAndReaped(t, log, 1)
 		})
 	}
 }
 
 func TestSessionLaunchFailureIsSticky(t *testing.T) {
-	t.Parallel()
-
 	testCases := []struct {
 		name    string
-		exe     string
 		mode    string
 		wall    time.Duration
 		started int
@@ -142,69 +127,56 @@ func TestSessionLaunchFailureIsSticky(t *testing.T) {
 		{name: "no greeting", mode: "silent", wall: 300 * time.Millisecond, started: 1},
 		{name: "other protocol", mode: "badproto", started: 1},
 		{name: "not a parser", mode: "plain", started: 1},
-		{name: "missing binary", exe: "/nonexistent/parser", mode: "x"},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			runner := helperRunner(t, time.Minute, 1<<30)
+			log := pidLogOf(t)
+			t.Setenv(helperEnv, helperSpec(testCase.mode, log, ""))
+			runner := NewRunner(1<<30, time.Minute)
 			if testCase.wall != 0 {
-				runner.Wall = testCase.wall
-			}
-			runner.Args = []string{testCase.mode}
-			if testCase.exe != "" {
-				runner.Exe = testCase.exe
+				runner.wall = testCase.wall
 			}
 			session := runner.Open()
 			for call := range 3 {
-				outcome, err := session.Do(context.Background(), Request{Path: "a"})
-				if !errors.Is(err, ErrUnavailable) || outcome.File != nil || outcome.Skip != "" {
+				outcome, err := session.Do(context.Background(), request("a"))
+				if !errors.Is(err, errUnavailable) || outcome.File != nil || outcome.Skip != "" {
 					t.Fatalf("call %d: outcome %+v, error %v", call, outcome, err)
 				}
 			}
 			session.Close()
-			if session.started != testCase.started || session.reaped != session.started {
-				t.Fatalf("started %d reaped %d", session.started, session.reaped)
-			}
+			assertStartedAndReaped(t, log, testCase.started)
 		})
 	}
 }
 
 func TestSessionNested(t *testing.T) {
-	t.Parallel()
-
 	report := filepath.Join(t.TempDir(), "report")
-	runner := helperRunner(t, 5*time.Second, 1<<30)
-	runner.Args = []string{"recurse", report}
+	log := pidLogOf(t)
+	t.Setenv(helperEnv, helperSpec("recurse", log, report))
+	runner := NewRunner(1<<30, 5*time.Second)
 	session := runner.Open()
-	_, err := session.Do(context.Background(), Request{Path: "a"})
+	_, err := session.Do(context.Background(), request("a"))
 	session.Close()
-	if !errors.Is(err, ErrUnavailable) {
+	if !errors.Is(err, errUnavailable) {
 		t.Fatalf("error %v", err)
 	}
-	if session.started != 1 || session.reaped != 1 {
-		t.Fatalf("started %d reaped %d", session.started, session.reaped)
-	}
+	assertStartedAndReaped(t, log, 1)
 	inner, err := os.ReadFile(report)
 	if err != nil {
 		t.Fatalf("report: %v", err)
 	}
-	if !strings.HasPrefix(string(inner), "started=0 err=") ||
-		!strings.Contains(string(inner), "unavailable") {
+	if !strings.Contains(string(inner), errNested.Error()) {
 		t.Fatalf("the nested session spawned: %s", inner)
 	}
 }
 
 func TestSessionHeldStdout(t *testing.T) {
-	t.Parallel()
-
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	runner := helperRunner(t, 300*time.Millisecond, 1<<30)
-	runner.Args = []string{"forkhold"}
+	t.Setenv(helperEnv, helperSpec("forkhold", pidLogOf(t), ""))
+	runner := NewRunner(1<<30, 300*time.Millisecond)
 	session := runner.Open()
-	outcome, err := session.Do(ctx, Request{Path: "a"})
+	outcome, err := session.Do(ctx, request("a"))
 	session.Close()
 	if err != nil {
 		t.Fatalf("a descendant holding stdout stretched the bound: %v", err)
@@ -213,11 +185,11 @@ func TestSessionHeldStdout(t *testing.T) {
 }
 
 func TestSessionChildCeiling(t *testing.T) {
-	t.Parallel()
-
 	const memory = 64 << 20
-	session := helperRunner(t, time.Minute, memory).Open()
-	outcome, err := session.Do(context.Background(), Request{Path: "limit"})
+	t.Setenv(helperEnv, helperSpec("serve", pidLogOf(t), ""))
+	runner := NewRunner(memory, time.Minute)
+	session := runner.Open()
+	outcome, err := session.Do(context.Background(), request("limit"))
 	session.Close()
 	if err != nil || outcome.File == nil {
 		t.Fatalf("outcome %+v, %v", outcome, err)
@@ -228,8 +200,6 @@ func TestSessionChildCeiling(t *testing.T) {
 }
 
 func TestSessionContext(t *testing.T) {
-	t.Parallel()
-
 	testCases := []struct {
 		name    string
 		ctx     func() (context.Context, context.CancelFunc)
@@ -253,40 +223,105 @@ func TestSessionContext(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
 			ctx, cancel := testCase.ctx()
 			defer cancel()
-			session := helperRunner(t, time.Minute, 1<<30).Open()
-			_, err := session.Do(ctx, Request{Path: testCase.path})
+			log := pidLogOf(t)
+			t.Setenv(helperEnv, helperSpec("serve", log, ""))
+			runner := NewRunner(1<<30, time.Minute)
+			session := runner.Open()
+			_, err := session.Do(ctx, request(testCase.path))
 			session.Close()
 			if !errors.Is(err, testCase.wantErr) {
 				t.Fatalf("error %v, want %v", err, testCase.wantErr)
 			}
-			if session.reaped != session.started {
-				t.Fatalf("started %d reaped %d", session.started, session.reaped)
+			if got := len(loggedPids(t, log)); got > 1 {
+				t.Fatalf("started %d parsers for one call", got)
+			}
+			for _, pid := range loggedPids(t, log) {
+				if processAlive(pid) {
+					t.Fatalf("parser %d outlived the session", pid)
+				}
 			}
 		})
 	}
 }
 
 func TestSessionAcceptLate(t *testing.T) {
-	t.Parallel()
-
-	session := helperRunner(t, time.Minute, 1<<30).Open()
+	log := pidLogOf(t)
+	t.Setenv(helperEnv, helperSpec("serve", log, ""))
+	runner := NewRunner(1<<30, time.Minute)
+	session := runner.Open()
 	defer session.Close()
-	ctx := context.Background()
-	outcome, err := session.Do(ctx, Request{Path: "a"})
+	outcome, err := session.Do(context.Background(), request("a"))
 	if err != nil || outcome.File == nil || session.live == nil {
 		t.Fatalf("first: %+v, %v", outcome, err)
 	}
 	if late := session.acceptLate(outcome.File); late.File != outcome.File || session.live != nil {
 		t.Fatalf("late accept kept the worker: %+v", late)
 	}
-	if outcome, err = session.Do(ctx, Request{Path: "b"}); err != nil || outcome.File == nil {
+	assertRelaunched(t, session, log)
+}
+
+func assertRelaunched(t *testing.T, session *Session, log string) {
+	t.Helper()
+
+	outcome, err := session.Do(context.Background(), request("b"))
+	if err != nil || outcome.File == nil {
 		t.Fatalf("second: %+v, %v", outcome, err)
 	}
-	if session.started != 2 || session.reaped != 1 {
-		t.Fatalf("started %d reaped %d", session.started, session.reaped)
+	pids := loggedPids(t, log)
+	if len(pids) != 2 || processAlive(pids[0]) || !processAlive(pids[1]) {
+		t.Fatalf("parsers %v: want the first reaped and the second alive", pids)
 	}
+}
+
+func isGone(pid int) bool {
+	stat, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
+	if err != nil {
+		return !processAlive(pid)
+	}
+	// A killed orphan stays a zombie until init reaps it, which a container may not do.
+	return strings.Contains(string(stat), ") Z ")
+}
+
+func TestSessionKillsDescendants(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("process groups are unix-only")
+	}
+	sleeperFile := filepath.Join(t.TempDir(), "sleeper")
+	t.Setenv(helperEnv, helperSpec("orphan", pidLogOf(t), sleeperFile))
+	runner := NewRunner(1<<30, 300*time.Millisecond)
+	session := runner.Open()
+	outcome, err := session.Do(context.Background(), request("a"))
+	session.Close()
+	if err != nil {
+		t.Fatalf("error %v", err)
+	}
+	checkOutcome(t, "a", outcome, "time limit")
+	raw, err := os.ReadFile(sleeperFile)
+	if err != nil {
+		t.Fatalf("sleeper pid: %v", err)
+	}
+	pid, err := strconv.Atoi(string(raw))
+	if err != nil {
+		t.Fatalf("sleeper pid %q: %v", raw, err)
+	}
+	if !goneWithin(pid, 2*time.Second) {
+		t.Fatalf("descendant %d survived the session", pid)
+	}
+}
+
+func goneWithin(pid int, limit time.Duration) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), limit)
+	defer cancel()
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	for !isGone(pid) {
+		select {
+		case <-ctx.Done():
+			return false
+		case <-ticker.C:
+		}
+	}
+	return true
 }

@@ -27,10 +27,11 @@ func guarded(summary *syntax.File, run func()) (result *syntax.File) {
 }
 
 func handleRequest(request sandbox.Request) *syntax.File {
-	summary := newSummary(request.Path)
-	options := facts.Options{IsTest: request.IsTest, Local: request.Local}
-	ext := strings.ToLower(filepath.Ext(request.Path))
-	return guarded(summary, func() { dispatch(summary, options, ext, request.Text) })
+	source := request.Source
+	summary := newSummary(source.Path)
+	options := facts.Options{IsTest: source.IsTest, Local: request.Local}
+	ext := strings.ToLower(filepath.Ext(source.Path))
+	return guarded(summary, func() { dispatch(summary, options, ext, string(source.Content)) })
 }
 
 func dispatch(summary *syntax.File, options facts.Options, ext, text string) {

@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
 type failWriter struct{}
@@ -17,7 +19,11 @@ func TestFrameRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	want := Request{Seq: 3, Path: "a.ts", Text: "let a;", Local: []string{"#lib/*"}, IsTest: true}
+	want := Request{
+		Seq:    3,
+		Source: syntax.Source{Path: "a.ts", Content: []byte("let a;"), IsTest: true},
+		Local:  []string{"#lib/*"},
+	}
 	if err := writeFrame(&buf, want); err != nil {
 		t.Fatalf("write: %v", err)
 	}
@@ -47,7 +53,10 @@ func TestFrameKeepsBytes(t *testing.T) {
 			t.Parallel()
 
 			var buf bytes.Buffer
-			want := Request{Seq: 1, Path: testCase.path, Text: testCase.text}
+			want := Request{
+				Seq:    1,
+				Source: syntax.Source{Path: testCase.path, Content: []byte(testCase.text)},
+			}
 			if err := writeFrame(&buf, want); err != nil {
 				t.Fatalf("write: %v", err)
 			}
@@ -103,7 +112,7 @@ func TestWriteFrameFailures(t *testing.T) {
 	if err := writeFrame(io.Discard, make(chan int)); err == nil {
 		t.Fatal("unencodable payload accepted")
 	}
-	huge := Request{Text: strings.Repeat("a", maxFrame)}
+	huge := Request{Source: syntax.Source{Content: []byte(strings.Repeat("a", maxFrame))}}
 	if err := writeFrame(io.Discard, huge); !errors.Is(err, errFrameSize) {
 		t.Fatalf("oversize payload: %v", err)
 	}
