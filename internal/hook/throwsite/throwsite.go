@@ -30,9 +30,6 @@ func Scan(ext, src string) []Hit {
 	if pattern == "" {
 		return nil
 	}
-	if id == language.Svelte {
-		src = maskMarkupComments(src)
-	}
 	literals := language.ScanLiterals(
 		ext, src, language.StringsEndAtNewline(), language.KeepSpansAtEOF(),
 	)
