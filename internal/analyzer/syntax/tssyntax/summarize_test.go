@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/Zzzen/typescript-go/use-at-your-own-risk/core"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax/facts"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/budget"
 )
 
@@ -18,7 +22,7 @@ func summarizeText(t *testing.T, source syntax.Source, text string) *syntax.File
 
 	read := func(string) ([]byte, bool) { return []byte(text), true }
 	out, err := New().Summarize(context.Background(), syntax.Corpus{
-		Sources: []syntax.Source{source},
+		Sources: withContent([]syntax.Source{source}, read),
 		Read:    read,
 	})
 	if err != nil {
@@ -364,6 +368,35 @@ func TestSummarizeScriptKinds(t *testing.T) {
 			got := summarizeText(t, syntax.Source{Path: testCase.path}, testCase.text)
 			if (got.ParseError != "") != testCase.wantError {
 				t.Fatalf("parse error %q, want error %v", got.ParseError, testCase.wantError)
+			}
+		})
+	}
+}
+
+func TestScriptKind(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		path string
+		want core.ScriptKind
+	}{
+		{path: "a.ts", want: core.ScriptKindTS},
+		{path: "a.MTS", want: core.ScriptKindTS},
+		{path: "a.cts", want: core.ScriptKindTS},
+		{path: "a.tsx", want: core.ScriptKindTSX},
+		{path: "a.js", want: core.ScriptKindJS},
+		{path: "a.mjs", want: core.ScriptKindJS},
+		{path: "a.cjs", want: core.ScriptKindJS},
+		{path: "a.jsx", want: core.ScriptKindJSX},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.path, func(t *testing.T) {
+			t.Parallel()
+
+			ext := strings.ToLower(filepath.Ext(testCase.path))
+			id := language.ForExtension(ext).ID
+			if got := scriptKind(id, ext); got != testCase.want {
+				t.Fatalf("scriptKind(%s, %s) = %v, want %v", id, ext, got, testCase.want)
 			}
 		})
 	}

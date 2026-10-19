@@ -19,20 +19,15 @@ import (
 
 func TestCollectRequests(t *testing.T) {
 	t.Parallel()
-	read := func(path string) ([]byte, bool) {
-		if path == "gone.dart" {
-			return nil, false
-		}
-		return []byte("body of " + path), true
-	}
 	sources := []syntax.Source{
-		{Path: "a.dart"}, {Path: "gone.dart"}, {Path: "a_test.dart", IsTest: true},
+		{Path: "a.dart", Content: []byte("body of a.dart")},
+		{Path: "a_test.dart", IsTest: true, Content: []byte("body of a_test.dart")},
 	}
 	want := []request{
 		{Path: "a.dart", Content: "body of a.dart"},
 		{Path: "a_test.dart", Content: "body of a_test.dart", Test: true},
 	}
-	if got := collectRequests(sources, read); !reflect.DeepEqual(got, want) {
+	if got := collectRequests(sources); !reflect.DeepEqual(got, want) {
 		t.Errorf("collectRequests = %+v, want %+v", got, want)
 	}
 }

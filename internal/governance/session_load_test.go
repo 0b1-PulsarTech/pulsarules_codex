@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -17,12 +18,13 @@ type recordingProvider struct {
 	calls   int
 	sources []syntax.Source
 	root    string
+	module  string
 	read    func(string) ([]byte, bool)
 }
 
-func (recorder *recordingProvider) Language() language.ID { return language.Go }
-
-func (recorder *recordingProvider) Handles(ext string) bool { return ext == ".go" }
+func (recorder *recordingProvider) Languages() []language.ID {
+	return []language.ID{language.Go}
+}
 
 func (recorder *recordingProvider) Summarize(
 	_ context.Context, corpus syntax.Corpus,
@@ -30,6 +32,7 @@ func (recorder *recordingProvider) Summarize(
 	recorder.calls++
 	recorder.sources = append(recorder.sources, corpus.Sources...)
 	recorder.root, recorder.read = corpus.Root, corpus.Read
+	recorder.module = corpus.Module()
 	files := map[string]*syntax.File{}
 	for _, source := range corpus.Sources {
 		files[source.Path] = &syntax.File{Path: source.Path, Language: language.Go}
@@ -200,13 +203,54 @@ type providerInputs struct {
 func assertProviderInputs(t *testing.T, recorder *recordingProvider, inputs providerInputs) {
 	t.Helper()
 
-	if len(recorder.sources) != 1 || recorder.sources[0] != inputs.want {
-		t.Fatalf("sources = %v, want %v", recorder.sources, inputs.want)
+	want := inputs.want
+	want.Content = []byte(inputs.body)
+	if len(recorder.sources) != 1 || !reflect.DeepEqual(recorder.sources[0], want) {
+		t.Fatalf("sources = %+v, want %+v", recorder.sources, want)
 	}
 	if recorder.root != inputs.root {
 		t.Fatalf("root = %q, want %q", recorder.root, inputs.root)
 	}
 	if got, ok := recorder.read(inputs.want.Path); !ok || string(got) != inputs.body {
 		t.Fatalf("read(%s) = %q, %v", inputs.want.Path, got, ok)
+	}
+}
+
+func TestSession_Load_ProviderModule(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		goMod      string
+		wantModule string
+	}{
+		{
+			name: "module path of the repo root", goMod: "module example.com/app\n\ngo 1.25\n",
+			wantModule: "example.com/app",
+		},
+		{name: "no go.mod gives no module"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			recorder := &recordingProvider{}
+			_, ctx := loadSession(t, "a.go", "package x\n", func(sess *Session) {
+				if testCase.goMod != "" {
+					goModPath := filepath.Join(sess.repo.Root(), "go.mod")
+					if err := os.WriteFile(goModPath, []byte(testCase.goMod), 0o600); err != nil {
+						t.Fatalf("write go.mod: %v", err)
+					}
+				}
+				sess.providers = func(*astcache.Cache) []syntax.Provider {
+					return []syntax.Provider{recorder}
+				}
+			})
+			ctx.Syntax.Unavailable()
+
+			if recorder.module != testCase.wantModule {
+				t.Fatalf("Corpus.Module() = %q, want %q", recorder.module, testCase.wantModule)
+			}
+		})
 	}
 }

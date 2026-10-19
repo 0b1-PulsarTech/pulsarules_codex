@@ -1,7 +1,6 @@
 package governance
 
 import (
-	"context"
 	"log/slog"
 	"slices"
 	"sync"
@@ -148,12 +147,12 @@ func (sess *Session) Load(discovery *Request) *pass.Context {
 		markGenerated(ctx.ChangedFiles, discovery.Sources)
 		ctx.ASTCache = populateASTCache(analyzable, discovery.Sources)
 		ctx.Syntax = syntax.NewCache(
-			context.Background(),
 			sess.providers(ctx.ASTCache),
 			syntax.Corpus{
 				Root:    root,
 				Sources: changedSources(analyzable),
 				Read:    discovery.Sources.Read,
+				Module:  func() string { return ctx.GoModule().Path },
 			},
 		)
 	}

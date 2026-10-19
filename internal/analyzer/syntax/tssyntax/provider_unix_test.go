@@ -36,7 +36,7 @@ func TestProviderSummarizeIgnoresFIFOConfig(t *testing.T) {
 	go func() {
 		files, err := New().Summarize(context.Background(), syntax.Corpus{
 			Root:    root,
-			Sources: []syntax.Source{{Path: "src/a.ts"}},
+			Sources: withContent([]syntax.Source{{Path: "src/a.ts"}}, read),
 			Read:    read,
 		})
 		done <- result{files, err}

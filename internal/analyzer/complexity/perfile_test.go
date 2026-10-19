@@ -1,7 +1,6 @@
 package complexity
 
 import (
-	"context"
 	"slices"
 	"testing"
 
@@ -131,5 +130,5 @@ func analyzeMessages(ctx *pass.Context) []string {
 
 func emptySyntax() *syntax.Cache {
 	read := func(string) ([]byte, bool) { return nil, true }
-	return syntax.NewCache(context.Background(), nil, syntax.Corpus{Read: read})
+	return syntax.NewCache(nil, syntax.Corpus{Read: read})
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/sandbox"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax/facts"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax/tsparse"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/budget"
 )
 
@@ -33,20 +34,22 @@ func handleRequest(request sandbox.Request) *syntax.File {
 }
 
 func dispatch(summary *syntax.File, options facts.Options, ext, text string) {
-	if ext == ".svelte" {
+	if summary.Language == language.Svelte {
 		summarizeSvelte(summary, options, text)
 		return
 	}
-	summarizeScript(summary, options, scriptBlock{text: text, kind: scriptKind(ext)})
+	kind := scriptKind(summary.Language, ext)
+	summarizeScript(summary, options, scriptBlock{text: text, kind: kind})
 }
 
-func scriptKind(ext string) core.ScriptKind {
-	switch ext {
-	case ".ts", ".mts", ".cts":
-		return core.ScriptKindTS
-	case ".tsx":
+func scriptKind(id language.ID, ext string) core.ScriptKind {
+	jsx := ext == ".tsx" || ext == ".jsx"
+	switch {
+	case id == language.TypeScript && jsx:
 		return core.ScriptKindTSX
-	case ".jsx":
+	case id == language.TypeScript:
+		return core.ScriptKindTS
+	case jsx:
 		return core.ScriptKindJSX
 	}
 	return core.ScriptKindJS

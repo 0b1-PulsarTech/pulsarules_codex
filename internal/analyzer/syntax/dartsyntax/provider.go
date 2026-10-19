@@ -17,14 +17,12 @@ type Provider struct{}
 
 func New() *Provider { return &Provider{} }
 
-func (provider *Provider) Language() language.ID { return language.Dart }
-
-func (provider *Provider) Handles(ext string) bool { return ext == ".dart" }
+func (provider *Provider) Languages() []language.ID { return []language.ID{language.Dart} }
 
 func (provider *Provider) Summarize(
 	ctx context.Context, corpus syntax.Corpus,
 ) (map[string]*syntax.File, error) {
-	requests := collectRequests(corpus.Sources, corpus.Read)
+	requests := collectRequests(corpus.Sources)
 	if len(requests) == 0 {
 		return map[string]*syntax.File{}, nil
 	}

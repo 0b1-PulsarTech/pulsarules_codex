@@ -3,8 +3,6 @@ package gosyntax
 import (
 	"context"
 	"go/ast"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
@@ -34,30 +32,12 @@ func summarizeSource(
 
 func plainSource() syntax.Source { return syntax.Source{Path: "pkg.go"} }
 
-func TestProviderIdentity(t *testing.T) {
+func TestProviderLanguages(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct {
-		ext  string
-		want bool
-	}{
-		{ext: ".go", want: true},
-		{ext: ".GO", want: true},
-		{ext: ".dart"},
-		{ext: ""},
-	}
-	provider := New(nil)
-	if provider.Language() != language.Go {
-		t.Fatalf("Language() = %q", provider.Language())
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.ext, func(t *testing.T) {
-			t.Parallel()
-
-			if got := provider.Handles(testCase.ext); got != testCase.want {
-				t.Fatalf("Handles(%q) = %v", testCase.ext, got)
-			}
-		})
+	got := New(nil).Languages()
+	if len(got) != 1 || got[0] != language.Go {
+		t.Fatalf("Languages() = %v, want [go]", got)
 	}
 }
 
@@ -66,7 +46,6 @@ type summarizeCase struct {
 	path        string
 	body        string
 	noModule    bool
-	unread      bool
 	cancelled   bool
 	wantErr     bool
 	wantParse   string
@@ -90,10 +69,6 @@ func summarizeCases() []summarizeCase {
 			name: "syntax error becomes a parse error", path: "bad.go", body: "package\n",
 			wantParse: "parse bad.go: bad.go:1:9: expected 'IDENT', found 'EOF'",
 		},
-		{
-			name: "unreadable source becomes a parse error", path: "gone.go", unread: true,
-			wantParse: "file is not readable",
-		},
 		{name: "cancelled context stops early", path: "ok.go", cancelled: true, wantErr: true},
 	}
 }
@@ -101,21 +76,11 @@ func summarizeCases() []summarizeCase {
 func TestProviderSummarize(t *testing.T) {
 	t.Parallel()
 
-	moduleRoot := t.TempDir()
-	if err := os.WriteFile(
-		filepath.Join(moduleRoot, "go.mod"), []byte("module example.com/app\n"), 0o600,
-	); err != nil {
-		t.Fatalf("write go.mod: %v", err)
-	}
 	for _, testCase := range summarizeCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			root := moduleRoot
-			if testCase.noModule {
-				root = t.TempDir()
-			}
-			got, err := runSummarize(root, testCase)
+			got, err := runSummarize(testCase)
 			if (err != nil) != testCase.wantErr {
 				t.Fatalf("err = %v, wantErr %v", err, testCase.wantErr)
 			}
@@ -126,21 +91,23 @@ func TestProviderSummarize(t *testing.T) {
 	}
 }
 
-func runSummarize(root string, testCase summarizeCase) (map[string]*syntax.File, error) {
+func runSummarize(testCase summarizeCase) (map[string]*syntax.File, error) {
 	cache := astcache.New()
 	if testCase.body != "" {
 		_, _ = cache.Parse(testCase.path, []byte(testCase.body))
 	}
-	read := func(string) ([]byte, bool) { return []byte(testCase.body), !testCase.unread }
+	module := "example.com/app"
+	if testCase.noModule {
+		module = ""
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	if testCase.cancelled {
 		cancel()
 	}
 	return New(cache).Summarize(ctx, syntax.Corpus{
-		Root:    root,
-		Sources: []syntax.Source{{Path: testCase.path}},
-		Read:    read,
+		Sources: []syntax.Source{{Path: testCase.path, Content: []byte(testCase.body)}},
+		Module:  func() string { return module },
 	})
 }
 
@@ -163,27 +130,12 @@ func assertSummary(t *testing.T, file *syntax.File, testCase summarizeCase) {
 func TestProviderParseError(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct {
-		name   string
-		unread bool
-		want   string
-	}{
-		{name: "readable but absent from the cache", want: "file has no syntax tree"},
-		{name: "unreadable", unread: true, want: "file is not readable"},
+	cache := astcache.New()
+	got := New(cache).parseError("fresh.go")
+	if got != "file has no syntax tree" {
+		t.Fatalf("parseError = %q", got)
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			cache := astcache.New()
-			read := func(string) ([]byte, bool) { return []byte("package x\n"), !testCase.unread }
-			got := New(cache).parseError("fresh.go", read)
-			if got != testCase.want {
-				t.Fatalf("parseError = %q, want %q", got, testCase.want)
-			}
-			if cache.Get("fresh.go") != nil {
-				t.Fatal("parseError must not parse into the shared cache")
-			}
-		})
+	if cache.Get("fresh.go") != nil {
+		t.Fatal("parseError must not parse into the shared cache")
 	}
 }

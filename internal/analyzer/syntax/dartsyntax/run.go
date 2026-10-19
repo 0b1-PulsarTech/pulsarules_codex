@@ -21,17 +21,11 @@ type request struct {
 	Test    bool   `json:"test"`
 }
 
-func collectRequests(
-	sources []syntax.Source, read func(string) ([]byte, bool),
-) []request {
+func collectRequests(sources []syntax.Source) []request {
 	requests := make([]request, 0, len(sources))
 	for _, source := range sources {
-		content, ok := read(source.Path)
-		if !ok {
-			continue
-		}
 		requests = append(requests, request{
-			Path: source.Path, Content: string(content), Test: source.IsTest,
+			Path: source.Path, Content: string(source.Content), Test: source.IsTest,
 		})
 	}
 	return requests

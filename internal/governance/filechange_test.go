@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
+	"reflect"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -155,7 +155,7 @@ func TestChangedSources(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := changedSources(testCase.files); !slices.Equal(got, testCase.want) {
+			if got := changedSources(testCase.files); !reflect.DeepEqual(got, testCase.want) {
 				t.Fatalf("changedSources() = %v, want %v", got, testCase.want)
 			}
 		})

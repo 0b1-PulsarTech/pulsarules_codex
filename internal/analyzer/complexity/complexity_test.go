@@ -1,7 +1,6 @@
 package complexity
 
 import (
-	"context"
 	"go/ast"
 	"os"
 	"path/filepath"
@@ -252,9 +251,11 @@ func checkFileCasesFlagArgs() []checkFileTestCase {
 func summaries(cache *astcache.Cache, path string) *syntax.Cache {
 	read := func(string) ([]byte, bool) { return nil, true }
 	return syntax.NewCache(
-		context.Background(),
 		[]syntax.Provider{gosyntax.New(cache)},
-		syntax.Corpus{Sources: []syntax.Source{{Path: path}}, Read: read},
+		syntax.Corpus{
+			Sources: []syntax.Source{{Path: path}}, Read: read,
+			Module: func() string { return "" },
+		},
 	)
 }
 

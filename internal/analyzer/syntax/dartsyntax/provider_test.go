@@ -43,21 +43,15 @@ func fixture(t *testing.T, name string) string {
 	return string(source)
 }
 
-func TestProviderIdentity(t *testing.T) {
+func TestProviderLanguages(t *testing.T) {
 	t.Parallel()
-	provider := New()
-	if provider.Language() != language.Dart {
-		t.Errorf("Language = %q", provider.Language())
-	}
-	for ext, want := range map[string]bool{".dart": true, ".go": false, ".svelte": false} {
-		if provider.Handles(ext) != want {
-			t.Errorf("Handles(%q) = %v, want %v", ext, !want, want)
-		}
+	got := New().Languages()
+	if len(got) != 1 || got[0] != language.Dart {
+		t.Errorf("Languages() = %v, want [dart]", got)
 	}
 }
 
 func TestSummarizeWithoutDart(t *testing.T) {
-	read := func(string) ([]byte, bool) { return []byte("void main() {}"), true }
 	testCases := []struct {
 		name    string
 		sources []syntax.Source
@@ -66,22 +60,21 @@ func TestSummarizeWithoutDart(t *testing.T) {
 		{name: "no sources needs no dart"},
 		{
 			name:    "missing dart names the step",
-			sources: []syntax.Source{{Path: "lib/a.dart"}},
+			sources: []syntax.Source{{Path: "lib/a.dart", Content: []byte("void main() {}")}},
 			wantErr: "locate dart",
 		},
 		{
 			name:    "missing dart mentions fvm",
-			sources: []syntax.Source{{Path: "lib/a.dart"}},
+			sources: []syntax.Source{{Path: "lib/a.dart", Content: []byte("void main() {}")}},
 			wantErr: "fvm users need one",
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Setenv("PATH", t.TempDir())
-			files, err := New().Summarize(context.Background(), syntax.Corpus{
-				Sources: testCase.sources,
-				Read:    read,
-			})
+			files, err := New().Summarize(
+				context.Background(), syntax.Corpus{Sources: testCase.sources},
+			)
 			if testCase.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
 					t.Fatalf("error = %v, want containing %q", err, testCase.wantErr)
@@ -102,15 +95,10 @@ func summarizeInline(t *testing.T, contents map[string]string) map[string]*synta
 	for path := range contents {
 		sources = append(sources, syntax.Source{
 			Path: path, IsTest: strings.HasSuffix(path, "_test.dart"),
+			Content: []byte(contents[path]),
 		})
 	}
-	read := func(path string) ([]byte, bool) {
-		content, ok := contents[path]
-		return []byte(content), ok
-	}
-	files, err := New().Summarize(
-		context.Background(), syntax.Corpus{Sources: sources, Read: read},
-	)
+	files, err := New().Summarize(context.Background(), syntax.Corpus{Sources: sources})
 	if err != nil {
 		for _, unusable := range []string{"dart pub get", "Dart SDK 3.11+ required"} {
 			if strings.Contains(err.Error(), unusable) {
@@ -364,12 +352,8 @@ func TestSummarizeReadOnlyCache(t *testing.T) {
 	}
 	lockDir(t, entry)
 	lockDir(t, filepath.Dir(entry))
-	read := func(string) ([]byte, bool) { return []byte("void main() {}"), true }
-	sources := []syntax.Source{{Path: "lib/a.dart"}}
-	files, err := New().Summarize(
-		context.Background(),
-		syntax.Corpus{Sources: sources, Read: read},
-	)
+	sources := []syntax.Source{{Path: "lib/a.dart", Content: []byte("void main() {}")}}
+	files, err := New().Summarize(context.Background(), syntax.Corpus{Sources: sources})
 	if err != nil || files["lib/a.dart"] == nil {
 		t.Fatalf("Summarize = %v, %v", files, err)
 	}

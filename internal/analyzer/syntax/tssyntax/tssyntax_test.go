@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/sandbox"
 )
 
@@ -22,4 +23,17 @@ func TestMain(m *testing.M) {
 		return
 	}
 	os.Exit(m.Run())
+}
+
+func withContent(sources []syntax.Source, read func(string) ([]byte, bool)) []syntax.Source {
+	filled := make([]syntax.Source, 0, len(sources))
+	for _, source := range sources {
+		content, ok := read(source.Path)
+		if !ok {
+			continue
+		}
+		source.Content = content
+		filled = append(filled, source)
+	}
+	return filled
 }

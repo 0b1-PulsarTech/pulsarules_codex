@@ -19,45 +19,12 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/budget"
 )
 
-func TestProviderHandles(t *testing.T) {
+func TestProviderLanguages(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct {
-		ext  string
-		want bool
-	}{
-		{ext: ".ts", want: true},
-		{ext: ".tsx", want: true},
-		{ext: ".mts", want: true},
-		{ext: ".cts", want: true},
-		{ext: ".js", want: true},
-		{ext: ".jsx", want: true},
-		{ext: ".mjs", want: true},
-		{ext: ".cjs", want: true},
-		{ext: ".svelte", want: true},
-		{ext: ".TS", want: true},
-		{ext: ".go", want: false},
-		{ext: ".dart", want: false},
-		{ext: ".json", want: false},
-		{ext: ".d", want: false},
-		{ext: "", want: false},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.ext, func(t *testing.T) {
-			t.Parallel()
-
-			if got := New().Handles(testCase.ext); got != testCase.want {
-				t.Fatalf("handles %q = %v, want %v", testCase.ext, got, testCase.want)
-			}
-		})
-	}
-}
-
-func TestProviderLanguage(t *testing.T) {
-	t.Parallel()
-
-	if got := New().Language(); got != language.TypeScript {
-		t.Fatalf("language %q", got)
+	want := []language.ID{language.TypeScript, language.JavaScript, language.Svelte}
+	if got := New().Languages(); !slices.Equal(got, want) {
+		t.Fatalf("Languages() = %v, want %v", got, want)
 	}
 }
 
@@ -81,7 +48,7 @@ func summarizeFixture(t *testing.T) map[string]*syntax.File {
 		{Path: "src/broken.tsx"},
 		{Path: "src/gone.ts"},
 	}
-	got, err := New().Summarize(context.Background(), syntax.Corpus{Sources: sources, Read: read})
+	got, err := New().Summarize(context.Background(), syntax.Corpus{Sources: withContent(sources, read), Read: read})
 	if err != nil {
 		t.Fatalf("summarize: %v", err)
 	}
@@ -100,7 +67,6 @@ func TestProviderSummarize(t *testing.T) {
 		{path: "src/a.ts", language: language.TypeScript, wantFns: 1},
 		{path: "src/b.mjs", language: language.JavaScript, wantFns: 1},
 		{path: "src/c.svelte", language: language.Svelte, wantFns: 1},
-		{path: "src/gone.ts", language: language.TypeScript, wantError: "file is not readable"},
 	}
 	got := summarizeFixture(t)
 	if len(got) != len(testCases)+1 {
@@ -137,7 +103,7 @@ func TestProviderSummarizeCancelled(t *testing.T) {
 	cancel()
 	read := func(string) ([]byte, bool) { return []byte("let a;"), true }
 	got, err := New().Summarize(ctx, syntax.Corpus{
-		Sources: []syntax.Source{{Path: "a.ts"}},
+		Sources: withContent([]syntax.Source{{Path: "a.ts"}}, read),
 		Read:    read,
 	})
 	if !errors.Is(err, context.Canceled) {
@@ -148,9 +114,9 @@ func TestProviderSummarizeCancelled(t *testing.T) {
 	}
 }
 
-func fileReader(root string) func(string) ([]byte, bool) {
+func hostileReader() func(string) ([]byte, bool) {
 	return func(path string) ([]byte, bool) {
-		content, err := os.ReadFile(filepath.Join(root, path))
+		content, err := os.ReadFile(filepath.Join("testdata/hostile", path))
 		return content, err == nil
 	}
 }
@@ -167,8 +133,8 @@ func TestProviderHostileShapes(t *testing.T) {
 		sources = append(sources, syntax.Source{Path: entry.Name()})
 	}
 	got, err := newProvider(32<<20, 5*time.Second).Summarize(context.Background(), syntax.Corpus{
-		Sources: sources,
-		Read:    fileReader("testdata/hostile"),
+		Sources: withContent(sources, hostileReader()),
+		Read:    hostileReader(),
 	})
 	if err != nil {
 		t.Fatalf("summarize: %v", err)
@@ -204,7 +170,7 @@ func TestProviderKeepsBytes(t *testing.T) {
 
 			read := func(string) ([]byte, bool) { return []byte(testCase.text), true }
 			got, err := New().Summarize(context.Background(), syntax.Corpus{
-				Sources: []syntax.Source{{Path: testCase.path}},
+				Sources: withContent([]syntax.Source{{Path: testCase.path}}, read),
 				Read:    read,
 			})
 			if err != nil {
@@ -236,7 +202,7 @@ func TestProviderClosesSession(t *testing.T) {
 	sources := []syntax.Source{{Path: "a.ts"}}
 	got, err := provider.Summarize(
 		context.Background(),
-		syntax.Corpus{Sources: sources, Read: read},
+		syntax.Corpus{Sources: withContent(sources, read), Read: read},
 	)
 	if err != nil || got["a.ts"] == nil || got["a.ts"].ParseError != "" {
 		t.Fatalf("summarize %+v, %v", got, err)
@@ -278,8 +244,8 @@ func TestProviderWallBound(t *testing.T) {
 	const name = "jsx_async_20.tsx"
 	provider := newProvider(memoryCeiling, 500*time.Millisecond)
 	got, err := provider.Summarize(context.Background(), syntax.Corpus{
-		Sources: []syntax.Source{{Path: name}},
-		Read:    fileReader("testdata/hostile"),
+		Sources: withContent([]syntax.Source{{Path: name}}, hostileReader()),
+		Read:    hostileReader(),
 	})
 	if err != nil {
 		t.Fatalf("summarize: %v", err)
@@ -300,21 +266,18 @@ func TestProviderSkips(t *testing.T) {
 		want     string
 	}{
 		{name: "oversize", provider: New(), path: "big.svelte", want: "byte limit"},
-		{name: "unreadable", provider: New(), path: "gone.ts", want: "not readable"},
 	}
-	read := func(path string) ([]byte, bool) {
-		if path == "big.svelte" {
-			return []byte(oversize), true
-		}
-		return []byte("let a;"), path != "gone.ts"
-	}
+	read := func(string) ([]byte, bool) { return []byte(oversize), true }
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
 			got, err := testCase.provider.Summarize(
 				context.Background(),
-				syntax.Corpus{Sources: []syntax.Source{{Path: testCase.path}}, Read: read},
+				syntax.Corpus{
+					Sources: withContent([]syntax.Source{{Path: testCase.path}}, read),
+					Read:    read,
+				},
 			)
 			file := got[testCase.path]
 			if err != nil || file == nil || !strings.Contains(file.ParseError, testCase.want) {
@@ -349,8 +312,7 @@ func TestProviderChildCannotStart(t *testing.T) {
 			}
 			read := func(string) ([]byte, bool) { return []byte("let a;"), true }
 			cache := syntax.NewCache(
-				context.Background(), []syntax.Provider{provider},
-				syntax.Corpus{Sources: sources, Read: read})
+				[]syntax.Provider{provider}, syntax.Corpus{Sources: sources, Read: read})
 			for _, path := range testCase.paths {
 				if file, ok := cache.Get(path); ok {
 					t.Fatalf("%s got a summary %+v, want it unavailable", path, file)
@@ -385,7 +347,7 @@ func TestProviderSummarizeAliases(t *testing.T) {
 	sources := []syntax.Source{
 		{Path: "web/src/lib/a.ts"}, {Path: "web/src/routes/p.ts"}, {Path: "free/f.ts"},
 	}
-	got, err := New().Summarize(context.Background(), syntax.Corpus{Sources: sources, Read: read})
+	got, err := New().Summarize(context.Background(), syntax.Corpus{Sources: withContent(sources, read), Read: read})
 	if err != nil {
 		t.Fatalf("summarize: %v", err)
 	}

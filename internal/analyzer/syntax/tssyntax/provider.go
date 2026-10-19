@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
@@ -35,14 +34,8 @@ func RunChild(args []string, exit func(int)) bool {
 	return sandbox.Child(args, handleRequest, exit)
 }
 
-func (provider *Provider) Language() language.ID { return language.TypeScript }
-
-func (provider *Provider) Handles(ext string) bool {
-	switch strings.ToLower(ext) {
-	case ".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".svelte":
-		return true
-	}
-	return false
+func (provider *Provider) Languages() []language.ID {
+	return []language.ID{language.TypeScript, language.JavaScript, language.Svelte}
 }
 
 func (provider *Provider) Summarize(
@@ -52,10 +45,9 @@ func (provider *Provider) Summarize(
 	summaries := make(map[string]*syntax.File, len(corpus.Sources))
 	session := provider.runner.Open()
 	defer session.Close()
-	batch := batch{session: session, read: corpus.Read}
 	for _, source := range corpus.Sources {
 		aliases := finder.For(source.Path)
-		summary, err := batch.summarize(ctx, source, pathalias.Specs(aliases))
+		summary, err := summarize(ctx, session, source, pathalias.Specs(aliases))
 		if err != nil {
 			return summaries, fmt.Errorf("summarize typescript sources: %w", err)
 		}
@@ -66,31 +58,22 @@ func (provider *Provider) Summarize(
 	return summaries, nil
 }
 
-type batch struct {
-	session *sandbox.Session
-	read    func(string) ([]byte, bool)
-}
-
-func (batch batch) summarize(
-	ctx context.Context, source syntax.Source, local []string,
+func summarize(
+	ctx context.Context, session *sandbox.Session, source syntax.Source, local []string,
 ) (*syntax.File, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("check context: %w", err)
 	}
 	summary := newSummary(source.Path)
-	content, ok := batch.read(source.Path)
-	if !ok {
-		summary.ParseError = "file is not readable"
-		return summary, nil
-	}
-	if reason := budget.CheckSize(string(content)); reason != "" {
+	text := string(source.Content)
+	if reason := budget.CheckSize(text); reason != "" {
 		summary.ParseError = reason
 		return summary, nil
 	}
 	request := sandbox.Request{
-		Path: source.Path, Text: string(content), Local: local, IsTest: source.IsTest,
+		Path: source.Path, Text: text, Local: local, IsTest: source.IsTest,
 	}
-	outcome, err := batch.session.Do(ctx, request)
+	outcome, err := session.Do(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("parse in child: %w", err)
 	}
@@ -102,6 +85,5 @@ func (batch batch) summarize(
 }
 
 func newSummary(path string) *syntax.File {
-	ext := strings.ToLower(filepath.Ext(path))
-	return &syntax.File{Path: path, Language: language.ForExtension(ext).ID}
+	return &syntax.File{Path: path, Language: language.ForExtension(filepath.Ext(path)).ID}
 }

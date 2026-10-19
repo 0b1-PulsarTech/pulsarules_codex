@@ -5,7 +5,6 @@ import (
 	"maps"
 	"path/filepath"
 	"slices"
-	"strings"
 	"sync"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
@@ -30,25 +29,27 @@ type Corpus struct {
 	Root    string
 	Sources []Source
 	Read    func(string) ([]byte, bool)
+	Module  func() string
 }
 
-func NewCache(ctx context.Context, providers []Provider, corpus Corpus) *Cache {
+func NewCache(providers []Provider, corpus Corpus) *Cache {
 	cache := &Cache{files: map[string]*File{}}
-	// A provider applies its own timeout inside Summarize, because the
-	// context outlives Load.
-	cache.build = func() { cache.run(ctx, providers, corpus) }
+	// No caller holds a context, so the lazy build starts from Background.
+	cache.build = func() { cache.run(context.Background(), providers, corpus) }
 	return cache
 }
 
 func (cache *Cache) run(ctx context.Context, providers []Provider, corpus Corpus) {
 	grouped := make([][]Source, len(providers))
 	for _, source := range corpus.Sources {
-		if _, ok := corpus.Read(source.Path); !ok {
+		content, ok := corpus.Read(source.Path)
+		if !ok {
 			continue
 		}
-		ext := strings.ToLower(filepath.Ext(source.Path))
+		source.Content = content
+		id := language.ForExtension(filepath.Ext(source.Path)).ID
 		idx := slices.IndexFunc(providers, func(provider Provider) bool {
-			return provider.Handles(ext)
+			return slices.Contains(provider.Languages(), id)
 		})
 		if idx >= 0 {
 			grouped[idx] = append(grouped[idx], source)
@@ -79,23 +80,16 @@ func (cache *Cache) summarize(ctx context.Context, provider Provider, corpus Cor
 		if file.Language == "" {
 			file.Language = language.ForExtension(filepath.Ext(source.Path)).ID
 		}
-		if file.Language == "" {
-			file.Language = provider.Language()
-		}
 		file.Path = source.Path
 		cache.files[source.Path] = file
 	}
-	cache.recordMissing(provider.Language(), missing, reason)
+	cache.recordMissing(missing, reason)
 }
 
-func (cache *Cache) recordMissing(fallback language.ID, missing []string, reason string) {
+func (cache *Cache) recordMissing(missing []string, reason string) {
 	counts := map[language.ID]int{}
 	for _, path := range missing {
-		id := language.ForExtension(filepath.Ext(path)).ID
-		if id == "" {
-			id = fallback
-		}
-		counts[id]++
+		counts[language.ForExtension(filepath.Ext(path)).ID]++
 	}
 	for _, id := range slices.Sorted(maps.Keys(counts)) {
 		cache.unavailable = append(cache.unavailable, Unavailable{

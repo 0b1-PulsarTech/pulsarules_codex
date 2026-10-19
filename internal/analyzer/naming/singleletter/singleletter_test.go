@@ -1,7 +1,6 @@
 package singleletter
 
 import (
-	"context"
 	"slices"
 	"strings"
 	"testing"
@@ -26,9 +25,11 @@ func defaultSettings() settings {
 func summaries(cache *astcache.Cache) *syntax.Cache {
 	read := func(string) ([]byte, bool) { return nil, true }
 	return syntax.NewCache(
-		context.Background(),
 		[]syntax.Provider{gosyntax.New(cache)},
-		syntax.Corpus{Sources: []syntax.Source{{Path: "pkg.go"}}, Read: read},
+		syntax.Corpus{
+			Sources: []syntax.Source{{Path: "pkg.go"}}, Read: read,
+			Module: func() string { return "" },
+		},
 	)
 }
 

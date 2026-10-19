@@ -1,7 +1,6 @@
 package controlflow
 
 import (
-	"context"
 	"fmt"
 	"slices"
 	"testing"
@@ -57,8 +56,11 @@ func goContext(t *testing.T, source string) *pass.Context {
 		ASTCache:     cache,
 		ChangedFiles: []pass.FileChange{{Path: "foo.go", Extension: ".go"}},
 		Syntax: syntax.NewCache(
-			context.Background(), []syntax.Provider{gosyntax.New(cache)},
-			syntax.Corpus{Sources: []syntax.Source{{Path: "foo.go"}}, Read: read},
+			[]syntax.Provider{gosyntax.New(cache)},
+			syntax.Corpus{
+				Sources: []syntax.Source{{Path: "foo.go"}}, Read: read,
+				Module: func() string { return "" },
+			},
 		),
 	}
 }

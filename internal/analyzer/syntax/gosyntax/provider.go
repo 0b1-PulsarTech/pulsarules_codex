@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/names"
@@ -22,24 +20,19 @@ func New(cache *astcache.Cache) *Provider {
 	return &Provider{cache: cache}
 }
 
-func (provider *Provider) Language() language.ID { return language.Go }
-
-func (provider *Provider) Handles(ext string) bool { return strings.EqualFold(ext, ".go") }
+func (provider *Provider) Languages() []language.ID { return []language.ID{language.Go} }
 
 func (provider *Provider) Summarize(
 	ctx context.Context, corpus syntax.Corpus,
 ) (map[string]*syntax.File, error) {
 	// An unreadable go.mod empties the import data; arch-boundary reports it off commit scope.
-	modulePath, err := pass.ModulePath(corpus.Root)
-	if err != nil {
-		modulePath = ""
-	}
+	modulePath := corpus.Module()
 	summaries := make(map[string]*syntax.File, len(corpus.Sources))
 	for _, source := range corpus.Sources {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return summaries, fmt.Errorf("summarize go sources: %w", ctxErr)
 		}
-		summaries[source.Path] = provider.summarizeSource(source, modulePath, corpus.Read)
+		summaries[source.Path] = provider.summarizeSource(source, modulePath)
 	}
 	return summaries, nil
 }
@@ -47,23 +40,19 @@ func (provider *Provider) Summarize(
 func (provider *Provider) summarizeSource(
 	source syntax.Source,
 	modulePath string,
-	read func(string) ([]byte, bool),
 ) *syntax.File {
 	file := provider.cache.Get(source.Path)
 	if file == nil {
 		return &syntax.File{
 			Path:       source.Path,
 			Language:   language.Go,
-			ParseError: provider.parseError(source.Path, read),
+			ParseError: provider.parseError(source.Path),
 		}
 	}
 	return summarizeFile(provider.cache.FileSet(), source, file, modulePath)
 }
 
-func (provider *Provider) parseError(path string, read func(string) ([]byte, bool)) string {
-	if _, ok := read(path); !ok {
-		return "file is not readable"
-	}
+func (provider *Provider) parseError(path string) string {
 	if err := provider.cache.Err(path); err != nil {
 		return err.Error()
 	}

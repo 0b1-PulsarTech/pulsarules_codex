@@ -1,7 +1,6 @@
 package doc
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -77,9 +76,12 @@ func TestCheckFileHints(t *testing.T) {
 func summaries(cache *astcache.Cache, source syntax.Source) *syntax.Cache {
 	read := func(string) ([]byte, bool) { return nil, true }
 	return syntax.NewCache(
-		context.Background(),
 		[]syntax.Provider{gosyntax.New(cache)},
-		syntax.Corpus{Sources: []syntax.Source{source}, Read: read},
+		syntax.Corpus{
+			Sources: []syntax.Source{source},
+			Read:    read,
+			Module:  func() string { return "" },
+		},
 	)
 }
 

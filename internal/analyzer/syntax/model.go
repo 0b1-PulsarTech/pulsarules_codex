@@ -92,12 +92,12 @@ type DocSite struct {
 }
 
 type Source struct {
-	Path   string
-	IsTest bool
+	Path    string
+	IsTest  bool
+	Content []byte
 }
 
 type Provider interface {
-	Language() language.ID
-	Handles(ext string) bool
+	Languages() []language.ID
 	Summarize(ctx context.Context, corpus Corpus) (map[string]*File, error)
 }

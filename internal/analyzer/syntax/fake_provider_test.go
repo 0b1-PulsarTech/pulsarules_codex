@@ -9,7 +9,7 @@ import (
 
 type fakeProvider struct {
 	language  language.ID
-	exts      []string
+	languages []language.ID
 	err       error
 	omit      []string
 	nilFiles  []string
@@ -19,19 +19,18 @@ type fakeProvider struct {
 	pathFor   func(string) string
 	calls     [][]Source
 	gotRoot   string
-	gotCtx    context.Context
+	gotSource []Source
 	gotRead   func(string) ([]byte, bool)
 }
 
-func (fake *fakeProvider) Language() language.ID { return fake.language }
-
-func (fake *fakeProvider) Handles(ext string) bool { return slices.Contains(fake.exts, ext) }
+func (fake *fakeProvider) Languages() []language.ID { return fake.languages }
 
 func (fake *fakeProvider) Summarize(
-	ctx context.Context, corpus Corpus,
+	_ context.Context, corpus Corpus,
 ) (map[string]*File, error) {
 	fake.calls = append(fake.calls, slices.Clone(corpus.Sources))
-	fake.gotRoot, fake.gotRead, fake.gotCtx = corpus.Root, corpus.Read, ctx
+	fake.gotRoot, fake.gotRead = corpus.Root, corpus.Read
+	fake.gotSource = slices.Clone(corpus.Sources)
 	if fake.noResults {
 		return nil, fake.err
 	}
@@ -78,3 +77,5 @@ func callPaths(calls [][]Source) [][]string {
 	}
 	return out
 }
+
+func goLanguages() []language.ID { return []language.ID{language.Go} }

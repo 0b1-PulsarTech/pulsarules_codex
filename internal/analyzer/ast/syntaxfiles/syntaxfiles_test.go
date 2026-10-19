@@ -14,9 +14,7 @@ import (
 
 type stubProvider struct{}
 
-func (stubProvider) Language() language.ID { return language.Go }
-
-func (stubProvider) Handles(ext string) bool { return ext == ".go" }
+func (stubProvider) Languages() []language.ID { return []language.ID{language.Go} }
 
 func (stubProvider) Summarize(
 	_ context.Context, corpus syntax.Corpus,
@@ -77,7 +75,7 @@ func TestEach(t *testing.T) {
 			if testCase.withTree {
 				read := func(string) ([]byte, bool) { return nil, true }
 				ctx.Syntax = syntax.NewCache(
-					context.Background(), []syntax.Provider{stubProvider{}},
+					[]syntax.Provider{stubProvider{}},
 					syntax.Corpus{Sources: corpus, Read: read},
 				)
 			}

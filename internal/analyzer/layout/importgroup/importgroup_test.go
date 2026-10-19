@@ -160,10 +160,16 @@ func TestAnalyze_ForeignModule(t *testing.T) {
 
 func summaries(cache *astcache.Cache, projectDir, path string) *syntax.Cache {
 	read := func(string) ([]byte, bool) { return nil, true }
+	module := func() string {
+		modulePath, _ := pass.ModulePath(projectDir)
+		return modulePath
+	}
 	return syntax.NewCache(
-		context.Background(),
 		[]syntax.Provider{gosyntax.New(cache)},
-		syntax.Corpus{Root: projectDir, Sources: []syntax.Source{{Path: path}}, Read: read},
+		syntax.Corpus{
+			Root: projectDir, Sources: []syntax.Source{{Path: path}}, Read: read,
+			Module: module,
+		},
 	)
 }
 
@@ -326,9 +332,7 @@ func TestCheckPaths(t *testing.T) {
 
 type pathProvider struct{}
 
-func (pathProvider) Language() language.ID { return language.TypeScript }
-
-func (pathProvider) Handles(ext string) bool { return ext == ".ts" }
+func (pathProvider) Languages() []language.ID { return []language.ID{language.TypeScript} }
 
 func (pathProvider) Summarize(
 	_ context.Context, _ syntax.Corpus,
@@ -365,7 +369,7 @@ func TestAnalyze_PathSeverityFromConfig(t *testing.T) {
 			corpus := syntax.Corpus{Sources: []syntax.Source{{Path: "a.ts"}}, Read: read}
 			providers := []syntax.Provider{pathProvider{}}
 			got := NewAnalyzer().Analyze(&pass.Context{
-				Syntax:       syntax.NewCache(context.Background(), providers, corpus),
+				Syntax:       syntax.NewCache(providers, corpus),
 				ChangedFiles: []pass.FileChange{{Path: "a.ts", Extension: ".ts"}},
 				Config:       testCase.config,
 			})

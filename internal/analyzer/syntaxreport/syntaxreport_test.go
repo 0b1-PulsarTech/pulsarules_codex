@@ -19,9 +19,11 @@ type stubProvider struct {
 	fail        error
 }
 
-func (stubProvider) Language() language.ID { return language.Go }
-
-func (stubProvider) Handles(string) bool { return true }
+func (stubProvider) Languages() []language.ID {
+	return []language.ID{
+		language.Go, language.Dart, language.TypeScript, language.JavaScript, language.Svelte,
+	}
+}
 
 func (provider stubProvider) Summarize(
 	_ context.Context, corpus syntax.Corpus,
@@ -51,7 +53,7 @@ func buildContext(provider stubProvider, paths []string, generated string) *pass
 	}
 	read := func(string) ([]byte, bool) { return nil, true }
 	ctx.Syntax = syntax.NewCache(
-		context.Background(), []syntax.Provider{provider},
+		[]syntax.Provider{provider},
 		syntax.Corpus{Sources: sources, Read: read})
 	return ctx
 }
