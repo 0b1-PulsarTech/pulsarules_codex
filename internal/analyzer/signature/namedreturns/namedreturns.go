@@ -7,6 +7,7 @@ import (
 	"go/types"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -36,24 +37,15 @@ func checkFile(
 	var findings []finding.Finding
 
 	ast.Inspect(file, func(node ast.Node) bool {
+		var sites []goast.ResultSite
 		switch typed := node.(type) {
 		case *ast.FuncDecl:
-			site := declSite{name: typed.Name.Name, pos: typed.Pos(), results: typed.Type.Results}
-			findings = append(findings, checkResults(fset, fc, site, reporter)...)
+			sites = []goast.ResultSite{goast.FuncDeclSite(typed)}
 		case *ast.InterfaceType:
-			for _, field := range typed.Methods.List {
-				funcType, ok := field.Type.(*ast.FuncType)
-				if !ok || len(field.Names) == 0 {
-					// Embedded interface: no method name of its own to report.
-					continue
-				}
-				site := declSite{
-					name:    field.Names[0].Name,
-					pos:     field.Pos(),
-					results: funcType.Results,
-				}
-				findings = append(findings, checkResults(fset, fc, site, reporter)...)
-			}
+			sites = goast.InterfaceMethodSites(typed)
+		}
+		for _, site := range sites {
+			findings = append(findings, checkResults(fset, fc, site, reporter)...)
 		}
 		return true
 	})
@@ -61,25 +53,19 @@ func checkFile(
 	return findings
 }
 
-type declSite struct {
-	name    string
-	pos     token.Pos
-	results *ast.FieldList
-}
-
 func checkResults(
-	fset *token.FileSet, fc pass.FileChange, site declSite, reporter finding.Reporter,
+	fset *token.FileSet, fc pass.FileChange, site goast.ResultSite, reporter finding.Reporter,
 ) []finding.Finding {
-	dup, found := duplicateResultType(site.results)
+	dup, found := duplicateResultType(site.Results)
 	if !found {
 		return nil
 	}
 	return []finding.Finding{reporter.At(
 		fc.Path,
-		fset.Position(site.pos).Line,
+		fset.Position(site.Pos).Line,
 		fmt.Sprintf(
 			"%s returns more than one unnamed %s, so only the order tells them apart",
-			site.name,
+			site.Name,
 			dup,
 		),
 		"name the results so the signature says which is which",

@@ -6,6 +6,7 @@ import (
 	"go/token"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -33,12 +34,6 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	})
 }
 
-type declSite struct {
-	name    string
-	pos     token.Pos
-	results *ast.FieldList
-}
-
 type rule struct {
 	reporter finding.Reporter
 	limit    int
@@ -48,16 +43,16 @@ func (rule rule) check(fset *token.FileSet, fc pass.FileChange, file *ast.File) 
 	var findings []finding.Finding
 	ast.Inspect(file, func(node ast.Node) bool {
 		for _, site := range sitesOf(node) {
-			count := countResults(site.results)
+			count := countResults(site.Results)
 			if count <= rule.limit {
 				continue
 			}
 			findings = append(findings, rule.reporter.At(
 				fc.Path,
-				fset.Position(site.pos).Line,
+				fset.Position(site.Pos).Line,
 				fmt.Sprintf(
 					"%s returns %d results, more than the limit of %d",
-					site.name,
+					site.Name,
 					count,
 					rule.limit,
 				),
@@ -70,30 +65,24 @@ func (rule rule) check(fset *token.FileSet, fc pass.FileChange, file *ast.File) 
 	return findings
 }
 
-func sitesOf(decl ast.Node) []declSite {
+func sitesOf(decl ast.Node) []goast.ResultSite {
 	switch node := decl.(type) {
 	case *ast.FuncDecl:
-		return []declSite{{name: node.Name.Name, pos: node.Pos(), results: node.Type.Results}}
+		return []goast.ResultSite{goast.FuncDeclSite(node)}
 	case *ast.FuncLit:
-		return []declSite{{name: "function literal", pos: node.Pos(), results: node.Type.Results}}
+		return []goast.ResultSite{
+			{Name: "function literal", Pos: node.Pos(), Results: node.Type.Results},
+		}
 	case *ast.TypeSpec:
 		funcType, ok := node.Type.(*ast.FuncType)
 		if !ok {
 			return nil
 		}
-		return []declSite{{name: node.Name.Name, pos: node.Pos(), results: funcType.Results}}
-	case *ast.InterfaceType:
-		var sites []declSite
-		for _, field := range node.Methods.List {
-			funcType, ok := field.Type.(*ast.FuncType)
-			if !ok || len(field.Names) == 0 {
-				continue
-			}
-			sites = append(sites, declSite{
-				name: field.Names[0].Name, pos: field.Pos(), results: funcType.Results,
-			})
+		return []goast.ResultSite{
+			{Name: node.Name.Name, Pos: node.Pos(), Results: funcType.Results},
 		}
-		return sites
+	case *ast.InterfaceType:
+		return goast.InterfaceMethodSites(node)
 	}
 	return nil
 }
