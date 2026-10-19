@@ -18,13 +18,13 @@ func validateDescription(
 	if len(descRunes) == 0 {
 		findings = append(
 			findings,
-			reporters.descRequired.New("commit message must have a description"),
+			reporters[ruleDescRequired].New("commit message must have a description"),
 		)
 		return findings
 	}
 
 	if len(descRunes) > cfg.MaxSubjectLen {
-		findings = append(findings, reporters.descLength.New(
+		findings = append(findings, reporters[ruleDescLength].New(
 			"subject is "+strconv.Itoa(len(descRunes))+" chars, max "+
 				strconv.Itoa(cfg.MaxSubjectLen),
 		))
@@ -33,14 +33,14 @@ func validateDescription(
 	if !unicode.IsUpper(descRunes[0]) && !msg.IsWIP {
 		findings = append(
 			findings,
-			reporters.descCapitalize.New("description must start with a capital letter"),
+			reporters[ruleDescCapitalize].New("description must start with a capital letter"),
 		)
 	}
 
 	if descRunes[len(descRunes)-1] == '.' {
 		findings = append(
 			findings,
-			reporters.descNoPeriod.New("description must not end with a period"),
+			reporters[ruleDescNoPeriod].New("description must not end with a period"),
 		)
 	}
 
@@ -58,7 +58,7 @@ func validateBody(
 	var findings []finding.Finding
 	for lineIndex, line := range strings.Split(msg.Body, "\n") {
 		if len([]rune(line)) > cfg.MaxBodyLineLen {
-			findings = append(findings, reporters.bodyLength.New(
+			findings = append(findings, reporters[ruleBodyLength].New(
 				"body line "+strconv.Itoa(lineIndex+1)+" is "+strconv.Itoa(
 					len([]rune(line)),
 				)+" chars, max "+strconv.Itoa(
@@ -68,7 +68,7 @@ func validateBody(
 		}
 	}
 	if total := len([]rune(msg.Body)); total > cfg.MaxBodyLen {
-		findings = append(findings, reporters.bodyTotalLength.New(
+		findings = append(findings, reporters[ruleBodyTotalLength].New(
 			"body is "+strconv.Itoa(total)+" chars, max "+strconv.Itoa(
 				cfg.MaxBodyLen,
 			)+"; keep it short or use a subject-only commit",
@@ -83,7 +83,7 @@ func validateToolTrailers(msg commitmsg.Message, reporters ruleReporters) []find
 		return nil
 	}
 	return []finding.Finding{
-		reporters.noCoauthor.New(
+		reporters[ruleNoCoauthor].New(
 			"tool-attribution trailer '" + trailer + "' is not allowed; " +
 				"remove it before committing",
 		),

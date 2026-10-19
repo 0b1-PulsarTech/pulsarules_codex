@@ -15,16 +15,21 @@ func kindOf(text string) Kind {
 	return Regular
 }
 
-func footerKeys() []string {
-	return append(
-		toolFooterKeys(), "BREAKING CHANGE", "BREAKING-CHANGE", "Closes", "Refs",
-	)
+func isToolFooterKey(key string) bool {
+	return slices.ContainsFunc(toolFooterKeys(), func(toolKey string) bool {
+		return strings.EqualFold(key, toolKey)
+	})
 }
 
 func isFooterLine(line string) bool {
-	return slices.ContainsFunc(footerKeys(), func(key string) bool {
-		return strings.HasPrefix(line, key+":")
-	})
+	if key, _, found := strings.Cut(line, ":"); found && isToolFooterKey(key) {
+		return true
+	}
+	// Only tool keys fold: Closes/Refs folding would change Body findings, BREAKING stays upper.
+	return slices.ContainsFunc(
+		[]string{"BREAKING CHANGE", "BREAKING-CHANGE", "Closes", "Refs"},
+		func(key string) bool { return strings.HasPrefix(line, key+":") },
+	)
 }
 
 func parseFooter(line string) Footer {

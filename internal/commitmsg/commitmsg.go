@@ -25,12 +25,11 @@ func (cursor *parser) parse(msg *Message) {
 	cursor.skipSpaces()
 
 	msg.Kind = kindOf(cursor.remainingText())
-	if msg.IsCanonicalSpecial() {
-		msg.Description = cursor.remainingText()
-		return
+	if msg.Kind == Regular {
+		cursor.parseHeader(msg)
+	} else {
+		cursor.parseDescription(msg)
 	}
-
-	cursor.parseHeader(msg)
 	if cursor.atEnd() {
 		return
 	}

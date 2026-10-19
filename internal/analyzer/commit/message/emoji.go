@@ -9,15 +9,15 @@ import (
 )
 
 type emojiCheck struct {
-	Message   commitmsg.Message
-	Catalog   *emoji.Catalog
-	History   []string
-	Config    emojiWindowConfig
-	Reporters emojiReporters
+	message   commitmsg.Message
+	catalog   *emoji.Catalog
+	history   []string
+	config    emojiWindowConfig
+	reporters ruleReporters
 }
 
 func (check emojiCheck) validate() []finding.Finding {
-	if check.Message.IsCanonicalSpecial() {
+	if hasCanonicalEmoji(check.message) {
 		return nil
 	}
 	return append(check.validateCatalog(), check.validateWindow()...)
@@ -25,7 +25,7 @@ func (check emojiCheck) validate() []finding.Finding {
 
 func (check emojiCheck) validateCatalog() []finding.Finding {
 	var findings []finding.Finding
-	for _, shortcode := range check.Message.LeadingEmojis {
+	for _, shortcode := range check.message.LeadingEmojis {
 		if replacement, banned := emoji.ProhibitedReplacement(shortcode); banned {
 			message := "emoji :" + shortcode + ": is prohibited by project convention"
 			if replacement != "" {
@@ -33,13 +33,16 @@ func (check emojiCheck) validateCatalog() []finding.Finding {
 			}
 			findings = append(
 				findings,
-				check.Reporters.prohibited.NewWithSuggestion(message, check.suggestionText()),
+				check.reporters[ruleEmojiProhibited].NewWithSuggestion(
+					message,
+					check.suggestionText(),
+				),
 			)
 			continue
 		}
 		// The catalog is the set proven to render in the tools history is read through.
-		if !check.Catalog.Allows(shortcode) {
-			findings = append(findings, check.Reporters.catalog.NewWithSuggestion(
+		if !check.catalog.Allows(shortcode) {
+			findings = append(findings, check.reporters[ruleEmojiCatalog].NewWithSuggestion(
 				"emoji :"+shortcode+": is not in the commit emoji catalog; "+
 					"it may not render in the history view",
 				check.suggestionText(),
@@ -50,19 +53,19 @@ func (check emojiCheck) validateCatalog() []finding.Finding {
 }
 
 func (check emojiCheck) suggestionText() string {
-	if check.Catalog == nil {
+	if check.catalog == nil {
 		return ""
 	}
 	// Exclude the window and the emoji already on this message: offering back
 	// the one that was just rejected is not an alternative.
-	excluded := append(check.recentEmojis(check.Config.HardWindow), check.Message.LeadingEmojis...)
+	excluded := append(check.recentEmojis(check.config.HardWindow), check.message.LeadingEmojis...)
 
-	seed := check.Message.Scope + " " + check.Message.Description
-	picks := check.Catalog.Suggest(
-		check.Message.Type,
+	seed := check.message.Scope + " " + check.message.Description
+	picks := check.catalog.Suggest(
+		check.message.Type,
 		seed,
 		excluded,
-		check.Config.Suggestions,
+		check.config.Suggestions,
 	)
 	if len(picks) == 0 {
 		return ""

@@ -19,6 +19,7 @@ func TestRecentEmojis(t *testing.T) {
 	}{
 		{"tail of a longer history", subjects("a", "b", "c"), 2, []string{"b", "c"}},
 		{"whole history when shorter", subjects("a", "b"), 5, []string{"a", "b"}},
+		{"first emoji of a multi-emoji subject", []string{":a::b: feat: X"}, 5, []string{"a"}},
 		{"zero window", subjects("a", "b"), 0, nil},
 		{"negative window", subjects("a", "b"), -1, nil},
 		{"empty history", nil, 5, nil},
@@ -34,7 +35,7 @@ func TestRecentEmojis(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := emojiCheck{History: testCase.history}.recentEmojis(testCase.window)
+			got := emojiCheck{history: testCase.history}.recentEmojis(testCase.window)
 			if !slices.Equal(got, testCase.want) {
 				t.Fatalf("recentEmojis = %v, want %v", got, testCase.want)
 			}

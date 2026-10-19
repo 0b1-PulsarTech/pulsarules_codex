@@ -74,3 +74,28 @@ func TestValidateShortBodyWithFooterValid(t *testing.T) {
 		t.Fatalf("short body with a legit footer should be valid, got %+v", findings)
 	}
 }
+
+func TestValidateSubjectLengthBoundary(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		description string
+		wantFinding bool
+	}{
+		{"exactly 72 runes passes", "A" + strings.Repeat("x", 71), false},
+		{"73 runes blocks", "A" + strings.Repeat("x", 72), true},
+		{"72 multibyte runes pass", "\u00c9" + strings.Repeat("\u00e9", 71), false},
+		{"73 multibyte runes block", "\u00c9" + strings.Repeat("\u00e9", 72), true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			msg := commitmsg.Parse(":wrench: feat: " + testCase.description)
+			findings := validate(msg, defaultRuleConfig(), defaultRuleReporters())
+			if got := hasAnalyzer(findings, "commit-desc-length"); got != testCase.wantFinding {
+				t.Errorf("commit-desc-length present = %v, want %v", got, testCase.wantFinding)
+			}
+		})
+	}
+}

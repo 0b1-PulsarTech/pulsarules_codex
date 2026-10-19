@@ -22,8 +22,7 @@ type Analyzer struct {
 	ruleCfg   ruleConfig
 	windowCfg emojiWindowConfig
 
-	ruleReporters  ruleReporters
-	emojiReporters emojiReporters
+	reporters ruleReporters
 }
 
 func NewAnalyzer(catalog *emoji.Catalog) *Analyzer {
@@ -32,8 +31,7 @@ func NewAnalyzer(catalog *emoji.Catalog) *Analyzer {
 		ruleCfg:   defaultRuleConfig(),
 		windowCfg: defaultEmojiWindowConfig(),
 
-		ruleReporters:  defaultRuleReporters(),
-		emojiReporters: defaultEmojiReporters(),
+		reporters: defaultRuleReporters(),
 	}
 }
 
@@ -49,17 +47,15 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	msg := commitmsg.Parse(ctx.CommitMsg)
 	windowCfg := analyzer.windowCfg.merge(ctx.Params(analyzer.ID()))
 
+	reporters := analyzer.reporters.resolved(ctx)
 	findings := make([]finding.Finding, 0, typicalFindingCapacity)
-	findings = append(
-		findings,
-		validate(msg, analyzer.ruleCfg, analyzer.ruleReporters.resolved(ctx))...,
-	)
+	findings = append(findings, validate(msg, analyzer.ruleCfg, reporters)...)
 	findings = append(findings, emojiCheck{
-		Message:   msg,
-		Catalog:   analyzer.catalog,
-		History:   historySubjects(ctx.GitHistory),
-		Config:    windowCfg,
-		Reporters: analyzer.emojiReporters.resolved(ctx),
+		message:   msg,
+		catalog:   analyzer.catalog,
+		history:   historySubjects(ctx.GitHistory),
+		config:    windowCfg,
+		reporters: reporters,
 	}.validate()...)
 
 	return findings

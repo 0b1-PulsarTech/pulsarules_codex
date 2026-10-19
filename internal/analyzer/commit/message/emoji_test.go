@@ -24,11 +24,11 @@ func checkFor(tb testing.TB, msg commitmsg.Message, history []string) emojiCheck
 		tb.Fatalf("NewCatalog: %v", err)
 	}
 	return emojiCheck{
-		Message:   msg,
-		Catalog:   catalog,
-		History:   history,
-		Config:    defaultEmojiWindowConfig(),
-		Reporters: defaultEmojiReporters(),
+		message:   msg,
+		catalog:   catalog,
+		history:   history,
+		config:    defaultEmojiWindowConfig(),
+		reporters: defaultRuleReporters(),
 	}
 }
 

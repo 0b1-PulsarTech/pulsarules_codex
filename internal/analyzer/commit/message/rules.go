@@ -27,17 +27,15 @@ func defaultRuleConfig() ruleConfig {
 }
 
 func validate(msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters) []finding.Finding {
-	findings := make([]finding.Finding, 0, typicalFindingCapacity)
-
-	// Initial and merge commits are exempt from the type and emoji requirements.
+	// Initial and merge commits skip the type and emoji rules, not the trailer check.
 	switch msg.Kind {
 	case commitmsg.Initial:
-		return validateInitial(msg, reporters)
+		return append(validateInitial(msg, reporters), validateToolTrailers(msg, reporters)...)
 	case commitmsg.Merge:
-		return validateMerge(msg, reporters)
-	case commitmsg.Regular:
+		return append(validateMerge(msg, reporters), validateToolTrailers(msg, reporters)...)
 	}
 
+	findings := make([]finding.Finding, 0, typicalFindingCapacity)
 	findings = append(findings, validateEmojis(msg, reporters)...)
 	findings = append(findings, validateType(msg, reporters)...)
 	findings = append(findings, validateScope(msg, reporters)...)

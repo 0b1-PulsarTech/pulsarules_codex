@@ -47,3 +47,44 @@ func TestRuleReporters_ResolvedSeverity(t *testing.T) {
 		})
 	}
 }
+
+func TestRuleSpecs_IDsNonEmptyAndDistinct(t *testing.T) {
+	t.Parallel()
+
+	seen := map[string]rule{}
+	for index, spec := range ruleSpecs() {
+		if spec.id == "" {
+			t.Errorf("rule %d has an empty id", index)
+		}
+		if first, dup := seen[spec.id]; dup {
+			t.Errorf("rule %d repeats id %q of rule %d", index, spec.id, first)
+		}
+		seen[spec.id] = rule(index)
+	}
+}
+
+func TestRuleReporters_ResolvedAppliesToEveryRule(t *testing.T) {
+	t.Parallel()
+
+	for index, spec := range ruleSpecs() {
+		t.Run(spec.id, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := &pass.Context{Config: &pass.AnalysisConfig{
+				Analyzers: map[string]pass.AnalyzerConfig{
+					spec.id: {Params: map[string]any{"severity": "warning"}},
+				},
+			}}
+			resolved := defaultRuleReporters().resolved(ctx)
+			for other := range resolved {
+				want := ruleSpecs()[other].severity
+				if other == index {
+					want = finding.SeverityWarning
+				}
+				if got := resolved[other].New("x").Severity; got != want {
+					t.Errorf("rule %d severity = %v, want %v", other, got, want)
+				}
+			}
+		})
+	}
+}

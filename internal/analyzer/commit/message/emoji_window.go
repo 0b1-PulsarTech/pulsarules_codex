@@ -28,22 +28,22 @@ func defaultEmojiWindowConfig() emojiWindowConfig {
 }
 
 func (check emojiCheck) validateWindow() []finding.Finding {
-	if len(check.Message.LeadingEmojis) == 0 {
+	if len(check.message.LeadingEmojis) == 0 {
 		return nil
 	}
-	current := check.Message.LeadingEmojis[0]
+	current := check.message.LeadingEmojis[0]
 
-	if slices.Contains(check.recentEmojis(check.Config.HardWindow), current) {
-		return []finding.Finding{check.Reporters.repeat.NewWithSuggestion(
+	if slices.Contains(check.recentEmojis(check.config.HardWindow), current) {
+		return []finding.Finding{check.reporters[ruleEmojiRepeat].NewWithSuggestion(
 			"emoji :"+current+": already appears in the last "+
-				strconv.Itoa(check.Config.HardWindow)+
+				strconv.Itoa(check.config.HardWindow)+
 				" commits; every commit in that window needs a distinct emoji",
 			check.suggestionText(),
 		)}
 	}
-	if slices.Contains(check.recentEmojis(check.Config.SoftWindow), current) {
-		return []finding.Finding{check.Reporters.softRepeat.NewWithSuggestion(
-			"emoji :"+current+": was used within the last "+strconv.Itoa(check.Config.SoftWindow)+
+	if slices.Contains(check.recentEmojis(check.config.SoftWindow), current) {
+		return []finding.Finding{check.reporters[ruleEmojiSoftRepeat].NewWithSuggestion(
+			"emoji :"+current+": was used within the last "+strconv.Itoa(check.config.SoftWindow)+
 				" commits; a fresher one would read better",
 			check.suggestionText(),
 		)}
@@ -52,7 +52,7 @@ func (check emojiCheck) validateWindow() []finding.Finding {
 }
 
 func (check emojiCheck) recentEmojis(window int) []string {
-	history := check.History
+	history := check.history
 	if window <= 0 || len(history) == 0 {
 		return nil
 	}

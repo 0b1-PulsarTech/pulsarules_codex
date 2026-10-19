@@ -1,6 +1,7 @@
 package message
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -193,5 +194,69 @@ func TestValidateMergeCommitWrongEmoji(t *testing.T) {
 	findings := validate(msg, defaultRuleConfig(), defaultRuleReporters())
 	if !hasAnalyzer(findings, "commit-merge") {
 		t.Errorf("expected commit-merge finding for wrong emoji")
+	}
+}
+
+func TestValidateSpecialCommitRules(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{
+			"regular lowercase trailer",
+			":wrench: feat: Add x\n\nCo-authored-by: X",
+			[]string{"commit-no-coauthor"},
+		},
+		{
+			"merge with trailer",
+			":volcano: Merge branch x\n\nCo-Authored-By: Claude",
+			[]string{"commit-no-coauthor"},
+		},
+		{"merge clean", ":volcano: Merge branch x\n\nbody", nil},
+		{
+			"initial with trailer",
+			":ghost: Initial Commit\n\nClaude-Session: abc",
+			[]string{"commit-no-coauthor"},
+		},
+		{"initial exact", ":ghost: Initial Commit", nil},
+		{
+			"initial lowercase c", ":ghost: initial commit",
+			[]string{"commit-type-required", "commit-desc-capitalize"},
+		},
+		{"initial period", ":ghost: Initial Commit.", []string{"commit-initial"}},
+		{
+			"initial commit lowercase second word",
+			":ghost: Initial commit",
+			[]string{"commit-initial"},
+		},
+		{"initial suffix", ":ghost: Initial Commit now", []string{"commit-initial"}},
+		{"initial leading space", "  :ghost: Initial Commit", []string{"commit-initial"}},
+		{"initial leading tab", "\t:ghost: Initial Commit", []string{"commit-initial"}},
+		{"initial trailing space", ":ghost: Initial Commit ", nil},
+		{"initial crlf", ":ghost: Initial Commit\r\n\r\nbody", nil},
+		{"initial double space", ":ghost:  Initial Commit", []string{"commit-initial"}},
+		{"initial wrong emoji", ":wrench: Initial Commit", []string{"commit-initial"}},
+		{
+			"initial wrong and trailer",
+			":wrench: Initial Commit\n\nCo-Authored-By: X",
+			[]string{"commit-initial", "commit-no-coauthor"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			msg := commitmsg.Parse(testCase.input)
+			findings := validate(msg, defaultRuleConfig(), defaultRuleReporters())
+			var gotIDs []string
+			for _, finding := range findings {
+				gotIDs = append(gotIDs, finding.AnalyzerID)
+			}
+			if !slices.Equal(gotIDs, testCase.want) {
+				t.Errorf("validate(%q) = %v, want %v", testCase.input, gotIDs, testCase.want)
+			}
+		})
 	}
 }

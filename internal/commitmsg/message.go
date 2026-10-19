@@ -1,9 +1,6 @@
 package commitmsg
 
-import (
-	"slices"
-	"strings"
-)
+import "strings"
 
 type Kind int
 
@@ -11,11 +8,6 @@ const (
 	Regular Kind = iota
 	Initial
 	Merge
-)
-
-const (
-	InitialEmoji = "ghost"
-	MergeEmoji   = "volcano"
 )
 
 type Message struct {
@@ -47,18 +39,6 @@ func toolFooterKeys() []string {
 	return []string{"Co-Authored-By", "Claude-Session"}
 }
 
-func (msg Message) IsCanonicalSpecial() bool {
-	switch msg.Kind {
-	case Initial:
-		return len(msg.LeadingEmojis) == 1 && msg.LeadingEmojis[0] == InitialEmoji
-	case Merge:
-		return len(msg.LeadingEmojis) >= 1 && msg.LeadingEmojis[0] == MergeEmoji
-	case Regular:
-		return false
-	}
-	return false
-}
-
 func (msg Message) ToolTrailer() string {
 	toolAttributionMarkers := []string{
 		"claude.ai/code",
@@ -66,9 +46,7 @@ func (msg Message) ToolTrailer() string {
 		"generated with claude",
 	}
 	for _, footer := range msg.Footers {
-		if slices.ContainsFunc(toolFooterKeys(), func(key string) bool {
-			return strings.EqualFold(footer.Key, key)
-		}) {
+		if isToolFooterKey(footer.Key) {
 			return footer.Key
 		}
 	}

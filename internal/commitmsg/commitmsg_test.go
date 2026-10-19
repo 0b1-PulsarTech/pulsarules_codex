@@ -84,6 +84,27 @@ func parseCasesMerge() []parseTestCase {
 			},
 		},
 		{
+			name:  "merge with body and footer",
+			input: ":volcano: Merge branch x\n\nBody\n\nRefs: #1",
+			want: Message{
+				LeadingEmojis: []string{"volcano"},
+				Kind:          Merge,
+				Description:   "Merge branch x",
+				Body:          "Body",
+				Footers:       []Footer{{Key: "Refs", Value: "#1"}},
+			},
+		},
+		{
+			name:  "initial with body",
+			input: ":ghost: Initial Commit\n\nBody",
+			want: Message{
+				LeadingEmojis: []string{"ghost"},
+				Kind:          Initial,
+				Description:   "Initial Commit",
+				Body:          "Body",
+			},
+		},
+		{
 			name:  "ghost initial commit",
 			input: ":ghost: Initial Commit",
 			want: Message{
@@ -312,33 +333,31 @@ func TestParseKind(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name          string
-		input         string
-		wantKind      Kind
-		wantEmojis    []string
-		wantCanonical bool
+		name       string
+		input      string
+		wantKind   Kind
+		wantEmojis []string
 	}{
-		{"regular", ":wrench: feat: Add", Regular, []string{"wrench"}, false},
-		{"no emoji", "feat: Add", Regular, nil, false},
-		{"canonical initial", ":ghost: Initial Commit", Initial, []string{"ghost"}, true},
-		{"lowercase initial", ":ghost: Initial commit", Initial, []string{"ghost"}, true},
-		{"wrong emoji initial", ":smile: Initial Commit", Initial, []string{"smile"}, false},
+		{"regular", ":wrench: feat: Add", Regular, []string{"wrench"}},
+		{"no emoji", "feat: Add", Regular, nil},
+		{"canonical initial", ":ghost: Initial Commit", Initial, []string{"ghost"}},
+		{"lowercase initial", ":ghost: Initial commit", Initial, []string{"ghost"}},
+		{"wrong emoji initial", ":smile: Initial Commit", Initial, []string{"smile"}},
 		{
 			"extra emoji initial", ":ghost::smile: Initial Commit", Initial,
 			[]string{"ghost", "smile"},
-			false,
 		},
-		{"bare initial", "Initial Commit", Initial, nil, false},
-		{"canonical merge", ":volcano: Merge branch x", Merge, []string{"volcano"}, true},
-		{"volcano then more", ":volcano::tea: Merge x", Merge, []string{"volcano", "tea"}, true},
-		{"wrong emoji merge", ":smile: Merge branch x", Merge, []string{"smile"}, false},
-		{"bare merge", "Merge branch x", Merge, nil, false},
-		{"merge needs trailing space", ":volcano: Merged", Regular, []string{"volcano"}, false},
-		{"ghost on regular", ":ghost: feat: Ghost", Regular, []string{"ghost"}, false},
-		{"leading whitespace", "  :tea: test: Add", Regular, []string{"tea"}, false},
-		{"unterminated shortcode", ":wrench feat: Add", Regular, nil, false},
-		{"empty", "", Regular, nil, false},
-		{"four emojis", ":a: :b: :c: :d: feat: X", Regular, []string{"a", "b", "c", "d"}, false},
+		{"bare initial", "Initial Commit", Initial, nil},
+		{"canonical merge", ":volcano: Merge branch x", Merge, []string{"volcano"}},
+		{"volcano then more", ":volcano::tea: Merge x", Merge, []string{"volcano", "tea"}},
+		{"wrong emoji merge", ":smile: Merge branch x", Merge, []string{"smile"}},
+		{"bare merge", "Merge branch x", Merge, nil},
+		{"merge needs trailing space", ":volcano: Merged", Regular, []string{"volcano"}},
+		{"ghost on regular", ":ghost: feat: Ghost", Regular, []string{"ghost"}},
+		{"leading whitespace", "  :tea: test: Add", Regular, []string{"tea"}},
+		{"unterminated shortcode", ":wrench feat: Add", Regular, nil},
+		{"empty", "", Regular, nil},
+		{"four emojis", ":a: :b: :c: :d: feat: X", Regular, []string{"a", "b", "c", "d"}},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -349,36 +368,6 @@ func TestParseKind(t *testing.T) {
 			}
 			if !emojisEqual(got.LeadingEmojis, testCase.wantEmojis) {
 				t.Errorf("LeadingEmojis = %v, want %v", got.LeadingEmojis, testCase.wantEmojis)
-			}
-			if got.IsCanonicalSpecial() != testCase.wantCanonical {
-				t.Errorf("IsCanonicalSpecial = %v, want %v",
-					got.IsCanonicalSpecial(), testCase.wantCanonical)
-			}
-		})
-	}
-}
-
-func TestIsScopeChar(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		char rune
-		want bool
-	}{
-		{'a', true},
-		{'Z', true},
-		{'7', true},
-		{'-', true},
-		{'_', true},
-		{' ', false},
-		{'/', false},
-		{'\u00e9', false},
-	}
-	for _, testCase := range testCases {
-		t.Run(string(testCase.char), func(t *testing.T) {
-			t.Parallel()
-			if got := IsScopeChar(testCase.char); got != testCase.want {
-				t.Errorf("IsScopeChar(%q) = %v, want %v", testCase.char, got, testCase.want)
 			}
 		})
 	}
