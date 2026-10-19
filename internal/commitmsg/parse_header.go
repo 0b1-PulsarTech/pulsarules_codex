@@ -59,3 +59,8 @@ func (cursor *parser) parseDescription(msg *Message) {
 		msg.IsWIP = true
 	}
 }
+
+func IsScopeChar(char rune) bool {
+	return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+		(char >= '0' && char <= '9') || char == '-' || char == '_'
+}

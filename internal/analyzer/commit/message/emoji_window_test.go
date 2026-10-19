@@ -42,31 +42,6 @@ func TestRecentEmojis(t *testing.T) {
 	}
 }
 
-func TestLeadingEmoji(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name    string
-		subject string
-		want    string
-	}{
-		{"plain shortcode", ":wrench: feat: Add", "wrench"},
-		{"leading whitespace", "  :tea: test: Add", "tea"},
-		{"no emoji", "feat: Add", ""},
-		{"unterminated shortcode", ":wrench feat: Add", ""},
-		{"empty subject", "", ""},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			if got := leadingEmoji(testCase.subject); got != testCase.want {
-				t.Fatalf("leadingEmoji(%q) = %q, want %q", testCase.subject, got, testCase.want)
-			}
-		})
-	}
-}
-
 func TestValidateEmoji_SuggestionsExcludeRejected(t *testing.T) {
 	t.Parallel()
 
@@ -88,12 +63,12 @@ func TestValidateEmoji_SuggestionsExcludeRejected(t *testing.T) {
 				t,
 				msg,
 				subjects("tea", "memo", "bug", "gear", "package"),
-			).ValidateEmoji()
+			).validate()
 			if len(findings) == 0 {
 				t.Fatalf("expected a finding for %q", testCase.subject)
 			}
 			for _, finding := range findings {
-				for _, own := range msg.Emojis {
+				for _, own := range msg.LeadingEmojis {
 					if strings.Contains(finding.Suggestion, ":"+own+":") {
 						t.Fatalf("suggestion %q offers back the rejected %q",
 							finding.Suggestion, own)

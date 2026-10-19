@@ -9,38 +9,37 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
 
-func validateInitial(
-	msg commitmsg.Message, findings []finding.Finding, reporters ruleReporters,
-) []finding.Finding {
-	if len(msg.Emojis) != 1 || msg.Emojis[0] != "ghost" {
-		findings = append(
-			findings,
-			reporters.initial.New("initial commit must be :ghost: Initial Commit"),
-		)
+func validateInitial(msg commitmsg.Message, reporters ruleReporters) []finding.Finding {
+	if msg.IsCanonicalSpecial() {
+		return nil
 	}
-	return findings
+	return []finding.Finding{
+		reporters.initial.New(
+			"initial commit must be :" + commitmsg.InitialEmoji + ": Initial Commit",
+		),
+	}
 }
 
-func validateMerge(
-	msg commitmsg.Message, findings []finding.Finding, reporters ruleReporters,
-) []finding.Finding {
-	if len(msg.Emojis) < 1 || msg.Emojis[0] != "volcano" {
-		findings = append(findings, reporters.merge.New("merge commit must start with :volcano:"))
+func validateMerge(msg commitmsg.Message, reporters ruleReporters) []finding.Finding {
+	if msg.IsCanonicalSpecial() {
+		return nil
 	}
-	return findings
+	return []finding.Finding{
+		reporters.merge.New("merge commit must start with :" + commitmsg.MergeEmoji + ":"),
+	}
 }
 
 func validateEmojis(msg commitmsg.Message, reporters ruleReporters) []finding.Finding {
 	var findings []finding.Finding
 
-	if len(msg.Emojis) == 0 {
+	if len(msg.LeadingEmojis) == 0 {
 		findings = append(
 			findings,
 			reporters.emojiRequired.New("commit message must start with an emoji (:shortcode:)"),
 		)
 	}
 
-	if len(msg.Emojis) > commitmsg.MaxLeadingEmojis {
+	if len(msg.LeadingEmojis) > commitmsg.MaxLeadingEmojis {
 		findings = append(
 			findings,
 			reporters.emojiCount.New(
@@ -77,13 +76,14 @@ func validateScope(msg commitmsg.Message, reporters ruleReporters) []finding.Fin
 	if msg.Scope == "" {
 		return nil
 	}
-	for _, char := range msg.Scope {
-		if !isScopeChar(char) {
-			return []finding.Finding{
-				reporters.scopeCharset.New(
-					"scope must be ASCII alphanumeric with - or _ separators only",
-				),
-			}
+	if strings.ContainsFunc(
+		msg.Scope,
+		func(char rune) bool { return !commitmsg.IsScopeChar(char) },
+	) {
+		return []finding.Finding{
+			reporters.scopeCharset.New(
+				"scope must be ASCII alphanumeric with - or _ separators only",
+			),
 		}
 	}
 	return nil

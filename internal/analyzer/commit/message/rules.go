@@ -1,8 +1,6 @@
 package message
 
 import (
-	"strings"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
@@ -31,21 +29,13 @@ func defaultRuleConfig() ruleConfig {
 func validate(msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters) []finding.Finding {
 	findings := make([]finding.Finding, 0, typicalFindingCapacity)
 
-	rawAfterEmoji := strings.TrimSpace(msg.Raw)
-	for _, emoji := range msg.Emojis {
-		rawAfterEmoji = strings.TrimSpace(strings.TrimPrefix(rawAfterEmoji, ":"+emoji+":"))
-	}
-
-	isInitialText := strings.HasPrefix(rawAfterEmoji, "Initial Commit") ||
-		strings.HasPrefix(rawAfterEmoji, "Initial commit")
-	isMergeText := strings.HasPrefix(rawAfterEmoji, "Merge ")
-
 	// Initial and merge commits are exempt from the type and emoji requirements.
-	if isInitialText {
-		return validateInitial(msg, findings, reporters)
-	}
-	if isMergeText {
-		return validateMerge(msg, findings, reporters)
+	switch msg.Kind {
+	case commitmsg.Initial:
+		return validateInitial(msg, reporters)
+	case commitmsg.Merge:
+		return validateMerge(msg, reporters)
+	case commitmsg.Regular:
 	}
 
 	findings = append(findings, validateEmojis(msg, reporters)...)

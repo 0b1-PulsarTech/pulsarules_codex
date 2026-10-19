@@ -53,10 +53,10 @@ func readUsage(dir string) (commitUsage, error) {
 func (usage *commitUsage) add(msg commitmsg.Message, allowedTypes []string) {
 	const estimatedTypeVocabulary = 64
 
-	if len(msg.Emojis) == 0 {
+	if len(msg.LeadingEmojis) == 0 {
 		return
 	}
-	shortcode := msg.Emojis[0]
+	shortcode := msg.LeadingEmojis[0]
 	usage.byEmoji[shortcode]++
 
 	if msg.Type == "" || !slices.Contains(allowedTypes, msg.Type) {

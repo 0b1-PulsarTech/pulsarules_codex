@@ -57,7 +57,7 @@ func TestValidateEmojiCatalog(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			findings := checkFor(t, commitmsg.Parse(testCase.subject), nil).ValidateEmoji()
+			findings := checkFor(t, commitmsg.Parse(testCase.subject), nil).validate()
 			if testCase.wantID == "" {
 				if len(findings) != 0 {
 					t.Fatalf("expected no findings, got %+v", findings)
@@ -82,7 +82,7 @@ func TestValidateEmojiCatalog(t *testing.T) {
 func TestValidateEmoji_ProhibitedReplacement(t *testing.T) {
 	t.Parallel()
 
-	findings := checkFor(t, commitmsg.Parse(":test_tube: test: Add cases"), nil).ValidateEmoji()
+	findings := checkFor(t, commitmsg.Parse(":test_tube: test: Add cases"), nil).validate()
 	finding, found := findingByID(findings, "commit-emoji-prohibited")
 	if !found {
 		t.Fatalf("expected a prohibited finding, got %+v", findings)
@@ -166,7 +166,7 @@ func TestValidateEmojiWindow(t *testing.T) {
 				t,
 				commitmsg.Parse(testCase.subject),
 				testCase.history,
-			).ValidateEmoji()
+			).validate()
 			if testCase.wantID == "" {
 				if len(findings) != 0 {
 					t.Fatalf("expected no findings, got %+v", findings)
@@ -195,7 +195,7 @@ func TestValidateEmojiWindow_NewestEnd(t *testing.T) {
 	history := subjects("memo", "tea", "bug", "gear", "package", "art",
 		"wrench", "hammer", "whale", "skull", "seedling")
 
-	findings := checkFor(t, commitmsg.Parse(":wrench: feat: Add routing"), history).ValidateEmoji()
+	findings := checkFor(t, commitmsg.Parse(":wrench: feat: Add routing"), history).validate()
 	if !hasAnalyzer(findings, "commit-emoji-repeat") {
 		t.Fatalf("expected a hard repeat from the newest end, got %+v", findings)
 	}
@@ -205,7 +205,7 @@ func TestValidateEmojiSuggestionsAvoidTheWindow(t *testing.T) {
 	t.Parallel()
 
 	history := subjects("wrench", "tea", "bug", "gear", "package")
-	findings := checkFor(t, commitmsg.Parse(":wrench: feat: Add routing"), history).ValidateEmoji()
+	findings := checkFor(t, commitmsg.Parse(":wrench: feat: Add routing"), history).validate()
 
 	finding, found := findingByID(findings, "commit-emoji-repeat")
 	if !found {
@@ -225,7 +225,7 @@ func TestValidateEmojiChecksEveryLeadingEmoji(t *testing.T) {
 		t,
 		commitmsg.Parse(":wrench: :robot: feat: Add routing"),
 		nil,
-	).ValidateEmoji()
+	).validate()
 	if !hasAnalyzer(findings, "commit-emoji-prohibited") {
 		t.Fatalf("expected the trailing prohibited emoji to be caught, got %+v", findings)
 	}

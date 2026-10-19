@@ -3,9 +3,9 @@ package message
 import (
 	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
 
 type emojiWindowConfig struct {
@@ -28,10 +28,10 @@ func defaultEmojiWindowConfig() emojiWindowConfig {
 }
 
 func (check emojiCheck) validateWindow() []finding.Finding {
-	if len(check.Message.Emojis) == 0 {
+	if len(check.Message.LeadingEmojis) == 0 {
 		return nil
 	}
-	current := check.Message.Emojis[0]
+	current := check.Message.LeadingEmojis[0]
 
 	if slices.Contains(check.recentEmojis(check.Config.HardWindow), current) {
 		return []finding.Finding{check.Reporters.repeat.NewWithSuggestion(
@@ -62,23 +62,9 @@ func (check emojiCheck) recentEmojis(window int) []string {
 	}
 	shortcodes := make([]string, 0, len(history))
 	for _, subject := range history {
-		if shortcode := leadingEmoji(subject); shortcode != "" {
-			shortcodes = append(shortcodes, shortcode)
+		if emojis := commitmsg.Parse(subject).LeadingEmojis; len(emojis) > 0 {
+			shortcodes = append(shortcodes, emojis[0])
 		}
 	}
 	return shortcodes
-}
-
-func leadingEmoji(subject string) string {
-	trimmed := strings.TrimSpace(subject)
-	if !strings.HasPrefix(trimmed, ":") {
-		return ""
-	}
-	name, _, found := strings.Cut(trimmed[1:], ":")
-	// An unterminated shortcode swallows the type separator, so a subject like
-	// ":wrench feat: X" would otherwise read as the emoji "wrench feat".
-	if !found || name == "" || strings.ContainsAny(name, " \t") {
-		return ""
-	}
-	return name
 }

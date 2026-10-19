@@ -60,7 +60,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		History:   historySubjects(ctx.GitHistory),
 		Config:    windowCfg,
 		Reporters: analyzer.emojiReporters.resolved(ctx),
-	}.ValidateEmoji()...)
+	}.validate()...)
 
 	return findings
 }

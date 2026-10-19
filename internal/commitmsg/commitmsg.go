@@ -24,13 +24,8 @@ func (cursor *parser) parse(msg *Message) {
 	cursor.parseEmojis(msg)
 	cursor.skipSpaces()
 
-	if cursor.isSpecialInitial(msg) {
-		msg.IsInitial = true
-		msg.Description = cursor.remainingText()
-		return
-	}
-	if cursor.isSpecialMerge(msg) {
-		msg.IsMerge = true
+	msg.Kind = kindOf(cursor.remainingText())
+	if msg.IsCanonicalSpecial() {
 		msg.Description = cursor.remainingText()
 		return
 	}
@@ -50,7 +45,7 @@ func (cursor *parser) parseEmojis(msg *Message) {
 		}
 		// Uncapped: the commit analyzer enforces MaxLeadingEmojis, and
 		// truncating here would misread extras as the type.
-		msg.Emojis = append(msg.Emojis, name)
+		msg.LeadingEmojis = append(msg.LeadingEmojis, name)
 		cursor.skipSpaces()
 	}
 }

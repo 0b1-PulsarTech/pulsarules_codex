@@ -13,9 +13,9 @@ func validateDescription(
 	msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters,
 ) []finding.Finding {
 	var findings []finding.Finding
-	desc := msg.Description
+	descRunes := []rune(msg.Description)
 
-	if desc == "" {
+	if len(descRunes) == 0 {
 		findings = append(
 			findings,
 			reporters.descRequired.New("commit message must have a description"),
@@ -23,26 +23,21 @@ func validateDescription(
 		return findings
 	}
 
-	if len([]rune(desc)) > cfg.MaxSubjectLen {
+	if len(descRunes) > cfg.MaxSubjectLen {
 		findings = append(findings, reporters.descLength.New(
-			"subject is "+strconv.Itoa(
-				len([]rune(desc)),
-			)+" chars, max "+strconv.Itoa(
-				cfg.MaxSubjectLen,
-			),
+			"subject is "+strconv.Itoa(len(descRunes))+" chars, max "+
+				strconv.Itoa(cfg.MaxSubjectLen),
 		))
 	}
 
-	first := []rune(desc)[0]
-	if !unicode.IsUpper(first) && !msg.IsWIP {
+	if !unicode.IsUpper(descRunes[0]) && !msg.IsWIP {
 		findings = append(
 			findings,
 			reporters.descCapitalize.New("description must start with a capital letter"),
 		)
 	}
 
-	last := []rune(desc)[len([]rune(desc))-1]
-	if last == '.' {
+	if descRunes[len(descRunes)-1] == '.' {
 		findings = append(
 			findings,
 			reporters.descNoPeriod.New("description must not end with a period"),
@@ -93,9 +88,4 @@ func validateToolTrailers(msg commitmsg.Message, reporters ruleReporters) []find
 				"remove it before committing",
 		),
 	}
-}
-
-func isScopeChar(char rune) bool {
-	return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-		(char >= '0' && char <= '9') || char == '-' || char == '_'
 }

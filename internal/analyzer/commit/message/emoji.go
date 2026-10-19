@@ -16,8 +16,8 @@ type emojiCheck struct {
 	Reporters emojiReporters
 }
 
-func (check emojiCheck) ValidateEmoji() []finding.Finding {
-	if check.Message.IsInitial || check.Message.IsMerge {
+func (check emojiCheck) validate() []finding.Finding {
+	if check.Message.IsCanonicalSpecial() {
 		return nil
 	}
 	return append(check.validateCatalog(), check.validateWindow()...)
@@ -25,7 +25,7 @@ func (check emojiCheck) ValidateEmoji() []finding.Finding {
 
 func (check emojiCheck) validateCatalog() []finding.Finding {
 	var findings []finding.Finding
-	for _, shortcode := range check.Message.Emojis {
+	for _, shortcode := range check.Message.LeadingEmojis {
 		if replacement, banned := emoji.ProhibitedReplacement(shortcode); banned {
 			message := "emoji :" + shortcode + ": is prohibited by project convention"
 			if replacement != "" {
@@ -55,7 +55,7 @@ func (check emojiCheck) suggestionText() string {
 	}
 	// Exclude the window and the emoji already on this message: offering back
 	// the one that was just rejected is not an alternative.
-	excluded := append(check.recentEmojis(check.Config.HardWindow), check.Message.Emojis...)
+	excluded := append(check.recentEmojis(check.Config.HardWindow), check.Message.LeadingEmojis...)
 
 	seed := check.Message.Scope + " " + check.Message.Description
 	picks := check.Catalog.Suggest(

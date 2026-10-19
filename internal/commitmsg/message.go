@@ -5,18 +5,30 @@ import (
 	"strings"
 )
 
+type Kind int
+
+const (
+	Regular Kind = iota
+	Initial
+	Merge
+)
+
+const (
+	InitialEmoji = "ghost"
+	MergeEmoji   = "volcano"
+)
+
 type Message struct {
-	Emojis      []string
-	Type        string
-	Scope       string
-	Breaking    bool
-	Description string
-	Body        string
-	Footers     []Footer
-	IsMerge     bool
-	IsInitial   bool
-	IsWIP       bool
-	Raw         string
+	Kind          Kind
+	LeadingEmojis []string
+	Type          string
+	Scope         string
+	Breaking      bool
+	Description   string
+	Body          string
+	Footers       []Footer
+	IsWIP         bool
+	Raw           string
 }
 
 type Footer struct {
@@ -31,15 +43,30 @@ func AllowedTypes() []string {
 	}
 }
 
+func toolFooterKeys() []string {
+	return []string{"Co-Authored-By", "Claude-Session"}
+}
+
+func (msg Message) IsCanonicalSpecial() bool {
+	switch msg.Kind {
+	case Initial:
+		return len(msg.LeadingEmojis) == 1 && msg.LeadingEmojis[0] == InitialEmoji
+	case Merge:
+		return len(msg.LeadingEmojis) >= 1 && msg.LeadingEmojis[0] == MergeEmoji
+	case Regular:
+		return false
+	}
+	return false
+}
+
 func (msg Message) ToolTrailer() string {
-	forbiddenTrailerKeys := []string{"Co-Authored-By", "Claude-Session"}
 	toolAttributionMarkers := []string{
 		"claude.ai/code",
 		"noreply@anthropic.com",
 		"generated with claude",
 	}
 	for _, footer := range msg.Footers {
-		if slices.ContainsFunc(forbiddenTrailerKeys, func(key string) bool {
+		if slices.ContainsFunc(toolFooterKeys(), func(key string) bool {
 			return strings.EqualFold(footer.Key, key)
 		}) {
 			return footer.Key

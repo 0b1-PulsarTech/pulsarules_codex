@@ -46,21 +46,20 @@ func defaultRuleReporters() ruleReporters {
 }
 
 func (reporters ruleReporters) resolved(ctx *pass.Context) ruleReporters {
-	reporters.initial = pass.ResolveReporter(reporters.initial, ctx)
-	reporters.merge = pass.ResolveReporter(reporters.merge, ctx)
-	reporters.emojiRequired = pass.ResolveReporter(reporters.emojiRequired, ctx)
-	reporters.emojiCount = pass.ResolveReporter(reporters.emojiCount, ctx)
-	reporters.typeRequired = pass.ResolveReporter(reporters.typeRequired, ctx)
-	reporters.typeEnum = pass.ResolveReporter(reporters.typeEnum, ctx)
-	reporters.scopeCharset = pass.ResolveReporter(reporters.scopeCharset, ctx)
-	reporters.descRequired = pass.ResolveReporter(reporters.descRequired, ctx)
-	reporters.descLength = pass.ResolveReporter(reporters.descLength, ctx)
-	reporters.descCapitalize = pass.ResolveReporter(reporters.descCapitalize, ctx)
-	reporters.descNoPeriod = pass.ResolveReporter(reporters.descNoPeriod, ctx)
-	reporters.bodyLength = pass.ResolveReporter(reporters.bodyLength, ctx)
-	reporters.bodyTotalLength = pass.ResolveReporter(reporters.bodyTotalLength, ctx)
-	reporters.noCoauthor = pass.ResolveReporter(reporters.noCoauthor, ctx)
+	for _, reporter := range reporters.all() {
+		*reporter = pass.ResolveReporter(*reporter, ctx)
+	}
 	return reporters
+}
+
+func (reporters *ruleReporters) all() []*finding.Reporter {
+	return []*finding.Reporter{
+		&reporters.initial, &reporters.merge, &reporters.emojiRequired, &reporters.emojiCount,
+		&reporters.typeRequired, &reporters.typeEnum, &reporters.scopeCharset,
+		&reporters.descRequired, &reporters.descLength, &reporters.descCapitalize,
+		&reporters.descNoPeriod, &reporters.bodyLength, &reporters.bodyTotalLength,
+		&reporters.noCoauthor,
+	}
 }
 
 type emojiReporters struct {
@@ -82,9 +81,10 @@ func defaultEmojiReporters() emojiReporters {
 }
 
 func (reporters emojiReporters) resolved(ctx *pass.Context) emojiReporters {
-	reporters.prohibited = pass.ResolveReporter(reporters.prohibited, ctx)
-	reporters.catalog = pass.ResolveReporter(reporters.catalog, ctx)
-	reporters.repeat = pass.ResolveReporter(reporters.repeat, ctx)
-	reporters.softRepeat = pass.ResolveReporter(reporters.softRepeat, ctx)
+	for _, reporter := range []*finding.Reporter{
+		&reporters.prohibited, &reporters.catalog, &reporters.repeat, &reporters.softRepeat,
+	} {
+		*reporter = pass.ResolveReporter(*reporter, ctx)
+	}
 	return reporters
 }
