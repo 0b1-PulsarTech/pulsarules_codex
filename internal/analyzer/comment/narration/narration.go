@@ -32,11 +32,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		ctx,
 		eligible,
 		func(fc pass.FileChange, src []byte) []finding.Finding {
-			source := commentSource{
-				lang:   language.ForExtension(fc.Extension),
-				parsed: analyzer.cachedGo(ctx, fc),
-			}
-			return scanFile(src, fc, reporter, source)
+			return scanFile(src, fc, reporter, analyzer.cachedGo(ctx, fc))
 		},
 	)
 }
@@ -53,31 +49,19 @@ func (analyzer *Analyzer) cachedGo(ctx *pass.Context, fc pass.FileChange) parsed
 	return parsedGo{file: ctx.ASTCache.Get(fc.Path), fset: ctx.ASTCache.FileSet()}
 }
 
-func commentBlocks(
-	src []byte, fc pass.FileChange, lang language.Language, parsed parsedGo,
-) [][]segment {
+func commentBlocks(src []byte, fc pass.FileChange, parsed parsedGo) [][]segment {
 	if parsed.file != nil {
 		return blocks(fileSegments(parsed.file, parsed.fset))
 	}
-	if fc.Extension == ".go" {
-		if segments, ok := goSegments(src); ok {
-			return blocks(segments)
-		}
-	}
-	return blocks(scanSegments(src, lang))
-}
-
-type commentSource struct {
-	lang   language.Language
-	parsed parsedGo
+	return blocks(scanSegments(string(src), fc.Extension))
 }
 
 func scanFile(
-	src []byte, fc pass.FileChange, reporter finding.Reporter, source commentSource,
+	src []byte, fc pass.FileChange, reporter finding.Reporter, parsed parsedGo,
 ) []finding.Finding {
 	var findings []finding.Finding
 	phrases := narrationPhrases()
-	for _, block := range commentBlocks(src, fc, source.lang, source.parsed) {
+	for _, block := range commentBlocks(src, fc, parsed) {
 		for _, found := range findHits(wordsOf(block), phrases) {
 			findings = append(findings, reporter.At(
 				fc.Path,

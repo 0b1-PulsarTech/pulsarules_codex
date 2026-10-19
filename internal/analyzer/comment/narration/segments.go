@@ -2,19 +2,9 @@ package narration
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"strings"
 )
-
-func goSegments(src []byte) ([]segment, bool) {
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "", src, parser.ParseComments)
-	if err != nil || file == nil {
-		return nil, false
-	}
-	return fileSegments(file, fset), true
-}
 
 func fileSegments(file *ast.File, fset *token.FileSet) []segment {
 	var segments []segment

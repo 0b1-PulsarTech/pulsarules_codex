@@ -9,7 +9,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
@@ -27,8 +26,7 @@ func runScan(t *testing.T, testCase scanCase) {
 		source = "package p\n\nfunc f() {\n" + source + "}\n"
 	}
 	fc := pass.FileChange{Path: "f", Extension: "." + testCase.ext}
-	commentSrc := commentSource{lang: language.ForExtension(fc.Extension)}
-	got := scanFile([]byte(source), fc, NewAnalyzer().reporter(), commentSrc)
+	got := scanFile([]byte(source), fc, NewAnalyzer().reporter(), parsedGo{})
 	if len(got) != testCase.expect {
 		t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
 	}
@@ -42,7 +40,7 @@ func TestScanFileUnparsableGo(t *testing.T) {
 		[]byte("// used to be a loop\nfunc ("),
 		fc,
 		NewAnalyzer().reporter(),
-		commentSource{lang: language.ForExtension(".go")},
+		parsedGo{},
 	)
 	if len(got) != 1 || got[0].Line != 1 {
 		t.Fatalf("findings = %+v, want one on line 1", got)
@@ -67,7 +65,7 @@ func TestScanFileUnparsableGoFallback(t *testing.T) {
 			fc := pass.FileChange{Path: "f.go", Extension: ".go"}
 			got := scanFile(
 				[]byte(testCase.source), fc, NewAnalyzer().reporter(),
-				commentSource{lang: language.ForExtension(".go")},
+				parsedGo{},
 			)
 			if len(got) != testCase.expect {
 				t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
@@ -85,7 +83,7 @@ func TestScanFileSplitPhraseLine(t *testing.T) {
 		[]byte(source),
 		fc,
 		NewAnalyzer().reporter(),
-		commentSource{lang: language.ForExtension(".go")},
+		parsedGo{},
 	)
 	if len(got) != 1 || got[0].Line != 3 {
 		t.Fatalf("findings = %+v, want one on line 3", got)
@@ -101,7 +99,7 @@ func TestScanFileMessageNamesPhrase(t *testing.T) {
 		[]byte(source),
 		fc,
 		NewAnalyzer().reporter(),
-		commentSource{lang: language.ForExtension(".go")},
+		parsedGo{},
 	)
 	want := "comment narrates history: \"never ever used to retry\""
 	if len(got) != 1 || got[0].Message != want {

@@ -3,9 +3,11 @@ package narration
 import (
 	"slices"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-func TestScanSegments(t *testing.T) {
+func TestScanSegments_Boundaries(t *testing.T) {
 	t.Parallel()
 
 	for _, testCase := range slices.Concat(boundaryCases(), lineStartCases()) {
@@ -97,5 +99,63 @@ func lineStartCases() []scanCase {
 		{"sql dashes need no space", "sql", "SELECT 1;-- the old code\n", 1},
 		{"url slashes are not a comment", "ts", "see http://x.y/the-old-code\n", 0},
 		{"shell hash glued to a word", "sh", "echo a#the old code\n", 0},
+	}
+}
+
+func TestScanSegments(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		ext    string
+		source string
+		want   []segment
+	}{
+		{"line comment", ".py", "x = 1 # a\n", []segment{{1, " a"}}},
+		{"empty line comment", ".py", "x\n#\n", []segment{{2, ""}}},
+		{"block comment", ".c", "/* a */ x\n", []segment{{1, " a "}}},
+		{
+			"block comment lines and the closer line",
+			".c",
+			"x\n/* a\n  b\n*/\n",
+			[]segment{{2, " a"}, {3, "  b"}, {4, ""}},
+		},
+		{
+			"empty lines of a block comment leave a gap",
+			".c",
+			"/* a\n\nb */\n",
+			[]segment{{1, " a"}, {3, "b "}},
+		},
+		{"block comment opened at the end of its line", ".c", "/*\na\n", []segment{{2, "a"}}},
+		{"unterminated block comment", ".c", "/* a\nb", []segment{{1, " a"}, {2, "b"}}},
+		{"no comment", ".c", "x = \"// a\"\n", nil},
+		{"unknown extension", ".zzz", "// a\n", nil},
+		{
+			"html comment among markup, script and style",
+			".svelte",
+			"<!-- a -->\n<script>\n// b\n</script>\n<style>\n/* c */\n</style>\n",
+			[]segment{{1, " a "}, {3, " b"}, {6, " c "}},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := scanSegments(testCase.source, testCase.ext)
+			if !slices.Equal(got, testCase.want) {
+				t.Fatalf("scanSegments(%q) = %v, want %v", testCase.source, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestScanFileDartBlockCommentsNest(t *testing.T) {
+	t.Parallel()
+
+	source := "/* outer one /* inner two */ outer three\n   the old code used to be nested */\n"
+	fc := pass.FileChange{Path: "f.dart", Extension: ".dart"}
+	got := scanFile([]byte(source), fc, NewAnalyzer().reporter(), parsedGo{})
+	if len(got) == 0 || got[0].Line != 2 {
+		t.Fatalf("findings = %+v, want the first on line 2", got)
 	}
 }
