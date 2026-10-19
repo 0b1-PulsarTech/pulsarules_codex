@@ -13,6 +13,8 @@ type Language struct {
 
 	extensions    []string
 	isConfig      bool
+	strings       lexer.StringSyntax
+	astral        string
 	packageClause func(line string) bool
 }
 

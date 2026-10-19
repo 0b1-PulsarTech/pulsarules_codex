@@ -27,11 +27,10 @@ func KeepSpansAtEOF() ScanOption {
 
 func ScanLiterals(ext, src string, options ...ScanOption) Literals {
 	lang := ForExtension(ext)
-	grammar, ok := stringGrammarOf(lang.ID)
-	if !ok {
+	if len(lang.strings.Delims) == 0 {
 		return Literals{}
 	}
-	spec := literalSpec{Comments: lang.Comments, Strings: grammar.syntax, Astral: grammar.astral}
+	spec := literalSpec{Comments: lang.Comments, Strings: lang.strings, Astral: lang.astral}
 	for _, option := range options {
 		option(&spec)
 	}

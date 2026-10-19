@@ -5,7 +5,7 @@ import "github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 func dartStyle() lexer.CommentSyntax {
 	// Dart block comments nest, unlike the C family's.
 	syntax := lexer.SlashSyntax()
-	syntax.Blocks = []lexer.BlockDelim{{Open: "/*", Close: "*/", Nested: true}}
+	syntax.Blocks[0].Nested = true
 	return syntax
 }
 

@@ -2,26 +2,6 @@ package language
 
 import "github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 
-type stringGrammar struct {
-	syntax lexer.StringSyntax
-	astral string
-}
-
-func stringGrammarOf(id ID) (stringGrammar, bool) {
-	const braced = `\u{%X}`
-	switch id {
-	case Go:
-		return stringGrammar{syntax: goStrings(), astral: `\U%08X`}, true
-	case Dart:
-		return stringGrammar{syntax: dartStrings(), astral: braced}, true
-	case TypeScript, JavaScript:
-		return stringGrammar{syntax: jsStrings(), astral: braced}, true
-	case Svelte, Vue:
-		return stringGrammar{syntax: sfcStrings(), astral: braced}, true
-	}
-	return stringGrammar{}, false
-}
-
 func goStrings() lexer.StringSyntax {
 	return lexer.StringSyntax{Delims: []lexer.StringDelim{
 		{Open: `"`, Close: `"`, Escapes: true},

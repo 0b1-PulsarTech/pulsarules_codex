@@ -3,26 +3,7 @@ package language
 import "github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 
 func languages() []Language {
-	return []Language{
-		{
-			ID:            Go,
-			extensions:    []string{".go"},
-			Comments:      lexer.SlashSyntax(),
-			packageClause: isGoPackage,
-		},
-		{ID: Dart, extensions: []string{".dart"}, Comments: dartStyle()},
-		{
-			ID:         TypeScript,
-			extensions: []string{".ts", ".tsx", ".mts", ".cts"},
-			Comments:   lexer.SlashSyntax(),
-		},
-		{
-			ID:         JavaScript,
-			extensions: []string{".js", ".jsx", ".mjs", ".cjs"},
-			Comments:   lexer.SlashSyntax(),
-		},
-		{ID: Svelte, extensions: []string{".svelte"}, Comments: componentStyle()},
-		{ID: Vue, extensions: []string{".vue"}, Comments: componentStyle()},
+	return append(scriptLanguages(), []Language{
 		{ID: Java, extensions: []string{".java"}, Comments: lexer.SlashSyntax()},
 		{ID: Kotlin, extensions: []string{".kt", ".kts"}, Comments: lexer.SlashSyntax()},
 		{ID: Scala, extensions: []string{".scala"}, Comments: lexer.SlashSyntax()},
@@ -43,5 +24,57 @@ func languages() []Language {
 		// Config prose is not source: flagging it trains people to ignore the gate.
 		{ID: YAML, extensions: []string{".yaml", ".yml"}, Comments: hashStyle(), isConfig: true},
 		{ID: TOML, extensions: []string{".toml"}, Comments: hashStyle(), isConfig: true},
+	}...)
+}
+
+func scriptLanguages() []Language {
+	const (
+		braced = `\u{%X}`
+		goRune = `\U%08X`
+	)
+	return []Language{
+		{
+			ID:            Go,
+			extensions:    []string{".go"},
+			Comments:      lexer.SlashSyntax(),
+			strings:       goStrings(),
+			astral:        goRune,
+			packageClause: isGoPackage,
+		},
+		{
+			ID:         Dart,
+			extensions: []string{".dart"},
+			Comments:   dartStyle(),
+			strings:    dartStrings(),
+			astral:     braced,
+		},
+		{
+			ID:         TypeScript,
+			extensions: []string{".ts", ".tsx", ".mts", ".cts"},
+			Comments:   lexer.SlashSyntax(),
+			strings:    jsStrings(),
+			astral:     braced,
+		},
+		{
+			ID:         JavaScript,
+			extensions: []string{".js", ".jsx", ".mjs", ".cjs"},
+			Comments:   lexer.SlashSyntax(),
+			strings:    jsStrings(),
+			astral:     braced,
+		},
+		{
+			ID:         Svelte,
+			extensions: []string{".svelte"},
+			Comments:   componentStyle(),
+			strings:    sfcStrings(),
+			astral:     braced,
+		},
+		{
+			ID:         Vue,
+			extensions: []string{".vue"},
+			Comments:   componentStyle(),
+			strings:    sfcStrings(),
+			astral:     braced,
+		},
 	}
 }
