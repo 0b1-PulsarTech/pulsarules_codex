@@ -109,11 +109,7 @@ type dialectSpec struct {
 }
 
 func dialectSpecs() map[Dialect]dialectSpec {
-	slashes := CommentSyntax{
-		Line:   []string{"//"},
-		Blocks: []BlockDelim{{Open: "/*", Close: "*/"}},
-	}
-	goSyntax := slashes
+	goSyntax := SlashSyntax()
 	goSyntax.keepStars = true
 	return map[Dialect]dialectSpec{
 		DialectGo: {
@@ -128,7 +124,7 @@ func dialectSpecs() map[Dialect]dialectSpec {
 			toolchainText: true,
 		},
 		DialectTS: {
-			syntax: slashes,
+			syntax: SlashSyntax(),
 			bodyPrefixes: []string{
 				"eslint-", "@ts-", "pulsarules:", "ignore:", "ignore_for_file:",
 				"prettier-ignore", "istanbul ignore", "c8 ignore", "svelte-ignore",

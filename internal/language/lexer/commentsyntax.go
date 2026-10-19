@@ -18,6 +18,13 @@ type CommentSyntax struct {
 	keepStars bool
 }
 
+func SlashSyntax() CommentSyntax {
+	return CommentSyntax{
+		Line:   []string{"//"},
+		Blocks: []BlockDelim{{Open: "/*", Close: "*/"}},
+	}
+}
+
 func AnyCommentSyntax() CommentSyntax {
 	return CommentSyntax{
 		Line: []string{"//", "#", "--"},
