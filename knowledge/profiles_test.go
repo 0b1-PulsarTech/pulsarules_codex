@@ -50,3 +50,22 @@ func TestApplyProfiles_UnknownProfileIDIsError(t *testing.T) {
 		t.Error("ApplyProfiles(unknown) = nil, want error")
 	}
 }
+
+func TestApplyProfiles_PartialFailureKeepsViewsConsistent(t *testing.T) {
+	t.Parallel()
+
+	idx, _, err := Load("")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err = idx.ApplyProfiles([]string{"go", "ghost"}); err == nil {
+		t.Fatal("ApplyProfiles(go, ghost) = nil, want error")
+	}
+	for _, listed := range idx.Skills {
+		byID, ok := idx.Skill(listed.ID)
+		if !ok || !slices.Equal(listed.ComposeRules, byID.ComposeRules) {
+			t.Errorf("skill %q: slice %v, by-id %v", listed.ID,
+				listed.ComposeRules, byID.ComposeRules)
+		}
+	}
+}

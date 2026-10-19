@@ -13,6 +13,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
 func TestDispatchStop_CapsTheUncommittedListing(t *testing.T) {
@@ -428,7 +429,7 @@ func TestDispatchStop_MissingStopTemplate(t *testing.T) {
 	disp, out := dispatchCapture(Deps{
 		ProjectDir: dir,
 		Logger:     logger,
-		Templates:  fstest.MapFS{},
+		Templates:  templates.New(fstest.MapFS{}),
 		Governance: stubGovernance("\nGovernance checks:\n  - stub finding\n", 1),
 	})
 

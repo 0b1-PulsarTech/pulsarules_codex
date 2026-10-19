@@ -3,7 +3,6 @@ package hook
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -106,8 +105,8 @@ type postEditChecklist struct {
 
 func isGoFile(filePath string) bool { return strings.ToLower(filepath.Ext(filePath)) == ".go" }
 
-func renderPostEditChecklist(templatesItem fs.FS, doc postEditChecklist) (string, error) {
-	return templates.New(templatesItem).Render("hooks/post-edit-checklist.txt.tmpl", doc)
+func renderPostEditChecklist(assets templates.Set, doc postEditChecklist) (string, error) {
+	return assets.Render("hooks/post-edit-checklist.txt.tmpl", doc)
 }
 
 func (disp *Dispatcher) installedSkill(id string) string {

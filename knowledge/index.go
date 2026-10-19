@@ -9,13 +9,12 @@ import (
 )
 
 type Index struct {
-	Rules      []Rule
-	Patterns   []Pattern
-	Workflows  []Workflow
-	Skills     []Skill
-	Profiles   []Profile
-	References []Reference
-	Router     RouterSpec
+	Rules     []Rule
+	Patterns  []Pattern
+	Workflows []Workflow
+	Skills    []Skill
+	Profiles  []Profile
+	Router    RouterSpec
 
 	rules      catalog.Catalog[Rule]
 	patterns   catalog.Catalog[Pattern]
@@ -25,6 +24,17 @@ type Index struct {
 	references catalog.Catalog[Reference]
 	bodies     map[string]string
 	summaries  map[string]string
+}
+
+func NewIndex(skills []Skill) (*Index, error) {
+	idx := newIndex()
+	for _, skill := range skills {
+		if !idx.skills.Add(skill.ID, skill) {
+			return nil, fmt.Errorf("duplicate skill id %q", skill.ID)
+		}
+	}
+	idx.publish()
+	return idx, nil
 }
 
 func (idx *Index) Rule(id string) (Rule, bool) { return idx.rules.Get(id) }
@@ -48,6 +58,7 @@ func (idx *Index) WorkflowExists(id string) bool { return idx.workflows.Has(id) 
 func (idx *Index) SkillExists(id string) bool { return idx.skills.Has(id) }
 
 func (idx *Index) ApplyProfiles(ids []string) error {
+	defer idx.publish()
 	for _, id := range ids {
 		profile, ok := idx.profiles.Get(id)
 		if !ok {
@@ -59,15 +70,18 @@ func (idx *Index) ApplyProfiles(ids []string) error {
 				return fmt.Errorf("profile %q overrides unknown skill %q", id, skillID)
 			}
 			override.Apply(&skill)
-			idx.skills.Put(skillID, skill)
-			for pos := range idx.Skills {
-				if idx.Skills[pos].ID == skillID {
-					idx.Skills[pos] = skill
-				}
-			}
+			idx.skills.Replace(skillID, skill)
 		}
 	}
 	return nil
+}
+
+func (idx *Index) publish() {
+	idx.Rules = slices.Collect(idx.rules.All())
+	idx.Patterns = slices.Collect(idx.patterns.All())
+	idx.Workflows = slices.Collect(idx.workflows.All())
+	idx.Skills = slices.Collect(idx.skills.All())
+	idx.Profiles = slices.Collect(idx.profiles.All())
 }
 
 func (idx *Index) Body(kind Kind, id string) string { return idx.bodies[kind.key(id)] }
@@ -97,15 +111,13 @@ func (idx *Index) BaselineFor(languages ...string) []string {
 }
 
 func (idx *Index) Fits(id string, languages ...string) bool {
-	for _, skill := range idx.Skills {
-		if skill.ID != id {
-			continue
-		}
-		// A skill with no languages is neutral and fits every project.
-		return len(skill.Languages) == 0 ||
-			slices.ContainsFunc(skill.Languages, func(own string) bool {
-				return slices.Contains(languages, own)
-			})
+	skill, ok := idx.skills.Get(id)
+	if !ok {
+		return false
 	}
-	return false
+	// A skill with no languages is neutral and fits every project.
+	return len(skill.Languages) == 0 ||
+		slices.ContainsFunc(skill.Languages, func(own string) bool {
+			return slices.Contains(languages, own)
+		})
 }

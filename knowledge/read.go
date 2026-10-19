@@ -22,19 +22,19 @@ func loadKinds(standards fs.FS, idx *Index) error {
 	}{
 		{KindRule, func(fsys fs.FS) error {
 			return readKind(fsys, KindRule, kindSink[Rule]{
-				items: &idx.Rules, byID: &idx.rules,
+				byID:   &idx.rules,
 				bodies: idx.bodies, summaries: idx.summaries, idOf: ruleID,
 			})
 		}},
 		{KindPattern, func(fsys fs.FS) error {
 			return readKind(fsys, KindPattern, kindSink[Pattern]{
-				items: &idx.Patterns, byID: &idx.patterns,
+				byID:   &idx.patterns,
 				bodies: idx.bodies, summaries: idx.summaries, idOf: patternID,
 			})
 		}},
 		{KindWorkflow, func(fsys fs.FS) error {
 			return readKind(fsys, KindWorkflow, kindSink[Workflow]{
-				items: &idx.Workflows, byID: &idx.workflows,
+				byID:   &idx.workflows,
 				bodies: idx.bodies, summaries: idx.summaries, idOf: workflowID,
 			})
 		}},
@@ -67,5 +67,6 @@ func readIndex(standards fs.FS) (*Index, error) {
 	if err := readRouter(standards, idx); err != nil {
 		return nil, fmt.Errorf("load router: %w", err)
 	}
+	idx.publish()
 	return idx, nil
 }

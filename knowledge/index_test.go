@@ -5,15 +5,32 @@ import (
 	"testing"
 )
 
+func mustIndex(t *testing.T, skills ...Skill) *Index {
+	t.Helper()
+	idx, err := NewIndex(skills)
+	if err != nil {
+		t.Fatalf("NewIndex: %v", err)
+	}
+	return idx
+}
+
+func TestNewIndex_DuplicateSkill(t *testing.T) {
+	t.Parallel()
+
+	if _, err := NewIndex([]Skill{{ID: "a"}, {ID: "a"}}); err == nil {
+		t.Fatal("NewIndex with a duplicate skill id: err = nil, want an error")
+	}
+}
+
 func TestSkillsOrdered_ByOrderThenID(t *testing.T) {
 	t.Parallel()
 
-	idx := &Index{Skills: []Skill{
-		{ID: "b", Order: 10},
-		{ID: "router", Order: 0},
-		{ID: "a", Order: 10},
-		{ID: "c", Order: 5},
-	}}
+	idx := mustIndex(t,
+		Skill{ID: "b", Order: 10},
+		Skill{ID: "router", Order: 0},
+		Skill{ID: "a", Order: 10},
+		Skill{ID: "c", Order: 5},
+	)
 
 	want := []string{"router", "c", "a", "b"}
 	ordered := idx.SkillsOrdered()
@@ -30,21 +47,19 @@ func TestSkillsOrdered_ByOrderThenID(t *testing.T) {
 func TestBaselineFor(t *testing.T) {
 	t.Parallel()
 
-	idx := &Index{
-		Skills: []Skill{
-			{ID: "go-style", Languages: []string{"go"}},
-			{ID: "dart-style", Languages: []string{"dart"}},
-			{ID: "ts-errors", Languages: []string{"typescript", "javascript", "svelte"}},
-			{ID: "code-minimalism"},
-		},
-		Router: RouterSpec{Baseline: RouterBaseline{Always: []RouterBaselineEntry{
-			{Skill: "go-style"},
-			{Skill: "dart-style"},
-			{Skill: "ts-errors"},
-			{Skill: "code-minimalism"},
-			{Skill: "unlisted"},
-		}}},
-	}
+	idx := mustIndex(t,
+		Skill{ID: "go-style", Languages: []string{"go"}},
+		Skill{ID: "dart-style", Languages: []string{"dart"}},
+		Skill{ID: "ts-errors", Languages: []string{"typescript", "javascript", "svelte"}},
+		Skill{ID: "code-minimalism"},
+	)
+	idx.Router = RouterSpec{Baseline: RouterBaseline{Always: []RouterBaselineEntry{
+		{Skill: "go-style"},
+		{Skill: "dart-style"},
+		{Skill: "ts-errors"},
+		{Skill: "code-minimalism"},
+		{Skill: "unlisted"},
+	}}}
 	testCases := []struct {
 		name      string
 		index     *Index
@@ -74,10 +89,10 @@ func TestBaselineFor(t *testing.T) {
 func TestFits(t *testing.T) {
 	t.Parallel()
 
-	idx := &Index{Skills: []Skill{
-		{ID: "go-style", Languages: []string{"go"}},
-		{ID: "code-minimalism"},
-	}}
+	idx := mustIndex(t,
+		Skill{ID: "go-style", Languages: []string{"go"}},
+		Skill{ID: "code-minimalism"},
+	)
 	testCases := []struct {
 		name      string
 		id        string

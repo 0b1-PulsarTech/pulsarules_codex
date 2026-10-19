@@ -8,24 +8,24 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func readOptionalYAML[Doc any](standards fs.FS, name string) (Doc, bool, error) {
+func readOptionalYAML[Doc any](standards fs.FS, name string) (Doc, error) {
 	var loaded Doc
 	raw, err := fs.ReadFile(standards, name)
 	if err != nil {
 		// Each of these files is optional; its absence is not an error.
 		if errors.Is(err, fs.ErrNotExist) {
-			return loaded, false, nil
+			return loaded, nil
 		}
-		return loaded, false, fmt.Errorf("read %s: %w", name, err)
+		return loaded, fmt.Errorf("read %s: %w", name, err)
 	}
 	if err = yaml.Unmarshal(raw, &loaded); err != nil {
-		return loaded, false, fmt.Errorf("parse %s: %w", name, err)
+		return loaded, fmt.Errorf("parse %s: %w", name, err)
 	}
-	return loaded, true, nil
+	return loaded, nil
 }
 
 func readRouter(standards fs.FS, idx *Index) error {
-	loaded, _, err := readOptionalYAML[routerFile](standards, "router.yaml")
+	loaded, err := readOptionalYAML[routerFile](standards, "router.yaml")
 	if err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func readRouter(standards fs.FS, idx *Index) error {
 }
 
 func readReferences(standards fs.FS, idx *Index) error {
-	loaded, _, err := readOptionalYAML[referencesFile](standards, "references.yaml")
+	loaded, err := readOptionalYAML[referencesFile](standards, "references.yaml")
 	if err != nil {
 		return err
 	}
@@ -42,17 +42,15 @@ func readReferences(standards fs.FS, idx *Index) error {
 		if reference.ID == "" {
 			return errors.New("reference with empty id")
 		}
-		if idx.references.Has(reference.ID) {
+		if !idx.references.Add(reference.ID, reference) {
 			return fmt.Errorf("duplicate reference id %q", reference.ID)
 		}
-		idx.references.Put(reference.ID, reference)
-		idx.References = append(idx.References, reference)
 	}
 	return nil
 }
 
 func readProfiles(standards fs.FS, idx *Index) error {
-	loaded, _, err := readOptionalYAML[profilesFile](standards, "profiles.yaml")
+	loaded, err := readOptionalYAML[profilesFile](standards, "profiles.yaml")
 	if err != nil {
 		return err
 	}
@@ -60,11 +58,9 @@ func readProfiles(standards fs.FS, idx *Index) error {
 		if profile.ID == "" {
 			return errors.New("profile with empty id")
 		}
-		if idx.profiles.Has(profile.ID) {
+		if !idx.profiles.Add(profile.ID, profile) {
 			return fmt.Errorf("duplicate profile id %q", profile.ID)
 		}
-		idx.profiles.Put(profile.ID, profile)
-		idx.Profiles = append(idx.Profiles, profile)
 	}
 	return nil
 }
@@ -88,7 +84,7 @@ func readSkillSidecars(standards fs.FS, idx *Index) error {
 		if sidecar.ID == "" {
 			return fmt.Errorf("skills file %q has empty id", path)
 		}
-		if _, ok := idx.skills.Get(sidecar.ID); !ok {
+		if !idx.skills.Has(sidecar.ID) {
 			return fmt.Errorf(
 				"sidecar %q references unknown skill %q: %w",
 				path,

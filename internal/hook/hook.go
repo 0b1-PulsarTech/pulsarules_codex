@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/contract"
-	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
 func (disp *Dispatcher) Dispatch(mode string, payload []byte) error {
@@ -73,7 +72,7 @@ func (disp *Dispatcher) emitContext(asset, event string) error {
 }
 
 func (disp *Dispatcher) emitContextWithNotice(asset, event, notice string) error {
-	text, err := templates.New(disp.templates).Text(asset)
+	text, err := disp.templates.Text(asset)
 	if err != nil {
 		return err
 	}

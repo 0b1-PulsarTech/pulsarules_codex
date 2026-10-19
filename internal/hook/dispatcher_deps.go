@@ -3,17 +3,17 @@ package hook
 import (
 	"fmt"
 	"io"
-	"io/fs"
 	"log/slog"
 	"os"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
 type Dispatcher struct {
-	templates  fs.FS
+	templates  templates.Set
 	logger     *slog.Logger
 	index      *knowledge.Index
 	router     *fileRouter
@@ -26,7 +26,7 @@ type Dispatcher struct {
 }
 
 type Deps struct {
-	Templates  fs.FS
+	Templates  templates.Set
 	Logger     *slog.Logger
 	Index      *knowledge.Index
 	Out        io.Writer

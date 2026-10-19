@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"io/fs"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -68,14 +69,15 @@ func TestSet_Render(t *testing.T) {
 	}
 }
 
-func TestEmbedded_HoldsEveryAssetDir(t *testing.T) {
+func TestSet_Open(t *testing.T) {
 	t.Parallel()
 
-	for _, asset := range []string{
-		"docs/AGENTS.md.tmpl", "hooks/stop.txt", "skills/SKILL.md.tmpl",
-	} {
-		if _, err := Embedded().Text(asset); err != nil {
-			t.Errorf("Embedded().Text(%q): %v", asset, err)
-		}
+	set := New(fstest.MapFS{"a.txt": {Data: []byte("hello")}})
+	raw, err := fs.ReadFile(set, "a.txt")
+	if err != nil || string(raw) != "hello" {
+		t.Errorf("ReadFile = %q, %v; want hello, nil", raw, err)
+	}
+	if _, err = fs.ReadFile(set, "b.txt"); err == nil {
+		t.Error("ReadFile of a missing asset: err = nil, want an error")
 	}
 }

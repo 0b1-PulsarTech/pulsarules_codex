@@ -14,6 +14,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
 type resolveEveryBinding struct {
@@ -37,6 +38,10 @@ func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 		}},
 		{"templates fs.FS", func(inj remy.Injector) error {
 			_, err := remy.Get[fs.FS](inj)
+			return err
+		}},
+		{"templates set", func(inj remy.Injector) error {
+			_, err := remy.Get[templates.Set](inj)
 			return err
 		}},
 		{"renderer", func(inj remy.Injector) error {

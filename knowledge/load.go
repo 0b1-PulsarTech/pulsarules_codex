@@ -13,30 +13,37 @@ import (
 //go:embed standards
 var standardsFS embed.FS
 
-func Load(root string) (*Index, fs.FS, error) {
+//go:embed templates/docs templates/hooks templates/skills
+var templatesFS embed.FS
+
+func Load(root string) (*Index, templates.Set, error) {
 	if root == "" {
 		return loadEmbedded()
 	}
 	return loadDisk(filepath.Join(root, "knowledge"))
 }
 
-func loadEmbedded() (*Index, fs.FS, error) {
+func loadEmbedded() (*Index, templates.Set, error) {
 	standards, err := fs.Sub(standardsFS, "standards")
 	if err != nil {
-		return nil, nil, fmt.Errorf("sub standards: %w", err)
+		return nil, templates.Set{}, fmt.Errorf("sub standards: %w", err)
+	}
+	assets, err := fs.Sub(templatesFS, "templates")
+	if err != nil {
+		return nil, templates.Set{}, fmt.Errorf("sub templates: %w", err)
 	}
 	idx, err := readIndex(standards)
 	if err != nil {
-		return nil, nil, fmt.Errorf("read index: %w", err)
+		return nil, templates.Set{}, fmt.Errorf("read index: %w", err)
 	}
-	return idx, templates.Embedded().FS(), nil
+	return idx, templates.New(assets), nil
 }
 
-func loadDisk(dir string) (*Index, fs.FS, error) {
+func loadDisk(dir string) (*Index, templates.Set, error) {
 	standards := os.DirFS(filepath.Join(dir, "standards"))
 	idx, err := readIndex(standards)
 	if err != nil {
-		return nil, nil, fmt.Errorf("read index: %w", err)
+		return nil, templates.Set{}, fmt.Errorf("read index: %w", err)
 	}
-	return idx, templates.Dir(filepath.Join(dir, "templates")).FS(), nil
+	return idx, templates.New(os.DirFS(filepath.Join(dir, "templates"))), nil
 }

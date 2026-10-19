@@ -16,7 +16,6 @@ func patternID(pattern Pattern) string    { return pattern.ID }
 func workflowID(workflow Workflow) string { return workflow.ID }
 
 type kindSink[Item any] struct {
-	items     *[]Item
 	byID      *catalog.Catalog[Item]
 	bodies    map[string]string
 	summaries map[string]string
@@ -37,11 +36,9 @@ func readKind[Item any](standards fs.FS, kind Kind, sink kindSink[Item]) error {
 		if id == "" {
 			return fmt.Errorf("%s file %q has empty id", kind, path)
 		}
-		if sink.byID.Has(id) {
+		if !sink.byID.Add(id, item) {
 			return fmt.Errorf("duplicate %s id %q", kind, id)
 		}
-		*sink.items = append(*sink.items, item)
-		sink.byID.Put(id, item)
 		key := kind.key(id)
 		sink.bodies[key] = body
 		sink.summaries[key] = firstBlockquote(body)
@@ -96,11 +93,9 @@ func readSkills(standards fs.FS, idx *Index) error {
 		return fmt.Errorf("parse skills.yaml: %w", err)
 	}
 	for _, skill := range loaded.Skills {
-		if idx.skills.Has(skill.ID) {
+		if !idx.skills.Add(skill.ID, skill) {
 			return fmt.Errorf("duplicate skill id %q", skill.ID)
 		}
-		idx.skills.Put(skill.ID, skill)
-		idx.Skills = append(idx.Skills, skill)
 	}
 	return nil
 }

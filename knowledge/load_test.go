@@ -21,7 +21,6 @@ func TestLoad_EmbeddedCountsAndTransclusionBodies(t *testing.T) {
 		{"patterns", len(idx.Patterns), 30},
 		{"workflows", len(idx.Workflows), 8},
 		{"skills", len(idx.Skills), 46},
-		{"references", len(idx.References), 16},
 	}
 	for _, testCase := range testCases {
 		if testCase.got != testCase.want {
@@ -32,7 +31,7 @@ func TestLoad_EmbeddedCountsAndTransclusionBodies(t *testing.T) {
 	if _, ok := idx.Rule("errors"); !ok {
 		t.Error("missing errors rule")
 	}
-	if body := idx.Body("rules", "errors"); !strings.Contains(body, `{{define "must"}}`) {
+	if body := idx.Body(KindRule, "errors"); !strings.Contains(body, `{{define "must"}}`) {
 		t.Errorf("errors body missing a section define, got %q", body[:min(len(body), 80)])
 	}
 }

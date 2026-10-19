@@ -2,6 +2,7 @@ package knowledge
 
 import (
 	"errors"
+	"maps"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -18,7 +19,7 @@ func TestReadSkillSidecars_NonRouter(t *testing.T) {
 	}
 
 	for _, skill := range idx.Skills {
-		body := idx.Body("skills", skill.ID)
+		body := idx.Body(KindSkill, skill.ID)
 		if skill.ID == "project-router" {
 			if body != "" {
 				t.Errorf("project-router must not carry a sidecar, got %d bytes", len(body))
@@ -159,5 +160,63 @@ func TestReadSkillSidecars_DuplicateIDRejected(t *testing.T) {
 		t.Fatal("expected error for duplicate sidecar id, got nil")
 	} else if !errors.Is(err, errDuplicateSkill) {
 		t.Fatalf("error = %v, want error wrapping errDuplicateSkill", err)
+	}
+}
+
+func TestReadIndex_DuplicateIDRejected(t *testing.T) {
+	t.Parallel()
+
+	rule := "---\nid: dup\nname: Dup\n---\nbody\n"
+	baseFS := func(extra fstest.MapFS) fstest.MapFS {
+		standards := fstest.MapFS{
+			"skills.yaml":         {Data: []byte("skills:\n  - id: real\n    name: Real\n")},
+			"rules/README.md":     {Data: []byte("# rules\n")},
+			"patterns/README.md":  {Data: []byte("# patterns\n")},
+			"workflows/README.md": {Data: []byte("# workflows\n")},
+		}
+		maps.Copy(standards, extra)
+		return standards
+	}
+	testCases := []struct {
+		name      string
+		standards fstest.MapFS
+		want      string
+	}{
+		{
+			"rule files", baseFS(fstest.MapFS{
+				"rules/one.md": {Data: []byte(rule)},
+				"rules/two.md": {Data: []byte(rule)},
+			}),
+			`load rules: duplicate rules id "dup"`,
+		},
+		{
+			"skills.yaml", baseFS(fstest.MapFS{
+				"skills.yaml": {Data: []byte(
+					"skills:\n  - id: real\n    name: A\n  - id: real\n    name: B\n")},
+			}),
+			`duplicate skill id "real"`,
+		},
+		{
+			"references.yaml", baseFS(fstest.MapFS{
+				"references.yaml": {Data: []byte(
+					"references:\n  - id: ref\n    title: A\n  - id: ref\n    title: B\n")},
+			}),
+			`load references: duplicate reference id "ref"`,
+		},
+		{
+			"profiles.yaml", baseFS(fstest.MapFS{
+				"profiles.yaml": {Data: []byte("profiles:\n  - id: go\n  - id: go\n")},
+			}),
+			`load profiles: duplicate profile id "go"`,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := readIndex(testCase.standards)
+			if err == nil || err.Error() != testCase.want {
+				t.Errorf("readIndex error = %v, want %q", err, testCase.want)
+			}
+		})
 	}
 }

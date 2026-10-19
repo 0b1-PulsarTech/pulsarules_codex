@@ -9,56 +9,59 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func fakeRouterIndex() *knowledge.Index {
-	return &knowledge.Index{
-		Skills: []knowledge.Skill{
-			{
-				ID:        "go-style",
-				Languages: []string{"go"},
-				Triggers:  []string{"writing or editing any .go file"},
-			},
-			{
-				ID:        "errors-logging",
-				Languages: []string{"go"},
-				Triggers:  []string{"returning / wrapping / mapping an error"},
-			},
-			{
-				ID:        "code-placement",
-				Languages: []string{"go"},
-				Triggers:  []string{"deciding where a file or package belongs"},
-			},
-			{ID: "dart-style", Languages: []string{"dart"}},
-			{ID: "dart-errors", Languages: []string{"dart"}},
-			{ID: "dart-testing", Languages: []string{"dart"}},
-			{ID: "ts-errors", Languages: []string{"typescript", "javascript", "svelte"}},
-			{
-				ID:       "code-minimalism",
-				Triggers: []string{"writing or editing any function/method body"},
-			},
-			{
-				ID:       "database-persistence",
-				Triggers: []string{"writing a .sql query or generating migrations"},
-			},
-			{ID: "integration-tests", Triggers: []string{"writing unit tests for business logic"}},
+func fakeRouterIndex(t *testing.T) *knowledge.Index {
+	t.Helper()
+	idx, err := knowledge.NewIndex([]knowledge.Skill{
+		{
+			ID:        "go-style",
+			Languages: []string{"go"},
+			Triggers:  []string{"writing or editing any .go file"},
 		},
-		Router: knowledge.RouterSpec{
-			Baseline: knowledge.RouterBaseline{
-				Always: []knowledge.RouterBaselineEntry{
-					{Skill: "go-style"},
-					{Skill: "errors-logging"},
-					{Skill: "code-placement"},
-					{Skill: "code-minimalism"},
-					{Skill: "dart-style"},
-					{Skill: "dart-errors"},
-					{Skill: "ts-errors"},
-				},
+		{
+			ID:        "errors-logging",
+			Languages: []string{"go"},
+			Triggers:  []string{"returning / wrapping / mapping an error"},
+		},
+		{
+			ID:        "code-placement",
+			Languages: []string{"go"},
+			Triggers:  []string{"deciding where a file or package belongs"},
+		},
+		{ID: "dart-style", Languages: []string{"dart"}},
+		{ID: "dart-errors", Languages: []string{"dart"}},
+		{ID: "dart-testing", Languages: []string{"dart"}},
+		{ID: "ts-errors", Languages: []string{"typescript", "javascript", "svelte"}},
+		{
+			ID:       "code-minimalism",
+			Triggers: []string{"writing or editing any function/method body"},
+		},
+		{
+			ID:       "database-persistence",
+			Triggers: []string{"writing a .sql query or generating migrations"},
+		},
+		{ID: "integration-tests", Triggers: []string{"writing unit tests for business logic"}},
+	})
+	if err != nil {
+		t.Fatalf("NewIndex: %v", err)
+	}
+	idx.Router = knowledge.RouterSpec{
+		Baseline: knowledge.RouterBaseline{
+			Always: []knowledge.RouterBaselineEntry{
+				{Skill: "go-style"},
+				{Skill: "errors-logging"},
+				{Skill: "code-placement"},
+				{Skill: "code-minimalism"},
+				{Skill: "dart-style"},
+				{Skill: "dart-errors"},
+				{Skill: "ts-errors"},
 			},
-			Dispatch: []knowledge.RouterDispatchRow{
-				{Signal: "Any test work", Skills: []string{"integration-tests"}},
-				{Signal: "Writing or editing a _test.dart file", Skills: []string{"dart-testing"}},
-			},
+		},
+		Dispatch: []knowledge.RouterDispatchRow{
+			{Signal: "Any test work", Skills: []string{"integration-tests"}},
+			{Signal: "Writing or editing a _test.dart file", Skills: []string{"dart-testing"}},
 		},
 	}
+	return idx
 }
 
 func goBaseline() []string {
@@ -91,7 +94,7 @@ func TestRouterSkillsForFile(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			router := newFileRouter(fakeRouterIndex())
+			router := newFileRouter(fakeRouterIndex(t))
 			got := router.SkillsForFile(testCase.filePath)
 			if !sameSet(got, testCase.want) {
 				t.Fatalf("SkillsForFile(%q) = %v, want %v", testCase.filePath, got, testCase.want)
@@ -109,12 +112,12 @@ func TestRouterRoutes(t *testing.T) {
 		filePath string
 		want     bool
 	}{
-		{"go file", newFileRouter(fakeRouterIndex()), "pkg/foo.go", true},
-		{"sql file", newFileRouter(fakeRouterIndex()), "query.sql", true},
-		{"ts file has no trigger", newFileRouter(fakeRouterIndex()), "src/a.ts", false},
-		{"dart file has no trigger", newFileRouter(fakeRouterIndex()), "lib/a.dart", false},
-		{"markdown", newFileRouter(fakeRouterIndex()), "README.md", false},
-		{"extensionless file", newFileRouter(fakeRouterIndex()), "Makefile", false},
+		{"go file", newFileRouter(fakeRouterIndex(t)), "pkg/foo.go", true},
+		{"sql file", newFileRouter(fakeRouterIndex(t)), "query.sql", true},
+		{"ts file has no trigger", newFileRouter(fakeRouterIndex(t)), "src/a.ts", false},
+		{"dart file has no trigger", newFileRouter(fakeRouterIndex(t)), "lib/a.dart", false},
+		{"markdown", newFileRouter(fakeRouterIndex(t)), "README.md", false},
+		{"extensionless file", newFileRouter(fakeRouterIndex(t)), "Makefile", false},
 		{"go file with no baseline", newFileRouter(&knowledge.Index{}), "pkg/foo.go", false},
 		{"nil index", newFileRouter(nil), "pkg/foo.go", false},
 		{"nil router", nil, "pkg/foo.go", false},

@@ -19,6 +19,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/contract"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
 func hookTemplates() fstest.MapFS {
@@ -43,8 +44,8 @@ func hookTemplates() fstest.MapFS {
 func dispatchCapture(deps Deps) (*Dispatcher, *bytes.Buffer) {
 	var out bytes.Buffer
 	deps.Out = &out
-	if deps.Templates == nil {
-		deps.Templates = hookTemplates()
+	if deps.Templates == (templates.Set{}) {
+		deps.Templates = templates.New(hookTemplates())
 	}
 	if deps.ErrOut == nil {
 		deps.ErrOut = io.Discard
@@ -170,7 +171,7 @@ func TestDispatchSubagentStart_MissingContract(t *testing.T) {
 
 	var logBuf bytes.Buffer
 	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
-	disp, out := dispatchCapture(Deps{Logger: logger, Templates: fstest.MapFS{}})
+	disp, out := dispatchCapture(Deps{Logger: logger, Templates: templates.New(fstest.MapFS{})})
 
 	if err := disp.Dispatch("subagent-start", newSessionPayload(t)); err != nil {
 		t.Fatalf("Dispatch must never block, got error: %v", err)

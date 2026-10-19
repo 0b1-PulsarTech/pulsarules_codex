@@ -1,31 +1,20 @@
 package templates
 
 import (
-	"embed"
 	"fmt"
 	"io/fs"
-	"os"
 	"strings"
 	"text/template"
 )
 
-//go:embed docs hooks skills
-var embedded embed.FS
-
 type Set struct {
-	fsys fs.FS
+	fs.FS
 }
 
-func New(fsys fs.FS) Set { return Set{fsys: fsys} }
-
-func Embedded() Set { return Set{fsys: embedded} }
-
-func Dir(path string) Set { return Set{fsys: os.DirFS(path)} }
-
-func (set Set) FS() fs.FS { return set.fsys }
+func New(fsys fs.FS) Set { return Set{FS: fsys} }
 
 func (set Set) Text(name string) (string, error) {
-	raw, err := fs.ReadFile(set.fsys, name)
+	raw, err := fs.ReadFile(set.FS, name)
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", name, err)
 	}
@@ -33,7 +22,7 @@ func (set Set) Text(name string) (string, error) {
 }
 
 func (set Set) Render(name string, input any) (string, error) {
-	raw, err := fs.ReadFile(set.fsys, name)
+	raw, err := fs.ReadFile(set.FS, name)
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", name, err)
 	}

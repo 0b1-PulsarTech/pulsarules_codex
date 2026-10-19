@@ -3,7 +3,6 @@ package hook
 import (
 	"fmt"
 	"io"
-	"io/fs"
 	"log/slog"
 	"os"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
 func RunHook(inj remy.Injector, opts *version.Options) error {
@@ -24,7 +24,7 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 		printHookError(os.Stderr, "get knowledge index", err)
 		return nil
 	}
-	templates, err := remy.Get[fs.FS](inj)
+	assets, err := remy.Get[templates.Set](inj)
 	if err != nil {
 		printHookError(os.Stderr, "get templates", err)
 		return nil
@@ -41,7 +41,7 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 	payload, _ := io.ReadAll(os.Stdin)
 
 	disp := hook.NewDispatcher(hook.Deps{
-		Templates:  templates,
+		Templates:  assets,
 		Logger:     logger,
 		Index:      idx,
 		Out:        os.Stdout,
