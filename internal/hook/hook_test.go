@@ -38,6 +38,10 @@ func hookTemplates() fstest.MapFS {
 		"hooks/pre-search.txt":  {Data: []byte("pre-search gopls reminder\n")},
 		"hooks/user-prompt.txt": {Data: []byte("user-prompt routing reminder\n")},
 		"hooks/stop.txt":        {Data: []byte("Governance findings on the working tree.\n")},
+		"hooks/stop-checklist.txt.tmpl": {Data: []byte(
+			"{{if .Go}}- gofmt, go vet and go test green\n{{end}}{{if .SQL}}- sql bullet\n{{end}}" +
+				"{{if .YAML}}- yaml bullet\n{{end}}{{if .Markdown}}- md bullet\n{{end}}",
+		)},
 	}
 }
 

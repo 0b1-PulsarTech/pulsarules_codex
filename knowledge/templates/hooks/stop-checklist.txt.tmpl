@@ -1,0 +1,6 @@
+{{if .Go}}- gofmt -l clean; go vet ./... and go test -race ./... green
+- no doc comments; why-only comments of at most three lines
+{{end}}{{if .SQL}}- migrations reversible and reviewed; no raw SQL in handlers
+{{end}}{{if .YAML}}- validate passes: go run ./cmd/pulsarules_cli validate
+{{end}}{{if .Markdown}}- every Markdown file ends with a trailing newline
+{{end}}

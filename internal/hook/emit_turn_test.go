@@ -150,43 +150,20 @@ func TestUserPromptNudge_ShortAndKeepsPhrases(t *testing.T) {
 		t.Error("user-prompt.txt contains an em dash (U+2014)")
 	}
 
-	testCases := []struct {
-		name string
-		want string
-	}{
-		{"routing question kept", "Have you invoked the project-router skill"},
-		{"go/sql/config trigger kept", "Go/SQL/config"},
-		{"skip consequence kept", "Skipping the router skips the rules"},
+	for _, want := range []string{
+		"Have you invoked the project-router skill", "Go/SQL/config",
+		"Skipping the router skips the rules",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("user-prompt.txt missing %q:\n%s", want, text)
+		}
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			if !strings.Contains(text, testCase.want) {
-				t.Errorf("user-prompt.txt missing %q:\n%s", testCase.want, text)
-			}
-		})
-	}
-
-	notWantedCases := []struct {
-		name   string
-		phrase string
-	}{
-		{"contract.txt's baseline skill list", "code-minimalism"},
-		{"contract.txt/pre-edit.txt already state the test shape", "testCase"},
-		{"pre-edit.txt's minimalism ladder", "ladder"},
-		{"pre-edit.txt's stdlib rung", "slices/maps/cmp"},
-		{"pre-edit.txt's named-domain-type rule", "minor-unit int64"},
-	}
-	for _, notWantedCase := range notWantedCases {
-		t.Run(notWantedCase.name, func(t *testing.T) {
-			t.Parallel()
-			if strings.Contains(text, notWantedCase.phrase) {
-				t.Errorf(
-					"user-prompt.txt duplicates contract.txt/pre-edit.txt phrase %q",
-					notWantedCase.phrase,
-				)
-			}
-		})
+	for _, phrase := range []string{
+		"code-minimalism", "testCase", "ladder", "slices/maps/cmp", "minor-unit int64",
+	} {
+		if strings.Contains(text, phrase) {
+			t.Errorf("user-prompt.txt duplicates contract.txt/pre-edit.txt phrase %q", phrase)
+		}
 	}
 }
 
@@ -441,5 +418,50 @@ func TestDispatchStop_MissingStopTemplate(t *testing.T) {
 	}
 	if !strings.Contains(logBuf.String(), "read hooks/stop.txt") {
 		t.Errorf("log missing stop.txt read failure:\n%s", logBuf.String())
+	}
+}
+
+func TestStopChecklist(t *testing.T) {
+	t.Parallel()
+
+	const goBullets = "  - gofmt -l clean; go vet ./... and go test -race ./... green\n" +
+		"  - no doc comments; why-only comments of at most three lines"
+	testCases := []struct {
+		name string
+		exts []string
+		fsys fs.FS
+		want string
+	}{
+		{name: "empty status"},
+		{
+			name: "go and sql in fixed order", exts: []string{".sql", ".go"},
+			want: goBullets + "\n  - migrations reversible and reviewed; no raw SQL in handlers",
+		},
+		{
+			name: "yaml then md", exts: []string{".md", ".yaml"},
+			want: "  - validate passes: go run ./cmd/pulsarules_cli validate\n" +
+				"  - every Markdown file ends with a trailing newline",
+		},
+		{name: "unknown extension", exts: []string{".rs"}},
+		{name: "missing template", exts: []string{".go"}, fsys: fstest.MapFS{}, want: "!"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			fsys := testCase.fsys
+			if fsys == nil {
+				fsys = os.DirFS("../../knowledge/templates")
+			}
+			disp := NewDispatcher(Deps{Templates: templates.New(fsys)})
+			var status vcs.Status
+			for _, ext := range testCase.exts {
+				status.Changes = append(status.Changes, vcs.Change{Extension: ext})
+			}
+			got, err := disp.stopChecklist(status)
+			if (err != nil) != (testCase.want == "!") || (err == nil && got != testCase.want) {
+				t.Errorf("stopChecklist() = %q, %v; want %q", got, err, testCase.want)
+			}
+		})
 	}
 }

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/checklist"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -88,7 +87,11 @@ func (disp *Dispatcher) emitStop(event string, session *sessionTracker) (stopOut
 	if err != nil {
 		return outcome, err
 	}
-	if bullets := checklist.Typed(status); bullets != "" {
+	bullets, err := disp.stopChecklist(status)
+	if err != nil {
+		return outcome, err
+	}
+	if bullets != "" {
 		context += "\n" + bullets
 	}
 	context += "\n\nUncommitted changes:\n" + cappedStatus(status)
@@ -97,6 +100,22 @@ func (disp *Dispatcher) emitStop(event string, session *sessionTracker) (stopOut
 	}
 	disp.emitOutput(event, context)
 	return outcome, nil
+}
+
+type stopChecklistFlags struct {
+	Go, SQL, YAML, Markdown bool
+}
+
+func (disp *Dispatcher) stopChecklist(status vcs.Status) (string, error) {
+	present := status.Extensions()
+	text, err := disp.templates.Render("hooks/stop-checklist.txt.tmpl", stopChecklistFlags{
+		Go: present[".go"], SQL: present[".sql"], YAML: present[".yaml"], Markdown: present[".md"],
+	})
+	if err != nil || text == "" {
+		return "", err
+	}
+	// Render trims the template, so the bullet indent is added here.
+	return "  " + strings.ReplaceAll(text, "\n", "\n  "), nil
 }
 
 func (disp *Dispatcher) stopHeader(result governanceResult) (string, error) {
