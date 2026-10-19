@@ -1,4 +1,4 @@
-package dartsyntax
+package helperbin
 
 import (
 	"context"
@@ -13,7 +13,8 @@ import (
 func parseSDKVersion(output string) (string, error) {
 	match := regexp.MustCompile(`Dart (?:SDK|VM) version:\s*(\S+)`).FindStringSubmatch(output)
 	if match == nil {
-		return "", fmt.Errorf("dart --version: no version in %q", tail([]byte(output)))
+		text, _ := clip(output)
+		return "", fmt.Errorf("dart --version: no version in %q", text)
 	}
 	return match[1], nil
 }
@@ -47,7 +48,7 @@ func sdkVersion(ctx context.Context, dart string) (string, error) {
 		process.Command{Name: dart, Args: dartArgs([]string{"--version"})},
 	)
 	if err != nil {
-		return "", stepError(ctx, "--version", result, err)
+		return "", StepError("--version", result, err)
 	}
 	version, err := parseSDKVersion(result.Stdout + "\n" + result.Stderr)
 	if err != nil {

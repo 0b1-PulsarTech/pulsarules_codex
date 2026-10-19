@@ -2,14 +2,12 @@ package dartsyntax
 
 import (
 	"context"
-	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
@@ -28,8 +26,8 @@ func runWithSharedCache(m *testing.M) int {
 	if setErr := os.Setenv("XDG_CACHE_HOME", cache); setErr != nil {
 		return 1
 	}
-	if dart, lookErr := exec.LookPath("dart"); lookErr == nil {
-		_, _ = ensureHelper(context.Background(), cache, dart)
+	if _, lookErr := exec.LookPath("dart"); lookErr == nil {
+		_, _ = New().helper.Exe(context.Background())
 	}
 	return m.Run()
 }
@@ -286,76 +284,32 @@ func skipWhereXDGIsIgnored(tb testing.TB) {
 	}
 }
 
-func TestProviderPrepare(t *testing.T) {
-	skipWhereXDGIsIgnored(t)
-	dart := writeFakeDart(t)
-	t.Setenv("PATH", filepath.Dir(dart)+string(os.PathListSeparator)+os.Getenv("PATH"))
-	dir := t.TempDir()
-	testCases := []struct {
-		name     string
-		provider *Provider
-	}{
-		{name: "XDG override for the default base", provider: New()},
-		{name: "zero-value provider", provider: &Provider{}},
+func lockDir(t *testing.T, dir string) {
+	t.Helper()
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Setenv("XDG_CACHE_HOME", dir)
-			exe, err := testCase.provider.prepare(context.Background())
-			if err != nil {
-				t.Fatalf("prepare: %v", err)
-			}
-			if root := cacheRoot(dir); filepath.Dir(filepath.Dir(exe)) != root {
-				t.Errorf("exe = %q, want under %q", exe, root)
-			}
-		})
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
 	}
-}
-
-func TestProviderPrepareHonorsContextDeadline(t *testing.T) {
-	skipWhereXDGIsIgnored(t)
-	dart := writeFakeDart(t)
-	t.Setenv("PATH", filepath.Dir(dart)+string(os.PathListSeparator)+os.Getenv("PATH"))
-	t.Setenv("FAKE_FAIL", "hang")
-	base := t.TempDir()
-	t.Setenv("XDG_CACHE_HOME", base)
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
-	defer cancel()
-	_, err := New().prepare(ctx)
-	if err == nil {
-		t.Fatal("prepare succeeded with a hanging dart")
-	}
-	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Errorf("prepare error = %v, want context deadline exceeded", err)
-	}
-	if _, marked := loadMarker(currentDir(t, base)); marked {
-		t.Error("a parent deadline wrote a failure marker")
-	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
 }
 
 func TestSummarizeReadOnlyCache(t *testing.T) {
-	skipWhereXDGIsIgnored(t)
-	dart := writeFakeDart(t)
-	t.Setenv("PATH", filepath.Dir(dart)+string(os.PathListSeparator)+os.Getenv("PATH"))
-	tempDir, base := t.TempDir(), t.TempDir()
-	t.Setenv("XDG_CACHE_HOME", base)
-	capture := filepath.Join(t.TempDir(), "request-path")
+	tempDir, cacheDir := t.TempDir(), t.TempDir()
 	t.Setenv("TMPDIR", tempDir)
-	entry := currentDir(t, base)
-	exe := filepath.Join(entry, exeName())
-	script := "#!/bin/sh\necho \"$1\" > " + capture + "\necho '{\"lib/a.dart\": {}}'\n"
-	if err := os.MkdirAll(entry, 0o700); err != nil {
+	capture := filepath.Join(t.TempDir(), "request-path")
+	script := "echo \"$1\" > " + capture + "\necho '{\"lib/a.dart\": {}}'\n"
+	exe := filepath.Join(cacheDir, "summary")
+	if err := os.WriteFile(exe, []byte("#!/bin/sh\n"+script), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(exe, []byte(script), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	lockDir(t, entry)
-	lockDir(t, filepath.Dir(entry))
-	sources := []syntax.Source{{Path: "lib/a.dart", Content: []byte("void main() {}")}}
-	files, err := New().Summarize(context.Background(), syntax.Corpus{Sources: sources})
+	lockDir(t, cacheDir)
+	prepare := func(context.Context) (string, error) { return exe, nil }
+	requests := []request{{Path: "lib/a.dart", Content: "void main() {}"}}
+	files, err := summarizeWith(context.Background(), requests, prepare)
 	if err != nil || files["lib/a.dart"] == nil {
-		t.Fatalf("Summarize = %v, %v", files, err)
+		t.Fatalf("summarizeWith = %v, %v", files, err)
 	}
 	sent, readErr := os.ReadFile(capture)
 	requestPath := strings.TrimSpace(string(sent))

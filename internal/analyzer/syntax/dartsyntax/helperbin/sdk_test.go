@@ -1,4 +1,4 @@
-package dartsyntax
+package helperbin
 
 import (
 	"strings"
@@ -33,6 +33,12 @@ func TestParseSDKVersion(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseSDKVersionMessage(t *testing.T) {
+	t.Parallel()
+	_, err := parseSDKVersion("garbage 47\ngarbage 48")
+	assertErrContains(t, err, `no version in "garbage 47\ngarbage 48"`)
 }
 
 func TestCheckSDK(t *testing.T) {

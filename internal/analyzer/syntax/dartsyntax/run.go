@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/dartsyntax/helperbin"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
@@ -44,7 +45,7 @@ func runHelper(
 	result, runErr := process.Run(ctx, process.Command{Name: exe, Args: []string{requestPath}})
 	cleanErr := removeRequest(requestPath)
 	if runErr != nil {
-		return nil, errors.Join(stepError(ctx, "helper run", result, runErr), cleanErr)
+		return nil, errors.Join(helperbin.StepError("helper run", result, runErr), cleanErr)
 	}
 	files, decodeErr := decodeFiles([]byte(result.Stdout), requests)
 	return files, errors.Join(decodeErr, cleanErr)

@@ -1,4 +1,4 @@
-package dartsyntax
+package helperbin
 
 import (
 	"context"
@@ -11,9 +11,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"unicode/utf8"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
 func writeFakeDart(t *testing.T) string {
@@ -69,11 +66,11 @@ func fakeArgv(t *testing.T) string {
 
 func currentDir(t *testing.T, base string) string {
 	t.Helper()
-	hash, err := helperHash()
+	hash, err := helperHash(testFiles())
 	if err != nil {
 		t.Fatal(err)
 	}
-	return cacheDir(base, "9.9.9", hash)
+	return string(newHelperDir(base, "9.9.9", hash))
 }
 
 func readLines(path string) []string {
@@ -103,7 +100,7 @@ func TestEnsureHelper(t *testing.T) {
 			base := t.TempDir()
 			t.Setenv("FAKE_FAIL", testCase.fail)
 			log, argv := fakeLog(t), fakeArgv(t)
-			exe, err := ensureHelper(context.Background(), base, dart)
+			exe, err := ensureHelper(context.Background(), testFiles(), base, dart)
 			if err != nil {
 				t.Fatalf("ensureHelper: %v", err)
 			}
@@ -115,7 +112,7 @@ func TestEnsureHelper(t *testing.T) {
 				t.Errorf("pub calls = %q, want %q", got, testCase.wantPub)
 			}
 			t.Setenv("FAKE_FAIL", "compile")
-			again, err := ensureHelper(context.Background(), base, dart)
+			again, err := ensureHelper(context.Background(), testFiles(), base, dart)
 			if err != nil || again != exe {
 				t.Errorf("reuse = %q, %v; want %q", again, err, exe)
 			}
@@ -183,12 +180,14 @@ func TestEnsureHelperErrors(t *testing.T) {
 				defer cancel()
 			}
 			start := time.Now()
-			_, err := ensureHelper(ctx, base, dart)
+			_, err := ensureHelper(ctx, testFiles(), base, dart)
 			assertEnsureFailure(t, err, testCase.wantErr, time.Since(start))
 			if testCase.wantNoPub && len(readLines(log)) != 0 {
 				t.Errorf("pub was invoked: %q", readLines(log))
 			}
-			if _, marked := loadMarker(currentDir(t, base)); marked != testCase.wantMarker {
+			if _, marked := helperDir(
+				currentDir(t, base),
+			).loadMarker(); marked != testCase.wantMarker {
 				t.Errorf("marker = %v, want %v", marked, testCase.wantMarker)
 			}
 		})
@@ -271,10 +270,10 @@ func TestRememberFailure(t *testing.T) {
 			defer cancel()
 			dir := filepath.Join(t.TempDir(), "current-0123456789abcdef")
 			cause := errors.New("step failed")
-			if err := rememberFailure(ctx, dir, cause); !errors.Is(err, cause) {
+			if err := rememberFailure(ctx, helperDir(dir), cause); !errors.Is(err, cause) {
 				t.Errorf("rememberFailure = %v, want the build error", err)
 			}
-			if _, marked := loadMarker(dir); marked != testCase.wantMarker {
+			if _, marked := helperDir(dir).loadMarker(); marked != testCase.wantMarker {
 				t.Errorf("marker = %v, want %v", marked, testCase.wantMarker)
 			}
 		})
@@ -291,7 +290,7 @@ func TestEnsureHelperConcurrent(t *testing.T) {
 	var group sync.WaitGroup
 	for index := range workers {
 		group.Go(func() {
-			exes[index], errs[index] = ensureHelper(context.Background(), base, dart)
+			exes[index], errs[index] = ensureHelper(context.Background(), testFiles(), base, dart)
 		})
 	}
 	group.Wait()
@@ -316,7 +315,7 @@ func TestEnsureHelperAlternatingSDKs(t *testing.T) {
 	t.Setenv("FAKE_COMPILES", compiles)
 	for _, version := range []string{"9.9.9", "8.8.8", "9.9.9", "8.8.8"} {
 		t.Setenv("FAKE_VERSION", version)
-		if _, err := ensureHelper(context.Background(), base, dart); err != nil {
+		if _, err := ensureHelper(context.Background(), testFiles(), base, dart); err != nil {
 			t.Fatalf("ensureHelper %s: %v", version, err)
 		}
 	}
@@ -333,83 +332,15 @@ func TestEnsureHelperAlternatingHashes(t *testing.T) {
 	rival := filepath.Join(cacheRoot(base), keyPrefix("9.9.9")+"0123456789abcdef")
 	seedEntry(t, cacheRoot(base), seed{name: filepath.Base(rival), file: exeName()})
 	for round := range 3 {
-		if _, err := ensureHelper(context.Background(), base, dart); err != nil {
+		if _, err := ensureHelper(context.Background(), testFiles(), base, dart); err != nil {
 			t.Fatalf("round %d: %v", round, err)
 		}
-		if !exeExists(rival) {
+		if !helperDir(rival).exists() {
 			t.Fatalf("round %d pruned the rival helper that is still in use", round)
 		}
 	}
 	if got := readLines(compiles); len(got) != 1 {
 		t.Errorf("compiles = %q, want the current helper built once", got)
-	}
-}
-
-func TestTail(t *testing.T) {
-	t.Parallel()
-	long := strings.Repeat("x", 500) + "end"
-	bullets := "a" + strings.Repeat("\u2022", 200)
-	testCases := []struct {
-		name  string
-		input string
-		want  string
-	}{
-		{name: "trims space", input: "  hi \n", want: "hi"},
-		{name: "keeps the end", input: long, want: long[len(long)-400:]},
-		{name: "never splits a rune", input: bullets, want: bullets[len(bullets)-399:]},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			got := tail([]byte(testCase.input))
-			if got != testCase.want || !utf8.ValidString(got) {
-				t.Errorf("tail = %q, want valid UTF-8 %q", got, testCase.want)
-			}
-		})
-	}
-}
-
-func TestStepError(t *testing.T) {
-	t.Parallel()
-	testCases := []struct {
-		name   string
-		result process.Result
-		err    error
-		want   string
-	}{
-		{
-			name: "execx error unwraps to its cause",
-			err: &process.Error{
-				Name: "dart", Args: []string{"x"}, Stderr: "bad", Err: errors.New("boom"),
-			},
-			result: process.Result{Stderr: "bad"}, want: "dart run: boom: bad",
-		},
-		{name: "empty output has no trailing colon", want: "dart run: boom"},
-		{
-			name:   "whitespace-only output has no trailing colon",
-			result: process.Result{Stderr: " \n", Stdout: "\t"}, want: "dart run: boom",
-		},
-		{
-			name:   "stderr is appended",
-			result: process.Result{Stderr: "bad"}, want: "dart run: boom: bad",
-		},
-		{
-			name:   "stdout alone is appended",
-			result: process.Result{Stdout: "out"}, want: "dart run: boom: out",
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			runErr := testCase.err
-			if runErr == nil {
-				runErr = errors.New("boom")
-			}
-			err := stepError(context.Background(), "run", testCase.result, runErr)
-			if err.Error() != testCase.want {
-				t.Errorf("stepError = %q, want %q", err, testCase.want)
-			}
-		})
 	}
 }
 
@@ -433,18 +364,23 @@ func TestEnsureHelperMarkerWindow(t *testing.T) {
 			writeMarker(t, dir, failureMarker{
 				Key: filepath.Base(dir), At: time.Now().Add(-testCase.age), Message: "old failure",
 			})
-			exe, err := ensureHelper(context.Background(), base, dart)
+			exe, err := ensureHelper(context.Background(), testFiles(), base, dart)
 			if testCase.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) ||
-					!strings.Contains(err.Error(), "old failure") || exeExists(dir) {
+					!strings.Contains(err.Error(), "old failure") || helperDir(dir).exists() {
 					t.Fatalf("ensureHelper = %q, %v; want the remembered failure", exe, err)
 				}
 				return
 			}
-			if err != nil || !exeExists(dir) {
+			if err != nil || !helperDir(dir).exists() {
 				t.Fatalf("ensureHelper = %q, %v; want a rebuild", exe, err)
 			}
-			if _, statErr := os.Stat(markerPath(dir)); !errors.Is(statErr, os.ErrNotExist) {
+			if _, statErr := os.Stat(
+				helperDir(dir).markerPath(),
+			); !errors.Is(
+				statErr,
+				os.ErrNotExist,
+			) {
 				t.Errorf("successful build left the marker: %v", statErr)
 			}
 		})

@@ -1,4 +1,4 @@
-package dartsyntax
+package helperbin
 
 import (
 	"errors"
@@ -11,15 +11,15 @@ import (
 	"time"
 )
 
-func pruneCache(dir string) error {
-	root := filepath.Dir(dir)
+func (dir helperDir) prune() error {
+	root := dir.parent()
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return fmt.Errorf("list helper cache: %w", err)
 	}
 	var failures []error
 	for _, entry := range entries {
-		if removable(root, entry, filepath.Base(dir)) {
+		if removable(root, entry, dir.name()) {
 			if removeErr := os.RemoveAll(filepath.Join(root, entry.Name())); removeErr != nil {
 				failures = append(failures, removeErr)
 			}
@@ -66,10 +66,4 @@ func lastUse(root string, entry fs.DirEntry) time.Time {
 		return stat.ModTime()
 	}
 	return time.Now()
-}
-
-func touchExe(dir string) {
-	now := time.Now()
-	// A failed touch only risks an early prune of an entry that is rebuilt on demand.
-	_ = os.Chtimes(filepath.Join(dir, exeName()), now, now)
 }

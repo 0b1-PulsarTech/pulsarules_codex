@@ -307,3 +307,16 @@ func TestWriteRequest(t *testing.T) {
 		})
 	}
 }
+
+func assertErrContains(t *testing.T, err error, want string) {
+	t.Helper()
+	if want == "" {
+		if err != nil {
+			t.Fatalf("error = %v, want nil", err)
+		}
+		return
+	}
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Fatalf("error = %v, want containing %q", err, want)
+	}
+}

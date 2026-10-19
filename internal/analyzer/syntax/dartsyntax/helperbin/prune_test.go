@@ -1,4 +1,4 @@
-package dartsyntax
+package helperbin
 
 import (
 	"context"
@@ -129,7 +129,7 @@ func TestPruneCacheErrors(t *testing.T) {
 			} else {
 				lockEntry(t, root, "1.0.0-linux-amd64-0123456789abcdef")
 			}
-			err := pruneCache(filepath.Join(root, "9.9.9-linux-amd64-aaaaaaaaaaaaaaaa"))
+			err := helperDir(filepath.Join(root, "9.9.9-linux-amd64-aaaaaaaaaaaaaaaa")).prune()
 			if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
 				t.Errorf("pruneCache = %v, want containing %q", err, testCase.wantErr)
 			}
@@ -245,7 +245,7 @@ func TestEnsureHelperCacheLayout(t *testing.T) {
 				entry.name = expand(entry.name)
 				seedEntry(t, root, entry)
 			}
-			if _, err := ensureHelper(context.Background(), base, dart); err != nil {
+			if _, err := ensureHelper(context.Background(), testFiles(), base, dart); err != nil {
 				t.Fatalf("ensureHelper: %v", err)
 			}
 			for _, name := range testCase.wantKept {
@@ -320,7 +320,7 @@ func TestPruneCacheMarkers(t *testing.T) {
 				t.Fatal(err)
 			}
 			current := filepath.Join(root, "9.9.9-linux-amd64-aaaaaaaaaaaaaaaa")
-			if err := pruneCache(current); err != nil {
+			if err := helperDir(current).prune(); err != nil {
 				t.Fatalf("pruneCache: %v", err)
 			}
 			_, err := os.Stat(path)

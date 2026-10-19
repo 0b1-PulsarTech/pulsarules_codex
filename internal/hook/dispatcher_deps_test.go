@@ -12,7 +12,7 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/dartsyntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/dartsyntax/helperbin"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -438,8 +438,8 @@ func TestDispatchStop_DeadlineFromEntry(t *testing.T) {
 func TestStopGovernanceDeadline_DartBuild(t *testing.T) {
 	t.Parallel()
 
-	if dartsyntax.BuildTimeout >= stopGovernanceDeadline {
-		t.Fatalf("bound %s must stay below %s", dartsyntax.BuildTimeout, stopGovernanceDeadline)
+	if helperbin.BuildTimeout >= stopGovernanceDeadline {
+		t.Fatalf("bound %s must stay below %s", helperbin.BuildTimeout, stopGovernanceDeadline)
 	}
 }
 

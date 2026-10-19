@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
+	"os"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
@@ -38,8 +38,13 @@ func attempt(
 	runCtx, cancelRun := context.WithTimeout(ctx, runTimeout)
 	defer cancelRun()
 	files, err := runHelper(runCtx, exe, "", requests)
-	if err != nil && runCtx.Err() == nil && !exeExists(filepath.Dir(exe)) {
+	if err != nil && runCtx.Err() == nil && !fileExists(exe) {
 		return nil, fmt.Errorf("%w: %w", errExeGone, err)
 	}
 	return files, err
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

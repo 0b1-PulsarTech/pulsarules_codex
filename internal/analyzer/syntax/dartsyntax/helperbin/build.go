@@ -1,14 +1,12 @@
-package dartsyntax
+package helperbin
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
@@ -16,71 +14,60 @@ import (
 
 var errBuildBound = errors.New("dart helper build exceeded its time bound")
 
-func exeName() string {
-	const exeStem = "summary"
-	if runtime.GOOS == "windows" {
-		return exeStem + ".exe"
-	}
-	return exeStem
-}
-
-func ensureHelper(ctx context.Context, base, dart string) (string, error) {
+func ensureHelper(ctx context.Context, files fs.FS, base, dart string) (string, error) {
 	version, err := sdkVersion(ctx, dart)
 	if err != nil {
 		return "", err
 	}
-	hash, err := helperHash()
+	hash, err := helperHash(files)
 	if err != nil {
 		return "", err
 	}
-	dir := cacheDir(base, version, hash)
-	exe := filepath.Join(dir, exeName())
-	if exeExists(dir) {
-		touchExe(dir)
-		return exe, nil
+	dir := newHelperDir(base, version, hash)
+	if dir.exists() {
+		dir.touch()
+		return dir.exe(), nil
 	}
-	if recent := recentFailure(dir); recent != nil {
+	if recent := dir.recentFailure(); recent != nil {
 		return "", recent
 	}
-	if buildErr := buildHelper(ctx, dart, dir); buildErr != nil {
+	if buildErr := buildHelper(ctx, files, dart, dir); buildErr != nil {
 		return "", rememberFailure(ctx, dir, buildErr)
 	}
 	// Tidying is hygiene; a leftover file must not fail a good build.
-	_ = errors.Join(clearFailure(dir), pruneCache(dir))
-	return exe, nil
+	_ = errors.Join(dir.clearFailure(), dir.prune())
+	return dir.exe(), nil
 }
 
-func rememberFailure(ctx context.Context, dir string, buildErr error) error {
+func rememberFailure(ctx context.Context, dir helperDir, buildErr error) error {
 	if ctx.Err() != nil && !errors.Is(context.Cause(ctx), errBuildBound) {
 		return buildErr
 	}
-	if markErr := recordFailure(dir, buildErr); markErr != nil {
+	if markErr := dir.recordFailure(buildErr); markErr != nil {
 		return errors.Join(buildErr, markErr)
 	}
 	return buildErr
 }
 
-func buildHelper(ctx context.Context, dart, dir string) error {
-	parent := filepath.Dir(dir)
-	if err := os.MkdirAll(parent, disk.DirPrivate); err != nil {
+func buildHelper(ctx context.Context, files fs.FS, dart string, dir helperDir) error {
+	if err := os.MkdirAll(dir.parent(), disk.DirPrivate); err != nil {
 		return fmt.Errorf("create helper cache: %w", err)
 	}
-	work, err := os.MkdirTemp(parent, "build-*")
+	work, err := os.MkdirTemp(dir.parent(), "build-*")
 	if err != nil {
 		return fmt.Errorf("create helper build dir: %w", err)
 	}
-	buildErr := compileAndPublish(ctx, dart, work, dir)
+	buildErr := compileAndPublish(ctx, files, toolchain{dir: work, dart: dart}, dir)
 	if cleanErr := os.RemoveAll(work); cleanErr != nil {
 		return errors.Join(buildErr, fmt.Errorf("remove helper build dir: %w", cleanErr))
 	}
 	return buildErr
 }
 
-func compileAndPublish(ctx context.Context, dart, work, dir string) error {
-	if err := materialise(work); err != nil {
+func compileAndPublish(ctx context.Context, files fs.FS, tool toolchain, dir helperDir) error {
+	if err := materialise(files, tool.dir); err != nil {
 		return err
 	}
-	tool := toolchain{dir: work, dart: dart}
 	if err := pubGet(ctx, tool); err != nil {
 		return err
 	}
@@ -89,7 +76,7 @@ func compileAndPublish(ctx context.Context, dart, work, dir string) error {
 		return err
 	}
 	// A concurrent build may have won the rename; its exe is equivalent.
-	return publish(work, dir)
+	return dir.publish(tool.dir)
 }
 
 func pubGet(ctx context.Context, tool toolchain) error {
@@ -120,34 +107,7 @@ func runStep(ctx context.Context, tool toolchain, step string, args ...string) e
 	command := process.Command{Name: tool.dart, Args: dartArgs(args), Dir: tool.dir}
 	result, err := process.Run(ctx, command)
 	if err != nil {
-		return stepError(ctx, step, result, err)
+		return StepError(step, result, err)
 	}
 	return nil
-}
-
-func stepError(ctx context.Context, step string, result process.Result, err error) error {
-	if execErr, ok := errors.AsType[*process.Error](err); ok {
-		err = execErr.Err
-	}
-	if ctx.Err() != nil && !errors.Is(err, ctx.Err()) {
-		err = fmt.Errorf("%w: %w", ctx.Err(), err)
-	}
-	output := tail([]byte(result.Stderr + "\n" + result.Stdout))
-	if output == "" {
-		return fmt.Errorf("dart %s: %w", step, err)
-	}
-	return fmt.Errorf("dart %s: %w: %s", step, err, output)
-}
-
-func tail(output []byte) string {
-	const maxChars = 400
-	text := strings.TrimSpace(string(output))
-	if len(text) <= maxChars {
-		return text
-	}
-	start := len(text) - maxChars
-	for start < len(text) && !utf8.RuneStart(text[start]) {
-		start++
-	}
-	return text[start:]
 }

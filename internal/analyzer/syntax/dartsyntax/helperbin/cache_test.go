@@ -1,4 +1,4 @@
-package dartsyntax
+package helperbin
 
 import (
 	"encoding/json"
@@ -20,14 +20,14 @@ func writeMarker(t *testing.T, dir string, marker failureMarker) {
 	if mkdirErr := os.MkdirAll(filepath.Dir(dir), 0o700); mkdirErr != nil {
 		t.Fatal(mkdirErr)
 	}
-	if writeErr := os.WriteFile(markerPath(dir), payload, 0o600); writeErr != nil {
+	if writeErr := os.WriteFile(helperDir(dir).markerPath(), payload, 0o600); writeErr != nil {
 		t.Fatal(writeErr)
 	}
 }
 
 func TestCacheDir(t *testing.T) {
 	t.Parallel()
-	got := cacheDir("/base", "3.13.2", "abc123")
+	got := string(newHelperDir("/base", "3.13.2", "abc123"))
 	key := "3.13.2-" + runtime.GOOS + "-" + runtime.GOARCH + "-abc123"
 	want := filepath.Join("/base", "pulsarules", "dart-syntax", key)
 	if got != want {
@@ -65,15 +65,20 @@ func TestPublish(t *testing.T) {
 			if testCase.wantErr != "" {
 				lockDir(t, filepath.Dir(filepath.Join(dir, testCase.existed)))
 			}
-			err := publish(work, dir)
+			err := helperDir(dir).publish(work)
 			if testCase.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
 					t.Fatalf("publish error = %v, want containing %q", err, testCase.wantErr)
 				}
 				return
 			}
-			if err != nil || exeExists(dir) != testCase.wantExe {
-				t.Errorf("publish = %v, exe = %v, want %v", err, exeExists(dir), testCase.wantExe)
+			if err != nil || helperDir(dir).exists() != testCase.wantExe {
+				t.Errorf(
+					"publish = %v, exe = %v, want %v",
+					err,
+					helperDir(dir).exists(),
+					testCase.wantExe,
+				)
 			}
 		})
 	}
@@ -135,7 +140,7 @@ func TestRecentFailure(t *testing.T) {
 			if testCase.marker != nil {
 				testCase.marker.write(t, dir)
 			}
-			err := recentFailure(dir)
+			err := helperDir(dir).recentFailure()
 			assertErrContains(t, err, testCase.wantErr)
 		})
 	}
@@ -162,7 +167,7 @@ func (seed markerSeed) write(t *testing.T, dir string) {
 	if err := os.MkdirAll(filepath.Dir(dir), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(markerPath(dir), []byte(seed.raw), 0o600); err != nil {
+	if err := os.WriteFile(helperDir(dir).markerPath(), []byte(seed.raw), 0o600); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -187,14 +192,14 @@ func TestFailureMarkerFiles(t *testing.T) {
 			if testCase.blocked {
 				dir = filepath.Join(blockerFile(t), "x", "key")
 			}
-			err := recordFailure(dir, errors.New("pub exploded"))
+			err := helperDir(dir).recordFailure(errors.New("pub exploded"))
 			assertErrContains(t, err, testCase.wantErr)
 			for range testCase.clears {
-				if clearErr := clearFailure(dir); clearErr != nil {
+				if clearErr := helperDir(dir).clearFailure(); clearErr != nil {
 					t.Errorf("clearFailure: %v", clearErr)
 				}
 			}
-			marker, ok := loadMarker(dir)
+			marker, ok := helperDir(dir).loadMarker()
 			if ok != testCase.wantLoad || (ok && marker.Message != "pub exploded") {
 				t.Errorf("marker = %+v, %v; want loaded %v", marker, ok, testCase.wantLoad)
 			}
