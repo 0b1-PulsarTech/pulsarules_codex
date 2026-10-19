@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -47,10 +46,10 @@ func NewDispatcher(deps Deps) *Dispatcher {
 	if errOut == nil {
 		errOut = os.Stderr
 	}
-	governanceItem := deps.Governance
-	if governanceItem == nil {
-		governanceItem = func(repo vcs.Repository, status vcs.Status) (string, int) {
-			return RunGovernanceCheck(repo, status, deps.Index, governance.ScopeChanged)
+	governance := deps.Governance
+	if governance == nil {
+		governance = func(repo vcs.Repository, status vcs.Status) (string, int) {
+			return runGovernanceCheck(repo, status, deps.Index)
 		}
 	}
 	open := deps.Open
@@ -66,7 +65,7 @@ func NewDispatcher(deps Deps) *Dispatcher {
 		errOut:     errOut,
 		projectDir: deps.ProjectDir,
 		skillsDir:  deps.SkillsDir,
-		governance: governanceItem,
+		governance: governance,
 		open:       open,
 	}
 }

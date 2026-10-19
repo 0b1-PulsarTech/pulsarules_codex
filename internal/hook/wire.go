@@ -5,11 +5,11 @@ import (
 	"fmt"
 )
 
-type Output struct {
-	HookSpecificOutput Specific `json:"hookSpecificOutput"`
+type hookOutput struct {
+	HookSpecificOutput hookSpecific `json:"hookSpecificOutput"`
 }
 
-type Specific struct {
+type hookSpecific struct {
 	HookEventName     string `json:"hookEventName"`
 	AdditionalContext string `json:"additionalContext"`
 }
@@ -37,7 +37,7 @@ func decodeHookPayload(payload []byte) hookPayload {
 }
 
 func (disp *Dispatcher) emitOutput(event, context string) {
-	out, err := json.Marshal(Output{HookSpecificOutput: Specific{
+	out, err := json.Marshal(hookOutput{HookSpecificOutput: hookSpecific{
 		HookEventName:     event,
 		AdditionalContext: context,
 	}})

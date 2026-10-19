@@ -8,11 +8,14 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func (renderer *Renderer) RenderRouter(idx *knowledge.Index, installed []string) (string, error) {
+func (renderer *Renderer) renderRouterDoc(
+	idx *knowledge.Index,
+	installed []string,
+) (string, error) {
 	return renderer.renderRouter(idx, installed, "router.md.tmpl")
 }
 
-func (renderer *Renderer) RenderCursorRouter(
+func (renderer *Renderer) renderCursorRouter(
 	idx *knowledge.Index, installed []string,
 ) (string, error) {
 	return renderer.renderRouter(idx, installed, "router.mdc.tmpl")

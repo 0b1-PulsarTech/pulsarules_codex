@@ -63,7 +63,7 @@ func (tracker *sessionTracker) FirstEmission(event, content string) bool {
 	if prev, err := os.ReadFile(marker); err == nil && string(prev) == hash {
 		return false
 	}
-	//nolint:gosec // the id is a plain token or a hash, see NewSessionTrackerFromID.
+	//nolint:gosec // the id is a plain token or a hash, see newSessionTracker.
 	_ = os.WriteFile(marker, []byte(hash), disk.FilePrivate)
 	return true
 }

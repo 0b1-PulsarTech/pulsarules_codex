@@ -21,11 +21,11 @@ func NewRenderer(templates fs.FS) (*Renderer, error) {
 	return &Renderer{base: base}, nil
 }
 
-func (renderer *Renderer) Render(idx *knowledge.Index, skill knowledge.Skill) (string, error) {
+func (renderer *Renderer) renderBody(idx *knowledge.Index, skill knowledge.Skill) (string, error) {
 	return renderer.renderSkill(idx, skill, "SKILL.md.tmpl")
 }
 
-func (renderer *Renderer) RenderCursorRule(
+func (renderer *Renderer) renderCursorRule(
 	idx *knowledge.Index, skill knowledge.Skill,
 ) (string, error) {
 	return renderer.renderSkill(idx, skill, "SKILL.mdc.tmpl")
@@ -73,9 +73,9 @@ func (renderer *Renderer) RenderSkill(
 	installed []string,
 ) (string, error) {
 	if skill.ID == "project-router" {
-		return renderer.RenderRouter(idx, installed)
+		return renderer.renderRouterDoc(idx, installed)
 	}
-	return renderer.Render(idx, skill)
+	return renderer.renderBody(idx, skill)
 }
 
 func (renderer *Renderer) RenderSkillCursor(
@@ -84,9 +84,9 @@ func (renderer *Renderer) RenderSkillCursor(
 	installed []string,
 ) (string, error) {
 	if skill.ID == "project-router" {
-		return renderer.RenderCursorRouter(idx, installed)
+		return renderer.renderCursorRouter(idx, installed)
 	}
-	return renderer.RenderCursorRule(idx, skill)
+	return renderer.renderCursorRule(idx, skill)
 }
 
 func (renderer *Renderer) RenderWorkflow(

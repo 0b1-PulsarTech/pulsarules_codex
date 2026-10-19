@@ -35,7 +35,7 @@ func Install(dir string, templates fs.FS) (backedUp []string, err error) {
 	if note != "" {
 		backedUp = append(backedUp, note)
 	}
-	if err = InstallBinary(dir); err != nil {
+	if err = installBinary(dir); err != nil {
 		return backedUp, fmt.Errorf("install binary: %w", err)
 	}
 	if err = gitignore.Ensure(filepath.Join(dir, ".opencode"), "/bin/"); err != nil {
@@ -44,7 +44,7 @@ func Install(dir string, templates fs.FS) (backedUp []string, err error) {
 	return backedUp, nil
 }
 
-func InstallBinary(dir string) error {
+func installBinary(dir string) error {
 	// The embedded plugin script hardcodes this path; keep them in sync.
 	dst := filepath.Join(dir, binaryRel)
 	if err := selfbin.Copy(dst); err != nil {

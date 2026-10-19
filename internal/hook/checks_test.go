@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -29,7 +28,7 @@ func TestRunGovernanceCheck_EmptyRepo(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	got, count := RunGovernanceCheck(repo, status, nil, governance.ScopeChanged)
+	got, count := runGovernanceCheck(repo, status, nil)
 	if got != "" {
 		t.Errorf("block = %q, want empty for an empty repo", got)
 	}
@@ -59,7 +58,7 @@ func TestRunGovernanceCheck_SuppressionBlock(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	block, count := RunGovernanceCheck(repo, status, nil, governance.ScopeChanged)
+	block, count := runGovernanceCheck(repo, status, nil)
 	if count != 1 {
 		t.Fatalf("count = %d, want 1 (the generated file's finding is suppressed)", count)
 	}
@@ -93,7 +92,7 @@ func runDirtyCheck(t *testing.T, configYAML string) (string, int) {
 	if err != nil {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
-	return RunGovernanceCheck(repo, status, nil, governance.ScopeChanged)
+	return runGovernanceCheck(repo, status, nil)
 }
 
 type projectConfigCase struct {

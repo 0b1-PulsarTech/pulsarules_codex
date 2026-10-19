@@ -17,12 +17,11 @@ func TestNewRegistry(t *testing.T) {
 	t.Parallel()
 
 	reg := NewRegistry()
-	names := reg.Names()
-	if len(names) != 3 {
-		t.Fatalf("expected 3 installers, got %d: %v", len(names), names)
+	if len(reg.byName) != 3 {
+		t.Fatalf("expected 3 installers, got %d: %v", len(reg.byName), reg.byName)
 	}
 	for _, want := range []string{"claude", "git", "opencode"} {
-		if !reg.Has(want) {
+		if _, found := reg.byName[want]; !found {
 			t.Errorf("missing installer %q", want)
 		}
 	}

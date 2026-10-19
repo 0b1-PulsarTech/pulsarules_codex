@@ -11,16 +11,15 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func RunGovernanceCheck(
+func runGovernanceCheck(
 	repo vcs.Repository,
 	status vcs.Status,
 	index *knowledge.Index,
-	scope governance.Scope,
 ) (string, int) {
 	// The empty commit message is deliberate: only the git commit-msg hook validates one.
 	cfg, configFindings := loader.ForRepo(repo)
 	sess := governance.NewSession(repo, "", index, cfg)
-	result := sess.Analyze(scope, &status, governance.FileSetChanged)
+	result := sess.Analyze(governance.ScopeChanged, &status, governance.FileSetChanged)
 	findingsItem := slices.Concat(configFindings, result.Findings)
 
 	block := findings.FormatFindings(findingsItem, findings.StyleHook, "Governance checks:")

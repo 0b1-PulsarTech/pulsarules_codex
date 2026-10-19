@@ -54,7 +54,7 @@ func dispatchCapture(deps Deps) (*Dispatcher, *bytes.Buffer) {
 
 func extractContext(t *testing.T, raw string) string {
 	t.Helper()
-	var out Output
+	var out hookOutput
 	if err := json.Unmarshal([]byte(strings.TrimSpace(raw)), &out); err != nil {
 		t.Fatalf("unmarshal hook output: %v (raw=%q)", err, raw)
 	}

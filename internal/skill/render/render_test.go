@@ -58,9 +58,9 @@ func TestRenderSkill_NormativeSection(t *testing.T) {
 		assertSkillBody(t, idx, skill, body)
 	}
 
-	router, err := rnd.RenderRouter(idx, nil)
+	router, err := rnd.renderRouterDoc(idx, nil)
 	if err != nil {
-		t.Fatalf("RenderRouter: %v", err)
+		t.Fatalf("renderRouterDoc: %v", err)
 	}
 	for _, want := range []string{
 		"MANDATORY orchestrator", "Dispatch table", "Tests are not optional routing",
@@ -140,7 +140,7 @@ func TestRender_UnknownComposition(t *testing.T) {
 		t.Fatalf("NewRenderer: %v", err)
 	}
 
-	if _, err = rnd.Render(
+	if _, err = rnd.renderBody(
 		idx,
 		knowledge.Skill{ID: "x", ComposeRules: []string{"nope"}},
 	); err == nil {
@@ -175,9 +175,9 @@ func TestRenderSkillCursor_AllSkills(t *testing.T) {
 		assertCursorBody(t, skill, body)
 	}
 
-	router, err := rnd.RenderCursorRouter(idx, nil)
+	router, err := rnd.renderCursorRouter(idx, nil)
 	if err != nil {
-		t.Fatalf("RenderCursorRouter: %v", err)
+		t.Fatalf("renderCursorRouter: %v", err)
 	}
 	for _, want := range []string{
 		"MANDATORY orchestrator", "Dispatch table", "alwaysApply: false",

@@ -74,13 +74,13 @@ func TestRenderRouter_Filter(t *testing.T) {
 		t.Fatalf("NewRenderer: %v", err)
 	}
 
-	full, err := rnd.RenderRouter(idx, nil)
+	full, err := rnd.renderRouterDoc(idx, nil)
 	if err != nil {
-		t.Fatalf("RenderRouter full: %v", err)
+		t.Fatalf("renderRouterDoc full: %v", err)
 	}
-	filtered, err := rnd.RenderRouter(idx, []string{"usecase-layout", "rest-adapter"})
+	filtered, err := rnd.renderRouterDoc(idx, []string{"usecase-layout", "rest-adapter"})
 	if err != nil {
-		t.Fatalf("RenderRouter filtered: %v", err)
+		t.Fatalf("renderRouterDoc filtered: %v", err)
 	}
 
 	if !strings.Contains(full, "`database-persistence`") {

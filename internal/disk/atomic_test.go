@@ -24,7 +24,7 @@ func TestWriteFileAtomic_RefusesSymlink(t *testing.T) {
 
 	err := WriteFileAtomic(link, []byte("replacement"), 0o600)
 	if !errors.Is(err, errSymlink) {
-		t.Fatalf("err = %v, want ErrSymlink", err)
+		t.Fatalf("err = %v, want errSymlink", err)
 	}
 	if !strings.Contains(err.Error(), "refusing to replace a symlink") {
 		t.Errorf("err = %q, want it to say the link would be replaced", err)

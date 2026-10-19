@@ -3,7 +3,6 @@ package install
 import (
 	"fmt"
 	"io/fs"
-	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/report"
 )
@@ -62,18 +61,4 @@ func (reg *Registry) Uninstall(name string, ctx UninstallContext) (report.Report
 		return rpt, fmt.Errorf("uninstall %s: %w", inst.Name(), err)
 	}
 	return rpt, nil
-}
-
-func (reg *Registry) Has(name string) bool {
-	_, ok := reg.byName[name]
-	return ok
-}
-
-func (reg *Registry) Names() []string {
-	names := make([]string, 0, len(reg.byName))
-	for name := range reg.byName {
-		names = append(names, name)
-	}
-	slices.Sort(names)
-	return names
 }
