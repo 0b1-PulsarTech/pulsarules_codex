@@ -1,6 +1,7 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,43 +9,46 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-func (analyzer *Analyzer) checkEntry(
-	root string, entry pass.DelegatedCommand,
-) (kind format, dir, fault string) {
-	var known bool
-	kind, known = formats()[entry.Format]
-	switch {
-	case len(entry.Run) == 0:
-		return kind, "", "run is empty"
-	case !known:
-		return kind, "", fmt.Sprintf("unknown format %q", entry.Format)
-	}
-	dir, fault = dirFault(root, entry.Dir)
-	switch {
-	case fault != "":
-		return kind, "", fault
-	case entry.Rule != "" && analyzer.index != nil && !analyzer.index.RuleExists(entry.Rule):
-		return kind, "", fmt.Sprintf("rule %q is not in the knowledge index", entry.Rule)
-	}
-	return kind, dir, ""
+type entryTarget struct {
+	kind format
+	dir  string
 }
 
-func dirFault(root, name string) (dir, fault string) {
+func (analyzer *Analyzer) checkEntry(
+	root string, entry pass.DelegatedCommand,
+) (entryTarget, error) {
+	if len(entry.Run) == 0 {
+		return entryTarget{}, errors.New("run is empty")
+	}
+	kind, known := formats()[entry.Format]
+	if !known {
+		return entryTarget{}, fmt.Errorf("unknown format %q", entry.Format)
+	}
+	dir, err := resolveDir(root, entry.Dir)
+	if err != nil {
+		return entryTarget{}, err
+	}
+	if entry.Rule != "" && analyzer.index != nil && !analyzer.index.RuleExists(entry.Rule) {
+		return entryTarget{}, fmt.Errorf("rule %q is not in the knowledge index", entry.Rule)
+	}
+	return entryTarget{kind: kind, dir: dir}, nil
+}
+
+func resolveDir(root, name string) (string, error) {
 	if name == "" {
-		return root, ""
+		return root, nil
 	}
 	if !filepath.IsLocal(name) {
-		return "", fmt.Sprintf("dir %q must stay inside the project", name)
+		return "", fmt.Errorf("dir %q must stay inside the project", name)
 	}
-	var err error
-	dir, err = filepath.EvalSymlinks(filepath.Join(root, name))
+	dir, err := filepath.EvalSymlinks(filepath.Join(root, name))
 	if err != nil || !isDir(dir) {
-		return "", fmt.Sprintf("dir %q is not a directory", name)
+		return "", fmt.Errorf("dir %q is not a directory", name)
 	}
 	if rel, relErr := filepath.Rel(root, dir); relErr != nil || !filepath.IsLocal(rel) {
-		return "", fmt.Sprintf("dir %q resolves outside the project", name)
+		return "", fmt.Errorf("dir %q resolves outside the project", name)
 	}
-	return dir, ""
+	return dir, nil
 }
 
 func isDir(path string) bool {
