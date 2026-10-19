@@ -30,28 +30,27 @@ func (analyzer *Analyzer) runEntry(
 	if err != nil {
 		return []finding.Finding{rep.config(err.Error())}
 	}
-	kind, dir := target.kind, target.dir
-	if reason := kind.precheck(root, dir, listed); reason != "" {
+	if reason := target.kind.precheck(root, target.dir, listed); reason != "" {
 		return []finding.Finding{rep.skipped(reason)}
 	}
 	name := entry.Run[0]
-	if _, lookErr := exec.LookPath(resolveInDir(dir, name)); lookErr != nil {
+	if _, lookErr := exec.LookPath(resolveInDir(target.dir, name)); lookErr != nil {
 		return []finding.Finding{rep.unavailable(name)}
 	}
 	result, err := Execute(process.Command{
 		Name: name,
 		Args: entry.Run[1:],
-		Dir:  dir,
+		Dir:  target.dir,
 		// A cold dart analyze of an 860-file Flutter app takes about 6s; five minutes leaves
 		// room for a far larger project or a slow CI disk without hanging a hook forever.
 		Timeout: commandTimeout,
 	})
-	inv := invocation{rep: rep, kind: kind, name: name}
+	inv := invocation{rep: rep, kind: target.kind, name: name}
 	failure, reported := classify(inv, err, result)
 	if failure != nil {
 		return []finding.Finding{*failure}
 	}
-	where := scope{root: root, dir: dir, listed: listed}
+	where := scope{root: root, dir: target.dir, listed: listed}
 	return decodeFindings(inv, where, result, reported)
 }
 
@@ -98,7 +97,7 @@ func Execute(cmd process.Command) (process.Result, error) {
 }
 
 func classify(inv invocation, err error, result process.Result) (*finding.Finding, int) {
-	outcome, code := Classify(err, inv.kind.reportingExits())
+	outcome, code := Classify(err, inv.kind.reportingExits)
 	var failure finding.Finding
 	switch outcome {
 	case Completed, Reported:
