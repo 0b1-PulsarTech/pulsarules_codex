@@ -133,29 +133,3 @@ func hitsAt(lines ...int) []Hit {
 	}
 	return hits
 }
-
-func TestSkillFor(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		ext  string
-		want string
-	}{
-		{".dart", "dart-errors"},
-		{".DART", "dart-errors"},
-		{".ts", "ts-errors"},
-		{".js", "ts-errors"},
-		{".svelte", "ts-errors"},
-		{".go", ""},
-		{"", ""},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.ext, func(t *testing.T) {
-			t.Parallel()
-
-			if got := SkillFor(testCase.ext); got != testCase.want {
-				t.Errorf("SkillFor(%q) = %q, want %q", testCase.ext, got, testCase.want)
-			}
-		})
-	}
-}

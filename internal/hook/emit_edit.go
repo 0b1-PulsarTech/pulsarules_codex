@@ -120,7 +120,7 @@ func (disp *Dispatcher) installedSkill(id string) string {
 func (disp *Dispatcher) throwNotice(session *sessionTracker, filePath string) string {
 	root := disp.resolveProjectDir()
 	ext := filepath.Ext(filePath)
-	if root == "" || !throwsite.Handles(ext) {
+	if root == "" || !disp.throws.Handles(ext) {
 		return ""
 	}
 	resolved, err := projectroot.ResolveInside(root, filePath)
@@ -137,12 +137,12 @@ func (disp *Dispatcher) throwNotice(session *sessionTracker, filePath string) st
 		disp.debugThrowSkip(filePath, err.Error())
 		return ""
 	}
-	hits := throwsite.Scan(ext, string(src))
+	hits := disp.throws.Scan(ext, string(src))
 	if len(hits) == 0 {
 		return ""
 	}
 	// A skill that is not installed here must not be named, as in the checklist.
-	skill := disp.installedSkill(throwsite.SkillFor(ext))
+	skill := disp.installedSkill(disp.throws.SkillFor(ext))
 	text := throwsite.Notice(printable.Path(filepath.Base(filePath)), hits, skill)
 	// Per file, so editing another file between two edits does not re-announce this one.
 	if !session.FirstEmission(fileEvent("post-edit-throw-", filePath), text) {

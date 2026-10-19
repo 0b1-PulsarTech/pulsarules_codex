@@ -137,7 +137,7 @@ func TestScan_FindsAThrowAfterManyOpenStrings(t *testing.T) {
 
 	const line = "<p>Don't panic</p>\n"
 	src := strings.Repeat(line, (1<<20)/len(line)) + "throw a\n"
-	hits := Scan(".tsx", src)
+	hits := New().Scan(".tsx", src)
 	if want := strings.Count(src, "\n"); len(hits) != 1 || hits[0].Line != want {
 		t.Errorf("Scan hits = %v, want one throw on line %d", hits, want)
 	}
@@ -171,7 +171,7 @@ func TestHandles(t *testing.T) {
 		t.Run(testCase.ext, func(t *testing.T) {
 			t.Parallel()
 
-			if got := Handles(testCase.ext); got != testCase.want {
+			if got := New().Handles(testCase.ext); got != testCase.want {
 				t.Errorf("Handles(%q) = %v, want %v", testCase.ext, got, testCase.want)
 			}
 		})
@@ -184,7 +184,7 @@ func runScanCases(t *testing.T, testCases []scanCase) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := hitLines(Scan(testCase.ext, testCase.src))
+			got := hitLines(New().Scan(testCase.ext, testCase.src))
 			if !slices.Equal(got, testCase.want) {
 				t.Errorf("Scan(%q) lines = %v, want %v", testCase.src, got, testCase.want)
 			}
@@ -228,7 +228,7 @@ func TestScan_NamesTheMatchedWord(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := Scan(testCase.ext, testCase.src); !slices.Equal(got, testCase.want) {
+			if got := New().Scan(testCase.ext, testCase.src); !slices.Equal(got, testCase.want) {
 				t.Errorf("Scan(%q) = %v, want %v", testCase.src, got, testCase.want)
 			}
 		})
@@ -298,4 +298,30 @@ func TestScan_MarkupContext(t *testing.T) {
 		},
 	}
 	runScanCases(t, testCases)
+}
+
+func TestSkillFor(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		ext  string
+		want string
+	}{
+		{".dart", "dart-errors"},
+		{".DART", "dart-errors"},
+		{".ts", "ts-errors"},
+		{".js", "ts-errors"},
+		{".svelte", "ts-errors"},
+		{".go", ""},
+		{"", ""},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.ext, func(t *testing.T) {
+			t.Parallel()
+
+			if got := New().SkillFor(testCase.ext); got != testCase.want {
+				t.Errorf("SkillFor(%q) = %q, want %q", testCase.ext, got, testCase.want)
+			}
+		})
+	}
 }

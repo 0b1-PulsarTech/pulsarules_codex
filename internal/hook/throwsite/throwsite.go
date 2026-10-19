@@ -2,39 +2,72 @@ package throwsite
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
-func patternFor(id language.ID) string {
-	switch id {
-	case language.Dart:
-		return `rethrow|throw|Future\.error`
-	case language.TypeScript, language.JavaScript, language.Svelte:
-		return `throw|Promise\.reject`
-	}
-	return ""
+type rule struct {
+	languages []language.ID
+	pattern   *regexp.Regexp
+	skill     string
 }
 
-func Handles(ext string) bool { return patternFor(language.ForExtension(ext).ID) != "" }
+type Scanner struct {
+	rules []rule
+}
+
+func New() *Scanner {
+	return &Scanner{rules: []rule{
+		{
+			languages: []language.ID{language.Dart},
+			pattern:   regexp.MustCompile(`rethrow|throw|Future\.error`),
+			skill:     "dart-errors",
+		},
+		{
+			languages: []language.ID{language.TypeScript, language.JavaScript, language.Svelte},
+			pattern:   regexp.MustCompile(`throw|Promise\.reject`),
+			skill:     "ts-errors",
+		},
+	}}
+}
+
+func (scanner *Scanner) ruleFor(ext string) (rule, bool) {
+	id := language.ForExtension(ext).ID
+	for _, candidate := range scanner.rules {
+		if slices.Contains(candidate.languages, id) {
+			return candidate, true
+		}
+	}
+	return rule{}, false
+}
+
+func (scanner *Scanner) Handles(ext string) bool {
+	_, found := scanner.ruleFor(ext)
+	return found
+}
+
+func (scanner *Scanner) SkillFor(ext string) string {
+	found, _ := scanner.ruleFor(ext)
+	return found.skill
+}
 
 type Hit struct {
 	Line int
 	Word string
 }
 
-func Scan(ext, src string) []Hit {
-	id := language.ForExtension(ext).ID
-	pattern := patternFor(id)
-	if pattern == "" {
+func (scanner *Scanner) Scan(ext, src string) []Hit {
+	matched, handled := scanner.ruleFor(ext)
+	if !handled {
 		return nil
 	}
 	literals := language.ScanLiterals(
 		ext, src, language.StringsEndAtNewline(), language.KeepSpansAtEOF(),
 	)
 	var hits []Hit
-	for _, found := range regexp.MustCompile(pattern).FindAllStringIndex(src, -1) {
+	for _, found := range matched.pattern.FindAllStringIndex(src, -1) {
 		start, end := found[0], found[1]
 		if !standsAlone(src, start, end) || !inCode(literals, start) {
 			continue

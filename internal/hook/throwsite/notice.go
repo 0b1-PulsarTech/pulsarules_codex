@@ -8,16 +8,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
-func SkillFor(ext string) string {
-	switch {
-	case strings.ToLower(ext) == ".dart":
-		return "dart-errors"
-	case Handles(ext):
-		return "ts-errors"
-	}
-	return ""
-}
-
 func Notice(file string, hits []Hit, skill string) string {
 	const maxListed = 5
 	var lines printable.LineList

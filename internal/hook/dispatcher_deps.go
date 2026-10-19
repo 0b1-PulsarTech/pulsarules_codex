@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/throwsite"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
@@ -17,6 +18,7 @@ type Dispatcher struct {
 	logger     *slog.Logger
 	index      *knowledge.Index
 	router     *fileRouter
+	throws     *throwsite.Scanner
 	out        io.Writer
 	errOut     io.Writer
 	projectDir string
@@ -61,6 +63,7 @@ func NewDispatcher(deps Deps) *Dispatcher {
 		logger:     deps.Logger,
 		index:      deps.Index,
 		router:     newFileRouter(deps.Index),
+		throws:     throwsite.New(),
 		out:        out,
 		errOut:     errOut,
 		projectDir: deps.ProjectDir,
