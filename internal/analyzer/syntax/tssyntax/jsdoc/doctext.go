@@ -1,56 +1,6 @@
 package jsdoc
 
-import (
-	"slices"
-	"strings"
-)
-
-const maxDeprecatedLines = 3
-
-func docLines(comment string) []string {
-	body := strings.TrimSuffix(strings.TrimPrefix(comment, "/**"), "*/")
-	lines := strings.Split(body, "\n")
-	for idx, line := range lines {
-		lines[idx] = strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(line), "*"))
-	}
-	for len(lines) > 0 && lines[0] == "" {
-		lines = lines[1:]
-	}
-	for len(lines) > 0 && lines[len(lines)-1] == "" {
-		lines = lines[:len(lines)-1]
-	}
-	return lines
-}
-
-func commentBody(comment string) string {
-	body := strings.TrimPrefix(comment, "//")
-	if body == comment {
-		body = strings.TrimSuffix(strings.TrimPrefix(comment, "/*"), "*/")
-	}
-	return strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(body), "*"))
-}
-
-func isDirective(line string) bool {
-	for _, prefix := range []string{
-		"eslint-", "@ts-", "pulsarules:", "ignore:", "ignore_for_file:", "prettier-ignore",
-		"istanbul ignore", "c8 ignore", "svelte-ignore", "biome-ignore", "noinspection",
-	} {
-		if strings.HasPrefix(line, prefix) {
-			return true
-		}
-	}
-	return false
-}
-
-func isDeprecatedOnly(prose, own []string) bool {
-	marked := strings.HasPrefix(prose[0], "@deprecated") ||
-		strings.HasPrefix(prose[0], "Deprecated:")
-	return marked && len(own) <= maxDeprecatedLines && !slices.Contains(own, "")
-}
-
-func isSimplification(prose []string) bool {
-	return strings.HasPrefix(prose[0], "simplification:")
-}
+import "strings"
 
 func isTagsOnly(prose []string) bool {
 	for _, line := range prose {

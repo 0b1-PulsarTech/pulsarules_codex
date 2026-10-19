@@ -5,10 +5,10 @@ import (
 	"go/token"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast/testfunc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/docshape"
 )
 
 type docTarget struct {
@@ -25,12 +25,13 @@ func docSites(fset *token.FileSet, source syntax.Source, file *ast.File) []synta
 			if target.group == nil {
 				continue
 			}
+			shape := docshape.Classify(commentLines(target.group), nil)
 			found = append(found, syntax.DocSite{
 				Symbol:         target.symbol,
 				Kind:           target.kind,
 				Line:           lineOf(fset, target.group.Pos()),
-				Exempt:         target.exempt || isExemptDoc(target.group),
-				MixedDirective: goast.HintFor(target.group, "") != "",
+				Exempt:         target.exempt || shape.Exempt,
+				MixedDirective: shape.Mixed,
 			})
 		}
 	}
@@ -55,15 +56,10 @@ func docTargets(decl ast.Decl, source syntax.Source, file *ast.File) []docTarget
 	return nil
 }
 
-func isExemptDoc(group *ast.CommentGroup) bool {
-	return goast.IsDirectiveGroup(group) ||
-		goast.IsSimplificationGroup(group) ||
-		isDeprecatedOnly(group)
-}
-
-func isDeprecatedOnly(group *ast.CommentGroup) bool {
-	text := strings.TrimSpace(group.Text())
-	const maxLines = 3
-	return strings.HasPrefix(text, "Deprecated:") && !strings.Contains(text, "\n\n") &&
-		strings.Count(text, "\n")+1 <= maxLines
+func commentLines(group *ast.CommentGroup) []string {
+	lines := make([]string, 0, len(group.List))
+	for _, comment := range group.List {
+		lines = append(lines, strings.Split(comment.Text, "\n")...)
+	}
+	return lines
 }

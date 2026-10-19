@@ -48,6 +48,35 @@ func docSiteCases() []docSiteCase {
 				{Symbol: "run", Kind: syntax.DocFunction, Line: 3, Exempt: true},
 			},
 		},
+		{
+			name: "deprecated at three lines is exempt", source: plainSource(),
+			body: "package x\n\n// Deprecated: a\n// b\n// c\nfunc run() {}\n",
+			want: []syntax.DocSite{
+				{Symbol: "run", Kind: syntax.DocFunction, Line: 3, Exempt: true},
+			},
+		},
+		{
+			name: "deprecated at four lines is prose", source: plainSource(),
+			body: "package x\n\n// Deprecated: a\n// b\n// c\n// d\nfunc run() {}\n",
+			want: []syntax.DocSite{{Symbol: "run", Kind: syntax.DocFunction, Line: 3}},
+		},
+		{
+			name: "deprecated after prose is prose", source: plainSource(),
+			body: "package x\n\n// run does.\n// Deprecated: a\nfunc run() {}\n",
+			want: []syntax.DocSite{{Symbol: "run", Kind: syntax.DocFunction, Line: 3}},
+		},
+		{
+			name: "deprecated with a second paragraph is prose", source: plainSource(),
+			body: "package x\n\n// Deprecated: a\n//\n// b\nfunc run() {}\n",
+			want: []syntax.DocSite{{Symbol: "run", Kind: syntax.DocFunction, Line: 3}},
+		},
+		{
+			name: "simplification is exempt", source: plainSource(),
+			body: "package x\n\n// simplification: no cache.\nfunc run() {}\n",
+			want: []syntax.DocSite{
+				{Symbol: "run", Kind: syntax.DocFunction, Line: 3, Exempt: true},
+			},
+		},
 	}
 }
 
@@ -88,31 +117,6 @@ func TestDocSites(t *testing.T) {
 			got := summarizeSource(t, testCase.body, testCase.source, "").DocSites
 			if !slices.Equal(got, testCase.want) {
 				t.Fatalf("DocSites = %+v, want %+v", got, testCase.want)
-			}
-		})
-	}
-}
-
-func TestIsDeprecatedOnly(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name   string
-		source string
-		want   bool
-	}{
-		{"one line", "package p\n\n// Deprecated: use G.\nfunc F() {}\n", true},
-		{"three lines", "package p\n\n// Deprecated: a\n// b\n// c\nfunc F() {}\n", true},
-		{"four lines", "package p\n\n// Deprecated: a\n// b\n// c\n// d\nfunc F() {}\n", false},
-		{"prose first", "package p\n\n// F does.\n// Deprecated: a\nfunc F() {}\n", false},
-		{"second paragraph", "package p\n\n// Deprecated: a\n//\n// b\nfunc F() {}\n", false},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := isDeprecatedOnly(firstFunc(t, testCase.source).Doc); got != testCase.want {
-				t.Fatalf("isDeprecatedOnly = %v, want %v", got, testCase.want)
 			}
 		})
 	}

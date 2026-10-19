@@ -11,22 +11,8 @@ func IsBlock(comment string) bool {
 }
 
 func Classify(doc string, others []string) docshape.Shape {
-	own := docLines(doc)
-	var prose []string
-	hasDirective := false
-	for _, line := range own {
-		if isDirective(line) {
-			hasDirective = true
-		} else if line != "" {
-			prose = append(prose, line)
-		}
-	}
-	for _, other := range others {
-		hasDirective = hasDirective || isDirective(commentBody(other))
-	}
-	return docshape.Shape{
-		Exempt: len(prose) == 0 || isDeprecatedOnly(prose, own) || isSimplification(prose) ||
-			isTagsOnly(prose),
-		Mixed: len(prose) > 0 && hasDirective,
-	}
+	own := strings.Split(doc, "\n")
+	shape := docshape.Classify(own, others)
+	shape.Exempt = shape.Exempt || isTagsOnly(docshape.Prose(own))
+	return shape
 }
