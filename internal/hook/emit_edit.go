@@ -12,7 +12,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
-func (disp *Dispatcher) emitPreEdit(session *sessionTracker, in hookPayload) error {
+func (disp *Dispatcher) emitPreEdit(session *sessionTracker, in hookPayload, host string) error {
 	filePath := in.ToolInput.FilePath
 	if !disp.router.Routes(filePath) {
 		return nil
@@ -23,7 +23,7 @@ func (disp *Dispatcher) emitPreEdit(session *sessionTracker, in hookPayload) err
 	if !session.FirstEmission(preEditFileEvent(filePath), filePath) {
 		return nil
 	}
-	return disp.emitContext("hooks/pre-edit.txt", "PreToolUse")
+	return disp.emitContext("hooks/pre-edit.txt", host)
 }
 
 func preEditFileEvent(filePath string) string { return fileEvent("pre-edit-file-", filePath) }
@@ -34,7 +34,7 @@ func fileEvent(prefix, filePath string) string {
 	return prefix + fingerprint([]byte(filePath))[:eventKeyHexChars]
 }
 
-func (disp *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload) error {
+func (disp *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload, host string) error {
 	filePath := in.ToolInput.FilePath
 
 	// Before the skills gate below, which returns early for any extension
@@ -45,7 +45,7 @@ func (disp *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload) er
 		if notice == "" {
 			return nil
 		}
-		disp.emitOutput("PostToolUse", notice)
+		disp.emitOutput(host, notice)
 		return nil
 	}
 
@@ -60,7 +60,7 @@ func (disp *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload) er
 		if isGoFile(filePath) {
 			asset = "hooks/post-edit.txt"
 		}
-		return disp.emitContextWithNotice(asset, "PostToolUse", notice)
+		return disp.emitContextWithNotice(asset, host, notice)
 	}
 
 	text, err := renderPostEditChecklist(disp.templates, postEditChecklist{
@@ -74,10 +74,10 @@ func (disp *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload) er
 
 	// The checklist dedups on content, but a mutation notice must not: a
 	// second cleanup of the same file is a new fact, not a repeat.
-	if !session.FirstEmission("PostToolUse", text) && notice == "" {
+	if !session.FirstEmission(host, text) && notice == "" {
 		return nil
 	}
-	disp.emitOutput("PostToolUse", joinNotice(notice, text))
+	disp.emitOutput(host, joinNotice(notice, text))
 	return nil
 }
 

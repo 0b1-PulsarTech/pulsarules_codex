@@ -20,7 +20,7 @@ func (disp *Dispatcher) Dispatch(mode string, payload []byte) error {
 	)
 	for _, event := range Events() {
 		if event.Mode == mode {
-			outcome, err = event.handle(disp, session, in)
+			outcome, err = event.handle(disp, session, in, event.Host)
 			break
 		}
 	}
@@ -30,7 +30,7 @@ func (disp *Dispatcher) Dispatch(mode string, payload []byte) error {
 	return nil
 }
 
-func (disp *Dispatcher) emitSessionStart(session *sessionTracker) error {
+func (disp *Dispatcher) emitSessionStart(session *sessionTracker, host string) error {
 	if !session.OncePerSession("session-start") {
 		return nil
 	}
@@ -38,18 +38,18 @@ func (disp *Dispatcher) emitSessionStart(session *sessionTracker) error {
 	if err != nil {
 		return fmt.Errorf("session contract: %w", err)
 	}
-	disp.emitOutput("SessionStart", text)
-	disp.emitKnowledgeDrift()
+	disp.emitOutput(host, text)
+	disp.emitKnowledgeDrift(host)
 	return nil
 }
 
-func (disp *Dispatcher) emitSubagentStart() error {
+func (disp *Dispatcher) emitSubagentStart(host string) error {
 	text, err := contract.Subagent(disp.templates)
 	if err != nil {
 		return fmt.Errorf("subagent contract: %w", err)
 	}
 	// No OncePerSession gate: a subagent shares its parent's session id and would be muted.
-	disp.emitOutput("SubagentStart", text)
+	disp.emitOutput(host, text)
 	return nil
 }
 

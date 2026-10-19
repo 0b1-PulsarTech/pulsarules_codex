@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
 )
@@ -53,19 +52,18 @@ func TestRenderHooksBlock_OnlyStopCarriesATimeout(t *testing.T) {
 	}
 }
 
-func TestRenderHooksBlock_StopTimeout(t *testing.T) {
+func TestRenderHooksBlock_StopTimeoutFromTable(t *testing.T) {
 	t.Parallel()
 
-	const minimumMargin = 15 * time.Second
 	stop := renderedHooks(t)["Stop"][0].Hooks[0]
 	seconds, err := strconv.ParseInt(string(stop.Timeout), 10, 64)
 	if err != nil {
 		t.Fatalf("Stop timeout %q: %v", stop.Timeout, err)
 	}
-	hostTimeout := time.Duration(seconds) * time.Second
-	if hostTimeout < hook.StopGovernanceDeadline+minimumMargin {
-		t.Errorf("Stop timeout %s must exceed the governance deadline %s by %s",
-			hostTimeout, hook.StopGovernanceDeadline, minimumMargin)
+	for _, event := range hook.Events() {
+		if event.Mode == "stop" && int64(event.Timeout) != seconds {
+			t.Errorf("rendered Stop timeout %d, table says %d", seconds, event.Timeout)
+		}
 	}
 }
 

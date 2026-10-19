@@ -1,6 +1,10 @@
 package hook
 
-type handler func(disp *Dispatcher, session *sessionTracker, in hookPayload) (stopOutcome, error)
+type handler func(
+	disp *Dispatcher, session *sessionTracker, in hookPayload, host string,
+) (stopOutcome, error)
+
+type plainRun func(*Dispatcher, *sessionTracker, hookPayload, string) error
 
 type Event struct {
 	Host    string
@@ -10,9 +14,11 @@ type Event struct {
 	handle  handler
 }
 
-func plain(run func(*Dispatcher, *sessionTracker, hookPayload) error) handler {
-	return func(disp *Dispatcher, session *sessionTracker, in hookPayload) (stopOutcome, error) {
-		return stopOutcome{}, run(disp, session, in)
+func plain(run plainRun) handler {
+	return func(
+		disp *Dispatcher, session *sessionTracker, in hookPayload, host string,
+	) (stopOutcome, error) {
+		return stopOutcome{}, run(disp, session, in, host)
 	}
 }
 
@@ -21,10 +27,13 @@ func Events() []Event {
 
 	return []Event{
 		{
-			Host: "SessionStart", Mode: "session-start",
-			handle: plain(func(disp *Dispatcher, session *sessionTracker, _ hookPayload) error {
-				return disp.emitSessionStart(session)
-			}),
+			Host: "SessionStart",
+			Mode: "session-start",
+			handle: plain(
+				func(disp *Dispatcher, session *sessionTracker, _ hookPayload, host string) error {
+					return disp.emitSessionStart(session, host)
+				},
+			),
 		},
 		{
 			Host: "PreToolUse", Matcher: "Write|Edit|MultiEdit", Mode: "pre-edit",
@@ -39,16 +48,22 @@ func Events() []Event {
 			handle: plain((*Dispatcher).emitPostEdit),
 		},
 		{
-			Host: "UserPromptSubmit", Mode: "user-prompt",
-			handle: plain(func(disp *Dispatcher, _ *sessionTracker, _ hookPayload) error {
-				return disp.emitUserPrompt()
-			}),
+			Host: "UserPromptSubmit",
+			Mode: "user-prompt",
+			handle: plain(
+				func(disp *Dispatcher, _ *sessionTracker, _ hookPayload, host string) error {
+					return disp.emitUserPrompt(host)
+				},
+			),
 		},
 		{
-			Host: "SubagentStart", Mode: "subagent-start",
-			handle: plain(func(disp *Dispatcher, _ *sessionTracker, _ hookPayload) error {
-				return disp.emitSubagentStart()
-			}),
+			Host: "SubagentStart",
+			Mode: "subagent-start",
+			handle: plain(
+				func(disp *Dispatcher, _ *sessionTracker, _ hookPayload, host string) error {
+					return disp.emitSubagentStart(host)
+				},
+			),
 		},
 		// The host default is 600s and it discards output past the timeout; the Stop
 		// deadline must stay under this by the margin the host/claude test pins.
@@ -56,15 +71,20 @@ func Events() []Event {
 			Host: "Stop", Mode: "stop", Timeout: stopTimeoutSeconds, handle: stopHandler,
 		},
 		{
-			Host: "SessionEnd", Mode: "session-end",
-			handle: plain(func(_ *Dispatcher, session *sessionTracker, _ hookPayload) error {
-				session.Cleanup()
-				return nil
-			}),
+			Host: "SessionEnd",
+			Mode: "session-end",
+			handle: plain(
+				func(_ *Dispatcher, session *sessionTracker, _ hookPayload, _ string) error {
+					session.Cleanup()
+					return nil
+				},
+			),
 		},
 	}
 }
 
-func stopHandler(disp *Dispatcher, session *sessionTracker, _ hookPayload) (stopOutcome, error) {
-	return disp.emitStop("Stop", session)
+func stopHandler(
+	disp *Dispatcher, session *sessionTracker, _ hookPayload, host string,
+) (stopOutcome, error) {
+	return disp.emitStop(host, session)
 }

@@ -37,7 +37,6 @@ type Deps struct {
 	ProjectDir string
 	SkillsDir  string
 	Governance func(repo vcs.Repository, status vcs.Status) (block string, count int)
-	Open       func(dir string) (vcs.Repository, error)
 }
 
 func NewDispatcher(deps Deps) *Dispatcher {
@@ -57,10 +56,6 @@ func NewDispatcher(deps Deps) *Dispatcher {
 	if logger == nil {
 		logger = slog.New(slog.DiscardHandler)
 	}
-	open := deps.Open
-	if open == nil {
-		open = vcs.Open
-	}
 	return &Dispatcher{
 		templates:  deps.Templates,
 		logger:     logger,
@@ -72,7 +67,7 @@ func NewDispatcher(deps Deps) *Dispatcher {
 		projectDir: deps.ProjectDir,
 		skillsDirs: filepath.SplitList(deps.SkillsDir),
 		governance: governance,
-		open:       open,
+		open:       vcs.Open,
 	}
 }
 
@@ -103,7 +98,7 @@ func (disp *Dispatcher) warnMissingProjectDir(session *sessionTracker) {
 	disp.logger.Warn(msg)
 }
 
-const StopGovernanceDeadline = 60 * time.Second
+const stopGovernanceDeadline = 60 * time.Second
 
 type governanceResult struct {
 	block    string
@@ -117,7 +112,7 @@ func (disp *Dispatcher) governanceWithin(
 	entered time.Time,
 ) governanceResult {
 	// The host discards output past its timeout, so the budget runs from Stop entry.
-	remaining := StopGovernanceDeadline - time.Since(entered)
+	remaining := stopGovernanceDeadline - time.Since(entered)
 	if remaining <= 0 {
 		return governanceResult{block: governanceTimeoutNotice(), timedOut: true}
 	}
@@ -142,6 +137,6 @@ func governanceTimeoutNotice() string {
 	return fmt.Sprintf(
 		"Governance did not finish within %ds; run `pulsarules_cli governance` "+
 			"before committing (the git hooks still check).\n",
-		int(StopGovernanceDeadline/time.Second),
+		int(stopGovernanceDeadline/time.Second),
 	)
 }

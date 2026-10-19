@@ -10,7 +10,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-func (disp *Dispatcher) emitPreSearch(session *sessionTracker, in hookPayload) error {
+func (disp *Dispatcher) emitPreSearch(session *sessionTracker, in hookPayload, host string) error {
 	if !searchTargetsGo(in) {
 		return nil
 	}
@@ -28,7 +28,7 @@ func (disp *Dispatcher) emitPreSearch(session *sessionTracker, in hookPayload) e
 	if !session.OncePerSession("pre-search") {
 		return nil
 	}
-	return disp.emitContext("hooks/pre-search.txt", "PreToolUse")
+	return disp.emitContext("hooks/pre-search.txt", host)
 }
 
 func searchTargetsGo(in hookPayload) bool {
@@ -52,8 +52,8 @@ func searchTargetsGo(in hookPayload) bool {
 	}
 }
 
-func (disp *Dispatcher) emitUserPrompt() error {
-	return disp.emitContext("hooks/user-prompt.txt", "UserPromptSubmit")
+func (disp *Dispatcher) emitUserPrompt(host string) error {
+	return disp.emitContext("hooks/user-prompt.txt", host)
 }
 
 func (disp *Dispatcher) emitStop(event string, session *sessionTracker) (stopOutcome, error) {
@@ -88,7 +88,8 @@ func (disp *Dispatcher) emitStop(event string, session *sessionTracker) (stopOut
 	}
 	bullets, err := disp.stopChecklist(status)
 	if err != nil {
-		return outcome, err
+		// The block is the point of the Stop hook; a missing checklist only drops the bullets.
+		disp.logger.Warn("stop checklist unavailable", "error", err.Error())
 	}
 	if bullets != "" {
 		context += "\n" + bullets
