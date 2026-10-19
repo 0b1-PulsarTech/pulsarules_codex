@@ -2,15 +2,12 @@ package movepurity
 
 import (
 	"path"
-	"strconv"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
 )
 
 type declScope struct {
-	oldDir string
-	newDir string
+	dirPair
 	isTest bool
 }
 
@@ -26,25 +23,19 @@ func (moves *moveContext) captureSets(
 }
 
 func newDeclScope(edit fileEdit) declScope {
-	return declScope{
-		oldDir: path.Dir(edit.oldPath), newDir: path.Dir(edit.newPath),
-		isTest: strings.HasSuffix(edit.newPath, "_test.go"),
-	}
-}
-
-func isProductionGo(file string) bool {
-	return strings.HasSuffix(file, ".go") && !strings.HasSuffix(file, "_test.go")
+	return declScope{dirPair: edit.dirs(), isTest: isTestFile(edit.newPath)}
 }
 
 func (scope declScope) includes(file string) bool {
-	return isProductionGo(file) || (scope.isTest && strings.HasSuffix(file, ".go"))
+	return isProductionGo(file) || (scope.isTest && isGoFile(file))
 }
 
 func (moves *moveContext) leftBehind(scope declScope, pkg string) map[string]bool {
-	return moves.cachedDecls("left", scope, pkg, func(set map[string]bool) {
-		files, err := moves.reader.HeadDir(scope.oldDir)
+	return cached(moves.left, scopeKey{scope: scope, pkg: pkg}, func() map[string]bool {
+		set := map[string]bool{}
+		files, err := moves.head.dir(scope.oldDir)
 		if err != nil {
-			return
+			return set
 		}
 		for _, file := range files {
 			// A file co-moved into newDir takes its names along; one moved elsewhere
@@ -53,27 +44,25 @@ func (moves *moveContext) leftBehind(scope declScope, pkg string) map[string]boo
 			if !scope.includes(file) || (isMoved && path.Dir(dest) == scope.newDir) {
 				continue
 			}
-			if src, readErr := moves.reader.HeadBlob(file); readErr == nil {
-				gosrc.CollectDecls(src, pkg, set)
-			}
+			moves.head.addDecls(file, pkg, set)
 		}
+		return set
 	})
 }
 
 func (moves *moveContext) takenInNewDir(scope declScope, pkg string) map[string]bool {
-	return moves.cachedDecls("taken", scope, pkg, func(set map[string]bool) {
-		files, err := moves.reader.StagedDir(scope.newDir)
+	return cached(moves.taken, scopeKey{scope: scope, pkg: pkg}, func() map[string]bool {
+		set := map[string]bool{}
+		files, err := moves.staged.dir(scope.newDir)
 		if err != nil {
-			return
+			return set
 		}
 		for _, file := range files {
-			if !scope.includes(file) || moves.isComovedFrom(file, scope.oldDir) {
-				continue
-			}
-			if src, readErr := moves.reader.StagedBlob(file); readErr == nil {
-				gosrc.CollectDecls(src, pkg, set)
+			if scope.includes(file) && !moves.isComovedFrom(file, scope.oldDir) {
+				moves.staged.addDecls(file, pkg, set)
 			}
 		}
+		return set
 	})
 }
 
@@ -84,19 +73,4 @@ func (moves *moveContext) isComovedFrom(newPath, oldDir string) bool {
 		}
 	}
 	return false
-}
-
-func (moves *moveContext) cachedDecls(
-	kind string, scope declScope, pkg string, fill func(set map[string]bool),
-) map[string]bool {
-	key := strings.Join(
-		[]string{kind, scope.oldDir, scope.newDir, pkg, strconv.FormatBool(scope.isTest)}, "\x00",
-	)
-	if set, ok := moves.decls[key]; ok {
-		return set
-	}
-	set := map[string]bool{}
-	moves.decls[key] = set
-	fill(set)
-	return set
 }

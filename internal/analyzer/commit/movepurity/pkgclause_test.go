@@ -72,6 +72,108 @@ func TestPackageAllowed_Rejected(t *testing.T) {
 	runRenameCases(t, testCases)
 }
 
+func TestPackageAllowed_MixedDirectory(t *testing.T) {
+	t.Parallel()
+
+	const sample = "\nfunc Sample() int { return 1 }\n"
+	utilBody := "package util\n" + sample
+	moveA := []pass.Rename{pair(utilA, routingA)}
+	testCases := []renameCase{
+		{
+			name: "directory already holds three packages",
+			head: map[string]string{utilA: utilBody},
+			staged: map[string]string{
+				routingA:                "package r\n" + sample,
+				"internal/routing/x.go": "package p\n",
+				"internal/routing/y.go": "package q\n",
+				"internal/routing/z.go": "package r\n",
+			},
+			renames: moveA,
+		},
+		{
+			name: "external test package with no stem lands in a mixed directory",
+			head: map[string]string{"internal/util/a_test.go": "package util_test\n"},
+			staged: map[string]string{
+				"internal/routing/a_test.go": "package _test\n",
+				"internal/routing/x.go":      "package p\n",
+				"internal/routing/y.go":      "package q\n",
+			},
+			renames: []pass.Rename{pair("internal/util/a_test.go", "internal/routing/a_test.go")},
+		},
+	}
+	runRenameCases(t, testCases)
+}
+
+func TestCleanName_Merge(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		names []string
+		want  cleanName
+	}{
+		{"nothing", nil, cleanName{}},
+		{"one name", []string{"p"}, cleanName{name: "p"}},
+		{"same name twice", []string{"p", "p"}, cleanName{name: "p"}},
+		{"empty names are skipped", []string{"p", "", "p"}, cleanName{name: "p"}},
+		{"leading empty name", []string{"", "p"}, cleanName{name: "p"}},
+		{"two names", []string{"p", "q"}, cleanName{isMixed: true}},
+		{"a third name stays mixed", []string{"p", "q", "r"}, cleanName{isMixed: true}},
+		{"back to the first name stays mixed", []string{"p", "q", "p"}, cleanName{isMixed: true}},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			var got cleanName
+			for _, next := range testCase.names {
+				got = got.merge(next)
+			}
+			if got != testCase.want {
+				t.Fatalf("merge(%q) = %+v, want %+v", testCase.names, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestDirPackages_Want(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name      string
+		names     dirPackages
+		want      string
+		wantClean bool
+	}{
+		{"nothing", dirPackages{}, "", true},
+		{"staying wins", dirPackages{cleanName{name: "p"}, cleanName{name: "q"}}, "p", true},
+		{"moving names an empty dir", dirPackages{moving: cleanName{name: "q"}}, "q", true},
+		{"mixed staying", dirPackages{staying: cleanName{isMixed: true}}, "", false},
+		{
+			"mixed moving into an empty dir",
+			dirPackages{moving: cleanName{isMixed: true}},
+			"",
+			false,
+		},
+		{
+			"mixed moving behind a staying name",
+			dirPackages{cleanName{name: "p"}, cleanName{isMixed: true}},
+			"p", true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, isClean := testCase.names.want()
+			if got != testCase.want || isClean != testCase.wantClean {
+				t.Fatalf("want() = %q, %v, want %q, %v",
+					got, isClean, testCase.want, testCase.wantClean)
+			}
+		})
+	}
+}
+
 func TestPackageAllowed_Pure(t *testing.T) {
 	t.Parallel()
 

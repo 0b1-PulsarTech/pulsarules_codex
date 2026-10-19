@@ -71,7 +71,8 @@ func renameFinding(
 	if moves == nil {
 		return notPureMoveFinding(reporter, rename), isLow
 	}
-	switch got := moves.renameVerdict(rename); {
+	got := moves.renameVerdict(rename)
+	switch {
 	case got == verdictPure:
 		return finding.Finding{}, false
 	case got == verdictClauseOnly:
@@ -84,24 +85,15 @@ func renameFinding(
 		return strandsCompiledFinding(reporter, rename, moves.stranded[rename.NewPath]), true
 	case isLow:
 		return notPureMoveFinding(reporter, rename), true
-	default:
-		return editFinding(moves, reporter, rename, got), true
-	}
-}
-
-func editFinding(
-	moves *moveContext, reporter finding.Reporter, rename pass.Rename, got verdict,
-) finding.Finding {
-	switch got {
-	case verdictUnsafe:
-		return relocationUnsafeFinding(reporter, rename, "is byte-identical but")
-	case verdictInclusion:
-		return inclusionChangeFinding(reporter, rename)
-	case verdictUnlinksLoad:
-		return unlinksLoadFinding(reporter, rename.NewPath, moves.unlinked[rename.NewPath])
+	case got == verdictUnsafe:
+		return relocationUnsafeFinding(reporter, rename, "is byte-identical but"), true
+	case got == verdictInclusion:
+		return inclusionChangeFinding(reporter, rename), true
+	case got == verdictUnlinksLoad:
+		return unlinksLoadFinding(reporter, rename.NewPath, moves.unlinked[rename.NewPath]), true
 	}
 	// A failed git read lands here too: reporting beats a silent false negative.
-	return renameCarriesEditFinding(reporter, rename)
+	return renameCarriesEditFinding(reporter, rename), true
 }
 
 func unrelatedStagedEdits(

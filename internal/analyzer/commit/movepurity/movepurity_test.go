@@ -4,6 +4,7 @@ import (
 	"errors"
 	"maps"
 	"path"
+	"slices"
 	"strings"
 	"testing"
 
@@ -207,13 +208,9 @@ func blobOf(tree map[string]string, path string) (string, error) {
 }
 
 func dirOf(tree map[string]string, dir string) []string {
-	var files []string
-	for name := range tree {
-		if path.Dir(name) == dir {
-			files = append(files, name)
-		}
-	}
-	return files
+	return slices.DeleteFunc(slices.Sorted(maps.Keys(tree)), func(name string) bool {
+		return path.Dir(name) != dir
+	})
 }
 
 func pair(oldPath, newPath string) pass.Rename {

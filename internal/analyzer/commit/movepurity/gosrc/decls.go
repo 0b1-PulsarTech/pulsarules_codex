@@ -12,22 +12,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
 )
 
-func CollectDecls(src, pkg string, set map[string]bool) {
-	file, err := parser.ParseFile(token.NewFileSet(), "", src, parser.SkipObjectResolution)
-	if err != nil || file.Name.Name != pkg {
-		return
-	}
-	topLevelNames(file, set)
-}
-
-func CollectAnyDecls(src string, set map[string]bool) {
-	file, err := parser.ParseFile(token.NewFileSet(), "", src, parser.SkipObjectResolution)
-	if err != nil {
-		return
-	}
-	topLevelNames(file, set)
-}
-
 func topLevelNames(file *ast.File, set map[string]bool) {
 	for _, decl := range file.Decls {
 		switch typed := decl.(type) {

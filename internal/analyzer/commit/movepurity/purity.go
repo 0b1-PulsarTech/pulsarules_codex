@@ -9,18 +9,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-type entry struct {
-	mode string
-	id   string
-}
-
 func (moves *moveContext) entries(oldPath, newPath string) (oldEntry, newEntry entry, ok bool) {
-	oldMode, oldID, oldErr := moves.reader.HeadEntry(oldPath)
-	newMode, newID, newErr := moves.reader.StagedEntry(newPath)
-	if oldErr != nil || newErr != nil {
-		return entry{}, entry{}, false
-	}
-	return entry{oldMode, oldID}, entry{newMode, newID}, true
+	var oldErr, newErr error
+	oldEntry, oldErr = moves.head.entryOf(oldPath)
+	newEntry, newErr = moves.staged.entryOf(newPath)
+	return oldEntry, newEntry, oldErr == nil && newErr == nil
 }
 
 type verdict int
@@ -54,9 +47,10 @@ func (moves *moveContext) renameVerdict(rename pass.Rename) verdict {
 }
 
 func (moves *moveContext) identicalVerdict(rename pass.Rename) verdict {
-	isGo := path.Ext(rename.OldPath) == ".go" && path.Ext(rename.NewPath) == ".go"
+	isGo := isGoFile(rename.OldPath) && isGoFile(rename.NewPath)
+	dirs := renameDirs(rename)
 	switch {
-	case path.Dir(rename.OldPath) == path.Dir(rename.NewPath),
+	case dirs.oldDir == dirs.newDir,
 		gosrc.IsOutsidePackage(rename.OldPath) && gosrc.IsOutsidePackage(rename.NewPath):
 		return verdictPure
 	case !isGo && !gosrc.IsCompiled(rename.OldPath):
@@ -84,15 +78,15 @@ func (moves *moveContext) importChangeVerdict(changedPath string) verdict {
 }
 
 func (moves *moveContext) isGoEdit(edit fileEdit) verdict {
-	if path.Ext(edit.oldPath) != ".go" || path.Ext(edit.newPath) != ".go" {
+	if !edit.isGo() {
 		return verdictEdited
 	}
-	oldSrc, oldErr := moves.reader.HeadBlob(edit.oldPath)
-	newSrc, newErr := moves.reader.StagedBlob(edit.newPath)
+	oldFile, oldErr := moves.head.parse(edit.oldPath)
+	newFile, newErr := moves.staged.parse(edit.newPath)
 	if oldErr != nil || newErr != nil {
 		return verdictEdited
 	}
-	return moves.goEquivalent(oldSrc, newSrc, edit)
+	return moves.goEquivalent(oldFile, newFile, edit)
 }
 
 func notPureMoveFinding(reporter finding.Reporter, rename pass.Rename) finding.Finding {

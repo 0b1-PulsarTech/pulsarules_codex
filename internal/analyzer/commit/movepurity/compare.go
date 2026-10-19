@@ -3,26 +3,51 @@ package movepurity
 import (
 	"path"
 	"slices"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-type fileEdit struct {
-	oldPath string
-	newPath string
-	isMove  bool
-	isSame  bool
+type (
+	dirPair struct {
+		oldDir string
+		newDir string
+	}
+	fileEdit struct {
+		oldPath string
+		newPath string
+		isMove  bool
+		isSame  bool
+	}
+)
+
+func isGoFile(file string) bool { return strings.HasSuffix(file, ".go") }
+
+func isTestFile(file string) bool { return strings.HasSuffix(file, "_test.go") }
+
+func isProductionGo(file string) bool { return isGoFile(file) && !isTestFile(file) }
+
+func renameDirs(rename pass.Rename) dirPair {
+	return dirPair{oldDir: path.Dir(rename.OldPath), newDir: path.Dir(rename.NewPath)}
 }
 
-func (moves *moveContext) goEquivalent(oldSrc, newSrc string, edit fileEdit) verdict {
-	oldFile, oldErr := gosrc.Parse(oldSrc)
-	newFile, newErr := gosrc.Parse(newSrc)
-	if oldErr != nil || newErr != nil || !moves.sameShape(oldFile, newFile, edit) ||
-		!moves.sameBodies(oldFile, newFile, edit) {
+func (edit fileEdit) dirs() dirPair {
+	return dirPair{oldDir: path.Dir(edit.oldPath), newDir: path.Dir(edit.newPath)}
+}
+
+func (edit fileEdit) isGo() bool { return isGoFile(edit.oldPath) && isGoFile(edit.newPath) }
+
+func (edit fileEdit) isRelocation() bool {
+	dirs := edit.dirs()
+	return edit.isMove && dirs.oldDir != dirs.newDir
+}
+
+func (moves *moveContext) goEquivalent(oldFile, newFile gosrc.File, edit fileEdit) verdict {
+	if !moves.sameShape(oldFile, newFile, edit) || !moves.sameBodies(oldFile, newFile, edit) {
 		return verdictEdited
 	}
-	isRelocation := edit.isMove && path.Dir(edit.oldPath) != path.Dir(edit.newPath)
-	if isRelocation {
+	if edit.isRelocation() {
 		if got := moves.relocationVerdict(oldFile, newFile, edit); got != verdictPure {
 			return got
 		}
@@ -35,15 +60,15 @@ func (moves *moveContext) goEquivalent(oldSrc, newSrc string, edit fileEdit) ver
 }
 
 func (moves *moveContext) sameBodies(oldFile, newFile gosrc.File, edit fileEdit) bool {
-	oldDir, newDir := path.Dir(edit.oldPath), path.Dir(edit.newPath)
+	dirs := edit.dirs()
 	scope := gosrc.ImportScope{
-		OldMod:   moves.headModule(oldDir),
-		NewMod:   moves.stagedModule(newDir),
+		OldMod:   moves.head.module(dirs.oldDir),
+		NewMod:   moves.staged.module(dirs.newDir),
 		DirMoves: moves.dirMoves,
 	}
 	rules := moves.qualRules(oldFile, newFile, &scope, edit)
 	bind := moves.newBinding(oldFile, newFile, scope)
-	if edit.isMove && oldDir != newDir {
+	if edit.isRelocation() {
 		bind.Captures = moves.captureSets(oldFile, newFile, edit)
 	}
 	return scope.Allowed(oldFile.Imports, newFile.Imports) &&
@@ -65,8 +90,7 @@ func (moves *moveContext) qualRules(
 	oldFile, newFile gosrc.File, scope *gosrc.ImportScope, edit fileEdit,
 ) []gosrc.QualRule {
 	if edit.isMove {
-		dirs := [2]string{path.Dir(edit.oldPath), path.Dir(edit.newPath)}
-		return moves.renameRules(oldFile, newFile, scope, dirs)
+		return moves.renameRules(oldFile, newFile, scope, edit.dirs())
 	}
-	return moves.dependantRules(oldFile, newFile, scope, path.Dir(edit.oldPath))
+	return moves.dependantRules(oldFile, newFile, scope, edit.dirs().oldDir)
 }

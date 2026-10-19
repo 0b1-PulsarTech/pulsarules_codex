@@ -12,7 +12,7 @@ import (
 )
 
 func (moves *moveContext) relocationVerdict(oldFile, newFile gosrc.File, edit fileEdit) verdict {
-	dirs := [2]string{path.Dir(edit.oldPath), path.Dir(edit.newPath)}
+	dirs := edit.dirs()
 	if gosrc.RelocationUnsafe(oldFile, newFile) || moves.takesOverName(newFile, edit) ||
 		!moves.loadFollowsDir(newFile, edit) || !moves.embedsFollow(newFile.Embeds, dirs) {
 		return verdictClauseOnly
@@ -28,9 +28,9 @@ func (moves *moveContext) relocationVerdict(oldFile, newFile gosrc.File, edit fi
 	return verdictPure
 }
 
-func (moves *moveContext) strandedCompiled(dirs [2]string) (file string, listed bool) {
-	for _, dir := range dirs {
-		files, err := moves.reader.StagedDir(dir)
+func (moves *moveContext) strandedCompiled(dirs dirPair) (file string, listed bool) {
+	for _, dir := range []string{dirs.oldDir, dirs.newDir} {
+		files, err := moves.staged.dir(dir)
 		if err != nil {
 			return "", false
 		}
@@ -51,13 +51,13 @@ func (moves *moveContext) loadFollowsDir(newFile gosrc.File, edit fileEdit) bool
 	}
 	// A production package moved whole still reorders cross-package init,
 	// so only tests are exempt.
-	return strings.HasSuffix(edit.newPath, "_test.go") && moves.isWholeDirMove(edit)
+	return isTestFile(edit.newPath) && moves.isWholeDirMove(edit)
 }
 
 func (moves *moveContext) isWholeDirMove(edit fileEdit) bool {
-	oldDir, newDir := path.Dir(edit.oldPath), path.Dir(edit.newPath)
-	left, leftErr := moves.reader.StagedDir(oldDir)
-	present, presentErr := moves.reader.HeadDir(newDir)
+	dirs := edit.dirs()
+	left, leftErr := moves.staged.dir(dirs.oldDir)
+	present, presentErr := moves.head.dir(dirs.newDir)
 	if leftErr != nil || presentErr != nil ||
 		slices.ContainsFunc(left, isGoFile) || slices.ContainsFunc(present, isGoFile) {
 		return false
@@ -65,11 +65,10 @@ func (moves *moveContext) isWholeDirMove(edit fileEdit) bool {
 	// A rename that leaves oldDir for elsewhere, or reaches newDir from elsewhere,
 	// splits or merges the package.
 	return !slices.ContainsFunc(moves.renames, func(rename pass.Rename) bool {
-		return (path.Dir(rename.OldPath) == oldDir) != (path.Dir(rename.NewPath) == newDir)
+		moved := renameDirs(rename)
+		return (moved.oldDir == dirs.oldDir) != (moved.newDir == dirs.newDir)
 	})
 }
-
-func isGoFile(file string) bool { return strings.HasSuffix(file, ".go") }
 
 func (moves *moveContext) unlinkedImport(oldFile, newFile gosrc.File) string {
 	for _, moved := range moves.moveInfos() {
@@ -90,7 +89,7 @@ func dropsImport(oldFile, newFile gosrc.File, target string) bool {
 }
 
 func (moves *moveContext) dirKeepsLoad(dir string) bool {
-	files, err := moves.reader.StagedDir(dir)
+	files, err := moves.staged.dir(dir)
 	if err != nil {
 		return true
 	}
@@ -98,16 +97,15 @@ func (moves *moveContext) dirKeepsLoad(dir string) bool {
 		if !isProductionGo(file) || gosrc.IsOutsidePackage(file) {
 			return false
 		}
-		src, readErr := moves.reader.StagedBlob(file)
-		parsed, parseErr := gosrc.Parse(src)
-		return readErr != nil || parseErr != nil || (parsed.Loads && !parsed.IsIgnored)
+		parsed, err := moves.staged.parse(file)
+		return err != nil || (parsed.Loads && !parsed.IsIgnored)
 	})
 }
 
-func (moves *moveContext) embedsFollow(patterns []string, dirs [2]string) bool {
+func (moves *moveContext) embedsFollow(patterns []string, dirs dirPair) bool {
 	for _, pattern := range patterns {
 		if strings.ContainsAny(pattern, "*?[\\") || strings.HasPrefix(pattern, "all:") ||
-			moves.movedTo[path.Join(dirs[0], pattern)] != path.Join(dirs[1], pattern) {
+			moves.movedTo[path.Join(dirs.oldDir, pattern)] != path.Join(dirs.newDir, pattern) {
 			return false
 		}
 	}
@@ -126,20 +124,19 @@ func (moves *moveContext) takesOverName(newFile gosrc.File, edit fileEdit) bool 
 }
 
 func (moves *moveContext) headNamesIn(scope declScope) map[string]bool {
-	return moves.cachedDecls("owned", scope, "", func(set map[string]bool) {
-		files, err := moves.reader.HeadDir(scope.newDir)
+	return cached(moves.owned, scope, func() map[string]bool {
+		set := map[string]bool{}
+		files, err := moves.head.dir(scope.newDir)
 		if err != nil {
-			return
+			return set
 		}
 		for _, file := range files {
 			// Every .go file counts, whatever its package clause or test-ness.
-			if !strings.HasSuffix(file, ".go") {
-				continue
-			}
-			if src, readErr := moves.reader.HeadBlob(file); readErr == nil {
-				gosrc.CollectAnyDecls(src, set)
+			if isGoFile(file) {
+				moves.head.addAnyDecls(file, set)
 			}
 		}
+		return set
 	})
 }
 

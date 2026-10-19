@@ -1,137 +1,119 @@
 package movepurity
 
 import (
-	"path"
 	"slices"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-type moveContext struct {
-	reader   gitReader
-	dirMoves map[string]string
-	moved    map[string]bool
-	movedTo  map[string]string
-	decls    map[string]map[string]bool
-	dirNames map[string]dirPackages
-	pkgNames map[moduleKey]string
-	modules  map[moduleKey]gosrc.Module
-	unlinked map[string]string
-	stranded map[string]string
-	renames  []pass.Rename
-	infos    []gosrc.MoveInfo
-}
+type (
+	moveIndex struct {
+		dirMoves map[string]string
+		moved    map[string]bool
+		movedTo  map[string]string
+		renames  []pass.Rename
+	}
+	moveContext struct {
+		moveIndex
+		head     *snapshot
+		staged   *snapshot
+		declared map[pkgKey]map[string]bool
+		left     map[scopeKey]map[string]bool
+		taken    map[scopeKey]map[string]bool
+		owned    map[declScope]map[string]bool
+		dirNames map[string]dirPackages
+		unlinked map[string]string
+		stranded map[string]string
+		infos    []gosrc.MoveInfo
+	}
+	pkgKey struct {
+		dir string
+		pkg string
+	}
+	scopeKey struct {
+		scope declScope
+		pkg   string
+	}
+)
 
 func newMoveContext(reader gitReader, renames []pass.Rename) *moveContext {
-	ctx := &moveContext{
-		reader:   newCachedReader(reader),
+	index := moveIndex{
 		dirMoves: make(map[string]string, len(renames)),
 		moved:    make(map[string]bool, len(renames)*2),
 		movedTo:  make(map[string]string, len(renames)),
-		decls:    map[string]map[string]bool{},
-		dirNames: map[string]dirPackages{},
-		pkgNames: map[moduleKey]string{},
-		modules:  map[moduleKey]gosrc.Module{},
-		unlinked: map[string]string{},
-		stranded: map[string]string{},
 		renames:  renames,
 	}
 	for _, rename := range renames {
-		ctx.dirMoves[path.Dir(rename.OldPath)] = path.Dir(rename.NewPath)
-		ctx.moved[rename.OldPath] = true
-		ctx.moved[rename.NewPath] = true
-		ctx.movedTo[rename.OldPath] = rename.NewPath
+		dirs := renameDirs(rename)
+		index.dirMoves[dirs.oldDir] = dirs.newDir
+		index.moved[rename.OldPath] = true
+		index.moved[rename.NewPath] = true
+		index.movedTo[rename.OldPath] = rename.NewPath
 	}
-	return ctx
+	return &moveContext{
+		moveIndex: index,
+		head:      newHeadSnapshot(reader),
+		staged:    newStagedSnapshot(reader),
+		declared:  map[pkgKey]map[string]bool{},
+		left:      map[scopeKey]map[string]bool{},
+		taken:     map[scopeKey]map[string]bool{},
+		owned:     map[declScope]map[string]bool{},
+		dirNames:  map[string]dirPackages{},
+		unlinked:  map[string]string{},
+		stranded:  map[string]string{},
+	}
 }
 
-func (moves *moveContext) declared(dir, pkg string) map[string]bool {
-	key := dir + "\x00" + pkg
-	if set, ok := moves.decls[key]; ok {
-		return set
-	}
-	set := map[string]bool{}
-	moves.decls[key] = set
-	head, headErr := moves.reader.HeadDir(dir)
-	staged, stagedErr := moves.reader.StagedDir(dir)
-	if headErr != nil || stagedErr != nil {
-		return set
-	}
-	for _, file := range head {
-		isGo := strings.HasSuffix(file, ".go") && !strings.HasSuffix(file, "_test.go")
-		if !isGo || moves.moved[file] || !slices.Contains(staged, file) {
-			continue
+func (moves *moveContext) declaredIn(dir, pkg string) map[string]bool {
+	return cached(moves.declared, pkgKey{dir: dir, pkg: pkg}, func() map[string]bool {
+		set := map[string]bool{}
+		head, headErr := moves.head.dir(dir)
+		staged, stagedErr := moves.staged.dir(dir)
+		if headErr != nil || stagedErr != nil {
+			return set
 		}
-		if src, err := moves.reader.HeadBlob(file); err == nil {
-			gosrc.CollectDecls(src, pkg, set)
+		for _, file := range head {
+			if isProductionGo(file) && !moves.moved[file] && slices.Contains(staged, file) {
+				moves.head.addDecls(file, pkg, set)
+			}
 		}
-	}
-	return set
+		return set
+	})
 }
 
 func (moves *moveContext) moveInfos() []gosrc.MoveInfo {
 	if moves.infos != nil {
 		return moves.infos
 	}
-	byDirs := map[[2]string]*gosrc.MoveInfo{}
+	byDirs := map[dirPair]*gosrc.MoveInfo{}
 	moves.infos = []gosrc.MoveInfo{}
 	for _, rename := range moves.renames {
-		if path.Ext(rename.OldPath) != ".go" || path.Ext(rename.NewPath) != ".go" ||
-			strings.HasSuffix(rename.OldPath, "_test.go") {
+		if !isGoFile(rename.OldPath) || !isGoFile(rename.NewPath) || isTestFile(rename.OldPath) {
 			continue
 		}
-		oldSrc, oldErr := moves.reader.HeadBlob(rename.OldPath)
-		newSrc, newErr := moves.reader.StagedBlob(rename.NewPath)
+		_, oldErr := moves.head.blob(rename.OldPath)
+		_, newErr := moves.staged.blob(rename.NewPath)
 		if oldErr != nil || newErr != nil {
 			continue
 		}
-		dirs := [2]string{path.Dir(rename.OldPath), path.Dir(rename.NewPath)}
+		dirs := renameDirs(rename)
 		moved, ok := byDirs[dirs]
 		if !ok {
+			oldPkg, _ := moves.head.clause(rename.OldPath)
+			newPkg, _ := moves.staged.clause(rename.NewPath)
 			moved = &gosrc.MoveInfo{
-				OldDir: dirs[0], NewDir: dirs[1], Decls: map[string]bool{},
-				OldFull: moves.headModule(dirs[0]).ImportPath(dirs[0]),
-				NewFull: moves.stagedModule(dirs[1]).ImportPath(dirs[1]),
-				OldPkg:  packageOf(oldSrc), NewPkg: packageOf(newSrc),
+				OldDir: dirs.oldDir, NewDir: dirs.newDir, Decls: map[string]bool{},
+				OldFull: moves.head.module(dirs.oldDir).ImportPath(dirs.oldDir),
+				NewFull: moves.staged.module(dirs.newDir).ImportPath(dirs.newDir),
+				OldPkg:  oldPkg, NewPkg: newPkg,
 			}
 			byDirs[dirs] = moved
 		}
-		gosrc.CollectDecls(oldSrc, moved.OldPkg, moved.Decls)
+		moves.head.addDecls(rename.OldPath, moved.OldPkg, moved.Decls)
 	}
 	for _, moved := range byDirs {
 		moves.infos = append(moves.infos, *moved)
 	}
 	return moves.infos
-}
-
-func packageOf(src string) string {
-	name, _ := gosrc.PackageClause(src)
-	return name
-}
-
-type moduleKey struct {
-	isStaged bool
-	dir      string
-}
-
-func (moves *moveContext) headModule(dir string) gosrc.Module {
-	return moves.cachedModule(moduleKey{dir: dir}, moves.reader.HeadBlob)
-}
-
-func (moves *moveContext) stagedModule(dir string) gosrc.Module {
-	return moves.cachedModule(moduleKey{isStaged: true, dir: dir}, moves.reader.StagedBlob)
-}
-
-func (moves *moveContext) cachedModule(
-	key moduleKey,
-	read func(string) (string, error),
-) gosrc.Module {
-	if mod, ok := moves.modules[key]; ok {
-		return mod
-	}
-	mod := gosrc.WalkModule(key.dir, read)
-	moves.modules[key] = mod
-	return mod
 }

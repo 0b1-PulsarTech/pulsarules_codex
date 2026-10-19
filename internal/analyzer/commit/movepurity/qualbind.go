@@ -8,18 +8,20 @@ import (
 )
 
 type nameSide struct {
-	mod      gosrc.Module
-	isStaged bool
-	differs  map[gosrc.ImportSpec]bool
+	mod     gosrc.Module
+	snap    *snapshot
+	differs map[gosrc.ImportSpec]bool
 }
 
 func (moves *moveContext) newBinding(
 	oldFile, newFile gosrc.File,
 	scope gosrc.ImportScope,
 ) gosrc.Binding {
-	oldSide := nameSide{mod: scope.OldMod, differs: differing(oldFile.Imports, newFile.Imports)}
+	oldSide := nameSide{
+		mod: scope.OldMod, snap: moves.head, differs: differing(oldFile.Imports, newFile.Imports),
+	}
 	newSide := nameSide{
-		mod: scope.NewMod, isStaged: true, differs: differing(newFile.Imports, oldFile.Imports),
+		mod: scope.NewMod, snap: moves.staged, differs: differing(newFile.Imports, oldFile.Imports),
 	}
 	oldPaths, isOldUnknown := moves.importNames(oldFile.Imports, oldSide)
 	newPaths, isNewUnknown := moves.importNames(newFile.Imports, newSide)
@@ -48,15 +50,11 @@ func (moves *moveContext) importNames(
 	imports []gosrc.ImportSpec, at nameSide,
 ) (names map[string]string, isUnknown bool) {
 	names = make(map[string]string, len(imports))
-	clash := "\x00old"
-	if at.isStaged {
-		clash = "\x00new"
-	}
 	for _, spec := range imports {
 		name, isKnown := moves.importedName(spec, at)
 		isUnknown = isUnknown || !isKnown
 		if _, taken := names[name]; taken {
-			names[name] = clash
+			names[name] = at.snap.clash
 			continue
 		}
 		names[name] = spec.Path
@@ -69,7 +67,7 @@ func (moves *moveContext) importedName(spec gosrc.ImportSpec, at nameSide) (stri
 		return spec.Name, true
 	}
 	if dir, ok := at.mod.DirOf(spec.Path); ok {
-		if found := moves.packageName(moduleKey{isStaged: at.isStaged, dir: dir}); found != "" {
+		if found := at.snap.packageName(dir); found != "" {
 			return found, true
 		}
 	}
@@ -82,10 +80,10 @@ func (moves *moveContext) importedName(spec gosrc.ImportSpec, at nameSide) (stri
 
 func (moves *moveContext) movedPackage(importPath string, at nameSide) string {
 	for _, info := range moves.moveInfos() {
-		if at.isStaged && info.NewFull == importPath {
+		if at.snap == moves.staged && info.NewFull == importPath {
 			return info.NewPkg
 		}
-		if !at.isStaged && info.OldFull == importPath {
+		if at.snap == moves.head && info.OldFull == importPath {
 			return info.OldPkg
 		}
 	}

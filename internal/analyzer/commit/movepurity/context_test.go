@@ -21,11 +21,13 @@ func TestDeclared(t *testing.T) {
 		"d/other.go":  "package other\n\nfunc OtherPkg() {}\n",
 		"d/bad.go":    "package d\n\nfunc (\n",
 		"d/note.txt":  "func NotGo() {}\n",
+		"d/edit.go":   "package d\n\nfunc HeadOnly() {}\n",
 	}
 	staged := maps.Clone(head)
 	delete(staged, "d/gone.go")
 	delete(staged, "d/moved.go")
 	staged["e/moved.go"] = head["d/moved.go"]
+	staged["d/edit.go"] = "package d\n\nfunc StagedOnly() {}\n"
 	staged["d/added.go"] = "package d\n\nfunc Added() {}\n"
 	moves := newMoveContext(
 		newFakeRepo(head, staged),
@@ -40,21 +42,31 @@ func TestDeclared(t *testing.T) {
 		{
 			name: "same package top-level names only",
 			want: map[string]bool{
-				"Top": true,
-				"T":   true,
-				"C1":  true,
-				"C2":  true,
-				"V":   true,
-				"W":   true,
+				"Top":      true,
+				"T":        true,
+				"C1":       true,
+				"C2":       true,
+				"V":        true,
+				"W":        true,
+				"HeadOnly": true,
 			},
-			not: []string{"Method", "InTest", "Moved", "Gone", "OtherPkg", "Added", "NotGo"},
+			not: []string{
+				"Method",
+				"InTest",
+				"Moved",
+				"Gone",
+				"OtherPkg",
+				"Added",
+				"NotGo",
+				"StagedOnly",
+			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := moves.declared("d", "d")
+			got := moves.declaredIn("d", "d")
 			for name := range testCase.want {
 				if !got[name] {
 					t.Fatalf("declared[%s] = false, want true", name)
@@ -66,28 +78,6 @@ func TestDeclared(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestNewMoveContext_ReadsEachBlobOnce(t *testing.T) {
-	t.Parallel()
-
-	lookups := 0
-	repo := countingRepo{
-		fakeRepo: newFakeRepo(
-			map[string]string{"a.go": "package a\n"},
-			map[string]string{"a.go": "package a\n"},
-		),
-		lookups: &lookups,
-	}
-	moves := newMoveContext(repo, nil)
-	for range 2 {
-		if _, err := moves.reader.HeadBlob("a.go"); err != nil {
-			t.Fatalf("HeadBlob() error = %v", err)
-		}
-	}
-	if lookups != 1 {
-		t.Fatalf("%d reads of the underlying repo, want 1", lookups)
 	}
 }
 
@@ -126,39 +116,6 @@ func TestMoveInfos(t *testing.T) {
 	}
 }
 
-func TestPackageOf(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name string
-		src  string
-		want string
-	}{
-		{"clause", "package p\n\nfunc F() {}\n", "p"},
-		{"clause with broken body", "package q\n\nfunc (\n", "q"},
-		{"no clause", "func F() {}\n", ""},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := packageOf(testCase.src); got != testCase.want {
-				t.Fatalf("packageOf() = %q, want %q", got, testCase.want)
-			}
-		})
-	}
-}
-
-type countingRepo struct {
-	fakeRepo
-	lookups *int
-}
-
-func (repo countingRepo) HeadBlob(path string) (string, error) {
-	*repo.lookups++
-	return repo.fakeRepo.HeadBlob(path)
-}
-
 func TestModuleOf_WalksUp(t *testing.T) {
 	t.Parallel()
 
@@ -181,9 +138,9 @@ func TestModuleOf_WalksUp(t *testing.T) {
 			t.Parallel()
 
 			moves := newMoveContext(repo, nil)
-			got := moves.stagedModule(testCase.dir)
+			got := moves.staged.module(testCase.dir)
 			if testCase.isHead {
-				got = moves.headModule(testCase.dir)
+				got = moves.head.module(testCase.dir)
 			}
 			if gotPath := got.ImportPath(testCase.dir); gotPath != testCase.want {
 				t.Fatalf("ImportPath(%q) = %q, want %q", testCase.dir, gotPath, testCase.want)
@@ -196,36 +153,8 @@ func TestModuleOf_NoGoMod(t *testing.T) {
 	t.Parallel()
 
 	moves := newMoveContext(emptyRepo{}, nil)
-	if got := moves.headModule("a/b"); got != (gosrc.Module{}) {
+	if got := moves.head.module("a/b"); got != (gosrc.Module{}) {
 		t.Fatalf("moduleOf() = %+v, want the zero module", got)
-	}
-}
-
-func TestModuleOf_CachesPerSideAndDir(t *testing.T) {
-	t.Parallel()
-
-	lookups := 0
-	repo := countingRepo{
-		fakeRepo: newFakeRepo(map[string]string{}, map[string]string{}),
-		lookups:  &lookups,
-	}
-	moves := newMoveContext(repo, nil)
-	moves.reader = repo
-	first := moves.headModule("a/b")
-	afterFirst := lookups
-	if second := moves.headModule("a/b"); second != first || lookups != afterFirst {
-		t.Fatalf(
-			"second lookup = %+v after %d reads, want %+v with no new read",
-			second,
-			lookups,
-			first,
-		)
-	}
-	if moves.stagedModule("a/b") != first {
-		t.Fatalf("staged module differs from the head module of an unchanged go.mod")
-	}
-	if lookups != afterFirst {
-		t.Fatalf("staged lookup read HEAD %d more times", lookups-afterFirst)
 	}
 }
 

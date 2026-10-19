@@ -7,9 +7,9 @@ import (
 )
 
 func (moves *moveContext) renameRules(
-	oldFile, newFile gosrc.File, scope *gosrc.ImportScope, dirs [2]string,
+	oldFile, newFile gosrc.File, scope *gosrc.ImportScope, dirs dirPair,
 ) []gosrc.QualRule {
-	oldDir, newDir := dirs[0], dirs[1]
+	oldDir, newDir := dirs.oldDir, dirs.newDir
 	oldFull, newFull := scope.OldMod.ImportPath(oldDir), scope.NewMod.ImportPath(newDir)
 	scope.DropOK, scope.AddOK = nonEmpty(newFull), nonEmpty(oldFull)
 	var rules []gosrc.QualRule
@@ -17,7 +17,7 @@ func (moves *moveContext) renameRules(
 		rules = append(rules, gosrc.QualRule{
 			NewQual: name,
 			Declared: func(ident string) bool {
-				return moves.declared(oldDir, oldFile.Pkg)[ident]
+				return moves.declaredIn(oldDir, oldFile.Pkg)[ident]
 			},
 		})
 	}
@@ -25,7 +25,7 @@ func (moves *moveContext) renameRules(
 		rules = append(rules, gosrc.QualRule{
 			OldQual: name,
 			Declared: func(ident string) bool {
-				return moves.declared(newDir, newFile.Pkg)[ident]
+				return moves.declaredIn(newDir, newFile.Pkg)[ident]
 			},
 		})
 	}
