@@ -6,9 +6,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 )
 
-const entImportPath = "entgo.io/ent"
-
 func inspectEnt(file *ast.File) bool {
+	const entImportPath = "entgo.io/ent"
 	locals := make(map[string]bool)
 	for _, importPath := range []string{entImportPath, entImportPath + "/schema/mixin"} {
 		for _, local := range goast.ImportNames(file, importPath) {

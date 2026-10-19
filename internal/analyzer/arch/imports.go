@@ -1,82 +1,99 @@
 package arch
 
 import (
-	"fmt"
-	"go/parser"
+	"errors"
+	"go/ast"
+	"go/scanner"
 	"go/token"
-	"path"
-	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
-func discoverPackages(provider source.Provider, modulePath string) map[string][]string {
-	pkgMap := make(map[string][]string)
+type edge struct {
+	from string
+	to   string
+}
 
-	provider.Walk(func(file string, ext string) bool {
-		if ext != ".go" || strings.HasSuffix(file, "_test.go") || inSkippedDir(file) {
-			return true
-		}
-		src, ok := provider.Read(file)
-		if !ok {
-			return true
-		}
-		imports, err := parseImports(file, src)
-		if err != nil {
-			// One malformed file must not halt discovery of the rest.
-			return true
-		}
+type importSite struct {
+	file string
+	line int
+}
 
-		dir := path.Dir(filepath.ToSlash(file))
-		pkgImport := modulePath
-		if dir != "." {
-			pkgImport = modulePath + "/" + dir
-		}
-		known := pkgMap[pkgImport]
-		for _, imp := range imports {
-			if !slices.Contains(known, imp) {
-				known = append(known, imp)
+type importGraph struct {
+	deps  depGraph
+	sites map[edge]importSite
+}
+
+func loadImportGraph(index *gomod.Index, modulePath string) importGraph {
+	graph := importGraph{deps: make(depGraph), sites: make(map[edge]importSite)}
+	fset := index.FileSet()
+	for _, dir := range index.Dirs() {
+		pkg := packageImport(modulePath, dir)
+		for _, file := range index.Files(dir) {
+			if strings.HasSuffix(file.Path, "_test.go") {
+				continue
+			}
+			if _, seen := graph.deps[pkg]; !seen {
+				graph.deps[pkg] = nil
+			}
+			if brokenImportBlock(fset, file) {
+				continue
+			}
+			specs, _, _ := importHeader(file.Syntax)
+			for _, spec := range specs {
+				dep := strings.Trim(spec.Path.Value, `"`)
+				if !isLocal(modulePath, dep) || slices.Contains(graph.deps[pkg], dep) {
+					continue
+				}
+				graph.deps[pkg] = append(graph.deps[pkg], dep)
+				line := fset.Position(spec.Path.Pos()).Line
+				graph.sites[edge{from: pkg, to: dep}] = importSite{file: file.Path, line: line}
 			}
 		}
-		pkgMap[pkgImport] = known
-		return true
+	}
+	return graph
+}
+
+func brokenImportBlock(fset *token.FileSet, file gomod.File) bool {
+	var errs scanner.ErrorList
+	if !errors.As(file.Err, &errs) {
+		return false
+	}
+	// Like go list: only an error before the end of the import block drops the imports.
+	// An error at the end of a file with no body decl is still inside the import block.
+	_, end, endOfFile := importHeader(file.Syntax)
+	limit := fset.PositionFor(end, false).Offset
+	return slices.ContainsFunc(errs, func(found *scanner.Error) bool {
+		return found.Pos.Offset < limit || (endOfFile && found.Pos.Offset == limit)
 	})
-
-	return pkgMap
 }
 
-func inSkippedDir(file string) bool {
-	segments := strings.Split(filepath.ToSlash(file), "/")
-	for _, segment := range segments[:len(segments)-1] {
-		if gomod.IsHiddenName(segment) || segment == "vendor" || segment == "node_modules" {
-			return true
+func importHeader(syntax *ast.File) (specs []*ast.ImportSpec, end token.Pos, endOfFile bool) {
+	end, endOfFile = syntax.FileEnd, true
+	for _, decl := range syntax.Decls {
+		// Like go/build's header reader: an import after another declaration is not one.
+		gen, isGen := decl.(*ast.GenDecl)
+		if !isGen || gen.Tok != token.IMPORT {
+			return specs, decl.Pos(), false
+		}
+		for _, spec := range gen.Specs {
+			if imported, isImport := spec.(*ast.ImportSpec); isImport {
+				specs = append(specs, imported)
+			}
 		}
 	}
-	return false
+	return specs, end, endOfFile
 }
 
-func parseImports(file string, src []byte) ([]string, error) {
-	parsed, err := parser.ParseFile(token.NewFileSet(), file, src, parser.ImportsOnly)
-	if err != nil {
-		return nil, fmt.Errorf("parse %s: %w", file, err)
+func packageImport(modulePath, dir string) string {
+	if dir == "." {
+		return modulePath
 	}
-	var imports []string
-	for _, spec := range parsed.Imports {
-		imports = append(imports, strings.Trim(spec.Path.Value, `"`))
-	}
-	return imports, nil
+	return modulePath + "/" + dir
 }
 
-func localImports(modulePath string, imports []string) []string {
-	prefix := modulePath + "/"
-	var out []string
-	for _, imp := range imports {
-		if imp == modulePath || strings.HasPrefix(imp, prefix) {
-			out = append(out, imp)
-		}
-	}
-	return out
+func isLocal(modulePath, importPath string) bool {
+	return importPath == modulePath || strings.HasPrefix(importPath, modulePath+"/")
 }

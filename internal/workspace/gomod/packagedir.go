@@ -8,12 +8,14 @@ func IsHiddenName(name string) bool {
 
 func IsPackageDir(dir string) bool {
 	if dir == "." {
-		return false
+		return true
 	}
 	for segment := range strings.SplitSeq(dir, "/") {
+		// The ./... dir rule, except that vendor stays (a nested module's vendor/ is compiled);
+		// the CLI skip sets drop it anyway.
 		if IsHiddenName(segment) || segment == "testdata" {
-			return true
+			return false
 		}
 	}
-	return false
+	return true
 }

@@ -5,7 +5,12 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
+
+func newContext(projectDir string) *pass.Context {
+	return &pass.Context{ProjectDir: projectDir, Sources: newSources(projectDir)}
+}
 
 func newBoundaryAndCycleFixture(t *testing.T) string {
 	t.Helper()
@@ -31,7 +36,7 @@ func TestPackageBoundary_Violation(t *testing.T) {
 	t.Parallel()
 
 	projectDir := newBoundaryAndCycleFixture(t)
-	ctx := &pass.Context{ProjectDir: projectDir, Sources: newSources(projectDir)}
+	ctx := newContext(projectDir)
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -53,7 +58,7 @@ func TestImportCycle_DetectsCycle(t *testing.T) {
 	t.Parallel()
 
 	projectDir := newBoundaryAndCycleFixture(t)
-	ctx := &pass.Context{ProjectDir: projectDir, Sources: newSources(projectDir)}
+	ctx := newContext(projectDir)
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
@@ -75,7 +80,7 @@ func TestImportCycle_MessageOrder(t *testing.T) {
 	t.Parallel()
 
 	projectDir := newBoundaryAndCycleFixture(t)
-	ctx := &pass.Context{ProjectDir: projectDir, Sources: newSources(projectDir)}
+	ctx := newContext(projectDir)
 	want := "import cycle: domain \u2192 infra"
 
 	for range 50 {
@@ -91,7 +96,7 @@ func TestPackageBoundaryAnalyzer_Analyze_NoGoMod(t *testing.T) {
 
 	projectDir := t.TempDir()
 	writeFile(t, projectDir, "domain/user.go", "package domain\n")
-	ctx := &pass.Context{ProjectDir: projectDir, Sources: newSources(projectDir)}
+	ctx := newContext(projectDir)
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -105,7 +110,7 @@ func TestImportCycleAnalyzer_Analyze_NoGoMod(t *testing.T) {
 
 	projectDir := t.TempDir()
 	writeFile(t, projectDir, "domain/user.go", "package domain\n")
-	ctx := &pass.Context{ProjectDir: projectDir, Sources: newSources(projectDir)}
+	ctx := newContext(projectDir)
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
@@ -120,7 +125,7 @@ func TestPackageBoundary_MalformedGoMod(t *testing.T) {
 	projectDir := t.TempDir()
 	writeFile(t, projectDir, "go.mod", "go 1.24\n")
 	writeFile(t, projectDir, "domain/user.go", "package domain\n")
-	ctx := &pass.Context{ProjectDir: projectDir, Sources: newSources(projectDir)}
+	ctx := newContext(projectDir)
 
 	findings := NewPackageBoundaryAnalyzer().Analyze(ctx)
 
@@ -141,7 +146,7 @@ func TestImportCycle_MalformedGoMod(t *testing.T) {
 	projectDir := t.TempDir()
 	writeFile(t, projectDir, "go.mod", "go 1.24\n")
 	writeFile(t, projectDir, "domain/user.go", "package domain\n")
-	ctx := &pass.Context{ProjectDir: projectDir, Sources: newSources(projectDir)}
+	ctx := newContext(projectDir)
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
@@ -189,7 +194,8 @@ func TestAnalyzers_Analyze_NilSources(t *testing.T) {
 	t.Parallel()
 
 	projectDir := newBoundaryAndCycleFixture(t)
-	ctx := &pass.Context{ProjectDir: projectDir}
+	ctx := newContext(projectDir)
+	ctx.Sources = nil
 
 	if findings := NewPackageBoundaryAnalyzer().Analyze(ctx); findings != nil {
 		t.Errorf("arch-boundary: expected nil findings without Sources, got %v", findings)
@@ -207,7 +213,7 @@ func TestImportCycle_LaterFile(t *testing.T) {
 	writeFile(t, projectDir, "a/a1.go", "package a\n")
 	writeFile(t, projectDir, "a/a2.go", "package a\n\nimport _ \"example.com/target/b\"\n")
 	writeFile(t, projectDir, "b/b.go", "package b\n\nimport _ \"example.com/target/a\"\n")
-	ctx := &pass.Context{ProjectDir: projectDir, Sources: newSources(projectDir)}
+	ctx := newContext(projectDir)
 
 	findings := NewImportCycleAnalyzer().Analyze(ctx)
 
@@ -216,5 +222,36 @@ func TestImportCycle_LaterFile(t *testing.T) {
 			"expected 1 import-cycle finding from the second file of package a, got %v",
 			findings,
 		)
+	}
+}
+
+type readCounter struct {
+	source.Provider
+	reads map[string]int
+}
+
+func (counter *readCounter) Read(path string) ([]byte, bool) {
+	counter.reads[path]++
+	return counter.Provider.Read(path)
+}
+
+func TestAnalyzers_ShareOneParse(t *testing.T) {
+	t.Parallel()
+
+	projectDir := newBoundaryAndCycleFixture(t)
+	ctx := newContext(projectDir)
+	counter := &readCounter{Provider: ctx.Sources, reads: make(map[string]int)}
+	ctx.Sources = counter
+
+	NewPackageBoundaryAnalyzer().Analyze(ctx)
+	NewImportCycleAnalyzer().Analyze(ctx)
+
+	if len(counter.reads) == 0 {
+		t.Fatal("no source was read")
+	}
+	for file, reads := range counter.reads {
+		if reads != 1 {
+			t.Errorf("%s read %d times across both arch analyzers, want 1", file, reads)
+		}
 	}
 }

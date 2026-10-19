@@ -3,11 +3,13 @@ package pass
 import (
 	"go/ast"
 	"iter"
+	"sync"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/testfile"
 )
@@ -30,6 +32,11 @@ type GitCommitEntry struct {
 	Subject string
 }
 
+type Module struct {
+	Path string
+	Err  error
+}
+
 type Context struct {
 	ProjectDir    string
 	ChangedFiles  []FileChange
@@ -43,6 +50,28 @@ type Context struct {
 	Sources       source.Provider
 	Skips         source.SkipSet
 	Findings      []finding.Finding
+
+	goPackages     *gomod.Index
+	goPackagesOnce sync.Once
+	module         Module
+	moduleOnce     sync.Once
+}
+
+func (ctx *Context) GoPackages() *gomod.Index {
+	ctx.goPackagesOnce.Do(func() { ctx.goPackages = gomod.NewIndex(ctx.Sources) })
+	return ctx.goPackages
+}
+
+func (ctx *Context) GoModule() Module {
+	// Lazy: the commit scope never runs arch, so it must not read go.mod.
+	ctx.moduleOnce.Do(func() {
+		if ctx.ProjectDir == "" {
+			return
+		}
+		path, err := ModulePath(ctx.ProjectDir)
+		ctx.module = Module{Path: path, Err: err}
+	})
+	return ctx.module
 }
 
 func (ctx *Context) ChangedGoASTs() iter.Seq2[FileChange, *ast.File] {

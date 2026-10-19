@@ -1,12 +1,8 @@
 package packagevar
 
 import (
-	"bytes"
 	"go/ast"
-	"go/parser"
 	"go/token"
-	"path"
-	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
@@ -36,28 +32,18 @@ func scanDirs(ctx *pass.Context) dirScan {
 	if len(dirs) == 0 || ctx.Sources == nil {
 		return scan
 	}
-	fset := token.NewFileSet()
-	ctx.Sources.Walk(func(file string, _ string) bool {
-		file = filepath.ToSlash(file)
-		dir := path.Dir(file)
-		if !dirs[dir] || path.Ext(file) != ".go" {
-			return true
+	index := ctx.GoPackages()
+	for dir := range dirs {
+		for _, file := range index.Files(dir) {
+			if file.Err != nil {
+				continue
+			}
+			scan.collectDecls(dir, file.Syntax)
+			if isTestFile(file.Path) {
+				scan.collectMain(dir, file.Syntax)
+			}
 		}
-		src, ok := ctx.Sources.Read(file)
-		wantMain := hasTestMain(file, src)
-		if !ok || !wantMain && !hasDecls(src) {
-			return true
-		}
-		parsed, err := parser.ParseFile(fset, file, src, parser.SkipObjectResolution)
-		if err != nil {
-			return true
-		}
-		scan.collectDecls(dir, parsed)
-		if wantMain {
-			scan.collectMain(dir, parsed)
-		}
-		return true
-	})
+	}
 	return scan
 }
 
@@ -122,17 +108,4 @@ func dirsWithVars(ctx *pass.Context) map[string]bool {
 		}
 	}
 	return dirs
-}
-
-func hasDecls(src []byte) bool {
-	for _, marker := range []string{"type ", "func ", "const"} {
-		if bytes.Contains(src, []byte(marker)) {
-			return true
-		}
-	}
-	return false
-}
-
-func hasTestMain(file string, src []byte) bool {
-	return isTestFile(file) && bytes.Contains(src, []byte("func TestMain("))
 }

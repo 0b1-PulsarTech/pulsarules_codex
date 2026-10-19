@@ -116,3 +116,36 @@ func TestAnalyzeMalformedExempt(t *testing.T) {
 	}
 	runFileCountCases(t, testCases)
 }
+
+func TestAnalyzeMalformedExemptSkips(t *testing.T) {
+	t.Parallel()
+
+	testCases := []fileCountCase{
+		{
+			name:    "malformed pattern never anchors on a skipped vendor file",
+			files:   merged(numbered("pkg", 3), map[string]string{"vendor/dep/d.go": plainSource}),
+			changed: []string{"vendor/dep/d.go", "pkg/f00.go"},
+			params:  map[string]any{"exempt": []string{"pkg/["}},
+			want: []string{
+				"pkg/f00.go:1:invalid exempt pattern \"pkg/[\": syntax error in pattern",
+			},
+		},
+		{
+			name:    "malformed pattern skips a vendor file for a live non-go one",
+			files:   map[string]string{"vendor/dep/d.go": plainSource, "README.md": "x"},
+			changed: []string{"vendor/dep/d.go", "README.md"},
+			params:  map[string]any{"exempt": []string{"pkg/["}},
+			want: []string{
+				"README.md:1:invalid exempt pattern \"pkg/[\": syntax error in pattern",
+			},
+		},
+		{
+			name:    "malformed pattern with only skipped changes has no file to pin",
+			files:   map[string]string{"vendor/dep/d.go": plainSource},
+			changed: []string{"vendor/dep/d.go"},
+			params:  map[string]any{"exempt": []string{"pkg/["}},
+			want:    []string{":0:invalid exempt pattern \"pkg/[\": syntax error in pattern"},
+		},
+	}
+	runFileCountCases(t, testCases)
+}

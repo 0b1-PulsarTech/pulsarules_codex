@@ -1,8 +1,13 @@
 package pass
 
 import (
+	"errors"
 	"go/ast"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"testing"
+	"testing/fstest"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
@@ -177,5 +182,95 @@ func TestRunPerGoFile_ProductionAndTests(t *testing.T) {
 	})
 	if len(got) != 2 || got[0].File != "main.go" || got[1].File != "helper_test.go" {
 		t.Fatalf("got %v, want findings for main.go and helper_test.go", got)
+	}
+}
+
+type readCounter struct {
+	source.Provider
+	reads int
+}
+
+func (counter *readCounter) Read(path string) ([]byte, bool) {
+	counter.reads++
+	return counter.Provider.Read(path)
+}
+
+func TestAnalysisContext_GoPackages(t *testing.T) {
+	t.Parallel()
+
+	tree := fstest.MapFS{"a/a.go": {Data: []byte("package a\n")}}
+	counter := &readCounter{Provider: source.NewFSProvider(tree, "", source.NewSkipSet(nil))}
+	ctx := &Context{Sources: counter}
+
+	first := ctx.GoPackages()
+	if second := ctx.GoPackages(); second != first {
+		t.Error("GoPackages() built a second index in one run")
+	}
+	if counter.reads != 0 {
+		t.Errorf("source read %d times across two GoPackages() calls, want 0", counter.reads)
+	}
+	if files := first.Files("a"); len(files) != 1 || counter.reads != 1 {
+		t.Errorf("Files(a) = %d files after %d reads, want 1 and 1", len(files), counter.reads)
+	}
+}
+
+func TestAnalysisContext_GoPackages_NoSources(t *testing.T) {
+	t.Parallel()
+
+	if dirs := (&Context{}).GoPackages().Dirs(); len(dirs) != 0 {
+		t.Errorf("Dirs() = %v, want none", dirs)
+	}
+}
+
+func TestAnalysisContext_GoModule(t *testing.T) {
+	t.Parallel()
+
+	withModule := t.TempDir()
+	if err := os.WriteFile(
+		filepath.Join(withModule, "go.mod"), []byte("module example.com/m\n"), 0o600,
+	); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	testCases := []struct {
+		name     string
+		root     string
+		wantPath string
+		wantErr  error
+	}{
+		{name: "no root", root: ""},
+		{name: "module", root: withModule, wantPath: "example.com/m"},
+		{name: "no go.mod", root: t.TempDir(), wantErr: fs.ErrNotExist},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := (&Context{ProjectDir: testCase.root}).GoModule()
+			if got.Path != testCase.wantPath || !errors.Is(got.Err, testCase.wantErr) {
+				t.Errorf("GoModule() = %+v, want path %q err %v",
+					got, testCase.wantPath, testCase.wantErr)
+			}
+		})
+	}
+}
+
+func TestAnalysisContext_GoModule_ReadsOnce(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	ctx := &Context{ProjectDir: root}
+	if err := os.WriteFile(
+		filepath.Join(root, "go.mod"), []byte("module example.com/first\n"), 0o600,
+	); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+	first := ctx.GoModule()
+	if err := os.WriteFile(
+		filepath.Join(root, "go.mod"), []byte("module example.com/second\n"), 0o600,
+	); err != nil {
+		t.Fatalf("rewrite go.mod: %v", err)
+	}
+	if got := ctx.GoModule(); got != first || got.Path != "example.com/first" {
+		t.Errorf("GoModule() = %+v after a rewrite, want the memoised %+v", got, first)
 	}
 }

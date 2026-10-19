@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
@@ -22,65 +23,102 @@ func discoverCases(module string) []discoverCase {
 		{
 			name: "two files in one package union and dedupe imports",
 			files: map[string]string{
-				"pkg/a.go": goFile("pkg", "fmt", "os"),
-				"pkg/b.go": goFile("pkg", "fmt", "strings"),
+				"pkg/a.go": goFile("pkg", module+"/x", module+"/y"),
+				"pkg/b.go": goFile("pkg", module+"/x", module+"/z"),
 			},
-			want: map[string][]string{module + "/pkg": {"fmt", "os", "strings"}},
+			want: map[string][]string{
+				module + "/pkg": {module + "/x", module + "/y", module + "/z"},
+			},
 		},
 		{
 			name: "dot directory is skipped",
 			files: map[string]string{
-				"pkg/a.go":         goFile("pkg", "fmt"),
-				".hidden/h.go":     goFile("hidden", "os"),
-				"pkg/.nested/n.go": goFile("nested", "io"),
+				"pkg/a.go":         goFile("pkg", module+"/x"),
+				".hidden/h.go":     goFile("hidden", module+"/y"),
+				"pkg/.nested/n.go": goFile("nested", module+"/w"),
 			},
-			want: map[string][]string{module + "/pkg": {"fmt"}},
+			want: map[string][]string{module + "/pkg": {module + "/x"}},
 		},
 		{
 			name: "underscore-prefixed directory is skipped",
 			files: map[string]string{
-				"pkg/a.go":      goFile("pkg", "fmt"),
-				"_scratch/s.go": goFile("scratch", "os"),
-				"pkg/_gen/g.go": goFile("gen", "io"),
+				"pkg/a.go":      goFile("pkg", module+"/x"),
+				"_scratch/s.go": goFile("scratch", module+"/y"),
+				"pkg/_gen/g.go": goFile("gen", module+"/w"),
 			},
-			want: map[string][]string{module + "/pkg": {"fmt"}},
+			want: map[string][]string{module + "/pkg": {module + "/x"}},
 		},
 		{
-			name: "vendor and node_modules are skipped",
+			name: "testdata is skipped",
 			files: map[string]string{
-				"pkg/a.go":              goFile("pkg", "fmt"),
-				"vendor/v.go":           goFile("v", "os"),
-				"web/node_modules/n.go": goFile("n", "io"),
+				"pkg/a.go":          goFile("pkg", module+"/x"),
+				"testdata/t.go":     goFile("t", module+"/y"),
+				"pkg/testdata/p.go": goFile("p", module+"/w"),
 			},
-			want: map[string][]string{module + "/pkg": {"fmt"}},
+			want: map[string][]string{module + "/pkg": {module + "/x"}},
 		},
 		{
 			name: "test files are skipped",
 			files: map[string]string{
-				"pkg/a.go":      goFile("pkg", "fmt"),
-				"pkg/a_test.go": goFile("pkg", "testing"),
+				"pkg/a.go":      goFile("pkg", module+"/x"),
+				"pkg/a_test.go": goFile("pkg", module+"/t"),
 			},
-			want: map[string][]string{module + "/pkg": {"fmt"}},
+			want: map[string][]string{module + "/pkg": {module + "/x"}},
 		},
 		{
 			name:  "root-level file maps to the module path",
-			files: map[string]string{"main.go": goFile("main", "fmt")},
-			want:  map[string][]string{module: {"fmt"}},
+			files: map[string]string{"main.go": goFile("main", module+"/x")},
+			want:  map[string][]string{module: {module + "/x"}},
 		},
+	}
+}
+
+func headerDiscoverCases(module string) []discoverCase {
+	return []discoverCase{
 		{
 			name: "malformed file does not halt discovery",
 			files: map[string]string{
 				"bad/b.go": "not go source",
-				"pkg/a.go": goFile("pkg", "fmt"),
+				"pkg/a.go": goFile("pkg", module+"/x"),
 			},
-			want: map[string][]string{module + "/pkg": {"fmt"}},
+			want: map[string][]string{module + "/bad": nil, module + "/pkg": {module + "/x"}},
 		},
 		{
 			name: "a syntax error after the import block keeps the file's imports",
 			files: map[string]string{
-				"pkg/a.go": "package pkg\nimport \"fmt\"\nfunc broken( {\n",
+				"pkg/a.go": "package pkg\nimport \"example.com/mod/x\"\nfunc broken( {\n",
 			},
-			want: map[string][]string{module + "/pkg": {"fmt"}},
+			want: map[string][]string{module + "/pkg": {module + "/x"}},
+		},
+		{
+			name: "a stray token right after the import block keeps the imports",
+			files: map[string]string{
+				"pkg/a.go": "package pkg\nimport \"example.com/mod/x\"\n#\n",
+			},
+			want: map[string][]string{module + "/pkg": {module + "/x"}},
+		},
+		{
+			name: "an import after a declaration is not an import",
+			files: map[string]string{
+				"pkg/a.go": "package pkg\nfunc f() {}\nimport \"example.com/mod/x\"\n",
+				"pkg/b.go": "package pkg\nvar v = 1\nimport \"example.com/mod/y\"\n",
+			},
+			want: map[string][]string{module + "/pkg": nil},
+		},
+		{
+			name: "a syntax error inside the import block drops the file's imports",
+			files: map[string]string{
+				"domain/broken.go": "package domain\n\nimport (\n\t\"example.com/mod/infra\"\n\t!!!\n)\n",
+				"domain/ok.go":     goFile("domain", module+"/x"),
+			},
+			want: map[string][]string{module + "/domain": {module + "/x"}},
+		},
+		{
+			name: "an unterminated import block drops the file's imports",
+			files: map[string]string{
+				"pkg/a.go": "package pkg\nimport (\n\t\"example.com/mod/x\"\n",
+			},
+			want: map[string][]string{module + "/pkg": nil},
 		},
 	}
 }
@@ -98,7 +136,7 @@ func TestDiscoverPackages(t *testing.T) {
 	t.Parallel()
 
 	const module = "example.com/mod"
-	testCases := discoverCases(module)
+	testCases := slices.Concat(discoverCases(module), headerDiscoverCases(module))
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
@@ -108,7 +146,9 @@ func TestDiscoverPackages(t *testing.T) {
 			}
 
 			provider := source.NewProvider(projectDir, source.NewSkipSet(nil))
-			pkgs := discoverPackages(provider, module)
+			pkgs := map[string][]string(
+				loadImportGraph(gomod.NewIndex(provider), module).deps,
+			)
 
 			if !reflect.DeepEqual(pkgs, testCase.want) {
 				t.Fatalf("got %v, want %v", pkgs, testCase.want)
@@ -117,20 +157,22 @@ func TestDiscoverPackages(t *testing.T) {
 	}
 }
 
-func TestBuildGraph(t *testing.T) {
+func TestLoadImportGraph_Sites(t *testing.T) {
 	t.Parallel()
 
-	pkgs := map[string][]string{
-		"example.com/a": {"fmt", "example.com/b"},
-		"example.com/b": {"example.com/c"},
-		"example.com/c": {"os"},
-	}
-	graph := buildGraph(pkgs, "example.com")
-	if len(graph) != 3 {
-		t.Fatalf("expected 3 entries in graph, got %d", len(graph))
-	}
-	if !slices.Contains(graph["example.com/a"], "example.com/b") {
-		t.Error("example.com/a should depend on example.com/b")
+	projectDir := t.TempDir()
+	writeFile(t, projectDir, "a/a1.go", "package a\n")
+	writeFile(t, projectDir, "a/a2.go",
+		"package a\n\nimport (\n\t\"fmt\"\n\t\"example.com/mod/b\"\n)\n")
+	writeFile(t, projectDir, "a/a3.go", "package a\n\nimport \"example.com/mod/b\"\n")
+	writeFile(t, projectDir, "b/b.go", "package b\n")
+
+	graph := loadImportGraph(gomod.NewIndex(newSources(projectDir)), "example.com/mod")
+
+	got := graph.sites[edge{from: "example.com/mod/a", to: "example.com/mod/b"}]
+	want := importSite{file: "a/a2.go", line: 5}
+	if got != want {
+		t.Errorf("site = %+v, want the first import spec %+v", got, want)
 	}
 }
 
@@ -219,14 +261,15 @@ func TestClassifyLayer(t *testing.T) {
 		{"example.com/rest/v1", "transport"},
 		{"example.com/grpc/v1", "transport"},
 		{"example.com/cmd/server", "cmd"},
-		{"example.com/internal/util", layerUnclassified},
+		{"example.com/domain/infra", "domain"},
+		{"example.com/internal/util", ""},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.pkg, func(t *testing.T) {
 			t.Parallel()
-			got := classifyLayer(testCase.pkg)
-			if got != testCase.want {
-				t.Fatalf("classifyLayer(%q) = %q, want %q", testCase.pkg, got, testCase.want)
+			got, _ := classifyLayer(testCase.pkg)
+			if got.name != testCase.want {
+				t.Fatalf("classifyLayer(%q) = %q, want %q", testCase.pkg, got.name, testCase.want)
 			}
 		})
 	}
@@ -291,7 +334,7 @@ func TestCheckBoundaries(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := checkBoundaries(testCase.graph, "example.com")
+			got := checkBoundaries(importGraph{deps: testCase.graph}, "example.com")
 			if len(got) != testCase.want {
 				t.Fatalf("got %d violations, want %d: %v", len(got), testCase.want, got)
 			}
@@ -315,30 +358,13 @@ func TestCheckBoundaries_IsDeterministic(t *testing.T) {
 	}
 
 	for range 50 {
-		if got := checkBoundaries(graph, "example.com"); !reflect.DeepEqual(got, want) {
+		found := checkBoundaries(importGraph{deps: graph}, "example.com")
+		got := make([]string, 0, len(found))
+		for _, violation := range found {
+			got = append(got, violation.message)
+		}
+		if !reflect.DeepEqual(got, want) {
 			t.Fatalf("checkBoundaries = %v, want %v", got, want)
-		}
-	}
-}
-
-func TestDiscoverRealProject(t *testing.T) {
-	t.Parallel()
-	t.Skip("runs against the actual project tree - enable manually")
-	pkgs := discoverPackages(newSources("."), "github.com/0b1-PulsarTech/pulsarules_codex")
-	if len(pkgs) == 0 {
-		t.Fatal("no packages discovered")
-	}
-	graph := buildGraph(pkgs, "github.com/0b1-PulsarTech/pulsarules_codex")
-	cycles := findCycles(graph)
-	if len(cycles) > 0 {
-		for _, cycle := range cycles {
-			t.Errorf("cycle: %s", strings.Join(cycle, " → "))
-		}
-	}
-	violations := checkBoundaries(graph, "github.com/0b1-PulsarTech/pulsarules_codex")
-	if len(violations) > 0 {
-		for _, violation := range violations {
-			t.Logf("boundary: %s", violation)
 		}
 	}
 }
@@ -359,14 +385,14 @@ func newSources(dir string) source.Provider {
 	return source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs()))
 }
 
-func TestLoadDepGraph(t *testing.T) {
+func TestLoadImportGraph(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
 	writeFile(t, projectDir, "foo.go", "package foo\n")
 	writeFile(t, projectDir, "bar/baz.go", "package bar\nimport \"example.com/mod/foo\"\n")
 
-	got := loadDepGraph(newSources(projectDir), "example.com/mod")
+	got := loadImportGraph(gomod.NewIndex(newSources(projectDir)), "example.com/mod").deps
 	want := depGraph{"example.com/mod": nil, "example.com/mod/bar": {"example.com/mod/foo"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v, want %v", got, want)

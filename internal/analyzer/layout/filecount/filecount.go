@@ -35,10 +35,13 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 
 	var findings []finding.Finding
 	if len(ctx.ChangedFiles) > 0 {
+		pinned := malformedAnchor(ctx, anchors)
+		line := 1
+		if pinned == "" {
+			line = 0
+		}
 		for _, problem := range exempt.invalid() {
-			findings = append(findings, reporter.At(
-				malformedAnchor(ctx, anchors), 1, problem, "fix the exempt param",
-			))
+			findings = append(findings, reporter.At(pinned, line, problem, "fix the exempt param"))
 		}
 	}
 	wanted := make(map[string]bool, len(anchors))

@@ -33,7 +33,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	dirScans := scanDirs(ctx)
 	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		dir := dirOf(fc.Path)
-		if fc.Generated || gomod.IsPackageDir(dir) {
+		if fc.Generated || !gomod.IsPackageDir(dir) {
 			return nil
 		}
 		siblings := dirScans.dirs[pkgKey{dir: dir, pkg: file.Name.Name}]

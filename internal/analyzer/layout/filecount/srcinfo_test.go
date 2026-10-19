@@ -1,129 +1,47 @@
 package filecount
 
-import "testing"
+import (
+	"go/parser"
+	"go/token"
+	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
+)
 
 func TestInspectSource(t *testing.T) {
 	t.Parallel()
 
+	const entSchema = "package s\n\nimport \"entgo.io/ent\"\n\ntype T struct{ ent.Schema }\n"
 	testCases := []struct {
 		name string
 		src  string
 		want srcInfo
 	}{
 		{"plain", "package s\n", srcInfo{pkg: "s"}},
-		{"build ignore", "//go:build ignore\n\npackage main\n", srcInfo{pkg: "main", skip: true}},
-		{"build other tag", "//go:build linux\n\npackage s\n", srcInfo{pkg: "s"}},
-		{"build ignore or linux", "//go:build ignore || linux\n\npackage s\n", srcInfo{pkg: "s"}},
-		{"build ignore after package", "package s\n\n//go:build ignore\n", srcInfo{pkg: "s"}},
-		{
-			"legacy build ignore",
-			"// +build ignore\n\npackage main\n",
-			srcInfo{pkg: "main", skip: true},
-		},
-		{"legacy build other tag", "// +build linux\n\npackage s\n", srcInfo{pkg: "s"}},
-		{
-			"legacy ignore with go build linux",
-			"//go:build linux\n// +build ignore\n\npackage s\n",
-			srcInfo{pkg: "s"},
-		},
-		{"legacy ignore after package", "package s\n\n// +build ignore\n", srcInfo{pkg: "s"}},
-		{
-			"build ignore after package in a fully parsed file",
-			"package s\n\nimport \"entgo.io/ent\"\n\n//go:build ignore\n",
-			srcInfo{pkg: "s"},
-		},
-		{"unparsable", "import \"x\"\n", srcInfo{}},
+		{"ent schema", entSchema, srcInfo{pkg: "s", ent: true}},
+		{"syntax error in a body keeps the package", "package s\nfunc (\n", srcInfo{pkg: "s"}},
+		{"no package clause", "import \"x\"\n", srcInfo{}},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := inspectSource("s.go", []byte(testCase.src)); got != testCase.want {
+			parsed, _ := parser.ParseFile(
+				token.NewFileSet(), "s.go", testCase.src, parser.ParseComments,
+			)
+			got := inspectSource(gomod.File{Path: "s.go", Syntax: parsed})
+			if got != testCase.want {
 				t.Fatalf("inspectSource = %+v, want %+v", got, testCase.want)
 			}
 		})
 	}
 }
 
-type constraintFormTestCase struct {
-	name string
-	src  string
-	want srcInfo
-}
-
-func constraintFormCases() []constraintFormTestCase {
-	return []constraintFormTestCase{
-		{
-			"build ignore and linux",
-			"//go:build ignore && linux\n\npackage s\n",
-			srcInfo{pkg: "s", skip: true},
-		},
-		{
-			"build linux and ignore",
-			"//go:build linux && ignore\n\npackage s\n",
-			srcInfo{pkg: "s", skip: true},
-		},
-		{
-			"build nested and chain with ignore",
-			"//go:build (linux && amd64) && ignore\n\npackage s\n",
-			srcInfo{pkg: "s", skip: true},
-		},
-		{"build not ignore", "//go:build !ignore\n\npackage s\n", srcInfo{pkg: "s"}},
-		{
-			"build ignore touching the package clause",
-			"//go:build ignore\npackage s\n",
-			srcInfo{pkg: "s", skip: true},
-		},
-		{
-			"build ignore inside the package doc",
-			"// Package s doc.\n//go:build ignore\npackage s\n",
-			srcInfo{pkg: "s", skip: true},
-		},
-		{
-			"legacy ignore then go build linux touching the package clause",
-			"// +build ignore\n\n//go:build linux\npackage s\n",
-			srcInfo{pkg: "s"},
-		},
-		{
-			"legacy ignore comma linux",
-			"// +build ignore,linux\n\npackage s\n",
-			srcInfo{pkg: "s", skip: true},
-		},
-		{"legacy ignore space linux", "// +build ignore linux\n\npackage s\n", srcInfo{pkg: "s"}},
-		{
-			"legacy two lines ignore first",
-			"// +build ignore\n// +build linux\n\npackage s\n",
-			srcInfo{pkg: "s", skip: true},
-		},
-		{
-			"legacy two lines ignore last",
-			"// +build linux\n// +build ignore\n\npackage s\n",
-			srcInfo{pkg: "s", skip: true},
-		},
-		{
-			"legacy ignore touching the package clause",
-			"// +build ignore\npackage s\n",
-			srcInfo{pkg: "s"},
-		},
-		{
-			"legacy ignore inside the package doc",
-			"// Package s does things.\n// +build ignore\npackage s\n",
-			srcInfo{pkg: "s"},
-		},
-	}
-}
-
-func TestInspectSourceConstraintForms(t *testing.T) {
+func TestInspectSourceNoSyntax(t *testing.T) {
 	t.Parallel()
 
-	for _, testCase := range constraintFormCases() {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := inspectSource("s.go", []byte(testCase.src)); got != testCase.want {
-				t.Fatalf("inspectSource = %+v, want %+v", got, testCase.want)
-			}
-		})
+	if got := inspectSource(gomod.File{Path: "s.go"}); got != (srcInfo{}) {
+		t.Fatalf("inspectSource = %+v, want zero", got)
 	}
 }
 

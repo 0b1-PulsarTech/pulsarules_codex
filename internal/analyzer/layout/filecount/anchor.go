@@ -1,6 +1,7 @@
 package filecount
 
 import (
+	"cmp"
 	"path"
 	"path/filepath"
 
@@ -68,7 +69,8 @@ func changedAnchors(
 	set := newDirAnchors()
 	for _, fc := range ctx.ChangedFiles {
 		file := filepath.ToSlash(fc.Path)
-		if !eligible(fc) || gomod.IsPackageDir(path.Dir(file)) {
+		if !eligible(fc) || !gomod.IsPackageDir(path.Dir(file)) ||
+			ctx.Skips.SkipsPath(fc.Path) {
 			continue
 		}
 		src, ok := ctx.Sources.Read(file)
@@ -84,9 +86,13 @@ func malformedAnchor(ctx *pass.Context, anchors []anchor) string {
 	if len(anchors) > 0 {
 		return anchors[0].file
 	}
-	live := ""
+	live, first := "", ""
 	for _, fc := range ctx.ChangedFiles {
+		if ctx.Skips.SkipsPath(fc.Path) {
+			continue
+		}
 		file := filepath.ToSlash(fc.Path)
+		first = cmp.Or(first, file)
 		src, ok := ctx.Sources.Read(file)
 		if !ok {
 			continue
@@ -94,12 +100,7 @@ func malformedAnchor(ctx *pass.Context, anchors []anchor) string {
 		if fc.Extension == ".go" && !fc.Generated && !lexer.IsGeneratedSource(src) {
 			return file
 		}
-		if live == "" {
-			live = file
-		}
+		live = cmp.Or(live, file)
 	}
-	if live == "" {
-		return filepath.ToSlash(ctx.ChangedFiles[0].Path)
-	}
-	return live
+	return cmp.Or(live, first)
 }

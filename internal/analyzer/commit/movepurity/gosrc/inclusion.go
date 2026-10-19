@@ -23,7 +23,7 @@ func IsCompiled(file string) bool { return isToolchainExt(path.Ext(file)) }
 
 func IsOutsidePackage(file string) bool {
 	// A vendor dir stays compiled: a nested module's own vendor/ is its dependency tree.
-	return gomod.IsHiddenName(path.Base(file)) || gomod.IsPackageDir(path.Dir(file))
+	return gomod.IsHiddenName(path.Base(file)) || !gomod.IsPackageDir(path.Dir(file))
 }
 
 func inclusionOf(file string) inclusion {

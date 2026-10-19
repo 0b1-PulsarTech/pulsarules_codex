@@ -20,6 +20,7 @@ func countByDir(
 	wanted map[string]bool,
 ) map[string]dirCount {
 	byDir := make(map[string][]srcInfo)
+	index := ctx.GoPackages()
 	ctx.Sources.Walk(func(file string, ext string) bool {
 		file = filepath.ToSlash(file)
 		dir := path.Dir(file)
@@ -31,9 +32,12 @@ func countByDir(
 		if !ok || lexer.IsGeneratedSource(src) {
 			return true
 		}
-		if entry := inspectSource(file, src); !entry.skip {
-			byDir[dir] = append(byDir[dir], entry)
+		parsed, indexed := index.File(file)
+		// The index drops build-ignored .go files, which Go never compiles.
+		if ext == ".go" && !indexed {
+			return true
 		}
+		byDir[dir] = append(byDir[dir], inspectSource(parsed))
 		return true
 	})
 	counts := make(map[string]dirCount, len(byDir))

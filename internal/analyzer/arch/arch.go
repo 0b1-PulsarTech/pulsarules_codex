@@ -12,18 +12,17 @@ import (
 
 func resolveModuleOrFindings(
 	reporter finding.Reporter,
-	projectDir string,
+	module pass.Module,
 ) (string, []finding.Finding) {
-	modulePath, err := pass.ModulePath(projectDir)
-	if err == nil {
-		return modulePath, nil
+	if module.Err == nil {
+		return module.Path, nil
 	}
 	// A missing go.mod means no Go project here; any other failure must surface as a finding.
-	if errors.Is(err, fs.ErrNotExist) {
+	if errors.Is(module.Err, fs.ErrNotExist) {
 		return "", nil
 	}
 	return "", []finding.Finding{reporter.New(
-		fmt.Sprintf("cannot determine the project's module path: %s", err),
+		fmt.Sprintf("cannot determine the project's module path: %s", module.Err),
 	)}
 }
 
@@ -46,19 +45,18 @@ func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Fi
 	}
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
 
-	modulePath, findings := resolveModuleOrFindings(reporter, ctx.ProjectDir)
+	modulePath, findings := resolveModuleOrFindings(reporter, ctx.GoModule())
 	if modulePath == "" {
 		return findings
 	}
 
-	graph := loadDepGraph(ctx.Sources, modulePath)
-	violations := checkBoundaries(graph, modulePath)
+	graph := loadImportGraph(ctx.GoPackages(), modulePath)
 
-	for _, violation := range violations {
+	for _, found := range checkBoundaries(graph, modulePath) {
 		findings = append(findings, reporter.At(
 			".",
 			0,
-			violation,
+			found.message,
 			"invert the dependency or move the import to the correct layer",
 		))
 	}
@@ -84,13 +82,13 @@ func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []finding.Findin
 	}
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
 
-	modulePath, findings := resolveModuleOrFindings(reporter, ctx.ProjectDir)
+	modulePath, findings := resolveModuleOrFindings(reporter, ctx.GoModule())
 	if modulePath == "" {
 		return findings
 	}
 
-	graph := loadDepGraph(ctx.Sources, modulePath)
-	cycles := findCycles(graph)
+	graph := loadImportGraph(ctx.GoPackages(), modulePath)
+	cycles := findCycles(graph.deps)
 
 	for _, cycle := range cycles {
 		var builder strings.Builder
