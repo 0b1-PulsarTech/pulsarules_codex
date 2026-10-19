@@ -8,7 +8,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-func (goProvider) SoleUser(ctx *pass.Context, decl Declaration) (string, bool) {
+func (goProvider) SoleUser(ctx *pass.Context, decl declaration) (string, bool) {
 	fset := ctx.ASTCache.FileSet()
 	usedIn := make(map[ast.Node]bool)
 	files, complete := packageFiles(ctx, path.Dir(decl.File))
@@ -42,7 +42,7 @@ func describeOwner(owner ast.Node) string {
 
 type usageWalker struct {
 	fset      *token.FileSet
-	decl      Declaration
+	decl      declaration
 	enclosing ast.Node
 	usedIn    map[ast.Node]bool
 }

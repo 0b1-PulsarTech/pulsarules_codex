@@ -9,8 +9,8 @@ import (
 
 func checkCandidate(
 	ctx *pass.Context,
-	provider DeclarationProvider,
-	decl Declaration,
+	provider declarationSource,
+	decl declaration,
 	reporter finding.Reporter,
 ) []finding.Finding {
 	owner, ok := provider.SoleUser(ctx, decl)

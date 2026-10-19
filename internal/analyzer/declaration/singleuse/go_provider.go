@@ -10,18 +10,18 @@ import (
 
 type goProvider struct{}
 
-var _ DeclarationProvider = goProvider{}
+var _ declarationSource = goProvider{}
 
-func declKindFor(tok token.Token) DeclKind {
+func declKindFor(tok token.Token) declKind {
 	if tok == token.CONST {
-		return DeclConst
+		return declConst
 	}
-	return DeclVar
+	return declVar
 }
 
-func (goProvider) Declarations(ctx *pass.Context) []Declaration {
+func (goProvider) Declarations(ctx *pass.Context) []declaration {
 	fset := ctx.ASTCache.FileSet()
-	var out []Declaration
+	var out []declaration
 	for fc, file := range ctx.ChangedGoASTs() {
 		for _, decl := range file.Decls {
 			gen, ok := decl.(*ast.GenDecl)
@@ -42,15 +42,15 @@ func (goProvider) Declarations(ctx *pass.Context) []Declaration {
 
 func valueDeclarations(
 	gen *ast.GenDecl, vs *ast.ValueSpec, fc pass.FileChange, fset *token.FileSet,
-) []Declaration {
+) []declaration {
 	typeName := typeString(vs.Type)
 	annotations := docLines(gen.Doc, vs.Doc)
-	var out []Declaration
+	var out []declaration
 	for nameIndex, name := range vs.Names {
 		if name.Name == "_" {
 			continue
 		}
-		out = append(out, Declaration{
+		out = append(out, declaration{
 			Name:        name.Name,
 			Kind:        declKindFor(gen.Tok),
 			Exported:    ast.IsExported(name.Name),
@@ -84,7 +84,7 @@ func docLines(groups ...*ast.CommentGroup) []string {
 	return lines
 }
 
-func initKindFor(vs *ast.ValueSpec, idx int) InitKind {
+func initKindFor(vs *ast.ValueSpec, idx int) initKind {
 	var value ast.Expr
 	switch {
 	case len(vs.Values) == len(vs.Names):
@@ -93,14 +93,14 @@ func initKindFor(vs *ast.ValueSpec, idx int) InitKind {
 		// The broadcast form var a, b = f().
 		value = vs.Values[0]
 	default:
-		return InitNone
+		return ""
 	}
 	switch ast.Unparen(value).(type) {
 	case *ast.CallExpr:
-		return InitCall
+		return initCall
 	case *ast.CompositeLit:
-		return InitComposite
+		return initComposite
 	default:
-		return InitLiteral
+		return initLiteral
 	}
 }

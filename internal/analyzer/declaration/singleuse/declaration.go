@@ -2,34 +2,33 @@ package singleuse
 
 import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 
-type DeclKind string
+type declKind string
 
 const (
-	DeclConst DeclKind = "const"
-	DeclVar   DeclKind = "var"
+	declConst declKind = "const"
+	declVar   declKind = "var"
 )
 
-type InitKind string
+type initKind string
 
 const (
-	InitNone      InitKind = "none"
-	InitCall      InitKind = "call"
-	InitComposite InitKind = "composite"
-	InitLiteral   InitKind = "literal"
+	initCall      initKind = "call"
+	initComposite initKind = "composite"
+	initLiteral   initKind = "literal"
 )
 
-type Declaration struct {
+type declaration struct {
 	Name        string
-	Kind        DeclKind
+	Kind        declKind
 	Exported    bool
 	TypeName    string
 	Annotations []string
-	Init        InitKind
+	Init        initKind
 	File        string
 	Line        int
 }
 
-type DeclarationProvider interface {
-	Declarations(ctx *pass.Context) []Declaration
-	SoleUser(ctx *pass.Context, decl Declaration) (owner string, ok bool)
+type declarationSource interface {
+	Declarations(ctx *pass.Context) []declaration
+	SoleUser(ctx *pass.Context, decl declaration) (owner string, ok bool)
 }

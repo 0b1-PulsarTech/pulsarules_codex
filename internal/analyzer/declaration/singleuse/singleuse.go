@@ -6,7 +6,7 @@ import (
 )
 
 type Analyzer struct {
-	provider DeclarationProvider
+	provider declarationSource
 	reporter finding.Reporter
 }
 

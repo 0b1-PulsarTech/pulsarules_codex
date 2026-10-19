@@ -12,18 +12,18 @@ type fakeProvider struct {
 	ok    bool
 }
 
-var _ DeclarationProvider = fakeProvider{}
+var _ declarationSource = fakeProvider{}
 
-func (fakeProvider) Declarations(_ *pass.Context) []Declaration { return nil }
+func (fakeProvider) Declarations(_ *pass.Context) []declaration { return nil }
 
-func (provider fakeProvider) SoleUser(_ *pass.Context, _ Declaration) (string, bool) {
+func (provider fakeProvider) SoleUser(_ *pass.Context, _ declaration) (string, bool) {
 	return provider.owner, provider.ok
 }
 
 func TestCheckCandidate(t *testing.T) {
 	t.Parallel()
 
-	decl := Declaration{Name: "helperCount", File: "a.go", Line: 3}
+	decl := declaration{Name: "helperCount", File: "a.go", Line: 3}
 	reporter := finding.NewReporter(
 		"single-use-declaration",
 		finding.SeverityWarning,

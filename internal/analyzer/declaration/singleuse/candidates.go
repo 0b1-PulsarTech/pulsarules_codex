@@ -2,30 +2,30 @@ package singleuse
 
 import "strings"
 
-func eligible(decl Declaration) bool {
+func eligible(decl declaration) bool {
 	if decl.Name == "_" || decl.Exported {
 		return false
 	}
 	switch decl.Kind {
-	case DeclConst:
+	case declConst:
 		return true
-	case DeclVar:
+	case declVar:
 		return !hoistedInit(decl.Init) && !mustStayPackageLevel(decl)
 	default:
 		return false
 	}
 }
 
-func hoistedInit(kind InitKind) bool {
-	return kind == InitCall || kind == InitComposite
+func hoistedInit(kind initKind) bool {
+	return kind == initCall || kind == initComposite
 }
 
-func mustStayPackageLevel(decl Declaration) bool {
+func mustStayPackageLevel(decl declaration) bool {
 	// A //go:embed only compiles at package level, and a stateful type resets per call.
 	return hasPinnedAnnotation(decl) || isStatefulType(decl)
 }
 
-func hasPinnedAnnotation(decl Declaration) bool {
+func hasPinnedAnnotation(decl declaration) bool {
 	for _, annotation := range decl.Annotations {
 		if strings.HasPrefix(annotation, "//go:embed") {
 			return true
@@ -34,7 +34,7 @@ func hasPinnedAnnotation(decl Declaration) bool {
 	return false
 }
 
-func isStatefulType(decl Declaration) bool {
+func isStatefulType(decl declaration) bool {
 	return strings.HasPrefix(decl.TypeName, "atomic.") ||
 		strings.HasPrefix(decl.TypeName, "sync.")
 }
