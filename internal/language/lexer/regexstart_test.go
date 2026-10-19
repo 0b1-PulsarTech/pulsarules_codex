@@ -183,38 +183,48 @@ func TestLiterals_RegexHostileStaysLinear(t *testing.T) {
 	}
 }
 
-func TestJSStrings_RegexWordsAreTheUnionOfTheOldLists(t *testing.T) {
+func TestJSStrings_RegexAfterWords(t *testing.T) {
 	t.Parallel()
 
-	stringScanner := strings.Fields(
-		"return typeof case in of void yield await delete throw new",
+	wantWords := strings.Fields(
+		"return typeof case in of void yield await delete throw new " +
+			"instanceof else do extends default",
 	)
-	braceMatcher := strings.Fields(
-		"return typeof void delete await yield new throw " +
-			"case in of instanceof else do extends default",
-	)
-	union := slices.Concat(stringScanner, braceMatcher)
-	slices.Sort(union)
-	union = slices.Compact(union)
+	wantParen := strings.Fields("if while for with")
+	got := JSStrings().RegexAfter
+	if !slices.Equal(got.Words, wantWords) {
+		t.Errorf("string scanner words %v, want %v", got.Words, wantWords)
+	}
+	if !slices.Equal(got.ParenWords, wantParen) {
+		t.Errorf("string scanner paren words %v, want %v", got.ParenWords, wantParen)
+	}
+}
 
-	got := JSStrings().RegexAfter.Words
-	for _, word := range stringScanner {
-		if !slices.Contains(got, word) {
-			t.Errorf("string scanner lost %q", word)
-		}
-	}
-	for _, word := range union {
+func TestStartsExpression_IsExactlyTheScannerWords(t *testing.T) {
+	t.Parallel()
+
+	scanner := JSStrings().RegexAfter
+	notStarters := strings.Fields(
+		"export import let const var function class switch catch try finally this super " +
+			"null true false async if while for with break continue returns",
+	)
+	for _, word := range scanner.Words {
 		if !StartsExpression(word) {
-			t.Errorf("StartsExpression(%q) = false, want true", word)
+			t.Errorf("StartsExpression(%q) = false, but JSStrings lists it", word)
 		}
 	}
-	for _, word := range []string{"instanceof", "else", "do", "extends", "default"} {
-		if slices.Contains(got, word) {
-			t.Errorf("string scanner gained %q, which changes where a regex opens", word)
+	for _, word := range notStarters {
+		if StartsExpression(word) {
+			t.Errorf("StartsExpression(%q) = true, want false", word)
 		}
 	}
-	if len(got) != len(stringScanner) {
-		t.Errorf("string scanner words %v, want %v", got, stringScanner)
+	for _, word := range scanner.ParenWords {
+		if !IsHeaderWord(word) {
+			t.Errorf("IsHeaderWord(%q) = false, but JSStrings lists it", word)
+		}
+	}
+	if IsHeaderWord("switch") || IsHeaderWord("") {
+		t.Error("IsHeaderWord accepts a word outside if/while/for/with")
 	}
 }
 
@@ -303,6 +313,30 @@ func TestIsIdentByte(t *testing.T) {
 
 			if got := IsIdentByte(testCase.char); got != testCase.want {
 				t.Fatalf("IsIdentByte(%q) = %v, want %v", testCase.char, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestLiterals_RegexOpensAfterEveryJSWord(t *testing.T) {
+	t.Parallel()
+
+	words := JSStrings().RegexAfter.Words
+	testCases := make([]literalCase, 0, len(words))
+	for _, word := range words {
+		testCases = append(testCases, literalCase{
+			"after " + word, "a " + word + ` /"/.test(s) + 'q'`, []string{`/"/`, `'q'`},
+		})
+	}
+	comments, _ := testSyntax()
+	scan := JSStrings()
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := spanTexts(testCase.src, Literals(testCase.src, comments, scan).Spans)
+			if !slices.Equal(got, testCase.want) {
+				t.Errorf("spans %q, want %q for %q", got, testCase.want, testCase.src)
 			}
 		})
 	}

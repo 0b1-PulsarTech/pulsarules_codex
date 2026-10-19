@@ -325,3 +325,18 @@ func TestSkillFor(t *testing.T) {
 		})
 	}
 }
+
+func TestScan_RegexOpensAfterEveryGrammarWord(t *testing.T) {
+	t.Parallel()
+
+	words := strings.Fields(
+		"return typeof case in of void yield await delete throw new " +
+			"instanceof else do extends default",
+	)
+	testCases := make([]scanCase, 0, len(words))
+	for _, word := range words {
+		src := "function f() {\n  if (a) b(); " + word + " /\"/.test(s); throw new Error(\"x\");\n}\n"
+		testCases = append(testCases, scanCase{"regex after " + word, ".ts", src, []int{2}})
+	}
+	runScanCases(t, testCases)
+}

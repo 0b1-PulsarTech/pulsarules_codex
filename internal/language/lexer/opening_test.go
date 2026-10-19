@@ -25,6 +25,8 @@ func TestLiterals_TaggedDelimiter(t *testing.T) {
 		{"tagged after a punctuation byte", "(raw`x`)", []bool{true}},
 		{"tag inside a longer word", "a myraw`x`", []bool{false}},
 		{"tag as a prefix of a longer word", "a rawx`x`", []bool{false}},
+		{"tag glued to a dollar", "$raw`x`", []bool{false}},
+		{"tag glued to a non-ASCII letter", "\u00e9raw`x`", []bool{false}},
 		{"tag spelled in a comment", "raw // raw\n`x`", []bool{true}},
 		{"tagged then untagged", "raw`x` `y`", []bool{true, false}},
 	}
@@ -150,6 +152,7 @@ func TestIdentBefore(t *testing.T) {
 		{"punctuation before", "a+'x'", 2, ""},
 		{"digits and underscore count", "a_1'x'", 3, "a_1"},
 		{"dollar is not an identifier byte", "$'x'", 1, ""},
+		{"non-ASCII byte is not a prefix byte", "\u00e9'x'", 2, ""},
 		{"stops at a blank", "a b'x'", 3, "b"},
 	}
 	for _, testCase := range testCases {

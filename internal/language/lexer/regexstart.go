@@ -6,11 +6,6 @@ import (
 	"unicode/utf8"
 )
 
-const (
-	regexWords  = "return typeof case in of void yield await delete throw new"
-	headerWords = "if while for with"
-)
-
 type RegexContext struct {
 	After      string
 	Words      []string
@@ -126,26 +121,44 @@ func (scan *literalScan) divide(resume, lineEnd int) {
 func isSpace(char byte) bool { return char == ' ' || char == '\t' || char == '\r' || char == '\n' }
 
 func StartsExpression(word string) bool {
-	// These begin an operand but never opened a regex for the string scanner.
-	const operandStarters = "instanceof else do extends default"
-	return hasWord(regexWords, word) || hasWord(operandStarters, word)
-}
-
-func IsHeaderWord(word string) bool { return hasWord(headerWords, word) }
-
-func hasWord(list, word string) bool {
-	for rest := list; rest != ""; {
-		var field string
-		field, rest, _ = strings.Cut(rest, " ")
-		if field == word {
-			return true
-		}
+	switch word {
+	case "return", "typeof", "case", "in", "of", "void", "yield", "await", "delete",
+		"throw", "new", "instanceof", "else", "do", "extends", "default":
+		return true
 	}
 	return false
+}
+
+func IsHeaderWord(word string) bool {
+	return word == "if" || word == "while" || word == "for" || word == "with"
 }
 
 func IsIdentByte(char byte) bool {
 	letter := char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z'
 	digit := char >= '0' && char <= '9'
 	return letter || digit || char == '_' || char == '$' || char >= utf8.RuneSelf
+}
+
+func JSStrings() StringSyntax {
+	interp := "${"
+	return StringSyntax{
+		Delims: []StringDelim{
+			{Open: `"`, Close: `"`, Escapes: true, Continues: true},
+			{Open: `'`, Close: `'`, Escapes: true, Continues: true},
+			{Open: "`", Close: "`", Escapes: true, Multiline: true, Interp: interp},
+			{
+				Open: "`", Close: "`", Escapes: true, Multiline: true,
+				Raw: true, Interp: interp, Tag: "String.raw",
+			},
+			{Open: "/", Close: "/", Escapes: true, Regex: true},
+		},
+		RegexAfter: RegexContext{
+			After: "(,=:[!&|?{};+-*%<>~^",
+			Words: strings.Fields(
+				"return typeof case in of void yield await delete throw new " +
+					"instanceof else do extends default",
+			),
+			ParenWords: strings.Fields("if while for with"),
+		},
+	}
 }

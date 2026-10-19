@@ -137,26 +137,6 @@ func charLen(body string, delim *StringDelim) int {
 }
 
 func isPrefixByte(char byte) bool {
+	// String prefixes (r, b, f, u) are ASCII, and "$" is a JS-only identifier byte.
 	return IsIdentByte(char) && char != '$' && char < utf8.RuneSelf
-}
-
-func JSStrings() StringSyntax {
-	interp := "${"
-	return StringSyntax{
-		Delims: []StringDelim{
-			{Open: `"`, Close: `"`, Escapes: true, Continues: true},
-			{Open: `'`, Close: `'`, Escapes: true, Continues: true},
-			{Open: "`", Close: "`", Escapes: true, Multiline: true, Interp: interp},
-			{
-				Open: "`", Close: "`", Escapes: true, Multiline: true,
-				Raw: true, Interp: interp, Tag: "String.raw",
-			},
-			{Open: "/", Close: "/", Escapes: true, Regex: true},
-		},
-		RegexAfter: RegexContext{
-			After:      "(,=:[!&|?{};+-*%<>~^",
-			Words:      strings.Fields(regexWords),
-			ParenWords: strings.Fields(headerWords),
-		},
-	}
 }
