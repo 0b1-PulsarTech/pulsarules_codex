@@ -1,10 +1,5 @@
 package evals
 
-import (
-	"regexp"
-	"strings"
-)
-
 type Status string
 
 const (
@@ -60,28 +55,4 @@ func gradeAssertion(assertion Assertion, artifact string) AssertionResult {
 		result.Status = StatusPass
 	}
 	return result
-}
-
-func runCheck(check Check, artifact string) bool {
-	switch check.Type {
-	case CheckContains:
-		return strings.Contains(artifact, check.Pattern)
-	case CheckNotContains:
-		return !strings.Contains(artifact, check.Pattern)
-	case CheckRegexMatch:
-		return regexMatches(check.Pattern, artifact)
-	case CheckRegexAbsent:
-		return !regexMatches(check.Pattern, artifact)
-	default:
-		return false
-	}
-}
-
-func regexMatches(pattern, artifact string) bool {
-	// Compiled per call: eval data is small and grading is not a hot path.
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		return false
-	}
-	return re.MatchString(artifact)
 }

@@ -2,7 +2,6 @@ package evals
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -97,20 +96,4 @@ func validateAssertion(scenarioLabel string, assertion Assertion) []string {
 		)
 	}
 	return problems
-}
-
-func validateCheck(alabel string, check Check) []string {
-	switch check.Type {
-	case CheckContains, CheckNotContains:
-		return nil
-	case CheckRegexMatch, CheckRegexAbsent:
-		if _, err := regexp.Compile(check.Pattern); err != nil {
-			return []string{
-				fmt.Sprintf("%s has an invalid regex %q: %v", alabel, check.Pattern, err),
-			}
-		}
-		return nil
-	default:
-		return []string{fmt.Sprintf("%s has unknown check type %q", alabel, check.Type)}
-	}
 }
