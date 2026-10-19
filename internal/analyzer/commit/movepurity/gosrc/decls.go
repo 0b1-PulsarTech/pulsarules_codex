@@ -2,13 +2,14 @@ package gosrc
 
 import (
 	"go/ast"
-	"go/build/constraint"
 	"go/parser"
 	"go/token"
 	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
 )
 
 func CollectDecls(src, pkg string, set map[string]bool) {
@@ -60,35 +61,7 @@ func PackageClause(src string) (name string, isIgnored bool) {
 	if err != nil {
 		return "", false
 	}
-	return file.Name.Name, hasIgnoreConstraint(file)
-}
-
-func hasIgnoreConstraint(file *ast.File) bool {
-	for _, group := range file.Comments {
-		if group.End() > file.Package {
-			return false
-		}
-		for _, comment := range group.List {
-			if !constraint.IsGoBuild(comment.Text) && !constraint.IsPlusBuild(comment.Text) {
-				continue
-			}
-			expr, err := constraint.Parse(comment.Text)
-			if err == nil && requiresIgnore(expr) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func requiresIgnore(expr constraint.Expr) bool {
-	switch typed := expr.(type) {
-	case *constraint.TagExpr:
-		return typed.Tag == "ignore"
-	case *constraint.AndExpr:
-		return requiresIgnore(typed.X) || requiresIgnore(typed.Y)
-	}
-	return false
+	return file.Name.Name, gomod.IsBuildIgnored(file)
 }
 
 func exampleBodies(file *ast.File, tokFile *token.File) [][2]int {

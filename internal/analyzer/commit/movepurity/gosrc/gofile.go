@@ -8,6 +8,8 @@ import (
 	"go/token"
 	"strconv"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/gomod"
 )
 
 type (
@@ -51,7 +53,7 @@ func Parse(src string) (File, error) {
 		keys:       map[int]bool{},
 		docStart:   -1,
 		docEnd:     -1,
-		IsIgnored:  hasIgnoreConstraint(file),
+		IsIgnored:  gomod.IsBuildIgnored(file),
 		TopLevel:   map[string]bool{},
 		Embeds:     embedPatterns(file),
 		Imports:    importSpecs(file),

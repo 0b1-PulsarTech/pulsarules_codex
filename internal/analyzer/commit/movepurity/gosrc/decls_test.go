@@ -95,6 +95,13 @@ func TestPackageClause(t *testing.T) {
 		{"amd64 and not purego", "//go:build amd64 && !purego\n\npackage p\n", "p", false},
 		{"unrelated tag", "//go:build linux\n\npackage p\n", "p", false},
 		{"doc comment only", "// Package p does x.\npackage p\n", "p", false},
+		{
+			"go:build wins over plus build",
+			"//go:build linux\n// +build ignore\n\npackage p\n",
+			"p",
+			false,
+		},
+		{"plus build inside the package doc", "// +build ignore\npackage p\n", "p", false},
 		{"no clause", "func F() {}\n", "", false},
 		{"empty", "", "", false},
 	}
