@@ -334,7 +334,7 @@ func compositionCases(t *testing.T, idx *knowledge.Index) []compositionCase {
 
 	testCases := make([]compositionCase, 0, len(idx.Skills))
 	for _, skill := range idx.Skills {
-		sources, mergeErr := mergeSources(idx, skill)
+		sources, mergeErr := mergeSources(newBodyParser(), idx, skill)
 		if mergeErr != nil {
 			t.Fatalf("mergeSources %q: %v", skill.ID, mergeErr)
 		}

@@ -25,12 +25,13 @@ func Validate(idx *knowledge.Index, extra ...Check) Result {
 		routerPresent,
 		routerSkillIDs,
 		emojiThemeShortcodes,
+		canonicalSections,
 	}
 	var result Result
 	for _, step := range pipeline {
 		result.Errors = append(result.Errors, step(idx)...)
 	}
-	// Extra lets a caller pass a check needing unexported state (e.g. render.LintSections).
+	// Extra carries checks from packages validate must not import (registry, evals).
 	for _, step := range extra {
 		result.Errors = append(result.Errors, step(idx)...)
 	}

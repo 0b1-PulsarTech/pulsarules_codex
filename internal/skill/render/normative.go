@@ -10,7 +10,7 @@ import (
 var ErrUnknownComposition = errors.New("unknown composition")
 
 func HasNormativeSection(idx *knowledge.Index, skill knowledge.Skill) (bool, error) {
-	sources, err := mergeSources(idx, skill)
+	sources, err := mergeSources(newBodyParser(), idx, skill)
 	if err != nil {
 		return false, fmt.Errorf("skill %q: %w", skill.ID, err)
 	}

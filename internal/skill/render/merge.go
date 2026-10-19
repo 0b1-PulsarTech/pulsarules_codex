@@ -1,10 +1,7 @@
 package render
 
 import (
-	"bytes"
 	"fmt"
-	"strings"
-	"text/template"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -37,60 +34,22 @@ type mergedSection struct {
 	Items   []contribution
 }
 
-func bodySections(body string) (map[string]string, error) {
-	// Each body parses in its own namespace so bare {{define "must"}} names do not collide.
-	parsed, err := template.New("body").Funcs(funcs()).Parse(body)
-	if err != nil {
-		return nil, fmt.Errorf("parse body: %w", err)
-	}
-	sections := map[string]string{}
-	for _, canonical := range canonicalSections() {
-		if parsed.Lookup(canonical.Key) == nil {
-			continue
-		}
-		var buf bytes.Buffer
-		if execErr := parsed.ExecuteTemplate(&buf, canonical.Key, nil); execErr != nil {
-			return nil, fmt.Errorf("render section %q: %w", canonical.Key, execErr)
-		}
-		sections[canonical.Key] = strings.TrimSpace(buf.String())
-	}
-	return sections, nil
-}
-
-func mergeSources(idx *knowledge.Index, skill knowledge.Skill) ([]source, error) {
+func mergeSources(
+	parser *bodyParser, idx *knowledge.Index, skill knowledge.Skill,
+) ([]source, error) {
 	var sources []source
-	add := func(kind knowledge.Kind, entry, name string) error {
-		id := entryID(entry)
-		sections, err := bodySections(idx.Body(kind, id))
+	for entry := range composed(idx, skill.ComposeRules, skill.ComposePatterns) {
+		if !entry.Found {
+			return nil, fmt.Errorf(
+				"%w: skill %q composes unknown %s %q",
+				ErrUnknownComposition, skill.ID, entry.Label, entry.ID,
+			)
+		}
+		sections, err := parser.sections(idx.Body(entry.Kind, entry.ID))
 		if err != nil {
-			return fmt.Errorf("%s %q: %w", kind, id, err)
+			return nil, fmt.Errorf("%s %q: %w", entry.Kind, entry.ID, err)
 		}
-		sources = append(sources, source{name: name, sections: sections})
-		return nil
-	}
-	for _, entry := range skill.ComposeRules {
-		id := entryID(entry)
-		rule, ok := idx.Rule(id)
-		if !ok {
-			return nil, fmt.Errorf(
-				"%w: skill %q composes unknown rule %q", ErrUnknownComposition, skill.ID, id,
-			)
-		}
-		if err := add(knowledge.KindRule, entry, rule.Name); err != nil {
-			return nil, err
-		}
-	}
-	for _, entry := range skill.ComposePatterns {
-		id := entryID(entry)
-		pattern, ok := idx.Pattern(id)
-		if !ok {
-			return nil, fmt.Errorf(
-				"%w: skill %q composes unknown pattern %q", ErrUnknownComposition, skill.ID, id,
-			)
-		}
-		if err := add(knowledge.KindPattern, entry, pattern.Name); err != nil {
-			return nil, err
-		}
+		sources = append(sources, source{name: entry.Name, sections: sections})
 	}
 	return sources, nil
 }

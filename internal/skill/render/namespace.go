@@ -40,8 +40,8 @@ func emojiAnchorsText() (string, error) {
 	return strings.Join(areas, ", "), nil
 }
 
-func buildNamespace(templates fs.FS) (*template.Template, error) {
-	base := template.New("base").Option("missingkey=error").Funcs(funcs())
+func buildNamespace(templates fs.FS, funcMap template.FuncMap) (*template.Template, error) {
+	base := template.New("base").Option("missingkey=error").Funcs(funcMap)
 	if _, err := base.ParseFS(templates, "skills/parts.tmpl"); err != nil {
 		return nil, fmt.Errorf("parse parts.tmpl: %w", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -26,19 +27,10 @@ func (renderer *Renderer) composeWorkflows(
 
 func composeReferences(idx *knowledge.Index, skill knowledge.Skill) ([]referenceDoc, error) {
 	var ids []string
-	seen := map[string]bool{}
-	for _, entry := range skill.ComposeRules {
-		id := entryID(entry)
-		if rule, ok := idx.Rule(id); ok {
-			ids = appendUnseen(ids, seen, rule.References)
-		}
+	for entry := range composed(idx, skill.ComposeRules, skill.ComposePatterns) {
+		ids = append(ids, entry.References...)
 	}
-	for _, entry := range skill.ComposePatterns {
-		id := entryID(entry)
-		if pattern, ok := idx.Pattern(id); ok {
-			ids = appendUnseen(ids, seen, pattern.References)
-		}
-	}
+	ids = ordered.Dedupe(ids)
 	docs := make([]referenceDoc, 0, len(ids))
 	for _, id := range ids {
 		reference, ok := idx.Reference(id)
@@ -50,16 +42,6 @@ func composeReferences(idx *knowledge.Index, skill knowledge.Skill) ([]reference
 		})
 	}
 	return docs, nil
-}
-
-func appendUnseen(ids []string, seen map[string]bool, add []string) []string {
-	for _, id := range add {
-		if !seen[id] {
-			seen[id] = true
-			ids = append(ids, id)
-		}
-	}
-	return ids
 }
 
 func bodyWithoutH1(body string) string {

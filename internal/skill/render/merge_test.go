@@ -8,7 +8,7 @@ func TestBodySections(t *testing.T) {
 	body := "preamble text\n" +
 		"{{define \"must\"}}\nMUST BODY\n{{end}}\n" +
 		"{{define \"forbidden\"}}\nFORBIDDEN BODY\n{{end}}"
-	sections, err := bodySections(body)
+	sections, err := newBodyParser().sections(body)
 	if err != nil {
 		t.Fatalf("bodySections: %v", err)
 	}

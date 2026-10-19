@@ -6,19 +6,22 @@ import (
 	"io/fs"
 	"text/template"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 type Renderer struct {
-	base *template.Template
+	base   *template.Template
+	parser *bodyParser
 }
 
 func NewRenderer(templates fs.FS) (*Renderer, error) {
-	base, err := buildNamespace(templates)
+	parser := newBodyParser()
+	base, err := buildNamespace(templates, parser.funcs)
 	if err != nil {
 		return nil, err
 	}
-	return &Renderer{base: base}, nil
+	return &Renderer{base: base, parser: parser}, nil
 }
 
 func (renderer *Renderer) renderBody(idx *knowledge.Index, skill knowledge.Skill) (string, error) {
@@ -34,7 +37,7 @@ func (renderer *Renderer) renderCursorRule(
 func (renderer *Renderer) renderSkill(
 	idx *knowledge.Index, skill knowledge.Skill, tmplName string,
 ) (string, error) {
-	sidecar, err := renderSidecar(idx.Body(knowledge.KindSkill, skill.ID))
+	sidecar, err := renderer.parser.sidecar(idx.Body(knowledge.KindSkill, skill.ID))
 	if err != nil {
 		return "", fmt.Errorf("skill %q sidecar: %w", skill.ID, err)
 	}
@@ -45,7 +48,7 @@ func (renderer *Renderer) renderSkill(
 		Sidecar:       sidecar,
 		Linters:       composedLinters(idx, skill),
 	}
-	sources, err := mergeSources(idx, skill)
+	sources, err := mergeSources(renderer.parser, idx, skill)
 	if err != nil {
 		return "", err
 	}
@@ -97,29 +100,22 @@ func (renderer *Renderer) RenderWorkflow(
 		Steps: wf.Steps,
 		Body:  idx.Body(knowledge.KindWorkflow, wf.ID),
 	}
-	for _, entry := range wf.ComposesRules {
-		id := entryID(entry)
-		rule, ok := idx.Rule(id)
-		if !ok {
-			return "", fmt.Errorf("workflow %q: composed rule %q not found", wf.ID, id)
+	for entry := range composed(idx, wf.ComposesRules, wf.ComposesPatterns) {
+		if !entry.Found {
+			return "", fmt.Errorf(
+				"workflow %q: composed %s %q not found", wf.ID, entry.Label, entry.ID,
+			)
 		}
-		body, bodyErr := wholeBody(idx.Body(knowledge.KindRule, id))
+		body, bodyErr := renderer.parser.whole(idx.Body(entry.Kind, entry.ID))
 		if bodyErr != nil {
 			return "", fmt.Errorf("workflow %q: %w", wf.ID, bodyErr)
 		}
-		doc.Rules = append(doc.Rules, ref{Name: rule.Name, Body: bodyWithoutH1(body)})
-	}
-	for _, entry := range wf.ComposesPatterns {
-		id := entryID(entry)
-		pat, ok := idx.Pattern(id)
-		if !ok {
-			return "", fmt.Errorf("workflow %q: composed pattern %q not found", wf.ID, id)
+		item := ref{Name: entry.Name, Body: bodyWithoutH1(body)}
+		if entry.Kind == knowledge.KindRule {
+			doc.Rules = append(doc.Rules, item)
+		} else {
+			doc.Patterns = append(doc.Patterns, item)
 		}
-		body, bodyErr := wholeBody(idx.Body(knowledge.KindPattern, id))
-		if bodyErr != nil {
-			return "", fmt.Errorf("workflow %q: %w", wf.ID, bodyErr)
-		}
-		doc.Patterns = append(doc.Patterns, ref{Name: pat.Name, Body: bodyWithoutH1(body)})
 	}
 	var buf bytes.Buffer
 	if err := renderer.base.ExecuteTemplate(&buf, "WORKFLOW.md.tmpl", doc); err != nil {
@@ -130,13 +126,9 @@ func (renderer *Renderer) RenderWorkflow(
 
 func composedLinters(idx *knowledge.Index, skill knowledge.Skill) []string {
 	var linters []string
-	seen := map[string]bool{}
-	for _, entry := range skill.ComposeRules {
-		id := entryID(entry)
-		// Two composed rules commonly name the same linter, so appendUnseen de-duplicates.
-		if rule, ok := idx.Rule(id); ok {
-			linters = appendUnseen(linters, seen, rule.Linters)
-		}
+	for entry := range composed(idx, skill.ComposeRules, nil) {
+		linters = append(linters, entry.Linters...)
 	}
-	return linters
+	// Two composed rules commonly name the same linter.
+	return ordered.Dedupe(linters)
 }
