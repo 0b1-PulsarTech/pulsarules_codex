@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -14,8 +15,56 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
+
+func newTestCollaborators(tb testing.TB) installCollaborators {
+	tb.Helper()
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		tb.Fatalf("DoInjections: %v", err)
+	}
+	deps, err := resolveInstallCollaborators(inj)
+	if err != nil {
+		tb.Fatalf("resolveInstallCollaborators: %v", err)
+	}
+	return deps
+}
+
+//nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
+func TestNewTargetContext_LayoutThenSkillsShareOneReader(t *testing.T) {
+	deps := newTestCollaborators(t)
+	catalog := deps.idx.SkillsOrdered()
+	opts := &version.Options{Interactive: true, Languages: "go", NoMCP: true}
+	cfg := installConfig{absBase: t.TempDir()}
+	var prompts strings.Builder
+	console := newPrompter(strings.NewReader("monorepo\n1,3\n"), &prompts)
+	console.isTerminal = true
+
+	var ctx host.Context
+	var err error
+	stdout, _ := captureStreams(t, func() {
+		ctx, err = newTargetContext(opts, cfg, deps, console)
+	})
+	if err != nil {
+		t.Fatalf("newTargetContext: %v", err)
+	}
+	if !strings.Contains(stdout, `applied layout profile "monorepo"`) {
+		t.Errorf("stdout = %q, want the monorepo layout applied", stdout)
+	}
+	for _, picked := range []knowledge.Skill{catalog[0], catalog[2]} {
+		if !slices.Contains(ctx.IDs, picked.ID) {
+			t.Errorf("ids = %v, want picked skill %q", ctx.IDs, picked.ID)
+		}
+	}
+	if !strings.Contains(prompts.String(), "layout> ") ||
+		!strings.Contains(prompts.String(), "skills> ") {
+		t.Errorf("prompts = %q, want both questions on the prompter output", prompts.String())
+	}
+}
 
 //nolint:paralleltest // stubGoplsSoClaudeMCPIsWired needs t.Setenv, which bars t.Parallel.
 func TestRun_MalformedMCPJSON_ErrorNotDoubled(t *testing.T) {

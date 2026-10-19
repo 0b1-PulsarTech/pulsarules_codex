@@ -3,12 +3,9 @@ package install
 import (
 	"fmt"
 	"io"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
-
-	"golang.org/x/term"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
@@ -19,7 +16,7 @@ import (
 func resolveSelection(
 	opts *version.Options,
 	idx *knowledge.Index,
-	prompter *Prompter,
+	console *prompter,
 ) (selection.Choice, error) {
 	switch {
 	case opts.RouterOnly:
@@ -28,8 +25,8 @@ func resolveSelection(
 		return selection.Choice{All: true}, nil
 	case opts.Skills != "":
 		return selection.Choice{IDs: splitCSV(opts.Skills)}, nil
-	case term.IsTerminal(int(os.Stdin.Fd())):
-		return promptSkillSelection(idx, prompter)
+	case console.isTerminal:
+		return promptSkillSelection(idx, console)
 	// A non-TTY fails: prompting would hang CI, and installing everything would
 	// ignore the caller's choice.
 	default:
@@ -61,10 +58,10 @@ func printSkillCatalog(out io.Writer, catalog []knowledge.Skill) {
 	}
 }
 
-func promptSkillSelection(idx *knowledge.Index, prompter *Prompter) (selection.Choice, error) {
+func promptSkillSelection(idx *knowledge.Index, console *prompter) (selection.Choice, error) {
 	catalog := idx.SkillsOrdered()
-	printSkillCatalog(prompter.out, catalog)
-	line := prompter.Ask("skills> (e.g. 1,4,7-9 | a = all | Enter = mandatory-only): ")
+	printSkillCatalog(console.out, catalog)
+	line := console.ask("skills> (e.g. 1,4,7-9 | a = all | Enter = mandatory-only): ")
 
 	picked, err := parseSkillSelection(line, len(catalog))
 	if err != nil {

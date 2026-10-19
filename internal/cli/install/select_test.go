@@ -95,3 +95,61 @@ func TestPrintSkillCatalog(t *testing.T) {
 		})
 	}
 }
+
+func TestPromptSkillSelection(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		input    string
+		wantPos  []int
+		wantAll  bool
+		wantFail bool
+	}{
+		{name: "picks by index", input: "1,3\n", wantPos: []int{0, 2}},
+		{name: "enter picks nothing", input: "\n"},
+		{name: "a picks every skill", input: "a\n", wantAll: true},
+		{name: "out of range fails", input: "9999\n", wantFail: true},
+		{name: "garbage fails", input: "x\n", wantFail: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			idx := newTestCollaborators(t).idx
+			catalog := idx.SkillsOrdered()
+			var out strings.Builder
+			console := newPrompter(strings.NewReader(testCase.input), &out)
+			console.isTerminal = true
+			got, err := promptSkillSelection(idx, console)
+			if testCase.wantFail {
+				if err == nil {
+					t.Fatalf("expected an error, got %+v", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("promptSkillSelection: %v", err)
+			}
+			want := make([]string, 0, len(catalog))
+			for _, pos := range testCase.wantPos {
+				want = append(want, catalog[pos].ID)
+			}
+			if testCase.wantAll {
+				for _, skill := range catalog {
+					want = append(want, skill.ID)
+				}
+			}
+			if !slices.Equal(got.IDs, want) {
+				t.Errorf("ids = %v, want %v", got.IDs, want)
+			}
+			for _, wantText := range []string{
+				"Select skills to install", catalog[0].ID, "skills> ",
+			} {
+				if !strings.Contains(out.String(), wantText) {
+					t.Errorf("output lacks %q", wantText)
+				}
+			}
+		})
+	}
+}

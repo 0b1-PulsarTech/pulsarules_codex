@@ -12,11 +12,11 @@ import (
 func applySelectedLayout(
 	opts *version.Options,
 	idx *knowledge.Index,
-	prompter *Prompter,
+	console *prompter,
 ) error {
 	layout := opts.Layout
 	if opts.Interactive && layout == "" {
-		layout = promptLayout(idx, prompter)
+		layout = promptLayout(idx, console)
 	}
 	if layout == "" {
 		return nil
@@ -28,12 +28,12 @@ func applySelectedLayout(
 	return nil
 }
 
-func promptLayout(idx *knowledge.Index, prompter *Prompter) string {
+func promptLayout(idx *knowledge.Index, console *prompter) string {
 	if len(idx.Profiles) == 0 {
 		return ""
 	}
-	printProfiles(prompter.out, idx.Profiles)
-	return prompter.Ask("layout> ")
+	printProfiles(console.out, idx.Profiles)
+	return console.ask("layout> ")
 }
 
 func printProfiles(out io.Writer, profiles []knowledge.Profile) {

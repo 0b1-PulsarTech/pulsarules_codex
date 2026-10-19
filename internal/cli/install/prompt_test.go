@@ -24,8 +24,8 @@ func TestPrompter_Ask(t *testing.T) {
 			t.Parallel()
 
 			var out strings.Builder
-			prompter := NewPrompter(bytes.NewReader([]byte(testCase.input)), &out)
-			if got := prompter.Ask("skills> "); got != testCase.want {
+			console := newPrompter(bytes.NewReader([]byte(testCase.input)), &out)
+			if got := console.ask("skills> "); got != testCase.want {
 				t.Errorf("answer = %q, want %q", got, testCase.want)
 			}
 			if out.String() != "skills> " {
@@ -39,11 +39,11 @@ func TestPrompter_AskSharesBuffer(t *testing.T) {
 	t.Parallel()
 
 	var out strings.Builder
-	prompter := NewPrompter(strings.NewReader("first\nsecond\n"), &out)
-	if got := prompter.Ask("a> "); got != "first" {
+	console := newPrompter(strings.NewReader("first\nsecond\n"), &out)
+	if got := console.ask("a> "); got != "first" {
 		t.Fatalf("first answer = %q", got)
 	}
-	if got := prompter.Ask("b> "); got != "second" {
+	if got := console.ask("b> "); got != "second" {
 		t.Fatalf("second answer = %q", got)
 	}
 }

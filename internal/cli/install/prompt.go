@@ -7,17 +7,18 @@ import (
 	"strings"
 )
 
-type Prompter struct {
-	in  *bufio.Reader
-	out io.Writer
+type prompter struct {
+	in         *bufio.Reader
+	out        io.Writer
+	isTerminal bool
 }
 
-func NewPrompter(in io.Reader, out io.Writer) *Prompter {
-	return &Prompter{in: bufio.NewReader(in), out: out}
+func newPrompter(in io.Reader, out io.Writer) *prompter {
+	return &prompter{in: bufio.NewReader(in), out: out}
 }
 
-func (prompter *Prompter) Ask(question string) string {
-	_, _ = fmt.Fprint(prompter.out, question)
-	line, _ := prompter.in.ReadString('\n')
+func (console *prompter) ask(question string) string {
+	_, _ = fmt.Fprint(console.out, question)
+	line, _ := console.in.ReadString('\n')
 	return strings.TrimSpace(line)
 }

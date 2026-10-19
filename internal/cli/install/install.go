@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/wrapped-owls/goremy-di/remy"
+	"golang.org/x/term"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
@@ -26,12 +27,9 @@ func Run(inj remy.Injector, opts *version.Options) error {
 		return printHooksBlock()
 	}
 
-	prompter := NewPrompter(os.Stdin, os.Stdout)
-	if err = applySelectedLayout(opts, deps.idx, prompter); err != nil {
-		return fmt.Errorf("apply layout: %w", err)
-	}
-
-	ctx, err := newTargetContext(opts, cfg, deps, prompter)
+	console := newPrompter(os.Stdin, os.Stdout)
+	console.isTerminal = term.IsTerminal(int(os.Stdin.Fd()))
+	ctx, err := newTargetContext(opts, cfg, deps, console)
 	if err != nil {
 		return err
 	}
@@ -65,14 +63,17 @@ func newTargetContext(
 	opts *version.Options,
 	cfg installConfig,
 	deps installCollaborators,
-	prompter *Prompter,
+	console *prompter,
 ) (host.Context, error) {
+	if err := applySelectedLayout(opts, deps.idx, console); err != nil {
+		return host.Context{}, fmt.Errorf("apply layout: %w", err)
+	}
 	languages, err := resolveLanguages(cfg.absBase, opts.Languages)
 	if err != nil {
 		return host.Context{}, err
 	}
 
-	selection, err := resolveSelection(opts, deps.idx, prompter)
+	selection, err := resolveSelection(opts, deps.idx, console)
 	if err != nil {
 		return host.Context{}, err
 	}

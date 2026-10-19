@@ -41,3 +41,51 @@ func TestPrintProfiles(t *testing.T) {
 		})
 	}
 }
+
+func TestPromptLayout(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		input        string
+		noProfiles   bool
+		want         string
+		wantPrompted bool
+	}{
+		{name: "picks a profile", input: "monorepo\n", want: "monorepo", wantPrompted: true},
+		{name: "enter skips", input: "\n", want: "", wantPrompted: true},
+		{name: "eof skips", input: "", want: "", wantPrompted: true},
+		{name: "no profiles never prompts", input: "monorepo\n", noProfiles: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			idx := newTestCollaborators(t).idx
+			if testCase.noProfiles {
+				idx.Profiles = nil
+			}
+			var out strings.Builder
+			console := newPrompter(strings.NewReader(testCase.input), &out)
+			if got := promptLayout(idx, console); got != testCase.want {
+				t.Errorf("layout = %q, want %q", got, testCase.want)
+			}
+			if prompted := out.Len() > 0; prompted != testCase.wantPrompted {
+				t.Fatalf(
+					"prompted = %v, want %v (out %q)",
+					prompted,
+					testCase.wantPrompted,
+					out.String(),
+				)
+			}
+			if !testCase.wantPrompted {
+				return
+			}
+			for _, want := range []string{"Available layout profiles", idx.Profiles[0].ID, "layout> "} {
+				if !strings.Contains(out.String(), want) {
+					t.Errorf("output %q lacks %q", out.String(), want)
+				}
+			}
+		})
+	}
+}
