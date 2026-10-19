@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -75,15 +74,7 @@ func (analyzer *Analyzer) unavailable(ctx *pass.Context) []finding.Finding {
 func tidy(reason string) string {
 	const maxReasonBytes = 240
 
-	line := printable.Line(strings.Join(strings.Fields(reason), " "))
-	if len(line) <= maxReasonBytes {
-		return line
-	}
-	cut := maxReasonBytes
-	for cut > 0 && !utf8.RuneStart(line[cut]) {
-		cut--
-	}
-	return line[:cut]
+	return printable.Head(strings.Join(strings.Fields(reason), " "), maxReasonBytes)
 }
 
 func reasonLine(reason string) int {

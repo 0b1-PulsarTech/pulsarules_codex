@@ -2,15 +2,17 @@ package golangcilint
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
+
+const maxMessageBytes = 2048
 
 func unavailable(stderr string) bool {
 	const lockContention = "parallel golangci-lint is running"
@@ -59,28 +61,34 @@ func (runner *Runner) parseOutput(result process.Result, cmdErr error) []finding
 }
 
 func (runner *Runner) exitFailure(result process.Result, cmdErr error) []finding.Finding {
-	if cmdErr == nil {
+	const (
+		issuesFound    = 1
+		errorWasLogged = 7 // pkg/exitcodes: "ran fine, found something", not a failure
+	)
+	outcome, _ := command.Classify(cmdErr, []int{issuesFound, errorWasLogged})
+	switch outcome {
+	case command.Completed, command.Reported:
 		return nil
-	}
-	var exitErr *exec.ExitError
-	if !errors.As(cmdErr, &exitErr) {
-		// A non-ExitError means the command never produced stdout to parse;
-		// report the real cause, not a JSON parse failure on empty output.
-		return []finding.Finding{
-			runner.failure.New(fmt.Sprintf("golangci-lint failed: %s", cmdErr)),
+	case command.Exited:
+		if unavailable(result.Stderr) {
+			return []finding.Finding{runner.warning.New(
+				"golangci-lint was busy elsewhere; its checks did not run",
+			)}
 		}
-	}
-	if isLintExit(exitErr.ExitCode()) {
-		return nil
-	}
-	if unavailable(result.Stderr) {
-		return []finding.Finding{runner.warning.New(
-			"golangci-lint was busy elsewhere; its checks did not run",
+		return []finding.Finding{runner.failure.New(
+			"golangci-lint failed: " + printable.Tail(result.Stderr, maxMessageBytes),
+		)}
+	case command.OutputExceeded:
+		return []finding.Finding{runner.failure.New(
+			"golangci-lint failed: output exceeded its size limit: " +
+				printable.Tail(result.Stderr, maxMessageBytes),
 		)}
 	}
-	return []finding.Finding{
-		runner.failure.New(fmt.Sprintf("golangci-lint failed: %s", result.Stderr)),
-	}
+	// Otherwise the command never produced stdout to parse; report the real
+	// cause, not a JSON parse failure on empty output.
+	return []finding.Finding{runner.failure.New(
+		"golangci-lint failed: " + printable.Head(cmdErr.Error(), maxMessageBytes),
+	)}
 }
 
 func issueFindings(issues []lintIssue) (findings []finding.Finding, escaped int) {
@@ -115,15 +123,6 @@ func (runner *Runner) escapedWarning(escaped int) finding.Finding {
 
 func escapesProject(path string) bool {
 	// A path that climbs out of cmd.Dir comes from a stale cache keyed to a missing directory.
-	return strings.HasPrefix(filepath.ToSlash(filepath.Clean(path)), "../")
-}
-
-func isLintExit(code int) bool {
-	const (
-		lintExitIssuesFound    = 1
-		lintExitErrorWasLogged = 7
-	)
-	// golangci-lint's pkg/exitcodes reserves 1 (issues found) and 7 (issues surfaced
-	// through its own error log) for "ran fine, found something", not a failure.
-	return code == lintExitIssuesFound || code == lintExitErrorWasLogged
+	_, inside := command.RelativeTo(".", ".", path)
+	return !filepath.IsAbs(path) && !inside
 }

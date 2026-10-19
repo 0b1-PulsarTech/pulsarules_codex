@@ -196,6 +196,16 @@ func exitCases() []runCase {
 			[]finding.Severity{finding.SeverityError},
 			"sh exited with code 64: " + strings.Repeat("e", 4035) + "LAST",
 		},
+		{
+			"output over the cap",
+			entryRunning(func(*testing.T, string) string {
+				return "head -c 34000000 /dev/zero | tr '\\0' e\n"
+			}),
+			[]string{entryID + "/failed"},
+			[]string{""},
+			[]finding.Severity{finding.SeverityError},
+			fmt.Sprintf("output exceeded %d bytes", MaxOutputBytes),
+		},
 	}
 }
 
@@ -349,6 +359,16 @@ func TestClassify(t *testing.T) {
 				t.Errorf("Message = %q, want %q", got.Message, testCase.wantText)
 			}
 		})
+	}
+}
+
+func TestExecuteBoundsOutput(t *testing.T) {
+	t.Parallel()
+
+	script := writeScript(t, "head -c 34000000 /dev/zero\n")
+	_, err := Execute(process.Command{Name: script[0], Args: script[1:]})
+	if !errors.Is(err, process.ErrOutputExceeded) {
+		t.Fatalf("err = %v, want ErrOutputExceeded", err)
 	}
 }
 

@@ -20,7 +20,7 @@ func (rep reports) named(sub string, severity finding.Severity) finding.Reporter
 
 func (rep reports) plain(sub string, severity finding.Severity, message string) finding.Finding {
 	room := lineRoom(rep.id + "/" + sub)
-	return rep.named(sub, severity).New(fitHead(message, room))
+	return rep.named(sub, severity).New(printable.Head(message, room))
 }
 
 func (rep reports) config(message string) finding.Finding {
@@ -49,7 +49,7 @@ func (rep reports) timeout(name string) finding.Finding {
 func (rep reports) failed(reason, stderr string) finding.Finding {
 	const maxReasonBytes = 512
 
-	reason = fitHead(reason, maxReasonBytes)
+	reason = printable.Head(reason, maxReasonBytes)
 	message := reason
 	room := lineRoom(rep.id+"/failed") - len(printable.Line(reason)) - len(": ")
 	if tail := stderrTail(stderr, room); tail != "" {
@@ -75,8 +75,8 @@ func (rep reports) diagnostic(item diagnostic, rel string) finding.Finding {
 	}
 	room = lineRoom(rep.id+"/"+code) - room - len(suffix)
 	finding := rep.named(code, item.severity).At(
-		rel, line, fitHead(item.message, room)+suffix,
-		fitHead(item.suggestion, maxLineBytes-arrowFrameBytes),
+		rel, line, printable.Head(item.message, room)+suffix,
+		printable.Head(item.suggestion, maxLineBytes-arrowFrameBytes),
 	)
 	finding.RuleID = rep.rule
 	return finding
@@ -93,7 +93,7 @@ func validCode(code string) bool {
 
 func stderrTail(stderr string, limit int) string {
 	text := strings.Map(shown, strings.ToValidUTF8(strings.TrimSpace(stderr), "?"))
-	return fitTail(text, limit)
+	return printable.Tail(text, limit)
 }
 
 func shown(char rune) rune {
@@ -103,7 +103,7 @@ func shown(char rune) rune {
 	return char
 }
 
-func relativeTo(root, base, file string) (string, bool) {
+func RelativeTo(root, base, file string) (string, bool) {
 	if !filepath.IsAbs(file) {
 		file = filepath.Join(base, file)
 	}

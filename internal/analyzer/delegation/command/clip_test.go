@@ -2,7 +2,6 @@ package command
 
 import (
 	"math"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -14,57 +13,6 @@ import (
 )
 
 const wantFloor = 4000
-
-func TestFit(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name   string
-		fit    func(string, int) string
-		text   string
-		limit  int
-		want   string
-		stable bool
-	}{
-		{"fits raw", fitHead, "a\nb", 4, "a\nb", false},
-		{"head", fitHead, "abcd", 3, "abc", true},
-		{"tail", fitTail, "abcd", 3, "bcd", true},
-		{"head backs off a rune", fitHead, "ab\u00e9", 3, "ab", true},
-		{"tail skips a rune fragment", fitTail, "\u00e9bc", 3, "bc", true},
-		{"zero limit head", fitHead, "abc", 0, "", true},
-		{"negative limit tail", fitTail, "abc", -5, "", true},
-		{"invalid bytes head", fitHead, "\x80\x80\x80\x80", 8, `\x80\x80`, true},
-		{"invalid bytes tail", fitTail, "\x80\x80\x80\x80", 8, `\x80\x80`, true},
-		{"escaped size counts", fitHead, "a\nb", 3, `a\n`, true},
-		{"tail of escaped", fitTail, "a\nb", 3, `\nb`, true},
-		{"nul grows four times", fitHead, "\x00\x00", 4, `\x00`, true},
-		{"nul head stops before a cut escape", fitHead, many("\x00", 5), 9, `\x00\x00`, true},
-		{"nul tail stops before a cut escape", fitTail, many("\x00", 5), 9, `\x00\x00`, true},
-		{"one zero width escape of the tail", fitTail, many("\u200b", 10), 8, `\u200b`, true},
-		{"one zero width escape of the head", fitHead, many("\u200b", 10), 8, `\u200b`, true},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := testCase.fit(testCase.text, testCase.limit)
-			if got != testCase.want {
-				t.Errorf("fit = %q, want %q", got, testCase.want)
-			}
-			if testCase.stable && printable.Line(got) != got {
-				t.Errorf("fit result %q changes under a second escape", got)
-			}
-			if !wholeEscapes(got) {
-				t.Errorf("fit result %q holds a split escape", got)
-			}
-		})
-	}
-}
-
-func wholeEscapes(text string) bool {
-	whole := regexp.MustCompile(`\\(x[0-9a-f]{2}|u[0-9a-f]{4}|U[0-9a-f]{8}|[abfnrtv"\\])`)
-	return !strings.Contains(whole.ReplaceAllString(text, ""), `\`) && utf8.ValidString(text)
-}
 
 func renderedLine(finding finding.Finding) string {
 	line := "  [warning] " + printable.Line(
@@ -306,41 +254,6 @@ func checkFields(t *testing.T, testCase lineCase) {
 	}
 }
 
-func TestTailStartVisitsOnlyTheTail(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name        string
-		text        string
-		limit       int
-		wantStart   int
-		wantVisited int
-	}{
-		{"ascii", strings.Repeat("x", 1<<20), 100, 1<<20 - 100, 101},
-		{"two byte runes", strings.Repeat("\u00e9", 1<<19), 100, 1<<20 - 100, 51},
-		{"limit zero", strings.Repeat("x", 1<<20), 0, 1 << 20, 1},
-		{"limit above the text", "short", 100, 0, 5},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			visited := 0
-			size := func(unit string) int {
-				visited++
-				return len(unit)
-			}
-
-			if got := tailStart(testCase.text, testCase.limit, size); got != testCase.wantStart {
-				t.Errorf("tailStart = %d, want %d", got, testCase.wantStart)
-			}
-			if visited > testCase.wantVisited {
-				t.Errorf("sized %d units, want at most %d", visited, testCase.wantVisited)
-			}
-		})
-	}
-}
-
 func TestClipSizing(t *testing.T) {
 	t.Parallel()
 
@@ -357,7 +270,7 @@ func TestClipSizing(t *testing.T) {
 		},
 		{
 			"head clip counts the escaped size",
-			func() string { return fitHead(strings.Repeat(`\`, 10), 5) },
+			func() string { return printable.Head(strings.Repeat(`\`, 10), 5) },
 			strings.Repeat(`\`, 5),
 		},
 	}

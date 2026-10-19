@@ -1,12 +1,12 @@
 package golangcilint
 
 import (
-	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
 	"time"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
@@ -85,7 +85,7 @@ func (runner *Runner) runSingle(projectDir, configPath string) []finding.Finding
 }
 
 func (runner *Runner) run(projectDir string, args []string) (process.Result, error) {
-	result, err := process.Run(context.Background(), process.Command{
+	result, err := command.Execute(process.Command{
 		Name:    runner.path,
 		Args:    args,
 		Dir:     projectDir,

@@ -117,7 +117,7 @@ func generatedTarget(where scope, item diagnostic) (string, bool) {
 	default:
 		return "", false
 	}
-	if rel, inside := relativeTo(where.root, where.dir, item.file); inside {
+	if rel, inside := RelativeTo(where.root, where.dir, item.file); inside {
 		if target := dartgen.Resolve(rel, uri); target != "" {
 			return target, true
 		}

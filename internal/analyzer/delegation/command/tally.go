@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 type drops struct {
@@ -56,7 +57,7 @@ func (rep reports) dropped(lost drops) finding.Finding {
 		code = "diagnostic"
 	}
 	file := lost.first.file
-	file = file[:headEnd(file, maxPathBytes, quotedSize)]
+	file = file[:printable.HeadEnd(file, maxPathBytes, quotedSize)]
 	first := strconv.Quote(file)
 	if lost.first.line > 0 {
 		first += ":" + strconv.Itoa(lost.first.line)

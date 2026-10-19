@@ -6,6 +6,46 @@ import (
 	"unicode/utf8"
 )
 
+func HeadEnd(text string, limit int, size func(string) int) int {
+	used := 0
+	pos := 0
+	for pos < len(text) {
+		_, width := utf8.DecodeRuneInString(text[pos:])
+		used += size(text[pos : pos+width])
+		if used > limit {
+			break
+		}
+		pos += width
+	}
+	return pos
+}
+
+func lineSize(unit string) int { return len(Line(unit)) }
+
+func Head(text string, limit int) string {
+	if lineSize(text) <= limit {
+		return text
+	}
+	return Line(text[:HeadEnd(text, max(limit, 0), lineSize)])
+}
+
+func Tail(text string, limit int) string {
+	if lineSize(text) <= limit {
+		return text
+	}
+	used := 0
+	pos := len(text)
+	for pos > 0 {
+		_, width := utf8.DecodeLastRuneInString(text[:pos])
+		used += lineSize(text[pos-width : pos])
+		if used > max(limit, 0) {
+			break
+		}
+		pos -= width
+	}
+	return Line(text[pos:])
+}
+
 const Ellipsis = "..."
 
 type edge int

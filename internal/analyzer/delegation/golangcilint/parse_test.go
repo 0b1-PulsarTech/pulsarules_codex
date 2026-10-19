@@ -3,6 +3,7 @@ package golangcilint
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os/exec"
 	"strings"
 	"testing"
@@ -121,6 +122,34 @@ func TestParseOutput_Results(t *testing.T) {
 					t.Errorf("severity[%d] = %v, want %v",
 						idx, finding.Severity, testCase.wantSeverity[idx])
 				}
+			}
+		})
+	}
+}
+
+func TestParseOutput_BoundsMessage(t *testing.T) {
+	t.Parallel()
+
+	huge := strings.Repeat("e", 1<<20)
+	testCases := []struct {
+		name   string
+		cmdErr error
+	}{
+		{"exit status stderr", failedExit("3")},
+		{"never ran", errors.New(huge)},
+		{"output exceeded", fmt.Errorf("limit: %w", process.ErrOutputExceeded)},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := NewRunner("").parseOutput(process.Result{Stderr: huge}, testCase.cmdErr)
+			if len(got) != 1 {
+				t.Fatalf("got %d findings, want 1", len(got))
+			}
+			const frame = len("golangci-lint failed: output exceeded its size limit: ")
+			if limit := maxMessageBytes + frame; len(got[0].Message) > limit {
+				t.Errorf("message is %d bytes, want at most %d", len(got[0].Message), limit)
 			}
 		})
 	}

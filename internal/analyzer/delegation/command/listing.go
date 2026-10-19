@@ -70,10 +70,10 @@ func (files listing) escapesToListed(root, dir, full string) bool {
 	if err != nil {
 		return false
 	}
-	if _, within := relativeTo(dir, dir, target); within {
+	if _, within := RelativeTo(dir, dir, target); within {
 		return false
 	}
-	rel, inside := relativeTo(root, root, target)
+	rel, inside := RelativeTo(root, root, target)
 	_, listed := files[rel]
 	return inside && listed
 }

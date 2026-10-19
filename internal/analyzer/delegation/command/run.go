@@ -39,16 +39,13 @@ func (analyzer *Analyzer) runEntry(
 	if _, err := exec.LookPath(resolveInDir(dir, name)); err != nil {
 		return []finding.Finding{rep.unavailable(name)}
 	}
-	result, err := process.Run(context.Background(), process.Command{
+	result, err := Execute(process.Command{
 		Name: name,
 		Args: entry.Run[1:],
 		Dir:  dir,
 		// A cold dart analyze of an 860-file Flutter app takes about 6s; five minutes leaves
 		// room for a far larger project or a slow CI disk without hanging a hook forever.
 		Timeout: commandTimeout,
-		// Per stream. A real run is 0.3 MB; a project with no pub get reported 24937 diagnostics
-		// in 13.8 MB, so 32 MiB admits that case and still bounds a runaway tool.
-		MaxOutput: MaxOutputBytes,
 	})
 	inv := invocation{rep: rep, kind: kind, name: name}
 	failure, reported := classify(inv, err, result)
@@ -65,24 +62,55 @@ type invocation struct {
 	name string
 }
 
-func classify(inv invocation, err error, result process.Result) (*finding.Finding, int) {
+type Outcome int
+
+const (
+	Completed Outcome = iota
+	OutputExceeded
+	TimedOut
+	Reported
+	Exited
+	NotRun
+)
+
+func Classify(err error, reportingExits []int) (Outcome, int) {
 	if err == nil {
-		return nil, 0
+		return Completed, 0
 	}
-	var failure finding.Finding
 	var exitErr *exec.ExitError
 	switch {
 	case errors.Is(err, process.ErrOutputExceeded):
+		return OutputExceeded, 0
+	case errors.Is(err, context.DeadlineExceeded):
+		return TimedOut, 0
+	case errors.As(err, &exitErr) && slices.Contains(reportingExits, exitErr.ExitCode()):
+		return Reported, exitErr.ExitCode()
+	case exitErr != nil:
+		return Exited, exitErr.ExitCode()
+	}
+	return NotRun, 0
+}
+
+func Execute(cmd process.Command) (process.Result, error) {
+	cmd.MaxOutput = MaxOutputBytes // per stream; a no-pub-get dart run reported 13.8 MB
+	return process.Run(context.Background(), cmd)
+}
+
+func classify(inv invocation, err error, result process.Result) (*finding.Finding, int) {
+	outcome, code := Classify(err, inv.kind.reportingExits)
+	var failure finding.Finding
+	switch outcome {
+	case Completed, Reported:
+		return nil, code
+	case OutputExceeded:
 		failure = inv.rep.failed(
 			fmt.Sprintf("output exceeded %d bytes", MaxOutputBytes), result.Stderr,
 		)
-	case errors.Is(err, context.DeadlineExceeded):
+	case TimedOut:
 		failure = inv.rep.timeout(inv.name)
-	case errors.As(err, &exitErr) && slices.Contains(inv.kind.reportingExits, exitErr.ExitCode()):
-		return nil, exitErr.ExitCode()
-	case exitErr != nil:
+	case Exited:
 		failure = inv.rep.failed(
-			fmt.Sprintf("%s exited with code %d", inv.name, exitErr.ExitCode()), result.Stderr,
+			fmt.Sprintf("%s exited with code %d", inv.name, code), result.Stderr,
 		)
 	default:
 		failure = inv.rep.failed(
@@ -114,7 +142,7 @@ func (where scope) place(file string) placed {
 	if file == "" {
 		return placed{outcome: kept}
 	}
-	rel, inside := relativeTo(where.root, where.dir, file)
+	rel, inside := RelativeTo(where.root, where.dir, file)
 	if !inside {
 		return placed{outcome: dropped}
 	}

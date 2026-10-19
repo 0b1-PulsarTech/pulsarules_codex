@@ -244,27 +244,6 @@ func TestParseOutput_Raw(t *testing.T) {
 	}
 }
 
-func TestIsLintExit(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		code int
-		want bool
-	}{
-		{0, false},
-		{1, true},
-		{7, true},
-		{3, false},
-		{4, false},
-		{5, false},
-	}
-	for _, testCase := range testCases {
-		if got := isLintExit(testCase.code); got != testCase.want {
-			t.Errorf("isLintExit(%d) = %v, want %v", testCase.code, got, testCase.want)
-		}
-	}
-}
-
 func TestEscapesProject_StaleCacheEntries(t *testing.T) {
 	t.Parallel()
 
