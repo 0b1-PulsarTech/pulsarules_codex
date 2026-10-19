@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
@@ -193,12 +192,9 @@ func TestHookStop_RealGovernance(t *testing.T) {
 	initGitRepo(t, dir)
 	writeHookFile(t, dir, "violation.go", "package x\n\n// bad note \u2014 here\n")
 	var out bytes.Buffer
-	disp := hook.NewDispatcher(hook.Deps{
-		Templates: templates.New(assets), Index: index, Out: &out, ProjectDir: dir,
-		Governance: func(repo vcs.Repository, status vcs.Status) (string, int) {
-			return governChanges(repo, status, index)
-		},
-	})
+	t.Setenv("PULSARULES_PROJECT_DIR", dir)
+	t.Setenv("PULSARULES_SKILLS_DIR", "")
+	disp := newHookDispatcher(index, templates.New(assets), nil, &out)
 
 	_ = disp.Dispatch("stop", []byte(`{"session_id":"real-governance"}`))
 	for _, want := range []string{

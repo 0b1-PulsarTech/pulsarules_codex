@@ -45,22 +45,31 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 
 	payload, _ := io.ReadAll(os.Stdin)
 
-	disp := hook.NewDispatcher(hook.Deps{
+	disp := newHookDispatcher(idx, assets, logger, os.Stdout)
+
+	if dispatchErr := disp.Dispatch(opts.Mode, payload); dispatchErr != nil {
+		return fmt.Errorf("dispatch hook %q: %w", opts.Mode, dispatchErr)
+	}
+	return nil
+}
+
+func newHookDispatcher(
+	idx *knowledge.Index,
+	assets templates.Set,
+	logger *slog.Logger,
+	out io.Writer,
+) *hook.Dispatcher {
+	return hook.NewDispatcher(hook.Deps{
 		Templates:  assets,
 		Logger:     logger,
 		Index:      idx,
-		Out:        os.Stdout,
+		Out:        out,
 		ProjectDir: os.Getenv("PULSARULES_PROJECT_DIR"),
 		SkillsDir:  os.Getenv("PULSARULES_SKILLS_DIR"),
 		Governance: func(repo vcs.Repository, status vcs.Status) (string, int) {
 			return governChanges(repo, status, idx)
 		},
 	})
-
-	if dispatchErr := disp.Dispatch(opts.Mode, payload); dispatchErr != nil {
-		return fmt.Errorf("dispatch hook %q: %w", opts.Mode, dispatchErr)
-	}
-	return nil
 }
 
 func printHookError(out io.Writer, label string, err error) {
