@@ -67,11 +67,7 @@ func allowedTypes(params pass.ParamSet) []string {
 	// Gitflow prefixes are allowed by default: the check exists to stop a tool-generated
 	// name reaching a remote, not to block a project's own gitflow convention.
 	allowed := slices.Concat(commitmsg.AllowedTypes(), gitflowTypes)
-	for extra := range strings.SplitSeq(params.String("extra_types", ""), ",") {
-		if trimmed := strings.TrimSpace(extra); trimmed != "" {
-			allowed = append(allowed, trimmed)
-		}
-	}
+	allowed = append(allowed, params.Strings("extra_types", nil)...)
 	slices.Sort(allowed)
 	return slices.Compact(allowed)
 }
