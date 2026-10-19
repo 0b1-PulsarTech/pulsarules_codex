@@ -8,17 +8,19 @@ type markup struct {
 	open        []string
 	blocks      int
 	scripts     []Script
+	regions     []Region
 	hasModule   bool
 	hasInstance bool
 	dropped     bool
 	unclosed    bool
 	scanned     int
 	bounded     bool
+	plain       bool
 }
 
 func (scan *markup) run() error {
 	for scan.pos < len(scan.lower) {
-		next := strings.IndexAny(scan.lower[scan.pos:], "<{")
+		next := strings.IndexAny(scan.lower[scan.pos:], scan.openers())
 		if next < 0 {
 			scan.visit(len(scan.lower) - scan.pos)
 			return nil
@@ -34,6 +36,13 @@ func (scan *markup) run() error {
 		}
 	}
 	return nil
+}
+
+func (scan *markup) openers() string {
+	if scan.plain {
+		return "<"
+	}
+	return "<{"
 }
 
 func (scan *markup) tag() error {

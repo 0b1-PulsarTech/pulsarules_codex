@@ -1,9 +1,6 @@
 package sfc
 
-import (
-	"slices"
-	"strings"
-)
+import "strings"
 
 func (scan *markup) opening() error {
 	name := tagName(scan.lower[scan.pos+1:])
@@ -36,64 +33,12 @@ func (scan *markup) opening() error {
 	return nil
 }
 
-func (scan *markup) raw(name, attrs string) error {
-	start := scan.pos
-	stop := strings.Index(scan.lower[start:], "</"+name)
-	scan.visit(scanWidth(stop, len(scan.lower)-start))
-	record := name == "script" && scan.topLevel() && scan.wanted(attrs)
-	scan.noteDropped(name)
-	if stop < 0 {
-		scan.pos = len(scan.lower)
-		if record {
-			return errUnterminated
-		}
-		return nil
-	}
-	stop += start
-	scan.pos = stop
-	scan.skipPast(">")
-	if record {
-		scan.scripts = append(scan.scripts, Script{
-			TypeScript: isTypeScript(attrs),
-			Text:       blank(scan.text, start, stop),
-		})
-	}
-	return nil
-}
-
-func scanWidth(found, rest int) int {
-	if found < 0 {
-		return rest
-	}
-	return found
-}
-
-func (scan *markup) wanted(attrs string) bool {
-	if !isJavaScript(attrs) {
-		return false
-	}
-	if isModule(attrs) {
-		taken := scan.hasModule
-		scan.hasModule = true
-		return !taken
-	}
-	taken := scan.hasInstance
-	scan.hasInstance = true
-	return !taken
-}
-
 const (
 	textTag  = -2
 	badBrace = -3
 )
 
 func isRawElement(name string) bool { return name == "script" || name == "style" }
-
-func (scan *markup) noteDropped(name string) {
-	if name == "script" && !scan.topLevel() && !slices.Contains(scan.open, "svelte:head") {
-		scan.dropped = true
-	}
-}
 
 func (scan *markup) attrBraces(pos int) int {
 	braces := skipBraces(scan.view(pos), pos)
@@ -119,7 +64,7 @@ func (scan *markup) tagEnd(from int) (end, stop int) {
 			}
 		case opensQuote(lower, pos):
 			quote = char
-		case char == '{':
+		case char == '{' && !scan.plain:
 			next := scan.attrBraces(pos)
 			if next < 0 {
 				return badBrace, len(lower)
