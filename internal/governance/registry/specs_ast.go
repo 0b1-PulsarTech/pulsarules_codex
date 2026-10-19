@@ -18,17 +18,16 @@ func syntaxReportSpec(language language.ID) analyzerSpec {
 }
 
 func astSpecs() []analyzerSpec {
-	return []analyzerSpec{
-		syntaxReportSpec(language.Go),
-		syntaxReportSpec(language.Dart),
-		syntaxReportSpec(language.TypeScript),
-		syntaxReportSpec(language.JavaScript),
-		syntaxReportSpec(language.Svelte),
+	var specs []analyzerSpec
+	for _, id := range syntaxreport.Languages() {
+		specs = append(specs, syntaxReportSpec(id))
+	}
+	return append(specs, []analyzerSpec{
 		staticSpec("control-flow", controlflow.NewAnalyzer),
 		staticSpec("shadowing", shadowing.NewAnalyzer),
 		staticSpec("complexity", complexity.NewAnalyzer),
 		staticSpec("named-returns", namedreturns.NewAnalyzer),
 		staticSpec("test-comment", testdoc.NewAnalyzer),
 		staticSpec("single-use-declaration", singleuse.NewAnalyzer),
-	}
+	}...)
 }

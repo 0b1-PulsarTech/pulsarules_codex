@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntaxreport"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -23,9 +24,7 @@ func neutralFallbacks() map[string]string {
 
 func languageTags() map[string]bool {
 	// The languages a syntax provider parses; a rule tag outside the set is a topic.
-	ids := []language.ID{
-		language.Go, language.Dart, language.TypeScript, language.JavaScript, language.Svelte,
-	}
+	ids := syntaxreport.Languages()
 	tags := make(map[string]bool, len(ids))
 	for _, id := range ids {
 		tags[string(id)] = true

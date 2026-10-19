@@ -15,6 +15,12 @@ type Analyzer struct {
 	language language.ID
 }
 
+func Languages() []language.ID {
+	return []language.ID{
+		language.Go, language.Dart, language.TypeScript, language.JavaScript, language.Svelte,
+	}
+}
+
 func NewAnalyzer(language language.ID) *Analyzer {
 	return &Analyzer{language: language}
 }

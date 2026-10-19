@@ -259,3 +259,14 @@ func TestReasonLine(t *testing.T) {
 		})
 	}
 }
+
+func TestLanguages(t *testing.T) {
+	t.Parallel()
+
+	want := []language.ID{
+		language.Go, language.Dart, language.TypeScript, language.JavaScript, language.Svelte,
+	}
+	if got := Languages(); !slices.Equal(got, want) {
+		t.Fatalf("Languages() = %v, want %v", got, want)
+	}
+}
