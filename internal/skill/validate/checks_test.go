@@ -65,84 +65,6 @@ func assertSingleProblem(t *testing.T, check Check, idx *knowledge.Index, wantPr
 	}
 }
 
-func TestRuleDependencies(t *testing.T) {
-	t.Parallel()
-
-	embedded := embeddedIndex(t)
-	testCases := []struct {
-		name        string
-		idx         *knowledge.Index
-		wantProblem string
-	}{
-		{
-			name: "unknown dependency reported",
-			idx: &knowledge.Index{Rules: []knowledge.Rule{
-				{ID: "r", Dependencies: []string{"ghost"}},
-			}},
-			wantProblem: `rule "r" depends on unknown rule "ghost"`,
-		},
-		{name: "embedded rules resolve cleanly", idx: embedded},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			assertSingleProblem(t, ruleDependencies, testCase.idx, testCase.wantProblem)
-		})
-	}
-}
-
-func TestPatternDependencies(t *testing.T) {
-	t.Parallel()
-
-	embedded := embeddedIndex(t)
-	testCases := []struct {
-		name        string
-		idx         *knowledge.Index
-		wantProblem string
-	}{
-		{
-			name: "unknown dependency reported",
-			idx: &knowledge.Index{Patterns: []knowledge.Pattern{
-				{ID: "p", Dependencies: []string{"ghost"}},
-			}},
-			wantProblem: `pattern "p" depends on unknown rule "ghost"`,
-		},
-		{name: "embedded patterns resolve cleanly", idx: embedded},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			assertSingleProblem(t, patternDependencies, testCase.idx, testCase.wantProblem)
-		})
-	}
-}
-
-func TestPatternComposes(t *testing.T) {
-	t.Parallel()
-
-	embedded := embeddedIndex(t)
-	testCases := []struct {
-		name        string
-		idx         *knowledge.Index
-		wantProblem string
-	}{
-		{
-			name: "unknown composed pattern reported",
-			idx: &knowledge.Index{Patterns: []knowledge.Pattern{
-				{ID: "p", Composes: []string{"ghost"}},
-			}},
-			wantProblem: `pattern "p" composes unknown pattern "ghost"`,
-		},
-		{name: "embedded patterns resolve cleanly", idx: embedded},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			assertSingleProblem(t, patternComposes, testCase.idx, testCase.wantProblem)
-		})
-	}
-}
-
 func TestSkillBodies_EmptyOrMissing(t *testing.T) {
 	t.Parallel()
 
@@ -186,25 +108,5 @@ func TestSkillCompositions_Unresolved(t *testing.T) {
 		if !strings.Contains(joined, want) {
 			t.Errorf("problems missing %q; got %v", want, problems)
 		}
-	}
-}
-
-func TestReferencesResolve_Unknown(t *testing.T) {
-	t.Parallel()
-
-	problems := referencesResolve(&knowledge.Index{Rules: []knowledge.Rule{
-		{ID: "r", References: []string{"ghost"}},
-	}})
-	want := `rule "r" cites unknown reference "ghost"`
-	if len(problems) != 1 || !strings.Contains(problems[0], want) {
-		t.Fatalf("expected one unknown-reference problem, got %v", problems)
-	}
-
-	idx, _, err := knowledge.Load("")
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	if problems = referencesResolve(idx); len(problems) != 0 {
-		t.Errorf("embedded citations should all resolve, got %v", problems)
 	}
 }

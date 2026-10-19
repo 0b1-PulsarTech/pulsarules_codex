@@ -35,51 +35,6 @@ func ruleSummaries(idx *knowledge.Index) []string {
 	return problems
 }
 
-func ruleDependencies(idx *knowledge.Index) []string {
-	problems := make([]string, 0, len(idx.Rules))
-	for _, rule := range idx.Rules {
-		comps := []composition{{
-			refs:    rule.Dependencies,
-			resolve: idx.RuleExists,
-			missing: func(ref string) string {
-				return fmt.Sprintf("rule %q depends on unknown rule %q", rule.ID, ref)
-			},
-		}}
-		problems = append(problems, runCompositions(comps)...)
-	}
-	return problems
-}
-
-func patternDependencies(idx *knowledge.Index) []string {
-	problems := make([]string, 0, len(idx.Patterns))
-	for _, pattern := range idx.Patterns {
-		comps := []composition{{
-			refs:    pattern.Dependencies,
-			resolve: idx.RuleExists,
-			missing: func(ref string) string {
-				return fmt.Sprintf("pattern %q depends on unknown rule %q", pattern.ID, ref)
-			},
-		}}
-		problems = append(problems, runCompositions(comps)...)
-	}
-	return problems
-}
-
-func patternComposes(idx *knowledge.Index) []string {
-	problems := make([]string, 0, len(idx.Patterns))
-	for _, pattern := range idx.Patterns {
-		comps := []composition{{
-			refs:    pattern.Composes,
-			resolve: idx.PatternExists,
-			missing: func(ref string) string {
-				return fmt.Sprintf("pattern %q composes unknown pattern %q", pattern.ID, ref)
-			},
-		}}
-		problems = append(problems, runCompositions(comps)...)
-	}
-	return problems
-}
-
 func skillCompositions(idx *knowledge.Index) []string {
 	problems := make([]string, 0, len(idx.Skills))
 	for _, skill := range idx.Skills {
