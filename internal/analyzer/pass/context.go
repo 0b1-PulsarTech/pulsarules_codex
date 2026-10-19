@@ -63,7 +63,7 @@ func (ctx *Context) GoPackages() *gomod.Index {
 }
 
 func (ctx *Context) GoModule() Module {
-	// Lazy: the commit scope never runs arch, so it must not read go.mod.
+	// Lazy: go.mod is read only when arch or the Go syntax provider asks for it.
 	ctx.moduleOnce.Do(func() {
 		if ctx.ProjectDir == "" {
 			return

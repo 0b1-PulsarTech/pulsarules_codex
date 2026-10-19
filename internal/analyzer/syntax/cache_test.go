@@ -310,11 +310,17 @@ func TestNewCache_ProvidersReceiveContent(t *testing.T) {
 			wantReads: map[string]int{"a_test.go": 1, "b.go": 1},
 		},
 		{
-			name:        "unreadable source reported once by Cache",
+			name:        "unreadable source read once and dropped",
 			sources:     []Source{{Path: "a.go"}, {Path: "gone.go"}},
 			unreadable:  "gone.go",
 			wantSources: []Source{{Path: "a.go", Content: []byte("src:a.go")}},
 			wantReads:   map[string]int{"a.go": 1, "gone.go": 1},
+		},
+		{
+			name:        "source no provider handles is never read",
+			sources:     []Source{{Path: "a.go"}, {Path: "notes.md"}},
+			wantSources: []Source{{Path: "a.go", Content: []byte("src:a.go")}},
+			wantReads:   map[string]int{"a.go": 1},
 		},
 	}
 	for _, testCase := range testCases {
@@ -342,8 +348,11 @@ func TestNewCache_ProvidersReceiveContent(t *testing.T) {
 			if provider.gotRoot != "/the/root" {
 				t.Fatalf("root = %q", provider.gotRoot)
 			}
-			if got := cache.Unavailable(); len(got) != 0 {
-				t.Fatalf("Unavailable() = %v, want none", got)
+			if body, ok := provider.gotRead("probe"); string(body) != "src:probe" || !ok {
+				t.Fatalf("Read = %q, %v, want the cache's reader", body, ok)
+			}
+			if _, ok := provider.gotRead("gone.go"); ok == (testCase.unreadable == "gone.go") {
+				t.Fatalf("Read(gone.go) ok = %v, want the cache's reader", ok)
 			}
 		})
 	}

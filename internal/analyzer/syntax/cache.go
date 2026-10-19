@@ -42,18 +42,19 @@ func NewCache(providers []Provider, corpus Corpus) *Cache {
 func (cache *Cache) run(ctx context.Context, providers []Provider, corpus Corpus) {
 	grouped := make([][]Source, len(providers))
 	for _, source := range corpus.Sources {
+		id := language.ForExtension(filepath.Ext(source.Path)).ID
+		idx := slices.IndexFunc(providers, func(provider Provider) bool {
+			return slices.Contains(provider.Languages(), id)
+		})
+		if idx < 0 {
+			continue
+		}
 		content, ok := corpus.Read(source.Path)
 		if !ok {
 			continue
 		}
 		source.Content = content
-		id := language.ForExtension(filepath.Ext(source.Path)).ID
-		idx := slices.IndexFunc(providers, func(provider Provider) bool {
-			return slices.Contains(provider.Languages(), id)
-		})
-		if idx >= 0 {
-			grouped[idx] = append(grouped[idx], source)
-		}
+		grouped[idx] = append(grouped[idx], source)
 	}
 	for idx, provider := range providers {
 		if len(grouped[idx]) > 0 {
