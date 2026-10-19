@@ -2,7 +2,6 @@ package identifier
 
 import (
 	"fmt"
-	"go/ast"
 	"go/token"
 )
 
@@ -11,38 +10,9 @@ type fileChecker struct {
 	emit  func(pos token.Pos, msg, suggestion string)
 }
 
-func (checker fileChecker) funcDecl(fn *ast.FuncDecl) {
-	if fn.Name != nil {
-		checker.check(fn.Name.Name, fn.Name.NamePos)
-	}
-	if fn.Type.Params != nil {
-		checker.checkFields(fn.Type.Params)
-	}
-	if fn.Type.Results != nil {
-		checker.checkFields(fn.Type.Results)
-	}
-}
-
-func (checker fileChecker) checkFields(list *ast.FieldList) {
-	for _, field := range list.List {
-		for _, id := range field.Names {
-			checker.check(id.Name, id.NamePos)
-		}
-	}
-}
-
-func (checker fileChecker) genDecl(decl *ast.GenDecl) {
-	for _, spec := range decl.Specs {
-		switch typed := spec.(type) {
-		case *ast.ValueSpec:
-			for _, id := range typed.Names {
-				checker.check(id.Name, id.NamePos)
-			}
-		case *ast.TypeSpec:
-			if typed.Name != nil {
-				checker.check(typed.Name.Name, typed.Name.NamePos)
-			}
-		}
+func (checker fileChecker) run() {
+	for _, bound := range checker.index.checked {
+		checker.check(bound.name, bound.pos)
 	}
 }
 

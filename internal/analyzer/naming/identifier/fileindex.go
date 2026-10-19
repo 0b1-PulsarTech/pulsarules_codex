@@ -6,9 +6,17 @@ import (
 	"strings"
 )
 
+type binding struct {
+	name string
+	pos  token.Pos
+}
+
 type fileIndex struct {
 	declared    map[string]bool
 	typeDerived map[token.Pos]bool
+	// checked lists, in source order, the names the rules judge; declared also holds
+	// receivers and plain assignments, which only count as siblings.
+	checked []binding
 }
 
 func newFileIndex(file *ast.File) *fileIndex {
@@ -30,11 +38,17 @@ func newFileIndex(file *ast.File) *fileIndex {
 	return idx
 }
 
+func (idx *fileIndex) addChecked(id *ast.Ident) {
+	idx.checked = append(idx.checked, binding{name: id.Name, pos: id.NamePos})
+}
+
 func (idx *fileIndex) addFuncDecl(fn *ast.FuncDecl) {
 	if fn.Name != nil {
 		idx.declared[fn.Name.Name] = true
+		idx.addChecked(fn.Name)
 	}
-	for _, list := range []*ast.FieldList{fn.Recv, fn.Type.Params, fn.Type.Results} {
+	lists := []*ast.FieldList{fn.Recv, fn.Type.Params, fn.Type.Results}
+	for slot, list := range lists {
 		if list == nil {
 			continue
 		}
@@ -42,6 +56,10 @@ func (idx *fileIndex) addFuncDecl(fn *ast.FuncDecl) {
 			for _, id := range field.Names {
 				idx.declared[id.Name] = true
 				idx.markIfTypeDerived(id, typeName(field.Type))
+				// A receiver is indexed as a sibling but never judged.
+				if slot != 0 {
+					idx.addChecked(id)
+				}
 			}
 		}
 	}
@@ -53,6 +71,7 @@ func (idx *fileIndex) addGenDecl(decl *ast.GenDecl) {
 		case *ast.ValueSpec:
 			for pos, id := range typed.Names {
 				idx.declared[id.Name] = true
+				idx.addChecked(id)
 				idx.markIfTypeDerived(id, typeName(typed.Type))
 				// Values line up with Names only when the spec has one of
 				// each; anything else is a single call feeding the group.
@@ -65,6 +84,7 @@ func (idx *fileIndex) addGenDecl(decl *ast.GenDecl) {
 			// struct{}` is exactly the vague name the rule exists to catch.
 			if typed.Name != nil {
 				idx.declared[typed.Name.Name] = true
+				idx.addChecked(typed.Name)
 			}
 		}
 	}
@@ -77,6 +97,9 @@ func (idx *fileIndex) addAssign(assign *ast.AssignStmt) {
 			continue
 		}
 		idx.declared[id.Name] = true
+		if assign.Tok == token.DEFINE {
+			idx.addChecked(id)
+		}
 		switch {
 		case len(assign.Rhs) == len(assign.Lhs):
 			idx.markIfTypeDerived(id, typeOfExpr(assign.Rhs[pos]))

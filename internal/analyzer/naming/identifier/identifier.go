@@ -35,9 +35,9 @@ func (analyzer *Analyzer) checkFile(
 	reporter finding.Reporter,
 ) []finding.Finding {
 	var findings []finding.Finding
-	// Two passes: the sequential-name and noise rules both need the whole
-	// file (siblings, and the types names are built from), which no single
-	// identifier can answer for itself.
+	// newFileIndex is the one walk: the sequential-name and noise rules need the
+	// whole file (siblings, and the types names are built from) before any
+	// identifier can be judged.
 	checker := fileChecker{
 		index: newFileIndex(file),
 		emit: func(pos token.Pos, msg, suggestion string) {
@@ -48,23 +48,7 @@ func (analyzer *Analyzer) checkFile(
 		},
 	}
 
-	ast.Inspect(file, func(node ast.Node) bool {
-		switch typed := node.(type) {
-		case *ast.FuncDecl:
-			checker.funcDecl(typed)
-		case *ast.GenDecl:
-			checker.genDecl(typed)
-		case *ast.AssignStmt:
-			if typed.Tok == token.DEFINE {
-				for _, lhs := range typed.Lhs {
-					if id, ok := lhs.(*ast.Ident); ok && id.Name != "_" {
-						checker.check(id.Name, id.NamePos)
-					}
-				}
-			}
-		}
-		return true
-	})
+	checker.run()
 
 	return findings
 }
