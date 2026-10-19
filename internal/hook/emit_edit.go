@@ -1,13 +1,12 @@
 package hook
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"os"
 	"path/filepath"
-	"strings"
+	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/throwsite"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/projectroot"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
@@ -30,10 +29,9 @@ func (disp *Dispatcher) emitPreEdit(session *sessionTracker, in hookPayload) err
 func preEditFileEvent(filePath string) string { return fileEvent("pre-edit-file-", filePath) }
 
 func fileEvent(prefix, filePath string) string {
-	const eventKeyBytes = 16
-	sum := sha256.Sum256([]byte(filePath))
+	const eventKeyHexChars = 32
 	// Half the sha256 sum; plenty to avoid collisions among edited files.
-	return prefix + hex.EncodeToString(sum[:eventKeyBytes])
+	return prefix + fingerprint([]byte(filePath))[:eventKeyHexChars]
 }
 
 func (disp *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload) error {
@@ -51,15 +49,11 @@ func (disp *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload) er
 		return nil
 	}
 
-	relevant := disp.router.SkillsForFile(filePath)
-	if skillsDir := disp.resolveSkillsDir(); skillsDir != "" {
-		relevant = filterInstalled(relevant, skillsDir)
-	} else {
-		// Without a skills dir we cannot tell which of the matched skills
-		// are actually installed here, and naming un-installed skills is
-		// wrong output, so degrade to the generic reminder instead.
-		relevant = nil
-	}
+	// Without a skills dir no skill counts as installed, and naming an un-installed
+	// skill is wrong output, so the result degrades to the generic reminder.
+	relevant := slices.DeleteFunc(disp.router.SkillsForFile(filePath), func(id string) bool {
+		return !disp.skillInstalled(id)
+	})
 	if len(relevant) == 0 {
 		// post-edit.txt names Go commands, which mean nothing for a Dart or TS file.
 		asset := "hooks/post-edit-other.txt"
@@ -103,22 +97,16 @@ type postEditChecklist struct {
 	IsGo     bool
 }
 
-func isGoFile(filePath string) bool { return strings.ToLower(filepath.Ext(filePath)) == ".go" }
+func isGoFile(filePath string) bool {
+	return language.ForExtension(filepath.Ext(filePath)).ID == language.Go
+}
 
 func renderPostEditChecklist(assets templates.Set, doc postEditChecklist) (string, error) {
 	return assets.Render("hooks/post-edit-checklist.txt.tmpl", doc)
 }
 
-func (disp *Dispatcher) installedSkill(id string) string {
-	skillsDir := disp.resolveSkillsDir()
-	if skillsDir == "" || len(filterInstalled([]string{id}, skillsDir)) == 0 {
-		return ""
-	}
-	return id
-}
-
 func (disp *Dispatcher) throwNotice(session *sessionTracker, filePath string) string {
-	root := disp.resolveProjectDir()
+	root := disp.projectDir
 	ext := filepath.Ext(filePath)
 	if root == "" || !disp.throws.Handles(ext) {
 		return ""
@@ -142,7 +130,10 @@ func (disp *Dispatcher) throwNotice(session *sessionTracker, filePath string) st
 		return ""
 	}
 	// A skill that is not installed here must not be named, as in the checklist.
-	skill := disp.installedSkill(disp.throws.SkillFor(ext))
+	skill := disp.throws.SkillFor(ext)
+	if !disp.skillInstalled(skill) {
+		skill = ""
+	}
 	text := throwsite.Notice(printable.Path(filepath.Base(filePath)), hits, skill)
 	// Per file, so editing another file between two edits does not re-announce this one.
 	if !session.FirstEmission(fileEvent("post-edit-throw-", filePath), text) {
@@ -152,7 +143,5 @@ func (disp *Dispatcher) throwNotice(session *sessionTracker, filePath string) st
 }
 
 func (disp *Dispatcher) debugThrowSkip(filePath, reason string) {
-	if disp.logger != nil {
-		disp.logger.Debug("throw scan skipped", "path", filePath, "reason", reason)
-	}
+	disp.logger.Debug("throw scan skipped", "path", filePath, "reason", reason)
 }

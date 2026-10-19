@@ -14,16 +14,15 @@ func (disp *Dispatcher) emitPreSearch(session *sessionTracker, in hookPayload) e
 	if !searchTargetsGo(in) {
 		return nil
 	}
-	projectDir := disp.resolveProjectDir()
+	projectDir := disp.projectDir
 	if projectDir == "" {
 		return nil
 	}
-	// The projectDir is under PULSARULES_PROJECT_DIR, a hook-provided project root.
+	// The projectDir is the hook-provided project root, read from PULSARULES_PROJECT_DIR once.
 	if _, err := os.Stat(filepath.Join(projectDir, "go.mod")); err != nil {
 		return nil //nolint:nilerr // no go.mod means "not a Go project", not a failure.
 	}
-	skillsDir := disp.resolveSkillsDir()
-	if skillsDir == "" || len(filterInstalled([]string{"gopls-navigation"}, skillsDir)) == 0 {
+	if !disp.skillInstalled("gopls-navigation") {
 		return nil
 	}
 	if !session.OncePerSession("pre-search") {
@@ -59,7 +58,7 @@ func (disp *Dispatcher) emitUserPrompt() error {
 
 func (disp *Dispatcher) emitStop(event string, session *sessionTracker) (stopOutcome, error) {
 	entered := time.Now()
-	projectDir := disp.resolveProjectDir()
+	projectDir := disp.projectDir
 	if projectDir == "" {
 		return stopOutcome{}, nil
 	}

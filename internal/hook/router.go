@@ -47,8 +47,7 @@ func (router *fileRouter) Routes(filePath string) bool {
 	}
 	// A Go file, or one a skill names by extension; the baseline alone never makes a
 	// Dart or TS file noisy.
-	if language.ForExtension(ext).ID == language.Go &&
-		len(router.index.Router.Baseline.Always) > 0 {
+	if isGoFile(filePath) && len(router.index.Router.Baseline.Always) > 0 {
 		return true
 	}
 	return len(router.triggered(filePath, ext)) > 0

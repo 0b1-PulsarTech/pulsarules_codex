@@ -3,8 +3,6 @@ package hook
 import (
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/contract"
@@ -93,9 +91,6 @@ type dispatchRecord struct {
 }
 
 func (disp *Dispatcher) record(session *sessionTracker, entry dispatchRecord) {
-	if disp.logger == nil {
-		return
-	}
 	args := []any{
 		slog.String("event", entry.mode),
 		slog.String("session_id", session.SessionID()),
@@ -110,15 +105,4 @@ func (disp *Dispatcher) record(session *sessionTracker, entry dispatchRecord) {
 		args = append(args, slog.String("error", entry.err.Error()))
 	}
 	disp.logger.Info("hook dispatched", args...)
-}
-
-func filterInstalled(ids []string, skillsDir string) []string {
-	out := make([]string, 0, len(ids))
-	for _, id := range ids {
-		// The skillsDir is under PULSARULES_SKILLS_DIR, a hook-provided skills root.
-		if _, err := os.Stat(filepath.Join(skillsDir, id, "SKILL.md")); err == nil {
-			out = append(out, id)
-		}
-	}
-	return out
 }

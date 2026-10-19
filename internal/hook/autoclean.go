@@ -10,15 +10,13 @@ import (
 )
 
 func (disp *Dispatcher) autoCleanEdited(filePath string) string {
-	root := disp.resolveProjectDir()
+	root := disp.projectDir
 	if root == "" || filePath == "" {
 		return ""
 	}
 	report, err := cleaner.New(root).CleanFile(filePath)
 	if err != nil {
-		if disp.logger != nil {
-			disp.logger.Debug("auto-clean skipped", "path", filePath, "error", err.Error())
-		}
+		disp.logger.Debug("auto-clean skipped", "path", filePath, "error", err.Error())
 		return ""
 	}
 	if !report.Changed {

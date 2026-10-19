@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/throwsite"
@@ -22,7 +23,7 @@ type Dispatcher struct {
 	out        io.Writer
 	errOut     io.Writer
 	projectDir string
-	skillsDir  string
+	skillsDirs []string
 	governance func(repo vcs.Repository, status vcs.Status) (string, int)
 	open       func(dir string) (vcs.Repository, error)
 }
@@ -50,9 +51,11 @@ func NewDispatcher(deps Deps) *Dispatcher {
 	}
 	governance := deps.Governance
 	if governance == nil {
-		governance = func(repo vcs.Repository, status vcs.Status) (string, int) {
-			return runGovernanceCheck(repo, status, deps.Index)
-		}
+		governance = func(vcs.Repository, vcs.Status) (string, int) { return "", 0 }
+	}
+	logger := deps.Logger
+	if logger == nil {
+		logger = slog.New(slog.DiscardHandler)
 	}
 	open := deps.Open
 	if open == nil {
@@ -60,36 +63,34 @@ func NewDispatcher(deps Deps) *Dispatcher {
 	}
 	return &Dispatcher{
 		templates:  deps.Templates,
-		logger:     deps.Logger,
+		logger:     logger,
 		index:      deps.Index,
 		router:     newFileRouter(deps.Index),
 		throws:     throwsite.New(),
 		out:        out,
 		errOut:     errOut,
 		projectDir: deps.ProjectDir,
-		skillsDir:  deps.SkillsDir,
+		skillsDirs: filepath.SplitList(deps.SkillsDir),
 		governance: governance,
 		open:       open,
 	}
 }
 
-func (disp *Dispatcher) resolveProjectDir() string {
-	if disp.projectDir != "" {
-		return disp.projectDir
+func (disp *Dispatcher) skillInstalled(id string) bool {
+	// PULSARULES_SKILLS_DIR is a path list (project dir, then user dir): installed anywhere counts.
+	for _, dir := range disp.skillsDirs {
+		if dir == "" {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(dir, id, "SKILL.md")); err == nil {
+			return true
+		}
 	}
-	return os.Getenv("PULSARULES_PROJECT_DIR")
-}
-
-func (disp *Dispatcher) resolveSkillsDir() string {
-	if disp.skillsDir != "" {
-		return disp.skillsDir
-	}
-	// The layout is host-specific (.claude/skills vs .opencode/skills): no hardcoded default.
-	return os.Getenv("PULSARULES_SKILLS_DIR")
+	return false
 }
 
 func (disp *Dispatcher) warnMissingProjectDir(session *sessionTracker) {
-	if disp.resolveProjectDir() != "" {
+	if disp.projectDir != "" {
 		return
 	}
 	if !session.OncePerSession("no-project-dir") {
@@ -97,11 +98,9 @@ func (disp *Dispatcher) warnMissingProjectDir(session *sessionTracker) {
 	}
 	msg := "pulsarules_codex: hook ran with no project dir resolved; reinstall the hook " +
 		"(pulsarules_cli install) so it exports PULSARULES_PROJECT_DIR"
-	// The logger discards output unless PULSARULES_LOG_LEVEL is set, which no hook wrapper sets.
+	// The logger discards output unless the CLI edge saw PULSARULES_LOG_LEVEL, which no wrapper sets.
 	_, _ = fmt.Fprintln(disp.errOut, msg)
-	if disp.logger != nil {
-		disp.logger.Warn(msg)
-	}
+	disp.logger.Warn(msg)
 }
 
 const StopGovernanceDeadline = 60 * time.Second

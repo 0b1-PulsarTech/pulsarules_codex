@@ -11,7 +11,7 @@ import (
 )
 
 func (disp *Dispatcher) emitKnowledgeDrift() {
-	projectDir := disp.resolveProjectDir()
+	projectDir := disp.projectDir
 	if projectDir == "" {
 		return
 	}

@@ -179,3 +179,15 @@ func TestCleanup_SparesASessionWhoseIDEndsTheSame(t *testing.T) {
 		}
 	}
 }
+
+func TestFingerprint(t *testing.T) {
+	t.Parallel()
+
+	const emptySum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	if got := fingerprint(nil); got != emptySum {
+		t.Errorf("fingerprint(nil) = %q, want %q", got, emptySum)
+	}
+	if got := fileEvent("p-", "a.go"); len(got) != len("p-")+32 {
+		t.Errorf("fileEvent key = %q, want a 32-char suffix", got)
+	}
+}

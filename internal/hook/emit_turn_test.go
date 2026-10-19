@@ -322,7 +322,7 @@ func TestDispatchStop(t *testing.T) {
 	})
 
 	t.Run(
-		"real pipeline finding emits then dedups",
+		"a finding emits then dedups",
 		func(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
@@ -336,7 +336,8 @@ func TestDispatchStop(t *testing.T) {
 			); err != nil {
 				t.Fatalf("write: %v", err)
 			}
-			disp, out := dispatchCapture(Deps{ProjectDir: dir})
+			msg := "\nGovernance checks:\n  [error] typographic-markers: (violation.go:3)\n"
+			disp, out := dispatchCapture(Deps{ProjectDir: dir, Governance: stubGovernance(msg, 1)})
 			payload := newSessionPayload(t)
 
 			_ = disp.Dispatch("stop", payload)

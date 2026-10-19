@@ -16,64 +16,50 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-func TestDispatcher_ProjectDirEnvFallback(t *testing.T) {
-	testCases := []struct {
-		name       string
-		projectDir string
-		envDir     string
-		want       string
-	}{
-		{
-			name: "explicit dir wins", projectDir: "/explicit",
-			envDir: "/from-env", want: "/explicit",
-		},
-		{
-			name: "falls back to the env var", projectDir: "",
-			envDir: "/from-env", want: "/from-env",
-		},
-		{name: "empty when neither is set", projectDir: "", envDir: "", want: ""},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Setenv("PULSARULES_PROJECT_DIR", testCase.envDir)
-			disp := NewDispatcher(Deps{ProjectDir: testCase.projectDir})
-			if got := disp.resolveProjectDir(); got != testCase.want {
-				t.Errorf("resolveProjectDir() = %q, want %q", got, testCase.want)
-			}
-		})
-	}
-}
+func TestDispatcher_SkillInstalled(t *testing.T) {
+	t.Parallel()
 
-func TestDispatcher_SkillsDirEnvFallback(t *testing.T) {
+	projectDir, globalDir := t.TempDir(), t.TempDir()
+	installSkillFixture(t, projectDir, "go-style")
+	installSkillFixture(t, globalDir, "database-persistence")
+	sep := string(os.PathListSeparator)
 	testCases := []struct {
 		name      string
 		skillsDir string
-		envDir    string
-		want      string
+		id        string
+		want      bool
 	}{
+		{"installed", projectDir, "go-style", true},
+		{"not installed", projectDir, "not-installed", false},
+		{"no skills dir", "", "go-style", false},
 		{
-			name: "explicit dir wins", skillsDir: "/explicit/skills",
-			envDir: "/from-env/skills", want: "/explicit/skills",
+			"only in the global dir",
+			projectDir + sep + globalDir, "database-persistence", true,
 		},
 		{
-			name: "falls back to the env var", skillsDir: "",
-			envDir: "/from-env/skills", want: "/from-env/skills",
+			"in neither dir",
+			projectDir + sep + globalDir, "not-installed", false,
 		},
-		{name: "empty when neither is set", skillsDir: "", envDir: "", want: ""},
+		{
+			"missing first dir does not hide the second",
+			filepath.Join(projectDir, "absent") + sep + globalDir,
+			"database-persistence", true,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Setenv("PULSARULES_SKILLS_DIR", testCase.envDir)
+			t.Parallel()
+
 			disp := NewDispatcher(Deps{SkillsDir: testCase.skillsDir})
-			if got := disp.resolveSkillsDir(); got != testCase.want {
-				t.Errorf("resolveSkillsDir() = %q, want %q", got, testCase.want)
+			if got := disp.skillInstalled(testCase.id); got != testCase.want {
+				t.Errorf("skillInstalled(%q) = %v, want %v", testCase.id, got, testCase.want)
 			}
 		})
 	}
 }
 
 func TestDispatcher_MissingProjectDirOnce(t *testing.T) {
-	t.Setenv("PULSARULES_PROJECT_DIR", "")
+	t.Parallel()
 
 	var logBuf, errBuf bytes.Buffer
 	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
@@ -124,7 +110,7 @@ func TestDispatcher_MissingProjectDirWarning(t *testing.T) {
 }
 
 func TestDispatcher_WarnsToStderr(t *testing.T) {
-	t.Setenv("PULSARULES_PROJECT_DIR", "")
+	t.Parallel()
 
 	var errBuf bytes.Buffer
 	disp, _ := dispatchCapture(Deps{ErrOut: &errBuf})
@@ -454,5 +440,25 @@ func TestStopGovernanceDeadline_DartBuild(t *testing.T) {
 
 	if dartsyntax.BuildTimeout >= StopGovernanceDeadline {
 		t.Fatalf("bound %s must stay below %s", dartsyntax.BuildTimeout, StopGovernanceDeadline)
+	}
+}
+
+func TestNewDispatcher_NoGovernanceStaysSilent(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	gitInit(t, dir)
+	if err := os.WriteFile(
+		filepath.Join(dir, "dirty.go"),
+		[]byte("package x\n"),
+		0o600,
+	); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	disp, out := dispatchCapture(Deps{ProjectDir: dir})
+
+	_ = disp.Dispatch("stop", newSessionPayload(t))
+	if out.Len() != 0 {
+		t.Errorf("stop with no governance port wrote %q, want nothing", out.String())
 	}
 }

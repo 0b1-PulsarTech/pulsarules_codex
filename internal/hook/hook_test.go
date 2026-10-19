@@ -388,6 +388,25 @@ func TestDispatchPostEdit_ExplicitSkillsDir(t *testing.T) {
 	}
 }
 
+func TestDispatchPostEdit_SkillInstalledOnlyGlobally(t *testing.T) {
+	t.Parallel()
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	projectSkills, globalSkills := t.TempDir(), t.TempDir()
+	installSkillFixture(t, globalSkills, "go-style")
+	skillsDir := projectSkills + string(os.PathListSeparator) + globalSkills
+	disp, out := dispatchCapture(Deps{Index: idx, SkillsDir: skillsDir})
+
+	_ = disp.Dispatch("post-edit", postEditPayload(t, "pkg/foo.go", uniqueSessionID(t)))
+
+	if ctx := extractContext(t, out.String()); !strings.Contains(ctx, "go-style") {
+		t.Errorf("output missing the globally installed go-style skill:\n%s", ctx)
+	}
+}
+
 func TestDispatchPostEdit_NonGoFallback(t *testing.T) {
 	t.Parallel()
 
@@ -423,7 +442,7 @@ func TestDispatchPostEdit_SilentForTSAndJS(t *testing.T) {
 }
 
 func TestDispatchPostEdit_SkillsDirUnset(t *testing.T) {
-	t.Setenv("PULSARULES_SKILLS_DIR", "")
+	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
 	if err != nil {

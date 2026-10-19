@@ -1,8 +1,6 @@
 package hook
 
 import (
-	"os"
-	"path/filepath"
 	"slices"
 	"testing"
 
@@ -149,28 +147,6 @@ func TestRouterSkillsForFile_NilIndex(t *testing.T) {
 				t.Fatalf("SkillsForFile = %v, want nil", got)
 			}
 		})
-	}
-}
-
-func TestFilterInstalledDropsUninstalledSkills(t *testing.T) {
-	t.Parallel()
-
-	skillsDir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(skillsDir, "go-style"), 0o750); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(
-		filepath.Join(skillsDir, "go-style", "SKILL.md"),
-		[]byte("stub"),
-		0o600,
-	); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-
-	got := filterInstalled([]string{"go-style", "not-installed"}, skillsDir)
-	want := []string{"go-style"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("filterInstalled = %v, want %v", got, want)
 	}
 }
 

@@ -23,10 +23,14 @@ func newSessionTracker(sessionID string) *sessionTracker {
 		sessionID = "nosession"
 	}
 	if !isPlainToken(sessionID) {
-		sum := sha256.Sum256([]byte(sessionID))
-		sessionID = "h-" + hex.EncodeToString(sum[:])
+		sessionID = "h-" + fingerprint([]byte(sessionID))
 	}
 	return &sessionTracker{sessionID: sessionID}
+}
+
+func fingerprint(content []byte) string {
+	sum := sha256.Sum256(content)
+	return hex.EncodeToString(sum[:])
 }
 
 func isPlainToken(sessionID string) bool {
@@ -57,8 +61,7 @@ func (tracker *sessionTracker) OncePerSession(event string) bool {
 
 func (tracker *sessionTracker) FirstEmission(event, content string) bool {
 	marker := tracker.markerPath("skill-hook-" + event)
-	sum := sha256.Sum256([]byte(content))
-	hash := hex.EncodeToString(sum[:])
+	hash := fingerprint([]byte(content))
 	//nolint:gosec // marker is a deterministic temp path under our control
 	if prev, err := os.ReadFile(marker); err == nil && string(prev) == hash {
 		return false
