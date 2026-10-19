@@ -207,8 +207,8 @@ func TestSameComment(t *testing.T) {
 
 			oldFile := File{body: []goToken{testCase.left}}
 			newFile := File{body: []goToken{testCase.right}}
-			if got := sameComment(oldFile, newFile, [2]int{}, moves); got != testCase.want {
-				t.Fatalf("sameComment() = %v, want %v", got, testCase.want)
+			if got := newCommentMatcher().same(oldFile, newFile, [2]int{}, moves); got != testCase.want {
+				t.Fatalf("commentMatcher.same() = %v, want %v", got, testCase.want)
 			}
 		})
 	}
@@ -241,8 +241,8 @@ func TestSameComment_Example(t *testing.T) {
 			oldFile := mustParse(t, example(testCase.fn, testCase.oldRef))
 			newFile := mustParse(t, example(testCase.fn, testCase.newRef))
 			at := [2]int{len(oldFile.body) - 3, len(newFile.body) - 3}
-			if got := sameComment(oldFile, newFile, at, moves); got != testCase.want {
-				t.Fatalf("sameComment() = %v, want %v", got, testCase.want)
+			if got := newCommentMatcher().same(oldFile, newFile, at, moves); got != testCase.want {
+				t.Fatalf("commentMatcher.same() = %v, want %v", got, testCase.want)
 			}
 		})
 	}
@@ -283,8 +283,8 @@ func TestSameComment_References(t *testing.T) {
 				}
 				oldFile := File{body: []goToken{{kind: token.COMMENT, lit: testCase.left}}}
 				newFile := File{body: []goToken{{kind: token.COMMENT, lit: testCase.right}}}
-				if got := sameComment(oldFile, newFile, [2]int{}, moves); got != testCase.want {
-					t.Fatalf("sameComment() = %v, want %v", got, testCase.want)
+				if got := newCommentMatcher().same(oldFile, newFile, [2]int{}, moves); got != testCase.want {
+					t.Fatalf("commentMatcher.same() = %v, want %v", got, testCase.want)
 				}
 			})
 		}

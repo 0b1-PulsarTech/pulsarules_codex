@@ -20,12 +20,25 @@ type side struct {
 	qual string
 }
 
+type commentMatcher struct {
+	refs *regexp.Regexp
+	want *regexp.Regexp
+}
+
+func newCommentMatcher() commentMatcher {
+	return commentMatcher{
+		refs: regexp.MustCompile(`\b[A-Za-z_]\w*\.[A-Z]\w*`),
+		want: regexp.MustCompile("^want[\\s`\"]"),
+	}
+}
+
 func BodiesEquivalent(oldFile, newFile File, rules []QualRule, bind Binding) bool {
+	comments := newCommentMatcher()
 	oldBody, newBody := oldFile.body, newFile.body
 	oldPos, newPos := 0, 0
 	for oldPos < len(oldBody) && newPos < len(newBody) {
 		if sameToken(oldBody[oldPos], newBody[newPos]) ||
-			sameComment(oldFile, newFile, [2]int{oldPos, newPos}, bind.Moves) {
+			comments.same(oldFile, newFile, [2]int{oldPos, newPos}, bind.Moves) {
 			at := [2]int{oldPos, newPos}
 			if rebindsQualifier(oldFile, newFile, at, bind) ||
 				capturesBare(newFile, newPos, bind) {
@@ -101,15 +114,14 @@ func rebindsQualifier(oldFile, newFile File, pos [2]int, bind Binding) bool {
 	return !bind.allows(qualifier, newFile.body[pos[1]+2].lit)
 }
 
-func sameComment(oldFile, newFile File, at [2]int, moves []MoveInfo) bool {
+func (matcher commentMatcher) same(oldFile, newFile File, at [2]int, moves []MoveInfo) bool {
 	left, right := oldFile.body[at[0]], newFile.body[at[1]]
-	if !rewritable(oldFile, left) || !rewritable(newFile, right) {
+	if !matcher.rewritable(oldFile, left) || !matcher.rewritable(newFile, right) {
 		return false
 	}
-	pattern := regexp.MustCompile(`\b[A-Za-z_]\w*\.[A-Z]\w*`)
-	leftRefs := pattern.FindAllString(left.lit, -1)
-	rightRefs := pattern.FindAllString(right.lit, -1)
-	if !slices.Equal(pattern.Split(left.lit, -1), pattern.Split(right.lit, -1)) {
+	leftRefs := matcher.refs.FindAllString(left.lit, -1)
+	rightRefs := matcher.refs.FindAllString(right.lit, -1)
+	if !slices.Equal(matcher.refs.Split(left.lit, -1), matcher.refs.Split(right.lit, -1)) {
 		return false
 	}
 	for idx, ref := range leftRefs {
@@ -120,7 +132,7 @@ func sameComment(oldFile, newFile File, at [2]int, moves []MoveInfo) bool {
 	return true
 }
 
-func rewritable(file File, tok goToken) bool {
+func (matcher commentMatcher) rewritable(file File, tok goToken) bool {
 	if tok.kind != token.COMMENT || isDirective(tok.lit) || file.inExample(tok.off) {
 		return false
 	}
@@ -131,7 +143,7 @@ func rewritable(file File, tok goToken) bool {
 	if strings.Contains(text, "ERROR") {
 		return false
 	}
-	return !regexp.MustCompile("^want[\\s`\"]").MatchString(text)
+	return !matcher.want.MatchString(text)
 }
 
 func sameReference(left, right string, moves []MoveInfo) bool {
