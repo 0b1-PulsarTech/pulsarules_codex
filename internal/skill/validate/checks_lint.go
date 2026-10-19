@@ -7,7 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func canonicalSections(idx *knowledge.Index) []string {
+func nonCanonicalSections(idx *knowledge.Index) []string {
 	var problems []string
 	check := func(kind knowledge.Kind, id string) {
 		names, err := render.UnknownSections(idx.Body(kind, id))

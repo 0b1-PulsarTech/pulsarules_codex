@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -57,5 +58,34 @@ func TestCrossReferences(t *testing.T) {
 			t.Parallel()
 			assertSingleProblem(t, crossReferences, testCase.idx, testCase.wantProblem)
 		})
+	}
+}
+
+func TestCrossReferences_AllKindsOrdered(t *testing.T) {
+	t.Parallel()
+
+	idx := &knowledge.Index{
+		Rules: []knowledge.Rule{
+			{ID: "r1", Dependencies: []string{"g1"}, References: []string{"g4"}},
+			{ID: "r2", Dependencies: []string{"g2"}, References: []string{"g5"}},
+		},
+		Patterns: []knowledge.Pattern{
+			{
+				ID: "p1", Dependencies: []string{"g3"}, Composes: []string{"g6"},
+				References: []string{"g7"},
+			},
+		},
+	}
+	want := []string{
+		`rule "r1" depends on unknown rule "g1"`,
+		`rule "r2" depends on unknown rule "g2"`,
+		`pattern "p1" depends on unknown rule "g3"`,
+		`pattern "p1" composes unknown pattern "g6"`,
+		`rule "r1" cites unknown reference "g4"`,
+		`rule "r2" cites unknown reference "g5"`,
+		`pattern "p1" cites unknown reference "g7"`,
+	}
+	if got := crossReferences(idx); !slices.Equal(got, want) {
+		t.Errorf("crossReferences = %q, want %q", got, want)
 	}
 }

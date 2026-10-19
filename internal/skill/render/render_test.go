@@ -125,6 +125,36 @@ func TestRender_Workflow(t *testing.T) {
 			t.Errorf("RenderWorkflow output missing %q", want)
 		}
 	}
+	assertWorkflowSections(t, idx, wf, body)
+}
+
+func assertWorkflowSections(
+	t *testing.T, idx *knowledge.Index, wf knowledge.Workflow, body string,
+) {
+	t.Helper()
+
+	rules, patterns, found := strings.Cut(body, "## Applicable patterns")
+	if !found {
+		t.Fatal("RenderWorkflow output has no Applicable patterns section")
+	}
+	_, rules, found = strings.Cut(rules, "## Applicable rules")
+	if !found {
+		t.Fatal("RenderWorkflow output has no Applicable rules section")
+	}
+	rule, _ := idx.Rule(entryID(wf.ComposesRules[0]))
+	pattern, _ := idx.Pattern(entryID(wf.ComposesPatterns[0]))
+	if !strings.Contains(rules, "### "+rule.Name+"\n") {
+		t.Errorf("rule %q not under Applicable rules", rule.Name)
+	}
+	if strings.Contains(patterns, "### "+rule.Name+"\n") {
+		t.Errorf("rule %q leaked under Applicable patterns", rule.Name)
+	}
+	if !strings.Contains(patterns, "### "+pattern.Name+"\n") {
+		t.Errorf("pattern %q not under Applicable patterns", pattern.Name)
+	}
+	if strings.Contains(rules, "### "+pattern.Name+"\n") {
+		t.Errorf("pattern %q leaked under Applicable rules", pattern.Name)
+	}
 }
 
 func TestRender_UnknownComposition(t *testing.T) {
@@ -140,11 +170,13 @@ func TestRender_UnknownComposition(t *testing.T) {
 		t.Fatalf("NewRenderer: %v", err)
 	}
 
-	if _, err = rnd.renderBody(
-		idx,
-		knowledge.Skill{ID: "x", ComposeRules: []string{"nope"}},
-	); err == nil {
+	_, err = rnd.renderBody(idx, knowledge.Skill{ID: "x", ComposeRules: []string{"nope"}})
+	if err == nil {
 		t.Fatal("expected error for unknown composed rule, got nil")
+	}
+	want := ErrUnknownComposition.Error() + `: skill "x" composes unknown rule "nope"`
+	if err.Error() != want {
+		t.Errorf("error = %q, want %q", err, want)
 	}
 }
 

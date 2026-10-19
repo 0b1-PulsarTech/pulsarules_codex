@@ -2,27 +2,6 @@ package render
 
 import "testing"
 
-func TestBodySections(t *testing.T) {
-	t.Parallel()
-
-	body := "preamble text\n" +
-		"{{define \"must\"}}\nMUST BODY\n{{end}}\n" +
-		"{{define \"forbidden\"}}\nFORBIDDEN BODY\n{{end}}"
-	sections, err := newBodyParser().sections(body)
-	if err != nil {
-		t.Fatalf("bodySections: %v", err)
-	}
-	if sections["must"] != "MUST BODY" {
-		t.Errorf("must = %q, want MUST BODY", sections["must"])
-	}
-	if sections["forbidden"] != "FORBIDDEN BODY" {
-		t.Errorf("forbidden = %q, want FORBIDDEN BODY", sections["forbidden"])
-	}
-	if _, ok := sections["recipe"]; ok {
-		t.Error("recipe should be absent")
-	}
-}
-
 func TestMergeSections_CanonicalOrder(t *testing.T) {
 	t.Parallel()
 

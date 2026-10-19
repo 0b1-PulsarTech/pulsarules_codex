@@ -22,13 +22,13 @@ func Validate(idx *knowledge.Index, extra ...Check) Result {
 		routerPresent,
 		routerSkillIDs,
 		emojiThemeShortcodes,
-		canonicalSections,
+		nonCanonicalSections,
 	}
 	var result Result
 	for _, step := range pipeline {
 		result.Errors = append(result.Errors, step(idx)...)
 	}
-	// Extra carries checks from packages validate must not import (registry, evals).
+	// Extra carries checks (registry, evals) injected by the CLI: registry pulls ~200 packages.
 	for _, step := range extra {
 		result.Errors = append(result.Errors, step(idx)...)
 	}

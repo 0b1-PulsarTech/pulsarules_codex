@@ -9,34 +9,41 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func TestCanonicalSections_EmbeddedIsClean(t *testing.T) {
+func TestNonCanonicalSections_EmbeddedIsClean(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if problems := canonicalSections(idx); len(problems) != 0 {
+	if problems := nonCanonicalSections(idx); len(problems) != 0 {
 		t.Errorf("embedded index should lint clean, got %v", problems)
 	}
 }
 
-func TestCanonicalSections_Fixture(t *testing.T) {
+func TestNonCanonicalSections_Fixture(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name string
+		kind knowledge.Kind
 		body string
 		want string
 	}{
-		{"canonical define", `{{define "must"}}x{{end}}`, ""},
+		{"canonical define", knowledge.KindRule, `{{define "must"}}x{{end}}`, ""},
 		{
-			"non-canonical define", `{{define "musty"}}x{{end}}`,
-			`rules "fixture-rule" defines non-canonical section "musty"`,
+			"non-canonical define", knowledge.KindRule, `{{define "musty"}}x{{end}}`,
+			`rules "fixture" defines non-canonical section "musty"`,
 		},
 		{
-			"malformed template", `{{define bad`,
-			`rules "fixture-rule": parse body:`,
+			"malformed template", knowledge.KindRule, `{{define bad`,
+			`rules "fixture": parse body:`,
+		},
+		{
+			"non-canonical define in a pattern",
+			knowledge.KindPattern,
+			`{{define "musty"}}x{{end}}`,
+			`patterns "fixture" defines non-canonical section "musty"`,
 		},
 	}
 	for _, testCase := range testCases {
@@ -50,17 +57,22 @@ func TestCanonicalSections_Fixture(t *testing.T) {
 					t.Fatalf("mkdir %s: %v", dir, err)
 				}
 			}
-			rules := filepath.Join(standards, "rules")
-			writeFixtureFile(t, filepath.Join(rules, "fixture-rule.md"),
-				"---\nid: fixture-rule\nname: Fixture Rule\ndescription: d\n---\n\n"+
-					"# Fixture Rule\n\n"+testCase.body+"\n")
-			writeFixtureFile(t, filepath.Join(root, "knowledge", "standards", "skills.yaml"),
+			writeFixtureFile(t,
+				filepath.Join(standards, string(testCase.kind), "fixture.md"),
+				"---\nid: fixture\nname: Fixture\ndescription: d\n---\n\n"+
+					"# Fixture\n\n"+testCase.body+"\n")
+			writeFixtureFile(t, filepath.Join(standards, "skills.yaml"),
 				"skills:\n  - id: s\n    name: S\n    description: d\n")
 			idx, _, err := knowledge.Load(root)
 			if err != nil {
 				t.Fatalf("Load: %v", err)
 			}
-			problems := canonicalSections(idx)
+			var problems []string
+			for _, problem := range Validate(idx).Errors {
+				if strings.Contains(problem, string(testCase.kind)+` "fixture"`) {
+					problems = append(problems, problem)
+				}
+			}
 			if testCase.want == "" {
 				if len(problems) != 0 {
 					t.Errorf("problems = %v, want none", problems)

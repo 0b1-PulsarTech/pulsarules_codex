@@ -8,19 +8,17 @@ import (
 	"text/template"
 )
 
-type parsedBody struct{ tmpl *template.Template }
-
 type bodyParser struct {
 	mu    sync.Mutex
 	funcs template.FuncMap
-	cache map[string]parsedBody
+	cache map[string]*template.Template
 }
 
 func newBodyParser() *bodyParser {
-	return &bodyParser{funcs: funcs(), cache: map[string]parsedBody{}}
+	return &bodyParser{funcs: funcs(), cache: map[string]*template.Template{}}
 }
 
-func (parser *bodyParser) parse(body string) (parsedBody, error) {
+func (parser *bodyParser) parse(body string) (*template.Template, error) {
 	parser.mu.Lock()
 	defer parser.mu.Unlock()
 	if cached, ok := parser.cache[body]; ok {
@@ -29,11 +27,10 @@ func (parser *bodyParser) parse(body string) (parsedBody, error) {
 	// Each body parses in its own namespace so bare {{define "must"}} names do not collide.
 	tmpl, err := template.New("body").Funcs(parser.funcs).Parse(body)
 	if err != nil {
-		return parsedBody{}, fmt.Errorf("parse body: %w", err)
+		return nil, fmt.Errorf("parse body: %w", err)
 	}
-	parsed := parsedBody{tmpl: tmpl}
-	parser.cache[body] = parsed
-	return parsed, nil
+	parser.cache[body] = tmpl
+	return tmpl, nil
 }
 
 func (parser *bodyParser) sections(body string) (map[string]string, error) {
@@ -41,17 +38,17 @@ func (parser *bodyParser) sections(body string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parsed.sections()
+	return renderSections(parsed)
 }
 
-func (parsed parsedBody) sections() (map[string]string, error) {
+func renderSections(tmpl *template.Template) (map[string]string, error) {
 	byKey := map[string]string{}
 	for _, canonical := range canonicalSections() {
-		if parsed.tmpl.Lookup(canonical.Key) == nil {
+		if tmpl.Lookup(canonical.Key) == nil {
 			continue
 		}
 		var buf bytes.Buffer
-		if execErr := parsed.tmpl.ExecuteTemplate(&buf, canonical.Key, nil); execErr != nil {
+		if execErr := tmpl.ExecuteTemplate(&buf, canonical.Key, nil); execErr != nil {
 			return nil, fmt.Errorf("render section %q: %w", canonical.Key, execErr)
 		}
 		byKey[canonical.Key] = strings.TrimSpace(buf.String())
@@ -65,10 +62,10 @@ func (parser *bodyParser) whole(body string) (string, error) {
 		return "", err
 	}
 	var preamble bytes.Buffer
-	if execErr := parsed.tmpl.Execute(&preamble, nil); execErr != nil {
+	if execErr := parsed.Execute(&preamble, nil); execErr != nil {
 		return "", fmt.Errorf("render preamble: %w", execErr)
 	}
-	sections, err := parsed.sections()
+	sections, err := renderSections(parsed)
 	if err != nil {
 		return "", err
 	}
@@ -108,7 +105,7 @@ func UnknownSections(body string) ([]string, error) {
 		canonical[section.Key] = true
 	}
 	var names []string
-	for _, assoc := range parsed.tmpl.Templates() {
+	for _, assoc := range parsed.Templates() {
 		if name := assoc.Name(); name != "body" && !canonical[name] {
 			names = append(names, name)
 		}
