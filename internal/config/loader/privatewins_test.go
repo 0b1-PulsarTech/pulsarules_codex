@@ -77,9 +77,9 @@ func TestPrivateWinsOverBaseOverrides(t *testing.T) {
 			t.Parallel()
 			spec := layout{base: testCase.base, private: testCase.private, git: true}
 			root := spec.build(t)
-			cfg, findings := ForRoot(root)
+			cfg, findings := forRoot(root)
 			if len(findings) != 0 {
-				t.Fatalf("ForRoot() findings = %+v, want none", findings)
+				t.Fatalf("forRoot() findings = %+v, want none", findings)
 			}
 			if got := cfg.Analyzers[testCase.wantOff]; got.Enabled {
 				t.Fatalf("%s enabled = true, want off", testCase.wantOff)
@@ -136,9 +136,9 @@ func TestPrivateWinsKeepsWhatItShould(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			spec := layout{base: testCase.base, private: testCase.private, git: true}
-			cfg, findings := ForRoot(spec.build(t))
+			cfg, findings := forRoot(spec.build(t))
 			if len(findings) != 0 {
-				t.Fatalf("ForRoot() findings = %+v, want none", findings)
+				t.Fatalf("forRoot() findings = %+v, want none", findings)
 			}
 			if len(cfg.Overrides) != testCase.wantOverrides {
 				t.Fatalf("overrides = %+v, want %d", cfg.Overrides, testCase.wantOverrides)
@@ -174,7 +174,7 @@ func TestPrivateWins_NarrowsEachFile(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			spec := layout{base: testCase.base, private: testCase.private, git: true}
-			_, findings := ForRoot(spec.build(t))
+			_, findings := forRoot(spec.build(t))
 			assertConfigFinding(t, findings, testCase.wantFile, testCase.wantErr)
 		})
 	}

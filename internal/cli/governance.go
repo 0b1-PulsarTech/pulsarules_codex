@@ -101,7 +101,7 @@ func reportGovernance(result governance.Result) error {
 	)
 
 	if errCount > 0 {
-		return &ExitError{Code: 1}
+		return ErrFindings
 	}
 	return nil
 }

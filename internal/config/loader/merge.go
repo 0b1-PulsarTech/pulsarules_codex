@@ -26,7 +26,7 @@ func merge(base, private *projectfile.File, presetFlag string) (*projectfile.Fil
 	if err := checkMergedSizes(merged); err != nil {
 		return nil, err
 	}
-	if err := merged.Validate(Rules()); err != nil {
+	if err := merged.Validate(configRules()); err != nil {
 		return nil, err
 	}
 	return merged, nil

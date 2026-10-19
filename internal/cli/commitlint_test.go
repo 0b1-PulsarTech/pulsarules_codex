@@ -67,9 +67,8 @@ func TestRunCommitLint_ProjectConfig(t *testing.T) {
 				}
 				return
 			}
-			var exitErr *ExitError
-			if !errors.As(err, &exitErr) || exitErr.Code != 1 {
-				t.Fatalf("runCommitLint() error = %v, want exit code 1", err)
+			if !errors.Is(err, ErrFindings) {
+				t.Fatalf("runCommitLint() error = %v, want ErrFindings (exit code 1)", err)
 			}
 		})
 	}

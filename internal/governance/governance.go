@@ -44,7 +44,6 @@ func NewSession(
 ) *Session {
 	if cfg == nil {
 		cfg = config.Defaults()
-		cfg.ApplyPreset()
 	}
 	return &Session{
 		repo:        repo,

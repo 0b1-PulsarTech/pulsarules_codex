@@ -3,7 +3,7 @@ package loader
 import "github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 
 func privateRules(base *projectfile.File) projectfile.Rules {
-	rules := Rules()
+	rules := configRules()
 	if base == nil {
 		return rules
 	}

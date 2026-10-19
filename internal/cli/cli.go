@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -20,14 +21,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
-type ExitError struct {
-	Code int
-}
-
-func (exitErr *ExitError) Error() string {
-	// Fallback only: the command printed its findings before returning this.
-	return fmt.Sprintf("exit code %d", exitErr.Code)
-}
+// The command printed its findings before returning this; main exits 1 without reprinting.
+var ErrFindings = errors.New("findings reported")
 
 type command func(inj remy.Injector, opts *version.Options) error
 

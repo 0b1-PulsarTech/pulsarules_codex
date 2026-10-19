@@ -12,7 +12,7 @@ import (
 
 func parseFile(t *testing.T, name, content string) *projectfile.File {
 	t.Helper()
-	file, err := projectfile.Parse(name, []byte(content), Rules())
+	file, err := projectfile.Parse(name, []byte(content), configRules())
 	if err != nil {
 		t.Fatalf("Parse(%s) error = %v", name, err)
 	}

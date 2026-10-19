@@ -363,7 +363,7 @@ func TestForRootLayered(t *testing.T) {
 	for _, testCase := range forRootCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, findings := ForRoot(testCase.spec.build(t))
+			_, findings := forRoot(testCase.spec.build(t))
 			assertConfigFinding(t, findings, testCase.wantFile, testCase.wantMessage)
 			if testCase.wantNoSubstr != "" &&
 				strings.Contains(findings[0].Message, testCase.wantNoSubstr) {

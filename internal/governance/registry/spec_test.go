@@ -67,20 +67,19 @@ func TestDelegatedFormats(t *testing.T) {
 	}
 }
 
-func TestInternalIDs(t *testing.T) {
+func TestConfigurableIDs(t *testing.T) {
 	t.Parallel()
 
-	listed := InternalIDs()
+	listed := ConfigurableIDs()
 	for _, spec := range specs() {
-		if got := slices.Contains(listed, spec.id); got != spec.internal {
+		if got := slices.Contains(listed, spec.id); got == spec.internal {
 			t.Errorf("%q: listed = %v, internal flag = %v", spec.id, got, spec.internal)
 		}
 	}
-	want := []string{"rule-injection", "output", "delegated-command"}
-	slices.Sort(want)
-	slices.Sort(listed)
-	if !slices.Equal(listed, want) {
-		t.Fatalf("InternalIDs() = %v, want %v", listed, want)
+	for _, hidden := range []string{"rule-injection", "output", "delegated-command"} {
+		if slices.Contains(listed, hidden) {
+			t.Fatalf("ConfigurableIDs() = %v, want %q hidden", listed, hidden)
+		}
 	}
 }
 

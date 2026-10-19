@@ -17,7 +17,7 @@ const (
 func renderOverhead(file string) int {
 	const indent, label, location = 2, len("[error] "), len(" ()\n")
 	// The widest finding layout: indent, "[error] config: ", message, " (file)" and newline.
-	return indent + label + len(ConfigAnalyzerID) + len(": ") + location + len(printable.Path(file))
+	return indent + label + len(configAnalyzerID) + len(": ") + location + len(printable.Path(file))
 }
 
 func capReport(err error, file *projectfile.File) error {

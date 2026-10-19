@@ -93,8 +93,8 @@ func TestNewInvalidLevel(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid level")
 	}
-	if !errors.Is(err, ErrInvalidLevel) {
-		t.Fatalf("err = %v, want wrapping ErrInvalidLevel", err)
+	if !errors.Is(err, errInvalidLevel) {
+		t.Fatalf("err = %v, want wrapping errInvalidLevel", err)
 	}
 }
 

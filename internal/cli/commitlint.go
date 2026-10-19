@@ -58,7 +58,7 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 	_, _ = fmt.Fprint(os.Stderr, findings.FormatFindings(findingsItem, findings.StyleCLI, ""))
 
 	if errCount, _, _ := governance.CountBySeverity(findingsItem); errCount > 0 {
-		return &ExitError{Code: 1}
+		return ErrFindings
 	}
 	return nil
 }

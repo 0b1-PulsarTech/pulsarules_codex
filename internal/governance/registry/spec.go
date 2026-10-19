@@ -58,10 +58,10 @@ func IDs() []string {
 	return ids
 }
 
-func InternalIDs() []string {
+func ConfigurableIDs() []string {
 	var ids []string
 	for _, spec := range specs() {
-		if spec.internal {
+		if !spec.internal {
 			ids = append(ids, spec.id)
 		}
 	}

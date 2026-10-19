@@ -64,7 +64,7 @@ func TestFileErrorUnwraps(t *testing.T) {
 			t.Parallel()
 			fault := &fileError{File: "x.yaml", Err: testCase.inner}
 			if !errors.Is(fault, cause) || fault.Error() != testCase.wantMsg {
-				t.Fatalf("FileError = %v, want it to unwrap to its cause", fault)
+				t.Fatalf("fileError = %v, want it to unwrap to its cause", fault)
 			}
 		})
 	}

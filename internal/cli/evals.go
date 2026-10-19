@@ -74,7 +74,7 @@ func reportEvals(out io.Writer, scenarios []evals.Scenario, artifact string) err
 		"\n%d/%d machine assertions passed across %d scenario(s); %d need a human judge\n",
 		totalPassed, totalGraded, len(scenarios), totalJudge)
 	if totalGraded > 0 && totalPassed < totalGraded {
-		return &ExitError{Code: 1}
+		return ErrFindings
 	}
 	return nil
 }

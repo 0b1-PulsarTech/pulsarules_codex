@@ -53,7 +53,7 @@ func TestLoadBudgetsTheRenderedLine(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, findings := ForRoot(testCase.spec.build(t))
+			_, findings := forRoot(testCase.spec.build(t))
 			if len(findings) != 1 {
 				t.Fatalf("findings = %d, want exactly one", len(findings))
 			}
@@ -76,7 +76,7 @@ func TestRenderOverhead(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			bare := finding.Finding{
-				AnalyzerID: ConfigAnalyzerID, Severity: finding.SeverityError, File: testCase.file,
+				AnalyzerID: configAnalyzerID, Severity: finding.SeverityError, File: testCase.file,
 			}
 			want := len(findings.FormatFindings([]finding.Finding{bare}, findings.StyleHook, ""))
 			if got := renderOverhead(testCase.file); got != want {
@@ -168,7 +168,7 @@ func capReportCases() []capCase {
 
 func errorFinding(err error) finding.Finding {
 	return finding.Finding{
-		AnalyzerID: ConfigAnalyzerID, Severity: finding.SeverityError,
+		AnalyzerID: configAnalyzerID, Severity: finding.SeverityError,
 		File: faultFile(err, nil), Message: err.Error(),
 	}
 }
@@ -335,7 +335,7 @@ func TestLoadCapsEveryConfigError(t *testing.T) {
 			if testCase.spec.unreadable && os.Geteuid() == 0 {
 				t.Skip("root opens a mode 000 file")
 			}
-			_, findings := ForRoot(testCase.spec.build(t))
+			_, findings := forRoot(testCase.spec.build(t))
 			if len(findings) != 1 {
 				t.Fatalf("findings = %d, want exactly one", len(findings))
 			}

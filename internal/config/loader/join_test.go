@@ -138,7 +138,7 @@ func TestJoinFaults(t *testing.T) {
 			joined := joinFaults(testCase.base, testCase.second)
 			got := joined.Error()
 			findingItem := finding.Finding{
-				AnalyzerID: ConfigAnalyzerID, Severity: finding.SeverityError,
+				AnalyzerID: configAnalyzerID, Severity: finding.SeverityError,
 				File: faultFile(joined, nil), Message: got,
 			}
 			rendered := findings.FormatFindings(
@@ -182,7 +182,7 @@ func TestLoadCapsTheJoinedReport(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, findingsItem := ForRoot(testCase.spec.build(t))
+			_, findingsItem := forRoot(testCase.spec.build(t))
 			if len(findingsItem) != 1 {
 				t.Fatalf("findings = %+v, want exactly one", findingsItem)
 			}

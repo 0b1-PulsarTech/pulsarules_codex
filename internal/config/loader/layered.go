@@ -17,7 +17,7 @@ func loadLayers(
 	root string, resolve commonDirResolver, presetFlag string,
 ) (*projectfile.File, error) {
 	base, baseErr := loadOptional(filepath.Join(root, projectfile.Name),
-		projectfile.Name, Rules())
+		projectfile.Name, configRules())
 	rules := privateRules(base)
 	// A failed base hides its delegated ids, so the private ids cannot be judged yet.
 	rules.AnyAnalyzer = baseErr != nil

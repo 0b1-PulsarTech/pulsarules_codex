@@ -45,8 +45,8 @@ func main() {
 }
 
 func die(err error) {
-	if exitErr, ok := errors.AsType[*cli.ExitError](err); ok {
-		os.Exit(exitErr.Code)
+	if errors.Is(err, cli.ErrFindings) {
+		os.Exit(1)
 	}
 	cli.ReportError(os.Stderr, err)
 	os.Exit(1)

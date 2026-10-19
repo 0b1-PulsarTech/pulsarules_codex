@@ -11,9 +11,6 @@ import (
 )
 
 func toAnalysisConfig(cfg *config.GovernanceConfig) *pass.AnalysisConfig {
-	if cfg == nil {
-		return &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{}}
-	}
 	analyzers := make(map[string]pass.AnalyzerConfig, len(cfg.Analyzers)+1)
 	for id, ac := range cfg.Analyzers {
 		analyzers[id] = pass.AnalyzerConfig{

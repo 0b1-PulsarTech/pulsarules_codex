@@ -89,9 +89,8 @@ func TestRunEvals_ReachesGradeThroughTheDispatcher(t *testing.T) {
 				}
 				return
 			}
-			var exitErr *ExitError
-			if testCase.wantExit && !errors.As(err, &exitErr) {
-				t.Fatalf("error = %v, want an *ExitError for a failed assertion", err)
+			if testCase.wantExit && !errors.Is(err, ErrFindings) {
+				t.Fatalf("error = %v, want ErrFindings for a failed assertion", err)
 			}
 		})
 	}

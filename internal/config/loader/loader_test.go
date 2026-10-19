@@ -377,14 +377,14 @@ func TestForRoot(t *testing.T) {
 			if testCase.content != "" {
 				writeConfig(t, dir, testCase.content)
 			}
-			cfg, findings := ForRoot(dir)
+			cfg, findings := forRoot(dir)
 			if cfg.Preset != config.PresetRecommended || len(cfg.Overrides) != 0 {
 				t.Errorf("cfg = %+v, want defaults", cfg)
 			}
 			if testCase.wantMessage == "" {
 				got := cfg.Analyzers["big-comment"].Params["max_lines"]
 				if len(findings) != 0 || got != testCase.wantMaxLines {
-					t.Fatalf("ForRoot() = %+v, %+v", got, findings)
+					t.Fatalf("forRoot() = %+v, %+v", got, findings)
 				}
 				return
 			}
@@ -399,7 +399,7 @@ func assertConfigFinding(t *testing.T, findings []finding.Finding, file, message
 		t.Fatalf("findings = %+v, want exactly one", findings)
 	}
 	got := findings[0]
-	if got.AnalyzerID != ConfigAnalyzerID || got.Severity != finding.SeverityError {
+	if got.AnalyzerID != configAnalyzerID || got.Severity != finding.SeverityError {
 		t.Errorf("finding = %+v, want an error from the config analyzer", got)
 	}
 	if got.File != file || !strings.Contains(got.Message, message) {
@@ -432,8 +432,8 @@ func TestForRepo(t *testing.T) {
 func TestRulesReserveEveryBuiltInID(t *testing.T) {
 	t.Parallel()
 
-	reserved := Rules().ReservedIDs
-	for _, id := range append(registry.IDs(), ConfigAnalyzerID) {
+	reserved := configRules().ReservedIDs
+	for _, id := range append(registry.IDs(), configAnalyzerID) {
 		if !slices.Contains(reserved, id) {
 			t.Errorf("ReservedIDs lacks %q", id)
 		}

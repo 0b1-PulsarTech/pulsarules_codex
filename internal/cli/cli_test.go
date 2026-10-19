@@ -27,12 +27,12 @@ func TestRun_UnknownCommand(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error for an unknown command")
 	}
-	if _, ok := errors.AsType[*ExitError](err); ok {
-		t.Fatalf("unknown command should not be an *ExitError, got %v", err)
+	if errors.Is(err, ErrFindings) {
+		t.Fatalf("unknown command should not be ErrFindings, got %v", err)
 	}
 }
 
-func TestRunCommitLint_ReturnsExitError(t *testing.T) {
+func TestRunCommitLint_ReturnsErrFindings(t *testing.T) {
 	t.Parallel()
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
@@ -43,12 +43,8 @@ func TestRunCommitLint_ReturnsExitError(t *testing.T) {
 	const messageTrippingEmojiTypeAndInitialRules = "bad commit message"
 	err := runCommitLint(inj, &version.Options{CommitMsg: messageTrippingEmojiTypeAndInitialRules})
 
-	var exitErr *ExitError
-	if !errors.As(err, &exitErr) {
-		t.Fatalf("expected *ExitError, got %v (%T)", err, err)
-	}
-	if exitErr.Code != 1 {
-		t.Fatalf("Code = %d, want 1", exitErr.Code)
+	if !errors.Is(err, ErrFindings) {
+		t.Fatalf("error = %v, want ErrFindings", err)
 	}
 }
 
@@ -80,8 +76,8 @@ func TestRunCommitLint_NoRepository(t *testing.T) {
 		inj,
 		&version.Options{CommitMsg: invalidCommitMessage},
 	)
-	if _, ok := errors.AsType[*ExitError](err); !ok {
-		t.Fatalf("expected *ExitError from analysis findings, got %v (%T)", err, err)
+	if !errors.Is(err, ErrFindings) {
+		t.Fatalf("error = %v, want ErrFindings from analysis findings", err)
 	}
 }
 
@@ -129,14 +125,6 @@ func TestRun_PrefixesInstallAndUninstallErrors(t *testing.T) {
 				t.Errorf("error = %q, want prefix %q", err.Error(), testCase.wantPrefix)
 			}
 		})
-	}
-}
-
-func TestExitError_Error(t *testing.T) {
-	t.Parallel()
-
-	if got := (&ExitError{Code: 2}).Error(); got != "exit code 2" {
-		t.Errorf("Error() = %q, want %q", got, "exit code 2")
 	}
 }
 
@@ -306,8 +294,8 @@ func outcome(err error) string {
 	if err == nil {
 		return "ok"
 	}
-	if exitErr, isExit := errors.AsType[*ExitError](err); isExit {
-		return fmt.Sprintf("exit %d", exitErr.Code)
+	if errors.Is(err, ErrFindings) {
+		return "exit 1"
 	}
 	return err.Error()
 }

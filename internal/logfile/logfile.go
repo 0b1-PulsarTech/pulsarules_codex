@@ -13,17 +13,16 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 )
 
-var ErrInvalidLevel = errors.New("invalid log level")
+var errInvalidLevel = errors.New("invalid log level")
 
 type Config struct {
-	Level    string
-	Path     string
-	MaxBytes int64
+	Level string
+	Path  string
 }
 
 func New(cfg Config) (*slog.Logger, io.Closer, error) {
 	if cfg.Level == "" || cfg.Path == "" {
-		return slog.New(slog.DiscardHandler), noopCloser{}, nil
+		return slog.New(slog.DiscardHandler), io.NopCloser(nil), nil
 	}
 
 	level, err := parseLevel(cfg.Level)
@@ -31,13 +30,9 @@ func New(cfg Config) (*slog.Logger, io.Closer, error) {
 		return nil, nil, fmt.Errorf("parse log level: %w", err)
 	}
 
-	const defaultMaxBytes = 256 * 1024
+	const maxBytes = 256 * 1024
 
 	path := cfg.Path
-	maxBytes := cfg.MaxBytes
-	if maxBytes <= 0 {
-		maxBytes = defaultMaxBytes
-	}
 
 	if err = os.MkdirAll(filepath.Dir(path), disk.DirPrivate); err != nil {
 		return nil, nil, fmt.Errorf("create log dir: %w", err)
@@ -59,7 +54,7 @@ func New(cfg Config) (*slog.Logger, io.Closer, error) {
 func parseLevel(raw string) (slog.Level, error) {
 	var level slog.Level
 	if err := level.UnmarshalText([]byte(raw)); err != nil {
-		return 0, fmt.Errorf("%q: %w", raw, ErrInvalidLevel)
+		return 0, fmt.Errorf("%q: %w", raw, errInvalidLevel)
 	}
 	return level, nil
 }
@@ -93,9 +88,3 @@ func truncateToTail(path string, maxBytes int64) error {
 	}
 	return nil
 }
-
-type noopCloser struct{}
-
-func (noopCloser) Close() error { return nil }
-
-var _ io.Closer = noopCloser{}

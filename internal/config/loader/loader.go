@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
@@ -14,15 +13,12 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-const ConfigAnalyzerID = "config"
+const configAnalyzerID = "config"
 
-func Rules() projectfile.Rules {
-	internal := registry.InternalIDs()
+func configRules() projectfile.Rules {
 	return projectfile.Rules{
-		AnalyzerIDs: slices.DeleteFunc(registry.IDs(), func(id string) bool {
-			return slices.Contains(internal, id)
-		}),
-		ReservedIDs:      append(registry.IDs(), ConfigAnalyzerID),
+		AnalyzerIDs:      registry.ConfigurableIDs(),
+		ReservedIDs:      append(registry.IDs(), configAnalyzerID),
 		Params:           registry.Params(),
 		DelegatedFormats: registry.DelegatedFormats(),
 	}
@@ -35,7 +31,7 @@ func Load(root, explicit, presetFlag string) (*projectfile.File, error) {
 
 func load(root, explicit, presetFlag string) (*projectfile.File, error) {
 	if explicit != "" {
-		return loadFile(explicit, explicit, Rules())
+		return loadFile(explicit, explicit, configRules())
 	}
 	if root == "" {
 		return nil, nil
@@ -88,12 +84,12 @@ func withPreset(file *projectfile.File, presetFlag string) *config.GovernanceCon
 
 func ForRepo(repo vcs.Repository) (*config.GovernanceConfig, []finding.Finding) {
 	if repo == nil {
-		return ForRoot("")
+		return forRoot("")
 	}
-	return ForRoot(repo.Root())
+	return forRoot(repo.Root())
 }
 
-func ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
+func forRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
 	file, err := Load(root, "", "")
 	if err == nil {
 		var cfg *config.GovernanceConfig
@@ -102,7 +98,7 @@ func ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
 		}
 	}
 	findingItem := finding.Finding{
-		AnalyzerID: ConfigAnalyzerID,
+		AnalyzerID: configAnalyzerID,
 		Severity:   finding.SeverityError,
 		Category:   finding.CatProject,
 		File:       faultFile(err, file),
