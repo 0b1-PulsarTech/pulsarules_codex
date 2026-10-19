@@ -82,3 +82,29 @@ func isWordChar(char rune) bool {
 	return char == '_' || char >= '0' && char <= '9' || char >= 'a' && char <= 'z' ||
 		char >= 'A' && char <= 'Z'
 }
+
+func PulsarulesMarker(body string) (string, bool) {
+	token, ok := strings.CutPrefix(strings.TrimSpace(body), "pulsarules:")
+	if !ok || token == "" || token[0] == ' ' || token[0] == '\t' {
+		return "", false
+	}
+	return token, true
+}
+
+func directiveBodyPrefixes() []string {
+	return []string{
+		"eslint-", "@ts-", "pulsarules:", "ignore:", "ignore_for_file:", "prettier-ignore",
+		"istanbul ignore", "c8 ignore", "svelte-ignore", "biome-ignore", "noinspection",
+	}
+}
+
+func commentDirectivePrefixes() []string {
+	return []string{"//go:", "//nolint", "//lint:"}
+}
+
+func IsDirectiveLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return IsGeneratedMarkerLine(trimmed) || IsMachineReadCommentLine(trimmed) ||
+		hasAnyPrefix(trimmed, commentDirectivePrefixes()) ||
+		hasAnyPrefix(CommentBody(trimmed, AnyCommentSyntax()), directiveBodyPrefixes())
+}

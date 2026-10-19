@@ -73,13 +73,13 @@ func ExemptHeaderSpan(lines []string) int {
 	first := strings.TrimSpace(lines[0])
 	switch {
 	case strings.HasPrefix(first, "/*"):
-		span := blockSpan(lines, "/*", "*/")
+		span := blockSpan(lines, "/*")
 		if isDirectiveHeaderLine(first) || hasDocblockPragma(lines[:span]) {
 			return span
 		}
 	case strings.HasPrefix(first, "<!--"):
 		if isDirectiveHeaderLine(first) {
-			return blockSpan(lines, "<!--", "-->")
+			return blockSpan(lines, "<!--")
 		}
 	case isDirectiveHeaderLine(first):
 		return 1
@@ -87,26 +87,17 @@ func ExemptHeaderSpan(lines []string) int {
 	return 0
 }
 
-func blockSpan(lines []string, open, closer string) int {
-	for idx, line := range lines {
-		rest := line
-		if idx == 0 {
-			rest = strings.TrimSpace(line)[len(open):]
-		}
-		if strings.Contains(rest, closer) {
-			return idx + 1
-		}
-	}
-	return len(lines)
+func blockSpan(lines []string, open string) int {
+	anyBlocks := AnyCommentSyntax().Blocks
+	idx := slices.IndexFunc(anyBlocks, func(block BlockDelim) bool { return block.Open == open })
+	end, _ := BlockEnd(lines, anyBlocks[idx])
+	return end + 1
 }
 
 func hasDocblockPragma(block []string) bool {
 	pragmas := 0
 	for _, line := range block {
-		content := strings.TrimSpace(line)
-		content = strings.TrimSuffix(content, "*/")
-		content = strings.TrimPrefix(content, "/*")
-		fields := strings.Fields(strings.TrimLeft(content, "*"))
+		fields := strings.Fields(CommentBody(line, AnyCommentSyntax()))
 		if len(fields) == 0 {
 			continue
 		}
@@ -156,6 +147,6 @@ func isPulsarulesMarker(trimmed string) bool {
 	if !ok {
 		return false
 	}
-	token, ok := strings.CutPrefix(strings.TrimSpace(body), "pulsarules:")
-	return ok && token != "" && token[0] != ' ' && token[0] != '\t'
+	_, ok = PulsarulesMarker(body)
+	return ok
 }

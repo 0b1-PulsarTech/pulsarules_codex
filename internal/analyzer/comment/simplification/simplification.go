@@ -53,16 +53,17 @@ func scanFile(
 	lines := strings.Split(string(src), "\n")
 	// A block is the marker line plus every comment line immediately after it. One
 	// scanner runs in file order first, so continuations match big-comment's reading.
-	isComment := scanComments(lines, lang.CommentSyntax())
+	syntax := lang.CommentSyntax()
+	isComment := scanComments(lines, syntax)
 	for lineIdx := 0; lineIdx < len(lines); lineIdx++ {
-		if !isMarkerLine(lang, lines[lineIdx]) {
+		if !lexer.IsSimplificationMarker(lines[lineIdx], syntax) {
 			continue
 		}
 		blockEnd := lineIdx + 1
 		for blockEnd < len(lines) && isComment[blockEnd] {
 			blockEnd++
 		}
-		if !blockNamesUpgradePath(lang, lines[lineIdx:blockEnd]) {
+		if !blockNamesUpgradePath(syntax, lines[lineIdx:blockEnd]) {
 			findings = append(findings, reporter.At(
 				path,
 				lineIdx+1,
@@ -84,19 +85,10 @@ func scanComments(lines []string, syntax lexer.CommentSyntax) []bool {
 	return isComment
 }
 
-func isMarkerLine(lang pass.Language, line string) bool {
-	comment, ok := strings.CutPrefix(strings.TrimSpace(line), lang.CommentPrefix())
-	if !ok {
-		return false
-	}
-	return strings.HasPrefix(strings.TrimSpace(comment), lexer.SimplificationMarker)
-}
-
-func blockNamesUpgradePath(lang pass.Language, lines []string) bool {
+func blockNamesUpgradePath(syntax lexer.CommentSyntax, lines []string) bool {
 	words := make([]string, 0, len(lines))
 	for _, line := range lines {
-		comment, _ := strings.CutPrefix(strings.TrimSpace(line), lang.CommentPrefix())
-		words = append(words, strings.TrimSpace(comment))
+		words = append(words, lexer.CommentBody(line, syntax))
 	}
 	// Joined with a space: golines wraps prose, and a label split across two lines is
 	// still one label.

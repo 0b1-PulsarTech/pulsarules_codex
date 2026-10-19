@@ -62,6 +62,9 @@ func TestIsDirectiveGroup(t *testing.T) {
 		},
 		{"todo shaped prose", "package p\n\n//todo:remove this hack\nfunc f() {}\n", false},
 		{"empty block comment", "package p\n\n/**/\nfunc f() {}\n", true},
+		{"empty star block comment", "package p\n\n/** */\nfunc f() {}\n", true},
+		{"ignore directive", "package p\n\n// ignore: unused\nfunc f() {}\n", true},
+		{"eslint directive", "package p\n\n// eslint-disable-next-line\nfunc f() {}\n", true},
 		{"prose", "package p\n\n// does a thing\nfunc f() {}\n", false},
 		{
 			"prose plus directive",

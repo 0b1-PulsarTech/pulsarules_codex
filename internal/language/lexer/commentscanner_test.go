@@ -1,6 +1,9 @@
 package lexer
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestCommentScanner_HTMLBlockSpansLines(t *testing.T) {
 	t.Parallel()
@@ -147,6 +150,74 @@ func TestCommentScanner_InBlock(t *testing.T) {
 			}
 			if got := scanner.InBlock(); got != testCase.want {
 				t.Errorf("InBlock() = %v, want %v", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestCommentScanner_Scan(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		lines    []string
+		want     []CommentPiece
+		wantCode bool
+	}{
+		{"blank line", []string{""}, nil, false},
+		{"code line", []string{"package a"}, nil, true},
+		{"line comment", []string{"// note "}, []CommentPiece{{Rest: "note"}}, false},
+		{"hash comment", []string{"# note"}, []CommentPiece{{Rest: "note"}}, false},
+		{
+			"one-line block",
+			[]string{"/* note */"},
+			[]CommentPiece{{InBlock: true, Rest: "note */"}},
+			false,
+		},
+		{"opener alone", []string{"/*"}, []CommentPiece{{InBlock: true}}, false},
+		{
+			"block then line comment",
+			[]string{"/* a */ // b"},
+			[]CommentPiece{{InBlock: true, Rest: "a */ // b"}, {Rest: "b"}},
+			false,
+		},
+		{
+			"block then code",
+			[]string{"/* a */ package a"},
+			[]CommentPiece{{InBlock: true, Rest: "a */ package a"}},
+			true,
+		},
+		{
+			"continued block",
+			[]string{"/*", " * a", " */ // b"},
+			[]CommentPiece{{InBlock: true, Rest: "*/ // b"}, {Rest: "b"}},
+			false,
+		},
+		{
+			"lua block before line prefix",
+			[]string{"--[[ a"},
+			[]CommentPiece{{InBlock: true, Rest: "a"}},
+			false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			scanner := NewCommentScanner(AnyCommentSyntax())
+			var got []CommentPiece
+			var hasCode bool
+			for _, line := range testCase.lines {
+				got, hasCode = scanner.Scan(line)
+			}
+			if !slices.Equal(got, testCase.want) || hasCode != testCase.wantCode {
+				t.Fatalf(
+					"Scan = (%+v, %v), want (%+v, %v)",
+					got,
+					hasCode,
+					testCase.want,
+					testCase.wantCode,
+				)
 			}
 		})
 	}

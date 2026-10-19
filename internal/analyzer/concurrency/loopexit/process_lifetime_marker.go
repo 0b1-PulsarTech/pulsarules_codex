@@ -4,6 +4,8 @@ import (
 	"go/ast"
 	"go/token"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 func findProcessLifetimeMarker(
@@ -19,7 +21,7 @@ func findProcessLifetimeMarker(
 			if line == forLine-1 && codeLines[line] {
 				continue
 			}
-			text := strings.TrimSpace(strings.TrimPrefix(comment.Text, "//"))
+			text := strings.TrimPrefix(comment.Text, "//")
 			reason, ok := matchProcessLifetimeMarker(text)
 			if !ok {
 				continue
@@ -31,9 +33,11 @@ func findProcessLifetimeMarker(
 }
 
 func matchProcessLifetimeMarker(text string) (string, bool) {
-	const processLifetimeMarker = "pulsarules:process-lifetime"
-
-	reason, ok := strings.CutPrefix(text, processLifetimeMarker)
+	token, ok := lexer.PulsarulesMarker(text)
+	if !ok {
+		return "", false
+	}
+	reason, ok := strings.CutPrefix(token, "process-lifetime")
 	if !ok {
 		return "", false
 	}

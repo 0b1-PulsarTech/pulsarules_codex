@@ -1,7 +1,6 @@
 package banner
 
 import (
-	"bytes"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -9,12 +8,7 @@ import (
 )
 
 func leadingCommentLine(lang pass.Language, extension string, src []byte) (int, bool) {
-	// The BOM is dropped only so line 1 splits cleanly; IsGeneratedSource strips its own.
-	body := bytes.TrimPrefix(src, []byte("\xef\xbb\xbf"))
-	if lexer.IsGeneratedSource(body) {
-		return 0, false
-	}
-	lines := strings.Split(string(body), "\n")
+	lines := strings.Split(string(lexer.TrimBOM(src)), "\n")
 	var skip func(string) bool
 	if isScriptExtension(extension) {
 		skip = isToolPragma

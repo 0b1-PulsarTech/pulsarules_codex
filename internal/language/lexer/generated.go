@@ -6,18 +6,6 @@ import (
 	"strings"
 )
 
-func generatedLinePrefixes() []string {
-	return []string{"//", "#", "--"}
-}
-
-func generatedBlockDelims() []BlockDelim {
-	return []BlockDelim{
-		{Open: "/*", Close: "*/"},
-		{Open: "<!--", Close: "-->"},
-		{Open: "--[[", Close: "]]"},
-	}
-}
-
 func generatedPhrases() []string {
 	return []string{
 		"GENERATED CODE - ",
@@ -43,68 +31,29 @@ func generatedBlockPhrases() []string {
 }
 
 func IsGeneratedSource(src []byte) bool {
-	src = bytes.TrimPrefix(src, []byte("\xef\xbb\xbf"))
-	var openBlock *BlockDelim
-	// A marker counts on a line comment ahead of the first real content; one
-	// inside a block comment never does, except generatedBlockPhrases.
-lines:
-	for line := range bytes.Lines(src) {
-		rest := strings.TrimSpace(string(line))
-		for {
-			switch {
-			case openBlock != nil:
-				closeIdx := strings.Index(rest, openBlock.Close)
-				banner := strings.TrimSpace(strings.TrimLeft(rest, "*"))
-				if slices.Contains(generatedBlockPhrases(), banner) {
-					return true
-				}
-				if closeIdx == -1 {
-					continue lines
-				}
-				rest = strings.TrimSpace(rest[closeIdx+len(openBlock.Close):])
-				openBlock = nil
-			case rest == "":
-				continue lines
-			default:
-				block, isOpen := openingGeneratedBlock(rest)
-				if isOpen {
-					rest = strings.TrimSpace(rest[len(block.Open):])
-					openBlock = &block
-					continue
-				}
-				prefix, isLine := matchingLinePrefix(rest)
-				if !isLine {
-					// The first line of real code (for Go, the package
-					// clause). The marker is only honoured above it, and
-					// so is this scan.
-					return false
-				}
-				if isGeneratedMarker(strings.TrimSpace(rest[len(prefix):])) {
-					return true
-				}
-				continue lines
-			}
+	scanner := NewCommentScanner(AnyCommentSyntax())
+	// A marker counts on a line comment ahead of the first real content; one inside
+	// a block comment never does, except generatedBlockPhrases.
+	for line := range bytes.Lines(TrimBOM(src)) {
+		pieces, hasCode := scanner.Scan(string(line))
+		if slices.ContainsFunc(pieces, isGeneratedPiece) {
+			return true
+		}
+		if hasCode {
+			// The first line of real code (for Go, the package clause). The
+			// marker is only honoured above it, and so is this scan.
+			return false
 		}
 	}
 	return false
 }
 
-func openingGeneratedBlock(rest string) (BlockDelim, bool) {
-	for _, block := range generatedBlockDelims() {
-		if strings.HasPrefix(rest, block.Open) {
-			return block, true
-		}
+func isGeneratedPiece(piece CommentPiece) bool {
+	if piece.InBlock {
+		banner := strings.TrimSpace(strings.TrimLeft(piece.Rest, "*"))
+		return slices.Contains(generatedBlockPhrases(), banner)
 	}
-	return BlockDelim{}, false
-}
-
-func matchingLinePrefix(rest string) (string, bool) {
-	for _, prefix := range generatedLinePrefixes() {
-		if strings.HasPrefix(rest, prefix) {
-			return prefix, true
-		}
-	}
-	return "", false
+	return isGeneratedMarker(piece.Rest)
 }
 
 func isGeneratedMarker(content string) bool {
@@ -149,21 +98,16 @@ func isMockitoVersion(version string) bool {
 
 const SimplificationMarker = "simplification:"
 
-func IsSimplificationMarker(line string) bool {
-	trimmed := strings.TrimSpace(line)
-	for _, prefix := range []string{"//", "#", "--"} {
-		if comment, ok := strings.CutPrefix(trimmed, prefix); ok {
-			return strings.HasPrefix(strings.TrimSpace(comment), SimplificationMarker)
-		}
-	}
-	return false
+func IsSimplificationMarker(line string, syntax CommentSyntax) bool {
+	body, ok := openedBody(line, syntax)
+	return ok && strings.HasPrefix(body, SimplificationMarker)
 }
 
 func IsGeneratedMarkerLine(line string) bool {
-	trimmed := strings.TrimSpace(line)
-	prefix, ok := matchingLinePrefix(trimmed)
-	if !ok {
-		return false
+	for _, prefix := range AnyCommentSyntax().Line {
+		if body, ok := strings.CutPrefix(strings.TrimSpace(line), prefix); ok {
+			return isGeneratedMarker(strings.TrimSpace(body))
+		}
 	}
-	return isGeneratedMarker(strings.TrimSpace(trimmed[len(prefix):]))
+	return false
 }

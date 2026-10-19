@@ -13,32 +13,47 @@ func NewCommentScanner(syntax CommentSyntax) *CommentScanner {
 
 func (scan *CommentScanner) InBlock() bool { return scan.open != nil }
 
+type CommentPiece struct {
+	InBlock bool
+	Rest    string
+}
+
 func (scan *CommentScanner) IsCommentLine(line string) bool {
+	pieces, _ := scan.Scan(line)
+	return len(pieces) > 0
+}
+
+func (scan *CommentScanner) Scan(line string) (pieces []CommentPiece, hasCode bool) {
 	rest := strings.TrimSpace(line)
-	sawComment := false
 	for rest != "" {
-		if scan.open != nil {
-			sawComment = true
-			closeIdx := strings.Index(rest, scan.open.Close)
-			if closeIdx == -1 {
-				return true
+		if scan.open == nil {
+			block, ok := scan.openingBlock(rest)
+			if !ok {
+				return scan.trailingLine(rest, pieces)
 			}
-			rest = strings.TrimSpace(rest[closeIdx+len(scan.open.Close):])
-			scan.open = nil
-			continue
-		}
-		if block, ok := scan.openingBlock(rest); ok {
-			sawComment = true
-			rest = strings.TrimSpace(rest[len(block.Open):])
 			scan.open = &block
-			continue
+			rest = strings.TrimSpace(rest[len(block.Open):])
 		}
-		if scan.hasLinePrefix(rest) {
-			return true
+		pieces = append(pieces, CommentPiece{InBlock: true, Rest: rest})
+		closeIdx := strings.Index(rest, scan.open.Close)
+		if closeIdx == -1 {
+			return pieces, false
 		}
-		break
+		rest = strings.TrimSpace(rest[closeIdx+len(scan.open.Close):])
+		scan.open = nil
 	}
-	return sawComment
+	return pieces, false
+}
+
+func (scan *CommentScanner) trailingLine(
+	rest string, pieces []CommentPiece,
+) ([]CommentPiece, bool) {
+	for _, prefix := range scan.syntax.Line {
+		if body, ok := strings.CutPrefix(rest, prefix); ok {
+			return append(pieces, CommentPiece{Rest: strings.TrimSpace(body)}), false
+		}
+	}
+	return pieces, true
 }
 
 func (scan *CommentScanner) openingBlock(rest string) (BlockDelim, bool) {
@@ -49,13 +64,4 @@ func (scan *CommentScanner) openingBlock(rest string) (BlockDelim, bool) {
 		}
 	}
 	return BlockDelim{}, false
-}
-
-func (scan *CommentScanner) hasLinePrefix(rest string) bool {
-	for _, prefix := range scan.syntax.Line {
-		if strings.HasPrefix(rest, prefix) {
-			return true
-		}
-	}
-	return false
 }

@@ -38,25 +38,12 @@ func annotationBannerLine(lines []string) (int, bool) {
 }
 
 func annotationBlock(lines []string, start int) (int, string, bool) {
-	end := blockEnd(lines[start:])
-	if end < 0 {
+	end, closed := lexer.BlockEnd(lines[start:], lexer.BlockDelim{Open: "/**", Close: "*/"})
+	if !closed {
 		return 0, "", false
 	}
 	contents, rest := blockContents(lines[start : start+end+1])
 	return start + end + 1, rest, onlyAnnotationTags(contents)
-}
-
-func blockEnd(lines []string) int {
-	for idx, line := range lines {
-		rest := line
-		if idx == 0 {
-			rest = strings.TrimSpace(line)[len("/**"):]
-		}
-		if strings.Contains(rest, "*/") {
-			return idx
-		}
-	}
-	return -1
 }
 
 func blockContents(block []string) (contents []string, rest string) {

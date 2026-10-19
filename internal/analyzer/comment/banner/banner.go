@@ -22,12 +22,12 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if analyzer.langs == nil {
 		return nil
 	}
-	// Required header lines (lexical.ExemptHeaderSpan) are skipped so a hand comment after
-	// them is still flagged; a lexical.IsContentStartLine line ends the scan, and a file
-	// lexical.IsGeneratedSource accepts is exempt in full.
+	// Required header lines (lexer.ExemptHeaderSpan) are skipped so a hand comment after
+	// them is still flagged; a lexer.IsContentStartLine line ends the scan, and a
+	// generated file is exempt in full.
 	extFilter := pass.ExtensionFilter(ctx, analyzer.ID(), defaultExtensions())
 	eligible := func(fc pass.FileChange) bool {
-		return extFilter(fc) && analyzer.langs.Lookup(fc.Extension) != nil
+		return extFilter(fc) && !fc.Generated && analyzer.langs.Lookup(fc.Extension) != nil
 	}
 	scan := func(fc pass.FileChange, src []byte) []finding.Finding {
 		lang := analyzer.langs.Lookup(fc.Extension)

@@ -373,3 +373,46 @@ func mockitoVersionCases() []generatedTestCase {
 		},
 	}
 }
+
+func TestIsSimplificationMarker(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		line   string
+		syntax CommentSyntax
+		want   bool
+	}{
+		{"go line", "// simplification: x", goSyntax(), true},
+		{"go line without a space", "//simplification: x", goSyntax(), true},
+		{"indented", "\t// simplification: x", goSyntax(), true},
+		{"go block opener", "/* simplification: x", goSyntax(), true},
+		{"doc block opener", "/** simplification: x", goSyntax(), true},
+		{"hash line", "# simplification: x", CommentSyntax{Line: []string{"#"}}, true},
+		{"sql line", "-- simplification: x", CommentSyntax{Line: []string{"--"}}, true},
+		{"html block", "<!-- simplification: x -->", AnyCommentSyntax(), true},
+		{"prose mention", "// uses a simplification: x", goSyntax(), false},
+		{"wrong case", "// Simplification: x", goSyntax(), false},
+		{"code line", "simplification: x", goSyntax(), false},
+		{"block continuation is not an opener", " * simplification: x", goSyntax(), false},
+		{"hash is not a go comment", "# simplification: x", goSyntax(), false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := IsSimplificationMarker(testCase.line, testCase.syntax); got != testCase.want {
+				t.Fatalf(
+					"IsSimplificationMarker(%q) = %v, want %v",
+					testCase.line,
+					got,
+					testCase.want,
+				)
+			}
+		})
+	}
+}
+
+func goSyntax() CommentSyntax {
+	return CommentSyntax{Line: []string{"//"}, Blocks: []BlockDelim{{Open: "/*", Close: "*/"}}}
+}

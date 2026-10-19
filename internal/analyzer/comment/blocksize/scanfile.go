@@ -53,7 +53,8 @@ func scanFile(
 			blockStart = idx + 1
 			// A simplification block states the ceiling and an upgrade path, which no
 			// 3-line cap holds.
-			exempt = lexer.IsGeneratedMarkerLine(line) || lexer.IsSimplificationMarker(line)
+			exempt = lexer.IsGeneratedMarkerLine(line) ||
+				lexer.IsSimplificationMarker(line, syntax)
 		}
 		blockLines++
 	}
@@ -93,9 +94,9 @@ func opensHandBlock(scanner *lexer.CommentScanner, lines []string) bool {
 		return false
 	}
 	trimmed := strings.TrimSpace(lines[0])
-	for _, delims := range [][2]string{{"/*", "*/"}, {"<!--", "-->"}} {
-		if rest, ok := strings.CutPrefix(trimmed, delims[0]); ok {
-			_, after, closed := strings.Cut(rest, delims[1])
+	for _, delim := range lexer.AnyCommentSyntax().Blocks {
+		if rest, ok := strings.CutPrefix(trimmed, delim.Open); ok {
+			_, after, closed := strings.Cut(rest, delim.Close)
 			remainder := append([]string{strings.TrimSpace(after)}, lines[1:]...)
 			return closed && lexer.ExemptHeaderSpan(remainder) == 0
 		}

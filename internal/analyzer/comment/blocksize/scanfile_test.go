@@ -110,6 +110,14 @@ func multiLineAndMarkerCases() []directiveCase {
 			want: 0,
 		},
 		{
+			name: "simplification block comment marker exempts the block",
+			file: "a.go",
+			lang: "go",
+			src: "package a\n\n/* simplification: x\n * one\n * two\n * three\n * four */\n" +
+				"func f() {}\n",
+			want: 0,
+		},
+		{
 			name: "five-line svelte-ignore block",
 			file: "a.svelte",
 			lang: "sfc",

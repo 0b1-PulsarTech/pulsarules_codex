@@ -70,6 +70,17 @@ func analyzeCases() []analyzeCase {
 			0,
 		},
 		{
+			"block comment marker with no label fires", "block_marker.go",
+			"package foo\n\n/* simplification: skip the rare case. */\nfunc f() {}\n",
+			1,
+		},
+		{
+			"block comment marker with a label on a later line", "block_label.go",
+			"package foo\n\n/* simplification: skip the rare case.\n" +
+				" * Upgrade path: handle it once seen twice.\n */\nfunc f() {}\n",
+			0,
+		},
+		{
 			"no label fires in a clike file too", "no_label.dart",
 			"class Foo {\n" +
 				"  // simplification: skip the rare case because it never happens in practice.\n" +
@@ -221,7 +232,10 @@ func TestBlockNamesUpgradePath_Wrapped(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			if got := blockNamesUpgradePath(lang, testCase.lines); got != testCase.want {
+			if got := blockNamesUpgradePath(
+				lang.CommentSyntax(),
+				testCase.lines,
+			); got != testCase.want {
 				t.Errorf(
 					"blockNamesUpgradePath(%q) = %v, want %v",
 					testCase.lines,
