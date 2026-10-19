@@ -54,8 +54,8 @@ func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Fi
 
 	for _, found := range checkBoundaries(graph, modulePath) {
 		findings = append(findings, reporter.At(
-			".",
-			0,
+			found.site.file,
+			found.site.line,
 			found.message,
 			"invert the dependency or move the import to the correct layer",
 		))

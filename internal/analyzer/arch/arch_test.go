@@ -51,6 +51,10 @@ func TestPackageBoundary_Violation(t *testing.T) {
 		if finding.AnalyzerID != "arch-boundary" {
 			t.Errorf("finding has AnalyzerID %q, want %q", finding.AnalyzerID, "arch-boundary")
 		}
+		if finding.File != "domain/user.go" || finding.Line != 3 {
+			t.Errorf("finding anchored at %s:%d, want the import spec at domain/user.go:3",
+				finding.File, finding.Line)
+		}
 	}
 }
 
