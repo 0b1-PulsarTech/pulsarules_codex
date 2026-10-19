@@ -1,7 +1,7 @@
 package emoji
 
 import (
-	"fmt"
+	"io/fs"
 	"strings"
 )
 
@@ -10,8 +10,8 @@ type theme struct {
 	shortcodes []string
 }
 
-func loadThemes() ([]theme, error) {
-	records, err := readRecords(dataFS, "data/themes.txt", 2)
+func loadThemes(fsys fs.FS) ([]theme, error) {
+	records, err := readRecords(fsys, "data/themes.txt", 2)
 	if err != nil {
 		return nil, err
 	}
@@ -30,16 +30,12 @@ type Anchor struct {
 	Shortcodes []string
 }
 
-func Anchors() ([]Anchor, error) {
-	themes, err := loadThemes()
-	if err != nil {
-		return nil, fmt.Errorf("build anchors: %w", err)
-	}
-	anchors := make([]Anchor, len(themes))
-	for idx, theme := range themes {
+func (catalog *Catalog) Anchors() []Anchor {
+	anchors := make([]Anchor, len(catalog.themes))
+	for idx, theme := range catalog.themes {
 		anchors[idx] = Anchor{Area: theme.keywords[0], Shortcodes: theme.shortcodes}
 	}
-	return anchors, nil
+	return anchors
 }
 
 func (catalog *Catalog) themeMatches(text string) []string {

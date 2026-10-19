@@ -9,11 +9,7 @@ func TestThemeShortcodesAreSuggestible(t *testing.T) {
 	t.Parallel()
 
 	catalog := mustCatalog(t)
-	themes, err := loadThemes()
-	if err != nil {
-		t.Fatalf("loadThemes: %v", err)
-	}
-	for _, candidate := range themes {
+	for _, candidate := range catalog.themes {
 		if len(candidate.keywords) == 0 || len(candidate.shortcodes) == 0 {
 			t.Fatalf("theme %v is incomplete", candidate.keywords)
 		}
@@ -94,15 +90,8 @@ func TestThemeMatchesIsCaseAndSuffixTolerant(t *testing.T) {
 func loadAnchorFixture(t *testing.T) ([]Anchor, []theme) {
 	t.Helper()
 
-	anchors, err := Anchors()
-	if err != nil {
-		t.Fatalf("Anchors: %v", err)
-	}
-	themes, err := loadThemes()
-	if err != nil {
-		t.Fatalf("loadThemes: %v", err)
-	}
-	return anchors, themes
+	catalog := mustCatalog(t)
+	return catalog.Anchors(), catalog.themes
 }
 
 func TestAnchors_MirrorsTheLoadedThemeTableInOrder(t *testing.T) {

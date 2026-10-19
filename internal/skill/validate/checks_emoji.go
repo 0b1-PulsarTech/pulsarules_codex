@@ -12,12 +12,8 @@ func emojiThemeShortcodes(_ *knowledge.Index) []string {
 	if err != nil {
 		return []string{fmt.Sprintf("load emoji catalog: %v", err)}
 	}
-	anchors, err := emoji.Anchors()
-	if err != nil {
-		return []string{fmt.Sprintf("load emoji anchors: %v", err)}
-	}
 	// A bad theme surfaces as a validate error, not a confusing hook failure at commit time.
-	return themeShortcodesInCatalog(catalog, anchors)
+	return themeShortcodesInCatalog(catalog, catalog.Anchors())
 }
 
 func themeShortcodesInCatalog(catalog *emoji.Catalog, anchors []emoji.Anchor) []string {

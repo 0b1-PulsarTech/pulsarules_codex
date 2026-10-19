@@ -26,7 +26,9 @@ type entry struct {
 	useCount int
 }
 
-func NewCatalog() (*Catalog, error) {
+func NewCatalog() (*Catalog, error) { return NewCatalogFS(dataFS) }
+
+func NewCatalogFS(fsys fs.FS) (*Catalog, error) {
 	const (
 		estimatedCatalogSize     = 1100
 		estimatedCommitTypeCount = 16
@@ -35,13 +37,13 @@ func NewCatalog() (*Catalog, error) {
 		allowed: make(map[string]entry, estimatedCatalogSize),
 		byType:  make(map[string][]string, estimatedCommitTypeCount),
 	}
-	if err := catalog.readCatalog(dataFS); err != nil {
+	if err := catalog.readCatalog(fsys); err != nil {
 		return nil, err
 	}
-	if err := catalog.readTypes(); err != nil {
+	if err := catalog.readTypes(fsys); err != nil {
 		return nil, err
 	}
-	themes, err := loadThemes()
+	themes, err := loadThemes(fsys)
 	if err != nil {
 		return nil, fmt.Errorf("load themes: %w", err)
 	}
@@ -75,10 +77,10 @@ func (catalog *Catalog) readCatalog(fsys fs.FS) error {
 	return nil
 }
 
-func (catalog *Catalog) readTypes() error {
+func (catalog *Catalog) readTypes(fsys fs.FS) error {
 	const typesFieldCount = 3
 	// The types.txt columns are type, name and count.
-	records, err := readRecords(dataFS, "data/types.txt", typesFieldCount)
+	records, err := readRecords(fsys, "data/types.txt", typesFieldCount)
 	if err != nil {
 		return err
 	}

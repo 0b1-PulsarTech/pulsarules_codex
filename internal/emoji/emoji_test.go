@@ -1,6 +1,8 @@
 package emoji
 
 import (
+	"errors"
+	"io/fs"
 	"slices"
 	"strings"
 	"testing"
@@ -179,5 +181,49 @@ func TestReadCatalogRejectsUnparseableCount(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), ":sparkles:") {
 		t.Errorf("error = %q, want it to name the offending shortcode", err)
+	}
+}
+
+type openRecorder struct {
+	fstest.MapFS
+	opened []string
+}
+
+func (recorder *openRecorder) Open(name string) (fs.File, error) {
+	recorder.opened = append(recorder.opened, name)
+	return recorder.MapFS.Open(name)
+}
+
+func TestNewCatalogFS_LoadsEveryFileOnceFromTheGivenFS(t *testing.T) {
+	t.Parallel()
+
+	recorder := &openRecorder{MapFS: fstest.MapFS{
+		"data/catalog.txt": {Data: []byte("wrench\tObjects\ttool\t3\n")},
+		"data/types.txt":   {Data: []byte("build\twrench\t3\n")},
+		"data/themes.txt":  {Data: []byte("move,rename\twrench\n")},
+	}}
+	catalog, err := NewCatalogFS(recorder)
+	if err != nil {
+		t.Fatalf("NewCatalogFS: %v", err)
+	}
+	wantOpened := []string{"data/catalog.txt", "data/types.txt", "data/themes.txt"}
+	if !slices.Equal(recorder.opened, wantOpened) {
+		t.Errorf("opened = %v, want %v once each", recorder.opened, wantOpened)
+	}
+	anchors := catalog.Anchors()
+	if len(anchors) != 1 || anchors[0].Area != "move" {
+		t.Errorf("Anchors() = %v, want one anchor for area move", anchors)
+	}
+	if len(recorder.opened) != len(wantOpened) {
+		t.Errorf("Anchors() reopened files: %v", recorder.opened)
+	}
+}
+
+func TestNewCatalogFS_MissingFileFails(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewCatalogFS(fstest.MapFS{})
+	if !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("error = %v, want fs.ErrNotExist", err)
 	}
 }
