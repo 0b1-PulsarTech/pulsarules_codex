@@ -5,6 +5,11 @@ import (
 	"go/token"
 )
 
+type scopeWalker struct {
+	scopes *scopeStack
+	report reporter
+}
+
 type reporter struct {
 	shadow func(pos token.Pos, name, kind string)
 	reuse  func(pos token.Pos, name string)
@@ -32,97 +37,75 @@ func shadowKind(origin string) string {
 	return origin
 }
 
-func (analyzer *Analyzer) walkBlock(
-	block *ast.BlockStmt,
-	scopes *scopeStack,
-	report reporter,
-) {
+func (walker scopeWalker) walkBlock(block *ast.BlockStmt) {
 	if block == nil {
 		return
 	}
-	scopes.push()
-	defer scopes.pop()
+	walker.scopes.push()
+	defer walker.scopes.pop()
 
-	analyzer.walkStmts(block.List, scopes, report)
+	walker.walkStmts(block.List)
 }
 
-func (analyzer *Analyzer) walkStmts(
-	stmts []ast.Stmt,
-	scopes *scopeStack,
-	report reporter,
-) {
+func (walker scopeWalker) walkStmts(stmts []ast.Stmt) {
 	for _, stmt := range stmts {
-		analyzer.walkStmt(stmt, scopes, report)
+		walker.walkStmt(stmt)
 	}
 }
 
-func (analyzer *Analyzer) walkStmt(
-	stmt ast.Stmt,
-	scopes *scopeStack,
-	report reporter,
-) {
+func (walker scopeWalker) walkStmt(stmt ast.Stmt) {
 	switch typed := stmt.(type) {
 	case *ast.AssignStmt:
-		analyzer.walkAssign(typed, scopes, report)
+		walker.walkAssign(typed)
 	case *ast.DeclStmt:
-		analyzer.walkDecl(typed.Decl, scopes, report)
+		walker.walkDecl(typed.Decl)
 	case *ast.BlockStmt:
-		analyzer.walkBlock(typed, scopes, report)
+		walker.walkBlock(typed)
 	case *ast.LabeledStmt:
-		analyzer.walkStmt(typed.Stmt, scopes, report)
+		walker.walkStmt(typed.Stmt)
 	case *ast.CaseClause:
 		// Each clause is its own implicit block, so two clauses declaring the
 		// same name are two declarations, not one plus a reassignment.
-		analyzer.walkClause(nil, typed.Body, scopes, report)
+		walker.walkClause(nil, typed.Body)
 	case *ast.CommClause:
-		analyzer.walkClause(typed.Comm, typed.Body, scopes, report)
+		walker.walkClause(typed.Comm, typed.Body)
 	default:
-		analyzer.walkBranch(stmt, scopes, report)
+		walker.walkBranch(stmt)
 	}
 }
 
-func (analyzer *Analyzer) walkBranch(
-	stmt ast.Stmt,
-	scopes *scopeStack,
-	report reporter,
-) {
+func (walker scopeWalker) walkBranch(stmt ast.Stmt) {
 	switch typed := stmt.(type) {
 	case *ast.IfStmt:
-		analyzer.walkIf(typed, scopes, report)
+		walker.walkIf(typed)
 	case *ast.ForStmt:
-		analyzer.walkFor(typed, scopes, report)
+		walker.walkFor(typed)
 	case *ast.RangeStmt:
-		analyzer.walkRange(typed, scopes, report)
+		walker.walkRange(typed)
 	case *ast.SwitchStmt:
-		analyzer.walkSwitch(typed, scopes, report)
+		walker.walkSwitch(typed)
 	case *ast.TypeSwitchStmt:
-		analyzer.walkTypeSwitch(typed, scopes, report)
+		walker.walkTypeSwitch(typed)
 	case *ast.SelectStmt:
-		analyzer.walkSelect(typed, scopes, report)
+		walker.walkSelect(typed)
 	}
 }
 
-func (analyzer *Analyzer) walkClause(
+func (walker scopeWalker) walkClause(
 	comm ast.Stmt,
 	body []ast.Stmt,
-	scopes *scopeStack,
-	report reporter,
 ) {
-	scopes.push()
-	defer scopes.pop()
+	walker.scopes.push()
+	defer walker.scopes.pop()
 
 	if comm != nil {
 		// `case v := <-ch:` binds v in the clause's own block.
-		analyzer.walkStmt(comm, scopes, report)
+		walker.walkStmt(comm)
 	}
-	analyzer.walkStmts(body, scopes, report)
+	walker.walkStmts(body)
 }
 
-func (analyzer *Analyzer) walkAssign(
-	assign *ast.AssignStmt,
-	scopes *scopeStack,
-	report reporter,
-) {
+func (walker scopeWalker) walkAssign(assign *ast.AssignStmt) {
 	if assign.Tok != token.DEFINE {
 		return
 	}
@@ -131,16 +114,12 @@ func (analyzer *Analyzer) walkAssign(
 		if !ok || id.Name == "_" {
 			continue
 		}
-		report.declaring(id, scopes)
-		scopes.declare(id.Name)
+		walker.report.declaring(id, walker.scopes)
+		walker.scopes.declare(id.Name)
 	}
 }
 
-func (analyzer *Analyzer) walkDecl(
-	decl ast.Decl,
-	scopes *scopeStack,
-	report reporter,
-) {
+func (walker scopeWalker) walkDecl(decl ast.Decl) {
 	gen, ok := decl.(*ast.GenDecl)
 	if !ok {
 		return
@@ -149,24 +128,24 @@ func (analyzer *Analyzer) walkDecl(
 		switch typed := spec.(type) {
 		case *ast.ValueSpec:
 			for _, id := range typed.Names {
-				declareIdent(id, scopes, report)
+				walker.declareIdent(id)
 			}
 		case *ast.TypeSpec:
-			declareIdent(typed.Name, scopes, report)
+			walker.declareIdent(typed.Name)
 		}
 	}
 }
 
-func declareIfIdent(expr ast.Expr, scopes *scopeStack, report reporter) {
+func (walker scopeWalker) declareIfIdent(expr ast.Expr) {
 	if id, ok := expr.(*ast.Ident); ok {
-		declareIdent(id, scopes, report)
+		walker.declareIdent(id)
 	}
 }
 
-func declareIdent(id *ast.Ident, scopes *scopeStack, report reporter) {
+func (walker scopeWalker) declareIdent(id *ast.Ident) {
 	if id == nil || id.Name == "_" {
 		return
 	}
-	report.declaring(id, scopes)
-	scopes.declare(id.Name)
+	walker.report.declaring(id, walker.scopes)
+	walker.scopes.declare(id.Name)
 }

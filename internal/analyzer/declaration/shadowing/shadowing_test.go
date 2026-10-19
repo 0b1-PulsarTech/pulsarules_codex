@@ -4,7 +4,6 @@ import (
 	"go/types"
 	"os"
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -270,11 +269,6 @@ func TestCheckFileUniverse(t *testing.T) {
 	t.Parallel()
 
 	analyzer := NewAnalyzer()
-	for _, want := range []string{"min", "max", "clear"} {
-		if !slices.Contains(types.Universe.Names(), want) {
-			t.Fatalf("types.Universe lacks %q", want)
-		}
-	}
 	for _, name := range types.Universe.Names() {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

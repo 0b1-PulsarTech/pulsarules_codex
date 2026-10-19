@@ -95,21 +95,23 @@ func (analyzer *Analyzer) checkFile(
 		if !ok || fn.Body == nil {
 			continue
 		}
-		scopes := newScopeStack()
-		report := reps.forFunc(fset, fc, &findings)
+		walker := scopeWalker{
+			scopes: newScopeStack(),
+			report: reps.forFunc(fset, fc, &findings),
+		}
 
 		// Package scope: the function's own name is not part of its block.
-		scopes.push()
+		walker.scopes.push()
 		if fn.Name != nil {
-			scopes.declare(fn.Name.Name)
+			walker.scopes.declare(fn.Name.Name)
 		}
 
 		// The function block. Go puts the receiver, the parameters, the named
 		// results and the body's top-level statements in this one block, so
 		// walkStmts runs the body here instead of pushing a block of its own.
-		scopes.push()
-		declareFields(scopes, fn.Recv, fn.Type.Params, fn.Type.Results)
-		analyzer.walkStmts(fn.Body.List, scopes, report)
+		walker.scopes.push()
+		declareFields(walker.scopes, fn.Recv, fn.Type.Params, fn.Type.Results)
+		walker.walkStmts(fn.Body.List)
 	}
 
 	return findings

@@ -5,103 +5,75 @@ import (
 	"go/token"
 )
 
-func (analyzer *Analyzer) walkIf(
-	ifStmt *ast.IfStmt,
-	scopes *scopeStack,
-	report reporter,
-) {
+func (walker scopeWalker) walkIf(ifStmt *ast.IfStmt) {
 	// The braces open a further nested block, so this scope and the body's are both pushed.
-	scopes.push()
+	walker.scopes.push()
 	if ifStmt.Init != nil {
-		analyzer.walkStmt(ifStmt.Init, scopes, report)
+		walker.walkStmt(ifStmt.Init)
 	}
-	analyzer.walkBlock(ifStmt.Body, scopes, report)
+	walker.walkBlock(ifStmt.Body)
 	if ifStmt.Else != nil {
-		analyzer.walkStmt(ifStmt.Else, scopes, report)
+		walker.walkStmt(ifStmt.Else)
 	}
-	scopes.pop()
+	walker.scopes.pop()
 }
 
-func (analyzer *Analyzer) walkFor(
-	forStmt *ast.ForStmt,
-	scopes *scopeStack,
-	report reporter,
-) {
+func (walker scopeWalker) walkFor(forStmt *ast.ForStmt) {
 	// The braces open a further nested block, so this scope and the body's are both pushed.
-	scopes.push()
+	walker.scopes.push()
 	if forStmt.Init != nil {
-		analyzer.walkStmt(forStmt.Init, scopes, report)
+		walker.walkStmt(forStmt.Init)
 	}
-	analyzer.walkBlock(forStmt.Body, scopes, report)
-	scopes.pop()
+	walker.walkBlock(forStmt.Body)
+	walker.scopes.pop()
 }
 
-func (analyzer *Analyzer) walkRange(
-	rangeStmt *ast.RangeStmt,
-	scopes *scopeStack,
-	report reporter,
-) {
-	scopes.push()
+func (walker scopeWalker) walkRange(rangeStmt *ast.RangeStmt) {
+	walker.scopes.push()
 	if rangeStmt.Tok == token.DEFINE {
-		declareIfIdent(rangeStmt.Key, scopes, report)
-		declareIfIdent(rangeStmt.Value, scopes, report)
+		walker.declareIfIdent(rangeStmt.Key)
+		walker.declareIfIdent(rangeStmt.Value)
 	}
-	analyzer.walkBlock(rangeStmt.Body, scopes, report)
-	scopes.pop()
+	walker.walkBlock(rangeStmt.Body)
+	walker.scopes.pop()
 }
 
-func (analyzer *Analyzer) walkSwitch(
-	switchStmt *ast.SwitchStmt,
-	scopes *scopeStack,
-	report reporter,
-) {
-	scopes.push()
+func (walker scopeWalker) walkSwitch(switchStmt *ast.SwitchStmt) {
+	walker.scopes.push()
 	if switchStmt.Init != nil {
-		analyzer.walkStmt(switchStmt.Init, scopes, report)
+		walker.walkStmt(switchStmt.Init)
 	}
-	analyzer.walkClauses(switchStmt.Body, scopes, report)
-	scopes.pop()
+	walker.walkClauses(switchStmt.Body)
+	walker.scopes.pop()
 }
 
-func (analyzer *Analyzer) walkTypeSwitch(
-	typeSwitch *ast.TypeSwitchStmt,
-	scopes *scopeStack,
-	report reporter,
-) {
-	scopes.push()
+func (walker scopeWalker) walkTypeSwitch(typeSwitch *ast.TypeSwitchStmt) {
+	walker.scopes.push()
 	if typeSwitch.Init != nil {
-		analyzer.walkStmt(typeSwitch.Init, scopes, report)
+		walker.walkStmt(typeSwitch.Init)
 	}
 	if as, ok := typeSwitch.Assign.(*ast.AssignStmt); ok && as.Tok == token.DEFINE {
 		if id, ok := as.Lhs[0].(*ast.Ident); ok {
 			// The guard binds a name like any other declaration, so it goes
 			// through declareIdent and gets the same shadow check.
-			declareIdent(id, scopes, report)
+			walker.declareIdent(id)
 		}
 	}
-	analyzer.walkClauses(typeSwitch.Body, scopes, report)
-	scopes.pop()
+	walker.walkClauses(typeSwitch.Body)
+	walker.scopes.pop()
 }
 
-func (analyzer *Analyzer) walkSelect(
-	selectStmt *ast.SelectStmt,
-	scopes *scopeStack,
-	report reporter,
-) {
-	scopes.push()
-	analyzer.walkClauses(selectStmt.Body, scopes, report)
-	scopes.pop()
+func (walker scopeWalker) walkSelect(selectStmt *ast.SelectStmt) {
+	walker.scopes.push()
+	walker.walkClauses(selectStmt.Body)
+	walker.scopes.pop()
 }
 
-func (analyzer *Analyzer) walkClauses(
-	body *ast.BlockStmt,
-	scopes *scopeStack,
-	report reporter,
-) {
+func (walker scopeWalker) walkClauses(body *ast.BlockStmt) {
 	if body == nil {
 		return
 	}
 	// The braces around clauses are not a block: statements run in this scope
 	// and each clause pushes its own.
-	analyzer.walkStmts(body.List, scopes, report)
+	walker.walkStmts(body.List)
 }

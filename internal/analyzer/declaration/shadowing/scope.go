@@ -17,10 +17,7 @@ type scopeStack struct {
 }
 
 func newScopeStack() *scopeStack {
-	scopes := &scopeStack{}
-	// stack[0] is the universe scope; lookup answers it from types.Universe instead.
-	scopes.push()
-	return scopes
+	return &scopeStack{}
 }
 
 func (scopes *scopeStack) push() {
@@ -28,7 +25,7 @@ func (scopes *scopeStack) push() {
 }
 
 func (scopes *scopeStack) pop() {
-	if len(scopes.stack) > 1 {
+	if len(scopes.stack) > 0 {
 		scopes.stack = scopes.stack[:len(scopes.stack)-1]
 	}
 }
@@ -57,7 +54,7 @@ func (scopes *scopeStack) lookup(name string) (string, bool) {
 		return originBuiltin, true
 	}
 	// Every scope but the innermost is checked.
-	for idx := 1; idx < len(scopes.stack)-1; idx++ {
+	for idx := 0; idx < len(scopes.stack)-1; idx++ {
 		for _, entry := range scopes.stack[idx] {
 			if entry.name == name {
 				return entry.origin, true
