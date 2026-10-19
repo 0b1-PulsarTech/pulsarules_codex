@@ -3,10 +3,10 @@ package cleaner
 import (
 	"fmt"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/markdown"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 type Tally struct {
@@ -37,7 +37,7 @@ func (report Report) HeldNote(found invisible.Mark) string {
 	switch {
 	case !report.IsHeld(found):
 		return ""
-	case strings.EqualFold(filepath.Ext(report.Path), ".md"):
+	case markdown.IsMarkdown(filepath.Ext(report.Path)):
 		return "in possible code: judge it by hand; clean leaves it"
 	case report.literals.Raw(found.Offset):
 		return "in a raw string literal: move it into an interpreted string " +
@@ -76,21 +76,16 @@ func (tally Tally) ReportLine() string {
 
 func markerLines(marks []invisible.Mark) string {
 	const shown = 8
-	var lines []string
-	previous := 0
+	var lines printable.LineList
 	for _, found := range marks {
-		if found.Line == previous {
-			continue
-		}
-		previous = found.Line
-		if len(lines) == shown {
-			lines = append(lines, "...")
+		lines.Add(found.Line)
+		if lines.Len() > shown {
 			break
 		}
-		lines = append(lines, strconv.Itoa(found.Line))
 	}
-	if len(lines) == 1 {
-		return "markers on line " + lines[0]
+	text := "markers on " + lines.Noun() + " " + lines.Head(shown)
+	if lines.Extra(shown) > 0 {
+		text += ", ..."
 	}
-	return "markers on lines " + strings.Join(lines, ", ")
+	return text
 }

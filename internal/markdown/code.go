@@ -15,6 +15,16 @@ type Code struct {
 	possible []Region
 }
 
+func IsMarkdown(ext string) bool { return strings.EqualFold(ext, ".md") }
+
+func MarkdownCode(ext, src string) Code {
+	// Only Markdown has fences to skip; a literal in a language file gets the escape hint.
+	if !IsMarkdown(ext) {
+		return Code{}
+	}
+	return CodeRegions(src)
+}
+
 func (code Code) Certain(offset int) bool { return inRegions(code.certain, offset) }
 
 func (code Code) Possible(offset int) bool { return inRegions(code.possible, offset) }

@@ -2,6 +2,8 @@ package invisible
 
 type Class uint8
 
+func (class Class) Removable() bool { return class == ClassStrip || class == ClassSpace }
+
 const (
 	ClassStrip Class = iota
 	ClassSpace

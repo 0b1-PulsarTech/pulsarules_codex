@@ -2,7 +2,6 @@ package cleaner
 
 import (
 	"path/filepath"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
@@ -10,11 +9,12 @@ import (
 )
 
 func protection(path, src string, literals language.Literals) func(offset int) bool {
-	if !strings.EqualFold(filepath.Ext(path), ".md") {
+	ext := filepath.Ext(path)
+	if !markdown.IsMarkdown(ext) {
 		return literals.Contains
 	}
 	// Whatever might be code is left alone: rewriting shown code is the one unsafe mistake.
-	return markdown.CodeRegions(src).Possible
+	return markdown.MarkdownCode(ext, src).Possible
 }
 
 func rescan(report Report, text string) Report {
@@ -27,8 +27,7 @@ func settle(report Report, text string, literals language.Literals) Report {
 	protected := protection(report.Path, text, literals)
 	report.Held = nil
 	for _, found := range report.Remaining {
-		if (found.Class == invisible.ClassStrip || found.Class == invisible.ClassSpace) &&
-			protected(found.Offset) {
+		if found.Class.Removable() && protected(found.Offset) {
 			report.Held = append(report.Held, found)
 		}
 	}

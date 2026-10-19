@@ -7,6 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/markdown"
 )
 
 type textReporters struct {
@@ -66,7 +67,7 @@ func checkCarriers(fc pass.FileChange, src string, reporters textReporters) []fi
 		return findings
 	}
 	literals := language.ScanLiterals(fc.Extension, src)
-	code := markdownCode(fc.Extension, src)
+	code := markdown.MarkdownCode(fc.Extension, src)
 	var hinted []hintedFinding
 	for _, found := range marks {
 		// The class picks the reporter: a carrier no context can justify blocks, while
@@ -76,13 +77,7 @@ func checkCarriers(fc pass.FileChange, src string, reporters textReporters) []fi
 			reporter = reporters.contextual
 		}
 		advice := carrierAdvice(found, fc.Extension, literals, code)
-		hinted = append(hinted, hintedFinding{
-			finding: reporter.At(
-				fc.Path, found.Line, fmt.Sprintf("%s (U+%04X)", found.Name, found.Rune),
-				advice.text,
-			),
-			caution: advice.caution,
-		})
+		hinted = append(hinted, hintedAt(reporter, fc, found, advice))
 	}
 	return append(findings, settle(hinted)...)
 }
@@ -124,20 +119,14 @@ func checkTypographic(fc pass.FileChange, src string, reporter finding.Reporter)
 		return nil
 	}
 	literals := language.ScanLiterals(fc.Extension, src)
-	code := markdownCode(fc.Extension, src)
+	code := markdown.MarkdownCode(fc.Extension, src)
 	var hinted []hintedFinding
 	for _, found := range marks {
 		if code.Certain(found.Offset) {
 			continue
 		}
 		advice := typographicAdvice(found, fc.Extension, literals, code)
-		hinted = append(hinted, hintedFinding{
-			finding: reporter.At(
-				fc.Path, found.Line, fmt.Sprintf("%s (U+%04X)", found.Name, found.Rune),
-				advice.text,
-			),
-			caution: advice.caution,
-		})
+		hinted = append(hinted, hintedAt(reporter, fc, found, advice))
 	}
 	return settle(hinted)
 }
@@ -151,4 +140,15 @@ func marksOf(src string, wanted func(invisible.Class) bool) []invisible.Mark {
 		}
 	}
 	return marks
+}
+
+func hintedAt(
+	reporter finding.Reporter, fc pass.FileChange, found invisible.Mark, advice hint,
+) hintedFinding {
+	return hintedFinding{
+		finding: reporter.At(
+			fc.Path, found.Line, fmt.Sprintf("%s (U+%04X)", found.Name, found.Rune), advice.text,
+		),
+		caution: advice.caution,
+	}
 }

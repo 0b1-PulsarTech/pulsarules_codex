@@ -3,8 +3,9 @@ package throwsite
 import (
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 func SkillFor(ext string) string {
@@ -19,18 +20,12 @@ func SkillFor(ext string) string {
 
 func Notice(file string, hits []Hit, skill string) string {
 	const maxListed = 5
-	var lines []string
+	var lines printable.LineList
 	for _, hit := range hits {
-		line := strconv.Itoa(hit.Line)
-		if len(lines) == 0 || lines[len(lines)-1] != line {
-			lines = append(lines, line)
-		}
+		lines.Add(hit.Line)
 	}
-	where := "line " + strings.Join(lines[:min(len(lines), maxListed)], ", ")
-	if len(lines) > 1 {
-		where = "lines " + strings.Join(lines[:min(len(lines), maxListed)], ", ")
-	}
-	if extra := len(lines) - maxListed; extra > 0 {
+	where := lines.Noun() + " " + lines.Head(maxListed)
+	if extra := lines.Extra(maxListed); extra > 0 {
 		where += fmt.Sprintf(" and %d more", extra)
 	}
 	text := fmt.Sprintf(

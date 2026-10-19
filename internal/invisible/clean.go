@@ -11,7 +11,7 @@ func Clean(src string, protected func(offset int) bool) (cleaned string, acted [
 	out.Grow(len(src))
 	prev := 0
 	for _, mark := range marks {
-		if mark.Class != ClassStrip && mark.Class != ClassSpace {
+		if !mark.Class.Removable() {
 			continue
 		}
 		// A character inside a string literal is data: removing it changes behaviour.

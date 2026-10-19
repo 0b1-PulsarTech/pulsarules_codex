@@ -89,3 +89,27 @@ func runRegionCases(t *testing.T, testCases []regionCase) {
 		})
 	}
 }
+
+func TestMarkdownCode(t *testing.T) {
+	t.Parallel()
+
+	const src = "```\ncode\n```\n"
+	testCases := []struct {
+		name string
+		ext  string
+		want bool
+	}{
+		{"markdown", ".md", true},
+		{"markdown upper", ".MD", true},
+		{"go", ".go", false},
+		{"none", "", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := MarkdownCode(testCase.ext, src).Certain(5); got != testCase.want {
+				t.Errorf("Certain = %v, want %v", got, testCase.want)
+			}
+		})
+	}
+}

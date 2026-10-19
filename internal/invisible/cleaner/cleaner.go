@@ -47,7 +47,7 @@ func (report Report) IsHeld(found invisible.Mark) bool {
 func (report Report) Removable() int {
 	count := 0
 	for _, found := range report.Remaining {
-		if found.Class == invisible.ClassStrip || found.Class == invisible.ClassSpace {
+		if found.Class.Removable() {
 			count++
 		}
 	}

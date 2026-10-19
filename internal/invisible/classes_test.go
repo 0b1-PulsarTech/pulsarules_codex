@@ -59,3 +59,22 @@ func TestTablesAreDisjoint(t *testing.T) {
 		}
 	}
 }
+
+func TestClassRemovable(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		class Class
+		want  bool
+	}{
+		{ClassStrip, true},
+		{ClassSpace, true},
+		{ClassContextual, false},
+		{ClassTypographic, false},
+	}
+	for _, testCase := range testCases {
+		if got := testCase.class.Removable(); got != testCase.want {
+			t.Errorf("class %d Removable = %v, want %v", testCase.class, got, testCase.want)
+		}
+	}
+}

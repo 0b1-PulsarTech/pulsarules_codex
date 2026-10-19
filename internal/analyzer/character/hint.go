@@ -2,7 +2,6 @@ package character
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible/cleaner"
@@ -42,14 +41,6 @@ func unreadNote(literals language.Literals, found invisible.Mark) string {
 		return "; could not read this file's strings" + escapeNote
 	}
 	return escapeNote
-}
-
-func markdownCode(ext, src string) markdown.Code {
-	if !strings.EqualFold(ext, ".md") {
-		return markdown.Code{}
-	}
-	// Only markdown skips code regions; a literal in a language file gets the escape hint instead.
-	return markdown.CodeRegions(src)
 }
 
 func carrierAdvice(
@@ -99,7 +90,7 @@ func escapeAdvice(literals language.Literals, found invisible.Mark) string {
 }
 
 func unread(found invisible.Mark, ext string, literals language.Literals) bool {
-	if strings.EqualFold(ext, ".md") {
+	if markdown.IsMarkdown(ext) {
 		return false
 	}
 	return !literals.Covers(found.Offset) || literals.Incomplete()
