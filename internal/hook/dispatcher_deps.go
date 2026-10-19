@@ -122,7 +122,7 @@ func (disp *Dispatcher) governanceWithin(
 		return governanceResult{block: governanceTimeoutNotice(), timedOut: true}
 	}
 	done := make(chan governanceResult, 1)
-	// The hookwire test keeps StopTimeoutSeconds above this deadline by a margin.
+	// The host/claude test keeps the rendered Stop timeout above this deadline by a margin.
 	// No context reaches the analysis: an expired run is abandoned to die with the process.
 	go func() {
 		block, count := disp.governance(repo, status)

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
 )
 
 type hookCommand struct {
@@ -21,33 +23,9 @@ type hooksBlock struct {
 	Hooks map[string][]hookGroup `json:"hooks"`
 }
 
-const StopTimeoutSeconds = 90
-
-type hookRegistration struct {
-	Event   string
-	Matcher string
-	Mode    string
-	Timeout int
-}
-
-func hookRegistrations() []hookRegistration {
-	return []hookRegistration{
-		{Event: "SessionStart", Mode: "session-start"},
-		{Event: "PreToolUse", Matcher: "Write|Edit|MultiEdit", Mode: "pre-edit"},
-		{Event: "PreToolUse", Matcher: "Grep|Glob|Bash", Mode: "pre-search"},
-		{Event: "PostToolUse", Matcher: "Write|Edit|MultiEdit", Mode: "post-edit"},
-		{Event: "UserPromptSubmit", Mode: "user-prompt"},
-		{Event: "SubagentStart", Mode: "subagent-start"},
-		// The host default is 600s and it discards output past the timeout; the Stop
-		// deadline in internal/hook must stay under this by the margin the test pins.
-		{Event: "Stop", Mode: "stop", Timeout: StopTimeoutSeconds},
-		{Event: "SessionEnd", Mode: "session-end"},
-	}
-}
-
 func buildHooksBlock() hooksBlock {
 	block := hooksBlock{Hooks: map[string][]hookGroup{}}
-	for _, row := range hookRegistrations() {
+	for _, row := range hook.Events() {
 		command := hookCommand{
 			Type:    "command",
 			Command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/` + hookScript + `" ` + row.Mode,
@@ -55,7 +33,7 @@ func buildHooksBlock() hooksBlock {
 		if row.Timeout > 0 {
 			command.Timeout = json.RawMessage(strconv.Itoa(row.Timeout))
 		}
-		block.Hooks[row.Event] = append(block.Hooks[row.Event],
+		block.Hooks[row.Host] = append(block.Hooks[row.Host],
 			hookGroup{Matcher: row.Matcher, Hooks: []hookCommand{command}})
 	}
 	return block

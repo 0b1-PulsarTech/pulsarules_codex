@@ -18,23 +18,11 @@ func (disp *Dispatcher) Dispatch(mode string, payload []byte) error {
 		outcome stopOutcome
 		err     error
 	)
-	switch mode {
-	case "session-start":
-		err = disp.emitSessionStart(session)
-	case "pre-edit":
-		err = disp.emitPreEdit(session, in)
-	case "post-edit":
-		err = disp.emitPostEdit(session, in)
-	case "pre-search":
-		err = disp.emitPreSearch(session, in)
-	case "user-prompt":
-		err = disp.emitUserPrompt()
-	case "stop":
-		outcome, err = disp.emitStop("Stop", session)
-	case "subagent-start":
-		err = disp.emitSubagentStart()
-	case "session-end":
-		session.Cleanup()
+	for _, event := range Events() {
+		if event.Mode == mode {
+			outcome, err = event.handle(disp, session, in)
+			break
+		}
 	}
 
 	disp.record(session, dispatchRecord{mode: mode, start: start, outcome: outcome, err: err})

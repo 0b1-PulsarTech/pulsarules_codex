@@ -55,7 +55,7 @@ func assertCarriesMarker(t *testing.T, label, body string, err error) {
 		t.Fatalf("render %s: %v", label, err)
 	}
 	if !strings.Contains(body, Marker) {
-		t.Errorf("rendered %s does not carry marker.Installed", label)
+		t.Errorf("rendered %s does not carry ownedfile.Installed", label)
 	}
 }
 
@@ -117,7 +117,7 @@ func TestLiteralGatedAssetsCarryInstalled(t *testing.T) {
 				t.Fatalf("read %q: %v", path, readErr)
 			}
 			if !strings.Contains(string(content), Marker) {
-				t.Errorf("%q does not carry marker.Installed:\n%s", path, content)
+				t.Errorf("%q does not carry ownedfile.Installed:\n%s", path, content)
 			}
 		})
 	}
@@ -146,7 +146,7 @@ func flagUnlisted(t *testing.T, templates fs.FS, family, listed map[string]bool)
 			return fmt.Errorf("read %q: %w", path, readErr)
 		}
 		if strings.Contains(string(content), Marker) && !listed[path] {
-			t.Errorf("%q carries marker.Installed but is missing from literalGatedAssets", path)
+			t.Errorf("%q carries ownedfile.Installed but is missing from literalGatedAssets", path)
 		}
 		return nil
 	}

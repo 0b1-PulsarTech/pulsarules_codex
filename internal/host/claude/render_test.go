@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,14 +62,39 @@ func TestRenderHooksBlock_StopTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Stop timeout %q: %v", stop.Timeout, err)
 	}
-	if seconds != StopTimeoutSeconds {
-		t.Errorf("rendered Stop timeout = %d, want StopTimeoutSeconds = %d",
-			seconds, StopTimeoutSeconds)
-	}
 	hostTimeout := time.Duration(seconds) * time.Second
 	if hostTimeout < hook.StopGovernanceDeadline+minimumMargin {
 		t.Errorf("Stop timeout %s must exceed the governance deadline %s by %s",
 			hostTimeout, hook.StopGovernanceDeadline, minimumMargin)
+	}
+}
+
+func TestRenderHooksBlock_RendersEveryEvent(t *testing.T) {
+	t.Parallel()
+
+	hooks := renderedHooks(t)
+	for _, event := range hook.Events() {
+		t.Run(event.Mode, func(t *testing.T) {
+			t.Parallel()
+
+			found := false
+			for _, group := range hooks[event.Host] {
+				for _, command := range group.Hooks {
+					if group.Matcher == event.Matcher &&
+						strings.HasSuffix(command.Command, `" `+event.Mode) {
+						found = true
+					}
+				}
+			}
+			if !found {
+				t.Errorf(
+					"no %s group with matcher %q runs mode %q",
+					event.Host,
+					event.Matcher,
+					event.Mode,
+				)
+			}
+		})
 	}
 }
 
