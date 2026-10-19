@@ -1,7 +1,6 @@
 package install
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -9,13 +8,19 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/term"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/selection"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func resolveSelection(opts *version.Options, idx *knowledge.Index) (selection.Choice, error) {
+func resolveSelection(
+	opts *version.Options,
+	idx *knowledge.Index,
+	prompter *Prompter,
+) (selection.Choice, error) {
 	switch {
 	case opts.RouterOnly:
 		return selection.Choice{RouterOnly: true}, nil
@@ -23,8 +28,8 @@ func resolveSelection(opts *version.Options, idx *knowledge.Index) (selection.Ch
 		return selection.Choice{All: true}, nil
 	case opts.Skills != "":
 		return selection.Choice{IDs: splitCSV(opts.Skills)}, nil
-	case stdinIsTerminal():
-		return promptSkillSelection(idx)
+	case term.IsTerminal(int(os.Stdin.Fd())):
+		return promptSkillSelection(idx, prompter)
 	// A non-TTY fails: prompting would hang CI, and installing everything would
 	// ignore the caller's choice.
 	default:
@@ -56,11 +61,10 @@ func printSkillCatalog(out io.Writer, catalog []knowledge.Skill) {
 	}
 }
 
-func promptSkillSelection(idx *knowledge.Index) (selection.Choice, error) {
+func promptSkillSelection(idx *knowledge.Index, prompter *Prompter) (selection.Choice, error) {
 	catalog := idx.SkillsOrdered()
-	printSkillCatalog(os.Stdout, catalog)
-	_, _ = fmt.Print("skills> (e.g. 1,4,7-9 | a = all | Enter = mandatory-only): ")
-	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	printSkillCatalog(prompter.out, catalog)
+	line := prompter.Ask("skills> (e.g. 1,4,7-9 | a = all | Enter = mandatory-only): ")
 
 	picked, err := parseSkillSelection(line, len(catalog))
 	if err != nil {
@@ -84,7 +88,6 @@ func parseSkillSelection(input string, total int) ([]int, error) {
 		return allChoices(total), nil
 	}
 
-	seen := make(map[int]bool)
 	var indices []int
 	for token := range strings.SplitSeq(input, ",") {
 		token = strings.TrimSpace(token)
@@ -95,10 +98,12 @@ func parseSkillSelection(input string, total int) ([]int, error) {
 		if parseErr != nil {
 			return nil, parseErr
 		}
-		indices = addRange(seen, indices, start, end)
+		for choice := start; choice <= end; choice++ {
+			indices = append(indices, choice)
+		}
 	}
 	slices.Sort(indices)
-	return indices, nil
+	return slices.Compact(indices), nil
 }
 
 func allChoices(total int) []int {
@@ -118,16 +123,6 @@ func parseToken(token string, total int) (start, end int, err error) {
 		return 0, 0, fmt.Errorf("selection %q out of range 1-%d", token, total)
 	}
 	return start, end, nil
-}
-
-func addRange(seen map[int]bool, indices []int, start, end int) []int {
-	for choice := start; choice <= end; choice++ {
-		if !seen[choice] {
-			seen[choice] = true
-			indices = append(indices, choice)
-		}
-	}
-	return indices
 }
 
 func splitCSV(value string) []string {

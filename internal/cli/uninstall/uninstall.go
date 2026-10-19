@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
@@ -40,7 +38,7 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	errs := uninstallTargets(deps, targets, ctx)
 
 	gitReport, hookErr := deps.hooks.Uninstall("git", install.UninstallContext{Dir: absBase})
-	printReport(os.Stdout, os.Stderr, gitReport)
+	gitReport.Print(os.Stdout, os.Stderr)
 	if hookErr != nil {
 		errs = append(errs, hookErr)
 	}
@@ -59,13 +57,9 @@ func Run(inj remy.Injector, opts *version.Options) error {
 }
 
 func uninstallBase(opts *version.Options) (absBase string, settingsFiles []string, err error) {
-	projectDir, dirErr := opts.BaseDir()
-	if dirErr != nil {
-		return "", nil, fmt.Errorf("base dir: %w", dirErr)
-	}
-	absBase, err = filepath.Abs(projectDir)
+	absBase, err = opts.BaseDir()
 	if err != nil {
-		return "", nil, fmt.Errorf("resolve uninstall base: %w", err)
+		return "", nil, fmt.Errorf("base dir: %w", err)
 	}
 	settingsFiles, err = opts.SettingsFiles()
 	if err != nil {
@@ -82,7 +76,7 @@ func uninstallTargets(
 	var errs []error
 	for _, name := range targets {
 		report, uninstallErr := deps.targets.Uninstall(name, ctx)
-		printReport(os.Stdout, os.Stderr, report)
+		report.Print(os.Stdout, os.Stderr)
 		if uninstallErr != nil {
 			// The target registry's Uninstall already wraps this as
 			// `uninstall target %q: %w`; re-wrapping here would double it.
@@ -110,14 +104,8 @@ func resolveTargets(opts *version.Options, reg *host.Registry, base string) ([]s
 	if len(explicit) == 0 {
 		return reg.DetectTargets(base), nil
 	}
-	for _, name := range explicit {
-		if !reg.Has(name) {
-			return nil, fmt.Errorf(
-				"invalid --target %q (want %s)",
-				name,
-				strings.Join(reg.Names(), "|"),
-			)
-		}
+	if err := reg.Check(explicit); err != nil {
+		return nil, err
 	}
 	return explicit, nil
 }

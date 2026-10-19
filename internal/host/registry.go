@@ -3,6 +3,7 @@ package host
 import (
 	"fmt"
 	"slices"
+	"strings"
 )
 
 type Registry struct {
@@ -46,6 +47,17 @@ func (reg *Registry) Uninstall(name string, ctx UninstallContext) (Report, error
 func (reg *Registry) Has(name string) bool {
 	_, ok := reg.byName[name]
 	return ok
+}
+
+func (reg *Registry) Check(names []string) error {
+	for _, name := range names {
+		if !reg.Has(name) {
+			return fmt.Errorf(
+				"invalid --target %q (want %s)", name, strings.Join(reg.Names(), "|"),
+			)
+		}
+	}
+	return nil
 }
 
 func (reg *Registry) Names() []string {

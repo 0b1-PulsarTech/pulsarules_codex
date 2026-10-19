@@ -1,21 +1,22 @@
 package install
 
 import (
-	"bufio"
 	"fmt"
 	"io"
-	"os"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func applySelectedLayout(opts *version.Options, idx *knowledge.Index) error {
+func applySelectedLayout(
+	opts *version.Options,
+	idx *knowledge.Index,
+	prompter *Prompter,
+) error {
 	layout := opts.Layout
 	if opts.Interactive && layout == "" {
-		layout = promptLayout(idx)
+		layout = promptLayout(idx, prompter)
 	}
 	if layout == "" {
 		return nil
@@ -27,14 +28,12 @@ func applySelectedLayout(opts *version.Options, idx *knowledge.Index) error {
 	return nil
 }
 
-func promptLayout(idx *knowledge.Index) string {
+func promptLayout(idx *knowledge.Index, prompter *Prompter) string {
 	if len(idx.Profiles) == 0 {
 		return ""
 	}
-	printProfiles(os.Stdout, idx.Profiles)
-	_, _ = fmt.Print("layout> ")
-	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-	return strings.TrimSpace(line)
+	printProfiles(prompter.out, idx.Profiles)
+	return prompter.Ask("layout> ")
 }
 
 func printProfiles(out io.Writer, profiles []knowledge.Profile) {

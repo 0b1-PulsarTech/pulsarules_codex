@@ -2,6 +2,7 @@ package report
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -59,6 +60,47 @@ func TestReport_Merge(t *testing.T) {
 			}
 			if !slices.Equal(got.Warnings, testCase.wantWarning) {
 				t.Errorf("Warnings = %v, want %v", got.Warnings, testCase.wantWarning)
+			}
+		})
+	}
+}
+
+func TestReport_Print(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		report     Report
+		wantStdout string
+		wantStderr string
+	}{
+		{
+			name:       "note stays on one line",
+			report:     Report{Notes: []string{"wrote: x\n[ERROR] forged"}},
+			wantStdout: `wrote: x\n[ERROR] forged` + "\n",
+		},
+		{
+			name:       "warning stays on one line",
+			report:     Report{Warnings: []string{"odd: y\n[ERROR] forged"}},
+			wantStderr: `odd: y\n[ERROR] forged` + "\n",
+		},
+		{
+			name:       "plain text is untouched",
+			report:     Report{Notes: []string{"wrote: a/b"}},
+			wantStdout: "wrote: a/b\n",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			var stdout, stderr strings.Builder
+			testCase.report.Print(&stdout, &stderr)
+			if stdout.String() != testCase.wantStdout {
+				t.Errorf("stdout = %q, want %q", stdout.String(), testCase.wantStdout)
+			}
+			if stderr.String() != testCase.wantStderr {
+				t.Errorf("stderr = %q, want %q", stderr.String(), testCase.wantStderr)
 			}
 		})
 	}

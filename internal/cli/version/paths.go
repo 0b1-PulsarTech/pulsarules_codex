@@ -11,6 +11,7 @@ import (
 )
 
 func (opts *Options) BaseDir() (string, error) {
+	var dir string
 	switch {
 	case opts.Global && opts.Project != "":
 		return "", errors.New("--global and --project are mutually exclusive")
@@ -19,13 +20,18 @@ func (opts *Options) BaseDir() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("resolve home: %w", err)
 		}
-		return home, nil
+		dir = home
 	case opts.Project != "":
 		// A bare path: each target layers its own directory underneath.
-		return opts.Project, nil
+		dir = opts.Project
 	default:
 		return "", errors.New("install requires --global or --project PATH")
 	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", fmt.Errorf("absolute %q: %w", dir, err)
+	}
+	return abs, nil
 }
 
 func (opts *Options) Targets() []string {

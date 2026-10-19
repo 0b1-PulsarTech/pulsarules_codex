@@ -59,7 +59,7 @@ func installPostTargets(
 			TypographicSeverity: opts.TypographicSeverity,
 			BranchExtraTypes:    opts.BranchExtraTypes,
 		})
-		printReport(os.Stdout, os.Stderr, rpt)
+		rpt.Print(os.Stdout, os.Stderr)
 		if hookErr != nil {
 			printWarning(os.Stderr, "git hooks", hookErr)
 		}

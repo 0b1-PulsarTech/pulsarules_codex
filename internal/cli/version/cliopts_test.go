@@ -244,6 +244,7 @@ func TestBaseDir(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "project", opts: Options{Project: "/repo"}, want: "/repo"},
+		{name: "relative project is made absolute", opts: Options{Project: "."}, want: workDir(t)},
 		{name: "both exclusive", opts: Options{Global: true, Project: "/repo"}, wantErr: true},
 		{name: "neither", opts: Options{}, wantErr: true},
 	}
@@ -281,6 +282,20 @@ func TestBaseDir_Global(t *testing.T) {
 	}
 	if base != home {
 		t.Errorf("base = %q, want %q", base, home)
+	}
+}
+
+//nolint:paralleltest // t.Setenv bars t.Parallel.
+func TestBaseDir_GlobalRelativeHomeIsMadeAbsolute(t *testing.T) {
+	t.Setenv("HOME", "rel")
+
+	opts := Options{Global: true}
+	base, err := opts.BaseDir()
+	if err != nil {
+		t.Fatalf("BaseDir: %v", err)
+	}
+	if want := filepath.Join(workDir(t), "rel"); base != want {
+		t.Errorf("base = %q, want %q", base, want)
 	}
 }
 
@@ -393,4 +408,13 @@ func TestGitHookNames(t *testing.T) {
 			}
 		})
 	}
+}
+
+func workDir(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	return dir
 }

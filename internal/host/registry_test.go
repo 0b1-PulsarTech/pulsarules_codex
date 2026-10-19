@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
@@ -195,6 +196,40 @@ func TestRegistryDetectTargets(t *testing.T) {
 			}
 			if got := NewRegistry().DetectTargets(base); !slices.Equal(got, testCase.want) {
 				t.Errorf("DetectTargets(%q) = %v, want %v", base, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestRegistry_Check(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		targets []string
+		wantErr string
+	}{
+		{name: "none", targets: nil},
+		{name: "known", targets: []string{"claude", "cursor"}},
+		{
+			name:    "unknown rejected",
+			targets: []string{"claude", "vim"},
+			wantErr: `invalid --target "vim"`,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := NewRegistry().Check(testCase.targets)
+			if testCase.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
+				t.Fatalf("err = %v, want containing %q", err, testCase.wantErr)
 			}
 		})
 	}

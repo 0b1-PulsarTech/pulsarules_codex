@@ -3,8 +3,6 @@ package install
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
@@ -28,21 +26,22 @@ func Run(inj remy.Injector, opts *version.Options) error {
 		return printHooksBlock()
 	}
 
-	if err = applySelectedLayout(opts, deps.idx); err != nil {
+	prompter := NewPrompter(os.Stdin, os.Stdout)
+	if err = applySelectedLayout(opts, deps.idx, prompter); err != nil {
 		return fmt.Errorf("apply layout: %w", err)
 	}
 
-	ctx, err := newTargetContext(opts, cfg, deps)
+	ctx, err := newTargetContext(opts, cfg, deps, prompter)
 	if err != nil {
 		return err
 	}
 	targets := opts.Targets()
-	if err = checkTargets(deps.targets, targets); err != nil {
+	if err = deps.targets.Check(targets); err != nil {
 		return err
 	}
 	for _, name := range targets {
 		report, installErr := deps.targets.Install(name, ctx)
-		printReport(os.Stdout, os.Stderr, report)
+		report.Print(os.Stdout, os.Stderr)
 		if installErr != nil {
 			// The target registry's Install already wraps this as
 			// `install target %q: %w`; re-wrapping here would double it.
@@ -62,28 +61,18 @@ func printHooksBlock() error {
 	return nil
 }
 
-func checkTargets(reg *host.Registry, targets []string) error {
-	for _, name := range targets {
-		if !reg.Has(name) {
-			return fmt.Errorf(
-				"invalid --target %q (want %s)", name, strings.Join(reg.Names(), "|"),
-			)
-		}
-	}
-	return nil
-}
-
 func newTargetContext(
 	opts *version.Options,
 	cfg installConfig,
 	deps installCollaborators,
+	prompter *Prompter,
 ) (host.Context, error) {
 	languages, err := resolveLanguages(cfg.absBase, opts.Languages)
 	if err != nil {
 		return host.Context{}, err
 	}
 
-	selection, err := resolveSelection(opts, deps.idx)
+	selection, err := resolveSelection(opts, deps.idx, prompter)
 	if err != nil {
 		return host.Context{}, err
 	}
@@ -133,13 +122,9 @@ type installConfig struct {
 }
 
 func resolveInstallConfig(opts *version.Options) (installConfig, error) {
-	projectDir, err := opts.BaseDir()
+	absBase, err := opts.BaseDir()
 	if err != nil {
 		return installConfig{}, fmt.Errorf("base dir: %w", err)
-	}
-	absBase, err := filepath.Abs(projectDir)
-	if err != nil {
-		return installConfig{}, fmt.Errorf("resolve install base: %w", err)
 	}
 	settingsFile, err := opts.SettingsFileName()
 	if err != nil {
