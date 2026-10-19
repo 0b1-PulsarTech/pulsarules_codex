@@ -1,9 +1,12 @@
 package language
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/sfc"
+)
 
 func languages() []Language {
-	return append(scriptLanguages(), []Language{
+	rows := append(scriptLanguages(), []Language{
 		{ID: Java, extensions: []string{".java"}, Comments: lexer.SlashSyntax()},
 		{ID: Kotlin, extensions: []string{".kt", ".kts"}, Comments: lexer.SlashSyntax()},
 		{ID: Scala, extensions: []string{".scala"}, Comments: lexer.SlashSyntax()},
@@ -25,6 +28,10 @@ func languages() []Language {
 		{ID: YAML, extensions: []string{".yaml", ".yml"}, Comments: hashStyle(), isConfig: true},
 		{ID: TOML, extensions: []string{".toml"}, Comments: hashStyle(), isConfig: true},
 	}...)
+	for at := range rows {
+		rows[at].lineStrings = lineStringsFor(rows[at].ID)
+	}
+	return rows
 }
 
 func scriptLanguages() []Language {
@@ -66,15 +73,17 @@ func scriptLanguages() []Language {
 			ID:         Svelte,
 			extensions: []string{".svelte"},
 			Comments:   componentStyle(),
-			strings:    sfcStrings(),
+			strings:    sfcStrings(sfc.Regions),
 			astral:     braced,
+			regions:    sfc.Regions,
 		},
 		{
 			ID:         Vue,
 			extensions: []string{".vue"},
 			Comments:   componentStyle(),
-			strings:    sfcStrings(),
+			strings:    sfcStrings(sfc.PlainRegions),
 			astral:     braced,
+			regions:    sfc.PlainRegions,
 		},
 	}
 }

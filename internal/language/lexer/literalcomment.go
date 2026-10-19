@@ -10,7 +10,7 @@ func (scan *literalScan) commentLen(rest string) int {
 		}
 	}
 	for _, prefix := range scan.comments.Line {
-		if strings.HasPrefix(rest, prefix) {
+		if strings.HasPrefix(rest, prefix) && scan.lineMayOpen() {
 			line, _, _ := strings.Cut(rest, "\n")
 			scan.work += len(line)
 			return len(line)
@@ -28,4 +28,8 @@ func (scan *literalScan) blockLen(rest string, block BlockDelim) int {
 		scan.cut(cutAtEOF)
 	}
 	return at
+}
+
+func (scan *literalScan) lineMayOpen() bool {
+	return scan.comments.LineOpens == nil || scan.comments.LineOpens(scan.src, scan.pos)
 }

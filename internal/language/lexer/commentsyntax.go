@@ -14,6 +14,8 @@ type BlockDelim struct {
 type CommentSyntax struct {
 	Line   []string
 	Blocks []BlockDelim
+	// LineOpens keeps the "#" of a word or the "//" of a URL from opening a comment.
+	LineOpens func(src string, at int) bool
 	// keepStars keeps a leading "*" as text, as go/ast does; unset, it is JSDoc gutter.
 	keepStars bool
 }

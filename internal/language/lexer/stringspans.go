@@ -1,9 +1,6 @@
 package lexer
 
-import (
-	"sort"
-	"strings"
-)
+import "sort"
 
 type Span struct {
 	Start int
@@ -69,18 +66,15 @@ func SpanAt(spans []Span, offset int) (Span, bool) {
 }
 
 func Literals(src string, comments CommentSyntax, syntax StringSyntax) Result {
-	if syntax.Within.Open == "" {
+	if syntax.Within == nil {
 		whole := scanLiterals(src, comments, syntax)
 		whole.Regions = []Span{{Start: 0, End: len(src)}}
 		return whole
 	}
 	found := Result{Complete: true}
-	for pos := 0; pos < len(src); {
-		start, end, ok := nextRegion(src, pos, syntax.Within)
-		if !ok {
-			break
-		}
-		region := scanLiterals(src[start:end], comments, syntax)
+	for _, within := range syntax.Within(src) {
+		start := within.Start
+		region := scanLiterals(src[start:within.End], comments, syntax)
 		for _, span := range region.Spans {
 			span.Start += start
 			span.End += start
@@ -91,23 +85,11 @@ func Literals(src string, comments CommentSyntax, syntax StringSyntax) Result {
 			span.End += start
 			found.Comments = append(found.Comments, span)
 		}
-		found.Regions = append(found.Regions, Span{Start: start, End: end})
+		found.Regions = append(found.Regions, within)
 		if !region.Complete {
 			found.Complete, found.Cut, found.ToEOF = false, start+region.Cut, region.ToEOF
 			break
 		}
-		pos = end
 	}
 	return found
-}
-
-func nextRegion(src string, from int, region BlockDelim) (start, end int, ok bool) {
-	_, after, found := strings.Cut(src[from:], region.Open)
-	if !found {
-		return 0, 0, false
-	}
-	// The region starts right after the opener, so tag attributes are lexed like code.
-	start = len(src) - len(after)
-	body, _, _ := strings.Cut(after, region.Close)
-	return start, start + len(body), true
 }

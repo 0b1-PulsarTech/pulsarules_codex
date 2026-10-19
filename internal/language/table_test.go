@@ -26,3 +26,17 @@ func TestLanguages_EveryExtensionHasOneOwner(t *testing.T) {
 		}
 	}
 }
+
+func TestLanguages_LineStringsAndRegions(t *testing.T) {
+	t.Parallel()
+
+	for _, lang := range languages() {
+		quoting := len(lang.lineStrings.Delims) > 0
+		if quoting == (lang.ID == HTML) {
+			t.Errorf("language %q: has line strings = %v", lang.ID, quoting)
+		}
+		if got, want := lang.regions != nil, lang.ID == Svelte || lang.ID == Vue; got != want {
+			t.Errorf("language %q: has regions = %v, want %v", lang.ID, got, want)
+		}
+	}
+}

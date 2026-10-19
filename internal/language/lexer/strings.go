@@ -2,22 +2,10 @@ package lexer
 
 import "strings"
 
-type StringDelim struct {
-	Open      string
-	Close     string
-	Escapes   bool
-	Multiline bool
-	Raw       bool
-	Regex     bool
-	Continues bool
-	Interp    string
-	Tag       string
-}
-
 type StringSyntax struct {
 	Delims       []StringDelim
 	RegexAfter   RegexContext
-	Within       BlockDelim
+	Within       func(src string) []Span
 	EndAtNewline bool
 }
 
@@ -80,9 +68,16 @@ func (scan *literalScan) consume(rest string) {
 	if len(scan.frames) > 0 && scan.braceStep(rest[0]) {
 		return
 	}
-	if delim := scan.opening(rest); delim != nil {
-		scan.pos += len(delim.Open)
-		scan.literal(delim, scan.pos-len(delim.Open))
+	if delim, width := scan.opening(rest); delim != nil {
+		start := scan.pos
+		scan.pos += width
+		if delim.Char {
+			// A character literal is as long as its own rule says; escapes do not extend it.
+			scan.pos += charLen(rest[width:], delim)
+			scan.emit(start, delim)
+			return
+		}
+		scan.literal(delim, start)
 		return
 	}
 	scan.trackParen(rest[0])
@@ -121,6 +116,8 @@ func (scan *literalScan) literal(delim *StringDelim, start int) {
 		switch {
 		case delim.Escapes && rest[0] == '\\':
 			scan.pos += scan.escapeStep(rest, delim)
+		case delim.Doubled && strings.HasPrefix(rest, delim.Close+delim.Close):
+			scan.pos += 2 * len(delim.Close)
 		case strings.HasPrefix(rest, delim.Close):
 			scan.pos += len(delim.Close)
 			scan.emit(start, delim)

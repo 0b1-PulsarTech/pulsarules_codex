@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/sfc"
 )
 
 type Language struct {
@@ -14,6 +15,8 @@ type Language struct {
 	extensions    []string
 	isConfig      bool
 	strings       lexer.StringSyntax
+	lineStrings   lexer.StringSyntax
+	regions       func(src string) []sfc.Region
 	astral        string
 	packageClause func(line string) bool
 }

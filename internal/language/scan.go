@@ -63,3 +63,49 @@ func trimRegions(regions []lexer.Span, cut int) []lexer.Span {
 	}
 	return kept
 }
+
+func ScanComments(ext, src string) []lexer.Span {
+	lang := ForExtension(ext)
+	if lang.regions != nil {
+		return componentComments(lang, src)
+	}
+	return lineComments(lang.Comments, lang.lineStrings, src)
+}
+
+func lineComments(
+	syntax lexer.CommentSyntax, quoting lexer.StringSyntax, src string,
+) []lexer.Span {
+	syntax.LineOpens = lineOpens
+	return lexer.Literals(src, syntax, quoting).Comments
+}
+
+func componentComments(lang Language, src string) []lexer.Span {
+	var found []lexer.Span
+	from := 0
+	for _, region := range lang.regions(src) {
+		markup := lineComments(markupStyle(), lexer.StringSyntax{}, src[from:region.Start])
+		found = append(found, shifted(markup, from)...)
+		body := src[region.Start:region.End]
+		code := lineComments(regionComments(region.Tag), lang.lineStrings, body)
+		found = append(found, shifted(code, region.Start)...)
+		from = region.End
+	}
+	markup := lineComments(markupStyle(), lexer.StringSyntax{}, src[from:])
+	return append(found, shifted(markup, from)...)
+}
+
+func regionComments(tag string) lexer.CommentSyntax {
+	syntax := lexer.SlashSyntax()
+	if tag == "style" {
+		syntax.Line = nil
+	}
+	return syntax
+}
+
+func shifted(spans []lexer.Span, by int) []lexer.Span {
+	for at := range spans {
+		spans[at].Start += by
+		spans[at].End += by
+	}
+	return spans
+}

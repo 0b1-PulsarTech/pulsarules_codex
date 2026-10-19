@@ -10,7 +10,7 @@ func TestLiterals_WithinConfinesToRegions(t *testing.T) {
 	t.Parallel()
 
 	comments, strs := testSyntax()
-	strs.Within = BlockDelim{Open: "<script", Close: "</script>"}
+	strs.Within = scriptSpans
 	testCases := []struct {
 		name string
 		src  string
@@ -36,7 +36,7 @@ func TestLiterals_WithinCompleteNeedsEveryRegion(t *testing.T) {
 	t.Parallel()
 
 	comments, strs := testSyntax()
-	strs.Within = BlockDelim{Open: "<script", Close: "</script>"}
+	strs.Within = scriptSpans
 	testCases := []struct {
 		name string
 		src  string
@@ -65,7 +65,7 @@ func TestLiterals_RegionsAreTheScannedText(t *testing.T) {
 	if len(whole) != 1 || whole[0] != (Span{Start: 0, End: 5}) {
 		t.Errorf("whole-file regions = %v, want one span over the file", whole)
 	}
-	strs.Within = BlockDelim{Open: "<script", Close: "</script>"}
+	strs.Within = scriptSpans
 	src := `<p>a</p><script>'y'</script><i/><script>'z'`
 	got := Literals(src, comments, strs).Regions
 	want := []Span{{Start: 15, End: 19}, {Start: 39, End: 43}}
@@ -139,7 +139,7 @@ func TestLiterals_CutInsideARegionIsAbsolute(t *testing.T) {
 	comments, _ := testSyntax()
 	strs := StringSyntax{
 		Delims: []StringDelim{{Open: "'", Close: "'", Escapes: true}},
-		Within: BlockDelim{Open: "<script", Close: "</script>"},
+		Within: scriptSpans,
 	}
 	const src = "<i/><script>x = 'y\nz</script><script>'w'</script>"
 	got := Literals(src, comments, strs)
@@ -158,7 +158,7 @@ func TestLiterals_EOFInsideARegionIsFlagged(t *testing.T) {
 	comments, _ := testSyntax()
 	strs := StringSyntax{
 		Delims: []StringDelim{{Open: "'", Close: "'", Escapes: true}},
-		Within: BlockDelim{Open: "<script", Close: "</script>"},
+		Within: scriptSpans,
 	}
 	const src = "<i/><script>x = 'y"
 	got := Literals(src, comments, strs)
@@ -172,7 +172,7 @@ func TestLiterals_CommentSpans(t *testing.T) {
 
 	comments, strs := testSyntax()
 	within := strs
-	within.Within = BlockDelim{Open: "<script", Close: "</script>"}
+	within.Within = scriptSpans
 	testCases := []struct {
 		name   string
 		src    string
@@ -197,4 +197,19 @@ func TestLiterals_CommentSpans(t *testing.T) {
 			}
 		})
 	}
+}
+
+func scriptSpans(src string) []Span {
+	var spans []Span
+	for from := 0; from < len(src); {
+		_, after, found := strings.Cut(src[from:], "<script")
+		if !found {
+			return spans
+		}
+		start := len(src) - len(after)
+		body, _, _ := strings.Cut(after, "</script>")
+		spans = append(spans, Span{Start: start, End: start + len(body)})
+		from = start + len(body)
+	}
+	return spans
 }
