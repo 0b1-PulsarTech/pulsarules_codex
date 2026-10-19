@@ -3,6 +3,8 @@ package simplification
 import (
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -234,5 +236,55 @@ func TestBlockNamesUpgradePath_Wrapped(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestMarkerSyntax(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		ext  string
+		want []string
+	}{
+		{"go line prefix", ".go", []string{"//"}},
+		{"python hash", ".py", []string{"#"}},
+		{"sql dashes first", ".sql", []string{"--"}},
+		{"html falls back to the block opener", ".html", []string{"<!--"}},
+		{"unknown language has no marker and no panic", ".xml", nil},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := markerSyntax(language.ForExtension(testCase.ext).Comments)
+			if !slices.Equal(got.Line, testCase.want) || len(got.Blocks) != 0 {
+				t.Fatalf("markerSyntax(%s) = %+v, want line %q", testCase.ext, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestSimplificationPath_ConfiguredUnknownExtensionSkipped(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	content := "// simplification: x\n// used to be a loop\n" + strings.Repeat("// line\n", 40)
+	if err := os.WriteFile(filepath.Join(dir, "a.xml"), []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	config := &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
+		"simplification-path": {
+			Enabled: true,
+			Params:  map[string]any{"extensions": []string{".xml"}},
+		},
+	}}
+	got := NewAnalyzer().Analyze(&pass.Context{
+		ProjectDir:   dir,
+		Config:       config,
+		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		ChangedFiles: []pass.FileChange{{Path: "a.xml", Extension: ".xml"}},
+	})
+	if len(got) != 0 {
+		t.Fatalf("got %d findings for an unknown language, want 0: %+v", len(got), got)
 	}
 }

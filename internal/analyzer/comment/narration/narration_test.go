@@ -3,6 +3,7 @@ package narration
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
@@ -174,5 +175,30 @@ func TestAnalyzerIdentity(t *testing.T) {
 	analyzer := NewAnalyzer()
 	if analyzer.ID() != "history-narration" || analyzer.Stage() != finding.StageStatic {
 		t.Fatalf("id = %q stage = %v", analyzer.ID(), analyzer.Stage())
+	}
+}
+
+func TestHistoryNarration_ConfiguredUnknownExtensionSkipped(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	content := "// simplification: x\n// used to be a loop\n" + strings.Repeat("// line\n", 40)
+	if err := os.WriteFile(filepath.Join(dir, "a.xml"), []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	config := &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
+		"history-narration": {
+			Enabled: true,
+			Params:  map[string]any{"extensions": []string{".xml"}},
+		},
+	}}
+	got := NewAnalyzer().Analyze(&pass.Context{
+		ProjectDir:   dir,
+		Config:       config,
+		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		ChangedFiles: []pass.FileChange{{Path: "a.xml", Extension: ".xml"}},
+	})
+	if len(got) != 0 {
+		t.Fatalf("got %d findings for an unknown language, want 0: %+v", len(got), got)
 	}
 }

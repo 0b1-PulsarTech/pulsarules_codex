@@ -82,9 +82,6 @@ func TestForExtension(t *testing.T) {
 			if lang.ID == "" {
 				return
 			}
-			if got := lang.CommentPrefix(); got != testCase.wantPrefix {
-				t.Errorf("CommentPrefix() = %q, want %q", got, testCase.wantPrefix)
-			}
 			isNested := slices.ContainsFunc(
 				lang.Comments.Blocks,
 				func(block lexer.BlockDelim) bool {

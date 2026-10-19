@@ -48,13 +48,6 @@ func SourceExtensions() []string {
 	return exts
 }
 
-func (lang Language) CommentPrefix() string {
-	if len(lang.Comments.Line) > 0 {
-		return lang.Comments.Line[0]
-	}
-	return lang.Comments.Blocks[0].Open
-}
-
 func (lang Language) IsPackageClause(line string) bool {
 	return lang.packageClause != nil && lang.packageClause(line)
 }

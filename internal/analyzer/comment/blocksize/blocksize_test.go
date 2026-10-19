@@ -352,3 +352,25 @@ func TestBigComment_ReportsOnAMultilineLuaComment(t *testing.T) {
 		t.Fatalf("expected 1 finding for a 6-line --[[ ]] block, got %d", len(findings))
 	}
 }
+
+func TestBigComment_ConfiguredUnknownExtensionSkipped(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	content := "// simplification: x\n// used to be a loop\n" + strings.Repeat("// line\n", 40)
+	if err := os.WriteFile(filepath.Join(dir, "a.xml"), []byte(content), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	config := &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
+		"big-comment": {Enabled: true, Params: map[string]any{"extensions": []string{".xml"}}},
+	}}
+	got := NewAnalyzer().Analyze(&pass.Context{
+		ProjectDir:   dir,
+		Config:       config,
+		Sources:      source.NewProvider(dir, source.NewSkipSet(source.DefaultSkipDirs())),
+		ChangedFiles: []pass.FileChange{{Path: "a.xml", Extension: ".xml"}},
+	})
+	if len(got) != 0 {
+		t.Fatalf("got %d findings for an unknown language, want 0: %+v", len(got), got)
+	}
+}
