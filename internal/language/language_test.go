@@ -1,72 +1,92 @@
 package language
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
-func TestLanguages_EveryExtensionHasOneOwner(t *testing.T) {
-	t.Parallel()
+type extensionCase struct {
+	ext      string
+	wantID   ID
+	wantSyn  lexer.CommentSyntax
+	isListed bool
+}
 
-	owner := map[string]ID{}
-	ids := map[ID]bool{}
-	for _, lang := range languages() {
-		if ids[lang.ID] {
-			t.Errorf("language %q is listed twice", lang.ID)
-		}
-		ids[lang.ID] = true
-		if len(lang.extensions) == 0 {
-			t.Errorf("language %q has no extension", lang.ID)
-		}
-		if len(lang.Comments.Line) == 0 && len(lang.Comments.Blocks) == 0 {
-			t.Errorf("language %q has no comment grammar", lang.ID)
-		}
-		for _, ext := range lang.extensions {
-			if previous, taken := owner[ext]; taken {
-				t.Errorf("extension %q is listed for %q and %q", ext, previous, lang.ID)
-			}
-			owner[ext] = lang.ID
-		}
+func extensionCases() []extensionCase {
+	slash := lexer.CommentSyntax{
+		Line:   []string{"//"},
+		Blocks: []lexer.BlockDelim{{Open: "/*", Close: "*/"}},
+	}
+	dart := lexer.CommentSyntax{
+		Line:   []string{"//"},
+		Blocks: []lexer.BlockDelim{{Open: "/*", Close: "*/", Nested: true}},
+	}
+	component := lexer.CommentSyntax{
+		Line: []string{"//"},
+		Blocks: []lexer.BlockDelim{
+			{Open: "/*", Close: "*/"}, {Open: "<!--", Close: "-->"},
+		},
+	}
+	hash := lexer.CommentSyntax{Line: []string{"#"}}
+	nix := lexer.CommentSyntax{Line: []string{"#"}, Blocks: slash.Blocks}
+	sql := lexer.CommentSyntax{Line: []string{"--"}, Blocks: slash.Blocks}
+	lua := lexer.CommentSyntax{
+		Line:   []string{"--"},
+		Blocks: []lexer.BlockDelim{{Open: "--[[", Close: "]]"}},
+	}
+	markup := lexer.CommentSyntax{Blocks: []lexer.BlockDelim{{Open: "<!--", Close: "-->"}}}
+	return []extensionCase{
+		{".go", Go, slash, true},
+		{".dart", Dart, dart, true},
+		{".ts", TypeScript, slash, true},
+		{".tsx", TypeScript, slash, true},
+		{".mts", TypeScript, slash, true},
+		{".cts", TypeScript, slash, true},
+		{".js", JavaScript, slash, true},
+		{".jsx", JavaScript, slash, true},
+		{".mjs", JavaScript, slash, true},
+		{".cjs", JavaScript, slash, true},
+		{".svelte", Svelte, component, true},
+		{".vue", Vue, component, true},
+		{".java", Java, slash, true},
+		{".kt", Kotlin, slash, true},
+		{".kts", Kotlin, slash, true},
+		{".scala", Scala, slash, true},
+		{".swift", Swift, slash, true},
+		{".rs", Rust, slash, true},
+		{".c", CLang, slash, true},
+		{".h", CLang, slash, true},
+		{".cpp", CPP, slash, true},
+		{".hpp", CPP, slash, true},
+		{".cs", CSharp, slash, true},
+		{".py", Python, hash, true},
+		{".rb", Ruby, hash, true},
+		{".php", PHP, slash, true},
+		{".sh", Shell, hash, true},
+		{".bash", Shell, hash, true},
+		{".zsh", Shell, hash, true},
+		{".sql", SQL, sql, true},
+		{".proto", Proto, slash, true},
+		{".lua", Lua, lua, true},
+		{".html", HTML, markup, true},
+		{".nix", Nix, nix, true},
+		{".yaml", YAML, hash, true},
+		{".yml", YAML, hash, true},
+		{".toml", TOML, hash, true},
+		{".GO", Go, slash, false},
+		{".Dart", Dart, dart, false},
+		{".xml", "", lexer.CommentSyntax{}, false},
+		{"", "", lexer.CommentSyntax{}, false},
 	}
 }
 
 func TestForExtension(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct {
-		ext        string
-		wantID     ID
-		wantPrefix string
-		wantNested bool
-	}{
-		{".go", Go, "//", false},
-		{".GO", Go, "//", false},
-		{".dart", Dart, "//", true},
-		{".ts", TypeScript, "//", false},
-		{".tsx", TypeScript, "//", false},
-		{".mts", TypeScript, "//", false},
-		{".cts", TypeScript, "//", false},
-		{".js", JavaScript, "//", false},
-		{".mjs", JavaScript, "//", false},
-		{".cjs", JavaScript, "//", false},
-		{".jsx", JavaScript, "//", false},
-		{".svelte", Svelte, "//", false},
-		{".vue", Vue, "//", false},
-		{".rs", Rust, "//", false},
-		{".java", Java, "//", false},
-		{".py", Python, "#", false},
-		{".sh", Shell, "#", false},
-		{".yaml", YAML, "#", false},
-		{".toml", TOML, "#", false},
-		{".sql", SQL, "--", false},
-		{".nix", Nix, "#", false},
-		{".lua", Lua, "--", false},
-		{".html", HTML, "<!--", false},
-		{".xml", "", "", false},
-		{"", "", "", false},
-	}
+	testCases := extensionCases()
 	for _, testCase := range testCases {
 		t.Run(testCase.ext, func(t *testing.T) {
 			t.Parallel()
@@ -79,36 +99,64 @@ func TestForExtension(t *testing.T) {
 					testCase.wantID,
 				)
 			}
-			if lang.ID == "" {
-				return
-			}
-			isNested := slices.ContainsFunc(
-				lang.Comments.Blocks,
-				func(block lexer.BlockDelim) bool {
-					return block.Nested
-				},
-			)
-			if isNested != testCase.wantNested {
-				t.Errorf("nested block comments = %v, want %v", isNested, testCase.wantNested)
+			if !reflect.DeepEqual(lang.Comments, testCase.wantSyn) {
+				t.Fatalf("ForExtension(%q).Comments = %+v, want %+v",
+					testCase.ext, lang.Comments, testCase.wantSyn)
 			}
 		})
+	}
+	listed := map[string]bool{}
+	for _, testCase := range testCases {
+		listed[testCase.ext] = testCase.isListed
+	}
+	for _, lang := range languages() {
+		for _, ext := range lang.extensions {
+			if !listed[ext] {
+				t.Errorf("extension %q of %q has no row in this table", ext, lang.ID)
+			}
+		}
 	}
 }
 
 func TestSourceExtensions(t *testing.T) {
 	t.Parallel()
 
+	testCases := []struct {
+		name string
+		ext  string
+		want bool
+	}{
+		{"go", ".go", true},
+		{"dart", ".dart", true},
+		{"mts", ".mts", true},
+		{"cts", ".cts", true},
+		{"nix", ".nix", true},
+		{"sql", ".sql", true},
+		{"svelte", ".svelte", true},
+		{"yaml is config", ".yaml", false},
+		{"yml is config", ".yml", false},
+		{"toml is config", ".toml", false},
+		{"xml is unknown", ".xml", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := slices.Contains(SourceExtensions(), testCase.ext); got != testCase.want {
+				t.Fatalf(
+					"SourceExtensions() contains %q = %v, want %v",
+					testCase.ext,
+					got,
+					testCase.want,
+				)
+			}
+		})
+	}
+}
+
+func TestSourceExtensions_FreshSlice(t *testing.T) {
+	t.Parallel()
+
 	source := SourceExtensions()
-	for _, want := range []string{".go", ".dart", ".ts", ".mts", ".cts", ".nix", ".sql", ".svelte"} {
-		if !slices.Contains(source, want) {
-			t.Errorf("SourceExtensions() lacks %q", want)
-		}
-	}
-	for _, unwanted := range []string{".yaml", ".yml", ".toml", ".xml"} {
-		if slices.Contains(source, unwanted) {
-			t.Errorf("SourceExtensions() holds %q, config is not source", unwanted)
-		}
-	}
 	source[0] = "mutated"
 	if SourceExtensions()[0] == "mutated" {
 		t.Fatal("SourceExtensions must build a fresh slice on each call")
@@ -118,13 +166,23 @@ func TestSourceExtensions(t *testing.T) {
 func TestExtensions(t *testing.T) {
 	t.Parallel()
 
-	got := Extensions(TypeScript, Proto)
-	want := []string{".ts", ".tsx", ".mts", ".cts", ".proto"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("Extensions(TypeScript, Proto) = %v, want %v", got, want)
+	testCases := []struct {
+		name string
+		ids  []ID
+		want []string
+	}{
+		{"table order", []ID{TypeScript, Proto}, []string{".ts", ".tsx", ".mts", ".cts", ".proto"}},
+		{"one id", []ID{Go}, []string{".go"}},
+		{"unknown id", []ID{"cobol"}, nil},
+		{"no ids", nil, nil},
 	}
-	if none := Extensions(); len(none) != 0 {
-		t.Fatalf("Extensions() = %v, want none", none)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := Extensions(testCase.ids...); !slices.Equal(got, testCase.want) {
+				t.Fatalf("Extensions(%v) = %v, want %v", testCase.ids, got, testCase.want)
+			}
+		})
 	}
 }
 
