@@ -50,8 +50,7 @@ func TestIsTestCallback(t *testing.T) {
 			t.Parallel()
 
 			got := false
-			options := Options{IsTest: testCase.isTest}
-			for _, fn := range collectOf(t, testCase.text, options).Functions {
+			for _, fn := range functionsOf(t, testCase.text, Options{IsTest: testCase.isTest}).out {
 				got = got || fn.TestContainer
 			}
 			if got != testCase.want {

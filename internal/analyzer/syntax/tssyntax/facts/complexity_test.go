@@ -19,9 +19,9 @@ func runComplexity(t *testing.T, testCases []complexityCase) {
 			t.Parallel()
 
 			text := "function f(a, b, c, d) {" + testCase.body + "}\n"
-			facts := collectOf(t, text, Options{IsTest: testCase.isTest})
-			got := make([]int, 0, len(facts.Functions))
-			for _, fn := range facts.Functions {
+			facts := complexityOf(t, text, Options{IsTest: testCase.isTest})
+			got := make([]int, 0, len(facts.out))
+			for _, fn := range facts.out {
 				got = append(got, fn.Complexity)
 			}
 			if !slices.Equal(got, testCase.want) {

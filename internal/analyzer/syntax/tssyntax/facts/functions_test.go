@@ -277,7 +277,7 @@ func TestFunctions(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := collectOf(t, testCase.text, Options{}).Functions
+			got := functionsOf(t, testCase.text, Options{}).out
 			if !slices.Equal(got, testCase.want) {
 				t.Fatalf("functions\n got %+v\nwant %+v", got, testCase.want)
 			}

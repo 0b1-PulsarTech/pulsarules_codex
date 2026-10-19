@@ -6,47 +6,53 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
-func (coll *collector) names(node *ast.Node) {
+type nameFacts struct {
+	source
+	locals map[string]bool
+	out    []syntax.Name
+}
+
+func (facts *nameFacts) visit(node *ast.Node) {
 	switch node.Kind {
 	case ast.KindFunctionDeclaration:
-		coll.addExported(node.Name(), syntax.Name{Kind: syntax.NameFunction})
+		facts.addExported(node.Name(), syntax.Name{Kind: syntax.NameFunction})
 	case ast.KindFunctionExpression:
-		coll.addName(node.Name(), syntax.Name{Kind: syntax.NameFunction})
+		facts.addName(node.Name(), syntax.Name{Kind: syntax.NameFunction})
 	case ast.KindMethodDeclaration, ast.KindMethodSignature, ast.KindGetAccessor,
 		ast.KindSetAccessor:
-		coll.addName(node.Name(), syntax.Name{Kind: syntax.NameMethod})
+		facts.addName(node.Name(), syntax.Name{Kind: syntax.NameMethod})
 	case ast.KindClassDeclaration, ast.KindClassExpression, ast.KindInterfaceDeclaration,
 		ast.KindTypeAliasDeclaration, ast.KindEnumDeclaration, ast.KindModuleDeclaration:
-		coll.addExported(node.Name(), syntax.Name{Kind: syntax.NameType})
+		facts.addExported(node.Name(), syntax.Name{Kind: syntax.NameType})
 	case ast.KindEnumMember:
-		coll.addName(node.Name(), syntax.Name{Kind: syntax.NameEnumValue})
+		facts.addName(node.Name(), syntax.Name{Kind: syntax.NameEnumValue})
 	case ast.KindPropertyDeclaration, ast.KindPropertySignature:
-		coll.addName(node.Name(), syntax.Name{Kind: syntax.NameField})
+		facts.addName(node.Name(), syntax.Name{Kind: syntax.NameField})
 	case ast.KindTypeParameter:
-		coll.addName(node.Name(), syntax.Name{Kind: syntax.NameTypeParam})
+		facts.addName(node.Name(), syntax.Name{Kind: syntax.NameTypeParam})
 	case ast.KindParameter:
-		coll.parameter(node)
+		facts.parameter(node)
 	case ast.KindVariableDeclaration:
-		coll.variable(node)
+		facts.variable(node)
 	default:
-		coll.otherNames(node)
+		facts.otherNames(node)
 	}
 }
 
-func (coll *collector) otherNames(node *ast.Node) {
+func (facts *nameFacts) otherNames(node *ast.Node) {
 	switch node.Kind {
 	case ast.KindLabeledStatement:
-		coll.addLabel(node.AsLabeledStatement().Label)
+		facts.addLabel(node.AsLabeledStatement().Label)
 	case ast.KindImportClause, ast.KindNamespaceImport, ast.KindImportEqualsDeclaration:
-		coll.addName(node.Name(), syntax.Name{Kind: syntax.NameImportAlias})
+		facts.addName(node.Name(), syntax.Name{Kind: syntax.NameImportAlias})
 	case ast.KindImportSpecifier:
 		if node.AsImportSpecifier().PropertyName != nil {
-			coll.addName(node.Name(), syntax.Name{Kind: syntax.NameImportAlias})
+			facts.addName(node.Name(), syntax.Name{Kind: syntax.NameImportAlias})
 		}
 	}
 }
 
-func (coll *collector) addName(name *ast.Node, template syntax.Name) {
+func (facts *nameFacts) addName(name *ast.Node, template syntax.Name) {
 	if name == nil {
 		return
 	}
@@ -58,27 +64,27 @@ func (coll *collector) addName(name *ast.Node, template syntax.Name) {
 		return
 	}
 	template.Name = text
-	template.Line = coll.lineAt(name.Pos())
-	coll.out.Names = append(coll.out.Names, template)
+	template.Line = facts.lineAt(name.Pos())
+	facts.out = append(facts.out, template)
 }
 
-func (coll *collector) addLabel(label *ast.Node) {
-	coll.addName(label, syntax.Name{Kind: syntax.NameLabel})
-	last := len(coll.out.Names) - 1
+func (facts *nameFacts) addLabel(label *ast.Node) {
+	facts.addName(label, syntax.Name{Kind: syntax.NameLabel})
+	last := len(facts.out) - 1
 	// A Svelte reactive statement is the label "$", fixed by the framework.
-	if last >= 0 && coll.out.Names[last].Name == "$" {
-		coll.out.Names[last].Exempt = true
+	if last >= 0 && facts.out[last].Name == "$" {
+		facts.out[last].Exempt = true
 	}
 }
 
-func (coll *collector) parameter(node *ast.Node) {
+func (facts *nameFacts) parameter(node *ast.Node) {
 	if !isThisParam(node) {
-		coll.binding(node.Name(), syntax.Name{Kind: syntax.NameParameter})
+		facts.binding(node.Name(), syntax.Name{Kind: syntax.NameParameter})
 	}
 }
 
-func (coll *collector) variable(node *ast.Node) {
-	coll.binding(node.Name(), variableKind(node))
+func (facts *nameFacts) variable(node *ast.Node) {
+	facts.binding(node.Name(), variableKind(node))
 }
 
 func variableKind(node *ast.Node) syntax.Name {
@@ -100,7 +106,7 @@ func variableKind(node *ast.Node) syntax.Name {
 	return syntax.Name{Kind: syntax.NameVariable}
 }
 
-func (coll *collector) binding(name *ast.Node, template syntax.Name) {
+func (facts *nameFacts) binding(name *ast.Node, template syntax.Name) {
 	if name == nil {
 		return
 	}
@@ -108,10 +114,10 @@ func (coll *collector) binding(name *ast.Node, template syntax.Name) {
 	case ast.KindObjectBindingPattern, ast.KindArrayBindingPattern:
 		for _, element := range name.AsBindingPattern().Elements.Nodes {
 			if element.Kind == ast.KindBindingElement {
-				coll.binding(element.Name(), template)
+				facts.binding(element.Name(), template)
 			}
 		}
 	default:
-		coll.addExported(name, template)
+		facts.addExported(name, template)
 	}
 }

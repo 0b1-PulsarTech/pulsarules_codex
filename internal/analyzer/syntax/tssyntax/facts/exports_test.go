@@ -66,7 +66,7 @@ func TestExportedNames(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := collectOf(t, testCase.text, Options{}).Names
+			got := namesOf(t, testCase.text)
 			if !slices.Equal(got, testCase.want) {
 				t.Fatalf("names\n got %+v\nwant %+v", got, testCase.want)
 			}

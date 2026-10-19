@@ -6,12 +6,14 @@ import (
 	"github.com/Zzzen/typescript-go/use-at-your-own-risk/ast"
 )
 
-func (coll *collector) complexity(node *ast.Node) {
+type complexityFacts struct{ functions *functionFacts }
+
+func (facts complexityFacts) visit(node *ast.Node) {
 	if !branches(node) {
 		return
 	}
-	for _, frame := range slices.Backward(coll.frames) {
-		fn := &coll.out.Functions[frame]
+	for _, frame := range slices.Backward(facts.functions.frames) {
+		fn := &facts.functions.out[frame]
 		fn.Complexity++
 		if !fn.Nested || fn.TestContainer {
 			return

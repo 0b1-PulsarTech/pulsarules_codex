@@ -2,143 +2,95 @@ package facts
 
 import (
 	"errors"
-	"slices"
 
 	"github.com/Zzzen/typescript-go/use-at-your-own-risk/ast"
-	"github.com/Zzzen/typescript-go/use-at-your-own-risk/scanner"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax/tsparse"
 )
 
 const MaxTreeDepth = 50_000
 
 var errTooDeep = errors.New("syntax tree is nested too deeply")
 
-type collector struct {
-	text    string
-	lines   tsparse.Lines
-	isTest  bool
-	local   []string
-	factory *ast.NodeFactory
-	out     syntax.File
-	frames  []int
-	locals  map[string]bool
-	depth   int
-	stop    bool
-	each    ast.Visitor
-}
-
 type Options struct {
 	Local  []string
 	IsTest bool
 }
 
-func Collect(root *ast.SourceFile, text string, options Options) (syntax.File, error) {
-	coll := &collector{
-		text:    text,
-		lines:   tsparse.NewLines(text),
-		isTest:  options.IsTest,
-		local:   options.Local,
-		factory: ast.NewNodeFactory(ast.NodeFactoryHooks{}),
-	}
-	coll.each = func(child *ast.Node) bool {
-		coll.walk(child)
-		return coll.stop
-	}
-	node := root.AsNode()
-	statements := node.Statements()
-	coll.locals = exportedLocals(statements)
-	coll.imports(statements)
-	coll.docStatements(statements, "")
-	node.ForEachChild(coll.each)
-	if coll.stop {
-		return syntax.File{}, errTooDeep
-	}
-	return coll.out, nil
+type nodeVisitor interface{ visit(node *ast.Node) }
+
+type walker struct {
+	functions *functionFacts
+	visitors  []nodeVisitor
+	depth     int
+	stop      bool
+	each      ast.Visitor
 }
 
-func (coll *collector) walk(node *ast.Node) {
+func Collect(root *ast.SourceFile, text string, options Options) (syntax.File, error) {
+	src := newSource(text)
+	node := root.AsNode()
+	statements := node.Statements()
+	functions := &functionFacts{source: src, isTest: options.IsTest}
+	names := &nameFacts{source: src, locals: exportedLocals(statements)}
+	imports := &importFacts{source: src, local: options.Local}
+	imports.collect(statements)
+	docs := &docFacts{source: src, factory: ast.NewNodeFactory(ast.NodeFactoryHooks{})}
+	docs.docStatements(statements, "")
+	if err := newWalker(functions, complexityFacts{functions}, names).run(node); err != nil {
+		return syntax.File{}, err
+	}
+	facts := syntax.File{
+		Functions: functions.out,
+		Blocks:    functions.blocks,
+		Names:     names.out,
+		Imports:   imports.out,
+		DocSites:  docs.out,
+	}
+	if len(imports.out) > 0 {
+		facts.ImportGroups = importGroupNames()
+	}
+	return facts, nil
+}
+
+func newWalker(functions *functionFacts, visitors ...nodeVisitor) *walker {
+	walk := &walker{functions: functions, visitors: visitors}
+	walk.each = func(child *ast.Node) bool {
+		walk.walk(child)
+		return walk.stop
+	}
+	return walk
+}
+
+func (walk *walker) run(root *ast.Node) error {
+	root.ForEachChild(walk.each)
+	if walk.stop {
+		return errTooDeep
+	}
+	return nil
+}
+
+func (walk *walker) walk(node *ast.Node) {
 	// The parser appends cloned CommonJS export nodes to a JS file's statements.
 	if node.Flags&ast.NodeFlagsReparsed != 0 {
 		return
 	}
-	if coll.depth >= MaxTreeDepth {
-		coll.stop = true
+	if walk.depth >= MaxTreeDepth {
+		walk.stop = true
 		return
 	}
-	coll.depth++
-	coll.visit(node)
-	coll.depth--
+	walk.depth++
+	walk.visit(node)
+	walk.depth--
 }
 
-func (coll *collector) visit(node *ast.Node) {
-	switch node.Kind {
-	case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction,
-		ast.KindMethodDeclaration, ast.KindConstructor, ast.KindGetAccessor, ast.KindSetAccessor:
-		coll.function(node)
-	default:
-		coll.complexity(node)
-		coll.names(node)
-		node.ForEachChild(coll.each)
+func (walk *walker) visit(node *ast.Node) {
+	if !walk.functions.enter(node) {
+		return
 	}
-}
-
-func (coll *collector) lineAt(offset int) int {
-	return coll.lines.Of(scanner.SkipTrivia(coll.text, offset))
-}
-
-func (coll *collector) sourceOf(node *ast.Node) string {
-	return coll.text[scanner.SkipTrivia(coll.text, node.Pos()):node.End()]
-}
-
-func (coll *collector) ownerName(constructor *ast.Node) string {
-	owner := constructor.Parent
-	if owner == nil {
-		return "constructor"
+	for _, visitor := range walk.visitors {
+		visitor.visit(node)
 	}
-	if owner.Name() == nil && owner.Kind == ast.KindClassExpression {
-		if bound := coll.closureIdentity(owner); bound.bound {
-			return bound.name
-		}
-	}
-	return coll.nameOr(owner.Name(), "default")
-}
-
-func (coll *collector) declarationLine(node *ast.Node) int {
-	if name := node.Name(); name != nil && ast.HasDecorators(node) {
-		return coll.lineAt(name.Pos())
-	}
-	return coll.lineAt(node.Pos())
-}
-
-func (coll *collector) isOverload(node *ast.Node) bool {
-	switch node.Kind {
-	case ast.KindFunctionDeclaration, ast.KindMethodDeclaration, ast.KindConstructor:
-	default:
-		return false
-	}
-	if node.Parent == nil {
-		return false
-	}
-	var siblings []*ast.Node
-	if node.Parent.CanHaveStatements() {
-		siblings = node.Parent.Statements()
-	} else {
-		siblings = node.Parent.Members()
-	}
-	index := slices.Index(siblings, node)
-	if index < 0 {
-		return false
-	}
-	own := coll.nameOr(node.Name(), "")
-	for _, next := range siblings[index+1:] {
-		if next.Kind != node.Kind || coll.nameOr(next.Name(), "") != own {
-			return false
-		}
-		if next.Body() != nil {
-			return true
-		}
-	}
-	return false
+	node.ForEachChild(walk.each)
+	walk.functions.leave(node)
 }

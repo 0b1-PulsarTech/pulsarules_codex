@@ -85,6 +85,28 @@ func importCases() []importCase {
 	}
 }
 
+func TestImportFactsAlone(t *testing.T) {
+	t.Parallel()
+
+	testCases := importCases()
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := importsOf(
+				t,
+				testCase.text,
+				testCase.local,
+			); !slices.Equal(
+				got,
+				testCase.want,
+			) {
+				t.Fatalf("imports\n got %+v\nwant %+v", got, testCase.want)
+			}
+		})
+	}
+}
+
 func TestImports(t *testing.T) {
 	t.Parallel()
 

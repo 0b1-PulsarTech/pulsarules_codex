@@ -20,7 +20,7 @@ func runBlocks(t *testing.T, testCases []blockCase) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := collectOf(t, testCase.text, Options{IsTest: testCase.isTest}).Blocks
+			got := functionsOf(t, testCase.text, Options{IsTest: testCase.isTest}).blocks
 			if !slices.Equal(got, testCase.want) {
 				t.Fatalf("blocks %v, want %v", got, testCase.want)
 			}
