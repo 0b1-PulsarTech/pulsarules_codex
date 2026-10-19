@@ -82,12 +82,7 @@ func validateBody(
 	return findings
 }
 
-func validateToolTrailers(
-	msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters,
-) []finding.Finding {
-	if !cfg.RejectToolTrailers {
-		return nil
-	}
+func validateToolTrailers(msg commitmsg.Message, reporters ruleReporters) []finding.Finding {
 	trailer := msg.ToolTrailer()
 	if trailer == "" {
 		return nil

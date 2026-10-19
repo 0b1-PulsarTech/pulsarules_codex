@@ -2,6 +2,7 @@ package message
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
@@ -9,7 +10,7 @@ import (
 )
 
 func validateInitial(
-	msg commitmsg.Message, _ ruleConfig, findings []finding.Finding, reporters ruleReporters,
+	msg commitmsg.Message, findings []finding.Finding, reporters ruleReporters,
 ) []finding.Finding {
 	if len(msg.Emojis) != 1 || msg.Emojis[0] != "ghost" {
 		findings = append(
@@ -21,7 +22,7 @@ func validateInitial(
 }
 
 func validateMerge(
-	msg commitmsg.Message, _ ruleConfig, findings []finding.Finding, reporters ruleReporters,
+	msg commitmsg.Message, findings []finding.Finding, reporters ruleReporters,
 ) []finding.Finding {
 	if len(msg.Emojis) < 1 || msg.Emojis[0] != "volcano" {
 		findings = append(findings, reporters.merge.New("merge commit must start with :volcano:"))
@@ -29,12 +30,10 @@ func validateMerge(
 	return findings
 }
 
-func validateEmojis(
-	msg commitmsg.Message, cfg ruleConfig, reporters ruleReporters,
-) []finding.Finding {
+func validateEmojis(msg commitmsg.Message, reporters ruleReporters) []finding.Finding {
 	var findings []finding.Finding
 
-	if cfg.RequireEmoji && len(msg.Emojis) == 0 {
+	if len(msg.Emojis) == 0 {
 		findings = append(
 			findings,
 			reporters.emojiRequired.New("commit message must start with an emoji (:shortcode:)"),
@@ -42,7 +41,12 @@ func validateEmojis(
 	}
 
 	if len(msg.Emojis) > commitmsg.MaxLeadingEmojis {
-		findings = append(findings, reporters.emojiCount.New("too many leading emojis (max 3)"))
+		findings = append(
+			findings,
+			reporters.emojiCount.New(
+				"too many leading emojis (max "+strconv.Itoa(commitmsg.MaxLeadingEmojis)+")",
+			),
+		)
 	}
 
 	return findings

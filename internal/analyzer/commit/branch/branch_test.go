@@ -183,7 +183,7 @@ func TestValidExtraTypes(t *testing.T) {
 			t.Parallel()
 
 			if got := validExtraTypes(testCase.spec); got != testCase.want {
-				t.Errorf("ValidExtraTypes(%q) = %v, want %v", testCase.spec, got, testCase.want)
+				t.Errorf("validExtraTypes(%q) = %v, want %v", testCase.spec, got, testCase.want)
 			}
 		})
 	}

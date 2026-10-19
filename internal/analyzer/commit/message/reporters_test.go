@@ -37,7 +37,7 @@ func TestRuleReporters_ResolvedSeverity(t *testing.T) {
 
 			reporters := defaultRuleReporters().resolved(testCase.ctx)
 			msg := commitmsg.Parse(":wrench: feat(goscan):")
-			findings := Validate(msg, DefaultRuleConfig(), reporters)
+			findings := validate(msg, defaultRuleConfig(), reporters)
 			if len(findings) == 0 {
 				t.Fatal("expected a commit-desc-required finding")
 			}

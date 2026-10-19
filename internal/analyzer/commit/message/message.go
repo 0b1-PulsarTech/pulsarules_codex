@@ -29,7 +29,7 @@ type Analyzer struct {
 func NewAnalyzer(catalog *emoji.Catalog) *Analyzer {
 	return &Analyzer{
 		catalog:   catalog,
-		ruleCfg:   DefaultRuleConfig(),
+		ruleCfg:   defaultRuleConfig(),
 		windowCfg: defaultEmojiWindowConfig(),
 
 		ruleReporters:  defaultRuleReporters(),
@@ -52,7 +52,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	findings := make([]finding.Finding, 0, typicalFindingCapacity)
 	findings = append(
 		findings,
-		Validate(msg, analyzer.ruleCfg, analyzer.ruleReporters.resolved(ctx))...,
+		validate(msg, analyzer.ruleCfg, analyzer.ruleReporters.resolved(ctx))...,
 	)
 	findings = append(findings, emojiCheck{
 		Message:   msg,
