@@ -2,26 +2,6 @@ package language
 
 import "github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 
-func lineStringsFor(id ID) lexer.StringSyntax {
-	switch id {
-	case Rust:
-		return rustStrings()
-	case CSharp:
-		return csharpStrings()
-	case Shell:
-		return shellStrings()
-	case SQL:
-		return sqlStrings()
-	case Python, Ruby, Lua, Nix:
-		return scriptStrings()
-	case YAML, TOML:
-		return scalarStrings()
-	case HTML:
-		return lexer.StringSyntax{}
-	}
-	return likeStrings()
-}
-
 func quoted() lexer.StringDelim {
 	return lexer.StringDelim{Open: `"`, Close: `"`, Escapes: true}
 }

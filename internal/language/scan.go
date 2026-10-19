@@ -69,7 +69,7 @@ func ScanComments(ext, src string) []lexer.Span {
 	if lang.regions != nil {
 		return componentComments(lang, src)
 	}
-	return lineComments(lang.Comments, lang.lineStrings, src)
+	return lineComments(lang.Comments, lang.prose, src)
 }
 
 func lineComments(
@@ -86,7 +86,7 @@ func componentComments(lang Language, src string) []lexer.Span {
 		markup := lineComments(markupStyle(), lexer.StringSyntax{}, src[from:region.Start])
 		found = append(found, shifted(markup, from)...)
 		body := src[region.Start:region.End]
-		code := lineComments(regionComments(region.Tag), lang.lineStrings, body)
+		code := lineComments(regionComments(region.Tag), lang.prose, body)
 		found = append(found, shifted(code, region.Start)...)
 		from = region.End
 	}

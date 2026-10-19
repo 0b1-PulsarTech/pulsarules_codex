@@ -1,37 +1,74 @@
 package language
 
 import (
+	"slices"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/sfc"
 )
 
 func languages() []Language {
-	rows := append(scriptLanguages(), []Language{
-		{ID: Java, extensions: []string{".java"}, Comments: lexer.SlashSyntax()},
-		{ID: Kotlin, extensions: []string{".kt", ".kts"}, Comments: lexer.SlashSyntax()},
-		{ID: Scala, extensions: []string{".scala"}, Comments: lexer.SlashSyntax()},
-		{ID: Swift, extensions: []string{".swift"}, Comments: lexer.SlashSyntax()},
-		{ID: Rust, extensions: []string{".rs"}, Comments: lexer.SlashSyntax()},
-		{ID: CLang, extensions: []string{".c", ".h"}, Comments: lexer.SlashSyntax()},
-		{ID: CPP, extensions: []string{".cpp", ".hpp"}, Comments: lexer.SlashSyntax()},
-		{ID: CSharp, extensions: []string{".cs"}, Comments: lexer.SlashSyntax()},
-		{ID: Python, extensions: []string{".py"}, Comments: hashStyle()},
-		{ID: Ruby, extensions: []string{".rb"}, Comments: hashStyle()},
-		{ID: PHP, extensions: []string{".php"}, Comments: lexer.SlashSyntax()},
-		{ID: Shell, extensions: []string{".sh", ".bash", ".zsh"}, Comments: hashStyle()},
-		{ID: SQL, extensions: []string{".sql"}, Comments: sqlStyle(), packageClause: isSQLSchema},
-		{ID: Proto, extensions: []string{".proto"}, Comments: lexer.SlashSyntax()},
-		{ID: Lua, extensions: []string{".lua"}, Comments: luaStyle()},
-		{ID: HTML, extensions: []string{".html"}, Comments: markupStyle()},
-		{ID: Nix, extensions: []string{".nix"}, Comments: nixStyle()},
-		// Config prose is not source: flagging it trains people to ignore the gate.
-		{ID: YAML, extensions: []string{".yaml", ".yml"}, Comments: hashStyle(), isConfig: true},
-		{ID: TOML, extensions: []string{".toml"}, Comments: hashStyle(), isConfig: true},
-	}...)
-	for at := range rows {
-		rows[at].lineStrings = lineStringsFor(rows[at].ID)
+	return slices.Concat(
+		scriptLanguages(), compiledLanguages(), dynamicLanguages(), configLanguages(),
+	)
+}
+
+func compiledLanguages() []Language {
+	return []Language{
+		slashLanguage(Java, likeStrings(), ".java"),
+		slashLanguage(Kotlin, likeStrings(), ".kt", ".kts"),
+		slashLanguage(Scala, likeStrings(), ".scala"),
+		slashLanguage(Swift, likeStrings(), ".swift"),
+		slashLanguage(Rust, rustStrings(), ".rs"),
+		slashLanguage(CLang, likeStrings(), ".c", ".h"),
+		slashLanguage(CPP, likeStrings(), ".cpp", ".hpp"),
+		slashLanguage(CSharp, csharpStrings(), ".cs"),
 	}
-	return rows
+}
+
+func dynamicLanguages() []Language {
+	return []Language{
+		{ID: Python, extensions: []string{".py"}, Comments: hashStyle(), prose: scriptStrings()},
+		{ID: Ruby, extensions: []string{".rb"}, Comments: hashStyle(), prose: scriptStrings()},
+		slashLanguage(PHP, likeStrings(), ".php"),
+		{
+			ID:         Shell,
+			extensions: []string{".sh", ".bash", ".zsh"},
+			Comments:   hashStyle(),
+			prose:      shellStrings(),
+		},
+		{
+			ID:            SQL,
+			extensions:    []string{".sql"},
+			Comments:      sqlStyle(),
+			packageClause: isSQLSchema,
+			prose:         sqlStrings(),
+		},
+		slashLanguage(Proto, likeStrings(), ".proto"),
+		{ID: Lua, extensions: []string{".lua"}, Comments: luaStyle(), prose: scriptStrings()},
+		{ID: HTML, extensions: []string{".html"}, Comments: markupStyle()},
+		{ID: Nix, extensions: []string{".nix"}, Comments: nixStyle(), prose: scriptStrings()},
+	}
+}
+
+func configLanguages() []Language {
+	return []Language{
+		// Config prose is not source: flagging it trains people to ignore the gate.
+		{
+			ID:         YAML,
+			extensions: []string{".yaml", ".yml"},
+			Comments:   hashStyle(),
+			isConfig:   true,
+			prose:      scalarStrings(),
+		},
+		{
+			ID:         TOML,
+			extensions: []string{".toml"},
+			Comments:   hashStyle(),
+			isConfig:   true,
+			prose:      scalarStrings(),
+		},
+	}
 }
 
 func scriptLanguages() []Language {
@@ -45,6 +82,7 @@ func scriptLanguages() []Language {
 			extensions:    []string{".go"},
 			Comments:      lexer.SlashSyntax(),
 			strings:       goStrings(),
+			prose:         likeStrings(),
 			astral:        goRune,
 			packageClause: isGoPackage,
 		},
@@ -53,6 +91,7 @@ func scriptLanguages() []Language {
 			extensions: []string{".dart"},
 			Comments:   dartStyle(),
 			strings:    dartStrings(),
+			prose:      likeStrings(),
 			astral:     braced,
 		},
 		{
@@ -60,6 +99,7 @@ func scriptLanguages() []Language {
 			extensions: []string{".ts", ".tsx", ".mts", ".cts"},
 			Comments:   lexer.SlashSyntax(),
 			strings:    jsStrings(),
+			prose:      likeStrings(),
 			astral:     braced,
 		},
 		{
@@ -67,6 +107,7 @@ func scriptLanguages() []Language {
 			extensions: []string{".js", ".jsx", ".mjs", ".cjs"},
 			Comments:   lexer.SlashSyntax(),
 			strings:    jsStrings(),
+			prose:      likeStrings(),
 			astral:     braced,
 		},
 		{
@@ -74,6 +115,7 @@ func scriptLanguages() []Language {
 			extensions: []string{".svelte"},
 			Comments:   componentStyle(),
 			strings:    sfcStrings(sfc.Regions),
+			prose:      likeStrings(),
 			astral:     braced,
 			regions:    sfc.Regions,
 		},
@@ -82,8 +124,13 @@ func scriptLanguages() []Language {
 			extensions: []string{".vue"},
 			Comments:   componentStyle(),
 			strings:    sfcStrings(sfc.PlainRegions),
+			prose:      likeStrings(),
 			astral:     braced,
 			regions:    sfc.PlainRegions,
 		},
 	}
+}
+
+func slashLanguage(id ID, prose lexer.StringSyntax, extensions ...string) Language {
+	return Language{ID: id, extensions: extensions, Comments: lexer.SlashSyntax(), prose: prose}
 }
