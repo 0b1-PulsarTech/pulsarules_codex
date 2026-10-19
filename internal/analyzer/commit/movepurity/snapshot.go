@@ -21,21 +21,9 @@ type (
 		mode string
 		id   string
 	}
-	blobResult struct {
-		content string
-		err     error
-	}
-	entryResult struct {
-		entry entry
+	result[Value any] struct {
+		value Value
 		err   error
-	}
-	dirResult struct {
-		files []string
-		err   error
-	}
-	parseResult struct {
-		file gosrc.File
-		err  error
 	}
 	clauseResult struct {
 		name      string
@@ -46,13 +34,11 @@ type (
 		readEntry func(path string) (mode, id string, err error)
 		readDir   func(dir string) ([]string, error)
 		clash     string
-		blobs     map[string]blobResult
-		entries   map[string]entryResult
-		dirs      map[string]dirResult
-		parsed    map[string]parseResult
+		blobs     map[string]result[string]
+		entries   map[string]result[entry]
+		dirs      map[string]result[[]string]
+		parsed    map[string]result[gosrc.File]
 		clauses   map[string]clauseResult
-		modules   map[string]gosrc.Module
-		names     map[string]string
 	}
 )
 
@@ -75,13 +61,11 @@ func newSnapshot(
 		readEntry: readEntry,
 		readDir:   readDir,
 		clash:     clash,
-		blobs:     map[string]blobResult{},
-		entries:   map[string]entryResult{},
-		dirs:      map[string]dirResult{},
-		parsed:    map[string]parseResult{},
+		blobs:     map[string]result[string]{},
+		entries:   map[string]result[entry]{},
+		dirs:      map[string]result[[]string]{},
+		parsed:    map[string]result[gosrc.File]{},
 		clauses:   map[string]clauseResult{},
-		modules:   map[string]gosrc.Module{},
-		names:     map[string]string{},
 	}
 }
 
@@ -95,39 +79,39 @@ func cached[Key comparable, Value any](cache map[Key]Value, key Key, load func()
 }
 
 func (snap *snapshot) blob(file string) (string, error) {
-	got := cached(snap.blobs, file, func() blobResult {
+	got := cached(snap.blobs, file, func() result[string] {
 		content, err := snap.readBlob(file)
-		return blobResult{content: content, err: err}
+		return result[string]{value: content, err: err}
 	})
-	return got.content, got.err
+	return got.value, got.err
 }
 
 func (snap *snapshot) entryOf(file string) (entry, error) {
-	got := cached(snap.entries, file, func() entryResult {
+	got := cached(snap.entries, file, func() result[entry] {
 		mode, id, err := snap.readEntry(file)
-		return entryResult{entry: entry{mode: mode, id: id}, err: err}
+		return result[entry]{value: entry{mode: mode, id: id}, err: err}
 	})
-	return got.entry, got.err
+	return got.value, got.err
 }
 
 func (snap *snapshot) dir(dir string) ([]string, error) {
-	got := cached(snap.dirs, dir, func() dirResult {
+	got := cached(snap.dirs, dir, func() result[[]string] {
 		files, err := snap.readDir(dir)
-		return dirResult{files: files, err: err}
+		return result[[]string]{value: files, err: err}
 	})
-	return got.files, got.err
+	return got.value, got.err
 }
 
 func (snap *snapshot) parse(file string) (gosrc.File, error) {
-	got := cached(snap.parsed, file, func() parseResult {
+	got := cached(snap.parsed, file, func() result[gosrc.File] {
 		src, err := snap.blob(file)
 		if err != nil {
-			return parseResult{err: err}
+			return result[gosrc.File]{err: err}
 		}
 		parsed, parseErr := gosrc.Parse(src)
-		return parseResult{file: parsed, err: parseErr}
+		return result[gosrc.File]{value: parsed, err: parseErr}
 	})
-	return got.file, got.err
+	return got.value, got.err
 }
 
 func (snap *snapshot) clause(file string) (name string, isIgnored bool) {
@@ -143,27 +127,23 @@ func (snap *snapshot) clause(file string) (name string, isIgnored bool) {
 }
 
 func (snap *snapshot) module(dir string) gosrc.Module {
-	return cached(snap.modules, dir, func() gosrc.Module {
-		return gosrc.WalkModule(dir, snap.blob)
-	})
+	return gosrc.WalkModule(dir, snap.blob)
 }
 
 func (snap *snapshot) packageName(dir string) string {
-	return cached(snap.names, dir, func() string {
-		files, err := snap.dir(dir)
-		if err != nil {
-			return ""
-		}
-		for _, file := range slices.Sorted(slices.Values(files)) {
-			if !isProductionGo(file) {
-				continue
-			}
-			if name, isIgnored := snap.clause(file); !isIgnored && name != "" {
-				return name
-			}
-		}
+	files, err := snap.dir(dir)
+	if err != nil {
 		return ""
-	})
+	}
+	for _, file := range slices.Sorted(slices.Values(files)) {
+		if !isProductionGo(file) {
+			continue
+		}
+		if name, isIgnored := snap.clause(file); !isIgnored && name != "" {
+			return name
+		}
+	}
+	return ""
 }
 
 func (snap *snapshot) addDecls(file, pkg string, set map[string]bool) {

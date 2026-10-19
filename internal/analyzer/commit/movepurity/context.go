@@ -8,14 +8,11 @@ import (
 )
 
 type (
-	moveIndex struct {
+	moveContext struct {
 		dirMoves map[string]string
 		moved    map[string]bool
 		movedTo  map[string]string
 		renames  []pass.Rename
-	}
-	moveContext struct {
-		moveIndex
 		head     *snapshot
 		staged   *snapshot
 		declared map[pkgKey]map[string]bool
@@ -38,31 +35,29 @@ type (
 )
 
 func newMoveContext(reader gitReader, renames []pass.Rename) *moveContext {
-	index := moveIndex{
+	moves := &moveContext{
 		dirMoves: make(map[string]string, len(renames)),
 		moved:    make(map[string]bool, len(renames)*2),
 		movedTo:  make(map[string]string, len(renames)),
 		renames:  renames,
+		head:     newHeadSnapshot(reader),
+		staged:   newStagedSnapshot(reader),
+		declared: map[pkgKey]map[string]bool{},
+		left:     map[scopeKey]map[string]bool{},
+		taken:    map[scopeKey]map[string]bool{},
+		owned:    map[declScope]map[string]bool{},
+		dirNames: map[string]dirPackages{},
+		unlinked: map[string]string{},
+		stranded: map[string]string{},
 	}
 	for _, rename := range renames {
 		dirs := renameDirs(rename)
-		index.dirMoves[dirs.oldDir] = dirs.newDir
-		index.moved[rename.OldPath] = true
-		index.moved[rename.NewPath] = true
-		index.movedTo[rename.OldPath] = rename.NewPath
+		moves.dirMoves[dirs.oldDir] = dirs.newDir
+		moves.moved[rename.OldPath] = true
+		moves.moved[rename.NewPath] = true
+		moves.movedTo[rename.OldPath] = rename.NewPath
 	}
-	return &moveContext{
-		moveIndex: index,
-		head:      newHeadSnapshot(reader),
-		staged:    newStagedSnapshot(reader),
-		declared:  map[pkgKey]map[string]bool{},
-		left:      map[scopeKey]map[string]bool{},
-		taken:     map[scopeKey]map[string]bool{},
-		owned:     map[declScope]map[string]bool{},
-		dirNames:  map[string]dirPackages{},
-		unlinked:  map[string]string{},
-		stranded:  map[string]string{},
-	}
+	return moves
 }
 
 func (moves *moveContext) declaredIn(dir, pkg string) map[string]bool {

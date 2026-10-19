@@ -21,7 +21,9 @@ func (moves *moveContext) newBinding(
 		mod: scope.OldMod, snap: moves.head, differs: differing(oldFile.Imports, newFile.Imports),
 	}
 	newSide := nameSide{
-		mod: scope.NewMod, snap: moves.staged, differs: differing(newFile.Imports, oldFile.Imports),
+		mod:     scope.NewMod,
+		snap:    moves.staged,
+		differs: differing(newFile.Imports, oldFile.Imports),
 	}
 	oldPaths, isOldUnknown := moves.importNames(oldFile.Imports, oldSide)
 	newPaths, isNewUnknown := moves.importNames(newFile.Imports, newSide)
