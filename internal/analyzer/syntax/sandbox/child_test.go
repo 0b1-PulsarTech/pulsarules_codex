@@ -14,15 +14,15 @@ func TestChild(t *testing.T) {
 		{name: "not a child", args: []string{"exe", "validate"}},
 		{
 			name: "no ceiling", args: []string{"exe", ChildArg}, handled: true,
-			wantExit: []int{ExitProtocol},
+			wantExit: []int{exitProtocol},
 		},
 		{
 			name: "bad ceiling", args: []string{"exe", ChildArg, "x"}, handled: true,
-			wantExit: []int{ExitProtocol},
+			wantExit: []int{exitProtocol},
 		},
 		{
 			name: "negative ceiling", args: []string{"exe", ChildArg, "-1"}, handled: true,
-			wantExit: []int{ExitProtocol},
+			wantExit: []int{exitProtocol},
 		},
 	}
 	for _, testCase := range testCases {

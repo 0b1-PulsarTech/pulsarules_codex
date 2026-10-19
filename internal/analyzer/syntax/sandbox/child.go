@@ -12,8 +12,8 @@ import (
 
 const (
 	ChildArg     = "__tsproc_child"
-	ExitMemory   = 75
-	ExitProtocol = 76
+	exitMemory   = 75
+	exitProtocol = 76
 	MiB          = 1 << 20
 )
 
@@ -27,7 +27,7 @@ func Child(args []string, handle Handler, exit func(int)) bool {
 	}
 	ceiling, err := parseCeiling(args[2:])
 	if err != nil {
-		exit(ExitProtocol)
+		exit(exitProtocol)
 		return true
 	}
 	// The soft limit keeps garbage from reading as live memory against the ceiling.

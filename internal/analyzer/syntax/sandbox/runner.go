@@ -21,8 +21,6 @@ var (
 	errGreeting      = errors.New("parser sent no valid greeting")
 )
 
-const EnvMarker = "PULSARULES_TSPROC"
-
 type Runner struct {
 	Exe    string
 	Args   []string
@@ -36,7 +34,8 @@ type Outcome struct {
 }
 
 func (runner Runner) spawn(ctx context.Context) (*worker, error) {
-	if os.Getenv(EnvMarker) != "" {
+	const envMarker = "PULSARULES_TSPROC"
+	if os.Getenv(envMarker) != "" {
 		return nil, errNested
 	}
 	exe := runner.Exe
@@ -50,7 +49,7 @@ func (runner Runner) spawn(ctx context.Context) (*worker, error) {
 	workCtx, cancel := context.WithCancel(ctx)
 	cmd := exec.CommandContext(workCtx, exe, args...) //nolint:gosec // Re-executes this binary.
 	cmd.WaitDelay = time.Second
-	cmd.Env = append(os.Environ(), EnvMarker+"=1")
+	cmd.Env = append(os.Environ(), envMarker+"=1")
 	stderr := &tail{}
 	cmd.Stderr = stderr
 	stdin, stdout, err := openPipes(cmd)

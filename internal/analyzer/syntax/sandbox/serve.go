@@ -29,7 +29,7 @@ func serve(in io.Reader, out io.Writer, handle Handler, limits serveLimits) int 
 		workers.Wait()
 	}()
 	if err := writeFrame(out, hello{Protocol: protocol}); err != nil {
-		return ExitProtocol
+		return exitProtocol
 	}
 	input := &feed{requests: make(chan Request), ended: make(chan int, 1)}
 	go input.read(ctx, in, limits.Exit)
@@ -39,7 +39,7 @@ func serve(in io.Reader, out io.Writer, handle Handler, limits serveLimits) int 
 			file := handle(request)
 			input.pending.Add(-1)
 			if err := writeFrame(out, reply{Seq: request.Seq, File: *file}); err != nil {
-				return ExitProtocol
+				return exitProtocol
 			}
 		case code := <-input.ended:
 			return code
@@ -69,10 +69,10 @@ func (input *feed) finish(err error, exit func(int)) {
 	code := 0
 	switch {
 	case busy:
-		code = ExitProtocol
+		code = exitProtocol
 		exit(code)
 	case !errors.Is(err, io.EOF):
-		code = ExitProtocol
+		code = exitProtocol
 	}
 	input.ended <- code
 }

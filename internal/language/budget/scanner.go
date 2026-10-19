@@ -28,7 +28,7 @@ func newScanner(text string) *scanner {
 
 func (scan *scanner) run() int {
 	for scan.pos < len(scan.text) && scan.deepest <= MaxNesting &&
-		scan.widest <= MaxSpeculative && scan.fault == "" {
+		scan.widest <= maxSpeculative && scan.fault == "" {
 		scan.step()
 	}
 	if scan.fault == "" && scan.pos >= len(scan.text) && len(scan.templates) > 0 {

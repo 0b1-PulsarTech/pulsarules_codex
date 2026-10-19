@@ -12,11 +12,11 @@ func checkGauges(text string) string {
 	}
 	// Operator bytes drive recursion that brackets do not show: 64Ki of them peak at 106 MiB.
 	// Real bundles stay well under both bounds.
-	if operators := countOperators(text); operators > MaxOperators {
+	if operators := countOperators(text); operators > maxOperators {
 		return fmt.Sprintf(
 			"skipped: %d operators is over the %d parse limit",
 			operators,
-			MaxOperators,
+			maxOperators,
 		)
 	}
 	return ""

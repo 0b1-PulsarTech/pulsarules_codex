@@ -1,38 +1,16 @@
 package arch
 
-import (
-	"testing"
-)
+import "testing"
 
-func TestLoadProjectIndex(t *testing.T) {
+func TestLoadDepGraph(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
 	writeFile(t, projectDir, "foo.go", "package foo\n")
 	writeFile(t, projectDir, "bar/baz.go", "package bar\nimport \"example.com/mod/foo\"\n")
 
-	idx := loadProjectIndex(newSources(projectDir), "example.com/mod")
-	if idx == nil {
-		t.Fatal("expected a non-nil project index")
-	}
-	if len(idx.pkgMap) == 0 {
+	graph := loadDepGraph(newSources(projectDir), "example.com/mod")
+	if len(graph) == 0 {
 		t.Fatal("expected at least one discovered package")
-	}
-	if idx.graph == nil {
-		t.Fatal("expected a built dependency graph")
-	}
-}
-
-func TestLoadProjectIndex_RebuildsEveryCall(t *testing.T) {
-	t.Parallel()
-
-	projectDir := t.TempDir()
-	writeFile(t, projectDir, "foo.go", "package foo\n")
-
-	firstIndex := loadProjectIndex(newSources(projectDir), "example.com/mod")
-	secondIndex := loadProjectIndex(newSources(projectDir), "example.com/mod")
-
-	if firstIndex == secondIndex {
-		t.Error("expected a freshly built index on every call, got the same pointer")
 	}
 }

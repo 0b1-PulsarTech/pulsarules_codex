@@ -9,15 +9,15 @@ func cBlockComment() []lexer.BlockDelim {
 	return []lexer.BlockDelim{{Open: "/*", Close: "*/"}}
 }
 
-func specs() []Spec {
-	return []Spec{
+func specs() []languageSpec {
+	return []languageSpec{
 		goSpec(), clikeSpec(), hashSpec(), sqlSpec(),
 		nixSpec(), luaSpec(), markupSpec(), sfcSpec(),
 	}
 }
 
-func goSpec() Spec {
-	return Spec{
+func goSpec() languageSpec {
+	return languageSpec{
 		Name:               "go",
 		Extensions:         []string{".go"},
 		CommentPrefixValue: "//",
@@ -26,8 +26,8 @@ func goSpec() Spec {
 	}
 }
 
-func clikeSpec() Spec {
-	return Spec{
+func clikeSpec() languageSpec {
+	return languageSpec{
 		// Unions Dart/TS/JS/Java/Kt/Scala/Swift/Rust/C/C++/C#/PHP/Proto; excludes
 		// .svelte/.vue, whose embedded markup needs "sfc".
 		Name: "clike",
@@ -42,8 +42,8 @@ func clikeSpec() Spec {
 	}
 }
 
-func hashSpec() Spec {
-	return Spec{
+func hashSpec() languageSpec {
+	return languageSpec{
 		// Covers Python/Ruby/shell/YAML/TOML. Python's triple-quoted """ is a string
 		// literal, not a comment, so there is no block delimiter.
 		Name: "hash",
@@ -55,8 +55,8 @@ func hashSpec() Spec {
 	}
 }
 
-func sqlSpec() Spec {
-	return Spec{
+func sqlSpec() languageSpec {
+	return languageSpec{
 		Name:               "sql",
 		Extensions:         []string{".sql"},
 		CommentPrefixValue: "--",
@@ -65,8 +65,8 @@ func sqlSpec() Spec {
 	}
 }
 
-func nixSpec() Spec {
-	return Spec{
+func nixSpec() languageSpec {
+	return languageSpec{
 		Name:               "nix",
 		Extensions:         []string{".nix"},
 		CommentPrefixValue: "#",
@@ -74,8 +74,8 @@ func nixSpec() Spec {
 	}
 }
 
-func luaSpec() Spec {
-	return Spec{
+func luaSpec() languageSpec {
+	return languageSpec{
 		Name:               "lua",
 		Extensions:         []string{".lua"},
 		CommentPrefixValue: "--",
@@ -86,8 +86,8 @@ func luaSpec() Spec {
 	}
 }
 
-func markupSpec() Spec {
-	return Spec{
+func markupSpec() languageSpec {
+	return languageSpec{
 		// HTML only: core.DefaultSourceExtensions excludes .xml (config/data, not source),
 		// so a .xml registration here would be unreachable.
 		Name:               "markup",
@@ -99,8 +99,8 @@ func markupSpec() Spec {
 	}
 }
 
-func sfcSpec() Spec {
-	return Spec{
+func sfcSpec() languageSpec {
+	return languageSpec{
 		// Svelte/Vue unions clike's script grammar with markup's block: one file mixes
 		// a "//"/"/* */" script with "<!-- -->" markup and CSS.
 		Name:               "sfc",

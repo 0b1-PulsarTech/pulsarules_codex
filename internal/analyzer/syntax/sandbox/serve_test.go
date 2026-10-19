@@ -75,11 +75,11 @@ func TestServe(t *testing.T) {
 	}{
 		{name: "clean end", input: whole, want: 0, reply: 2},
 		{name: "end before any request", want: 0},
-		{name: "truncated", input: whole[:len(whole)-3], want: ExitProtocol, reply: 1},
-		{name: "garbage", input: []byte("zzzzzzzz"), want: ExitProtocol},
-		{name: "dead output", input: whole, out: failWriter{}, want: ExitProtocol},
-		{name: "dead output at the greeting", out: failWriter{}, want: ExitProtocol},
-		{name: "dead after hello", input: whole, out: &failAfter{ok: 1}, want: ExitProtocol},
+		{name: "truncated", input: whole[:len(whole)-3], want: exitProtocol, reply: 1},
+		{name: "garbage", input: []byte("zzzzzzzz"), want: exitProtocol},
+		{name: "dead output", input: whole, out: failWriter{}, want: exitProtocol},
+		{name: "dead output at the greeting", out: failWriter{}, want: exitProtocol},
+		{name: "dead after hello", input: whole, out: &failAfter{ok: 1}, want: exitProtocol},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

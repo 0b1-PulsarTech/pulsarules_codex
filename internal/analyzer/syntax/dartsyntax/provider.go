@@ -12,11 +12,9 @@ import (
 
 const BuildTimeout = 45 * time.Second
 
-type Provider struct {
-	buildBound time.Duration
-}
+type Provider struct{}
 
-func New() *Provider { return &Provider{buildBound: BuildTimeout} }
+func New() *Provider { return &Provider{} }
 
 func (provider *Provider) Language() syntax.Language { return syntax.LangDart }
 
@@ -43,11 +41,7 @@ func (provider *Provider) prepare(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("locate user cache dir: %w", err)
 	}
-	bound := provider.buildBound
-	if bound <= 0 {
-		bound = BuildTimeout
-	}
-	buildCtx, cancelBuild := context.WithTimeoutCause(ctx, bound, errBuildBound)
+	buildCtx, cancelBuild := context.WithTimeoutCause(ctx, BuildTimeout, errBuildBound)
 	defer cancelBuild()
 	return ensureHelper(buildCtx, base, dart)
 }

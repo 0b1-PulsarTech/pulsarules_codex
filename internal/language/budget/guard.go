@@ -5,9 +5,9 @@ import "fmt"
 const (
 	MaxFileBytes   = 1 << 20
 	MaxNesting     = 500
-	MaxSpeculative = 10
+	maxSpeculative = 10
 	MaxOpeners     = 1 << 15
-	MaxOperators   = 1 << 16
+	maxOperators   = 1 << 16
 )
 
 func CheckSize(text string) string {
@@ -34,11 +34,11 @@ func Check(text string) string {
 			MaxNesting,
 		)
 	}
-	if scan.widest > MaxSpeculative {
+	if scan.widest > maxSpeculative {
 		return fmt.Sprintf(
 			"skipped: %d nested arrow-like parentheses is over the %d parse limit",
 			scan.widest,
-			MaxSpeculative,
+			maxSpeculative,
 		)
 	}
 	return ""

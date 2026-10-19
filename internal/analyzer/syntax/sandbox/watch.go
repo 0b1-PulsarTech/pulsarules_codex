@@ -16,7 +16,7 @@ func watch(ctx context.Context, limits serveLimits) {
 			return
 		case <-ticker.C:
 			if inUse() > limits.Ceiling {
-				limits.Exit(ExitMemory)
+				limits.Exit(exitMemory)
 				return
 			}
 		}

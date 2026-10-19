@@ -5,7 +5,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
-type Spec struct {
+type languageSpec struct {
 	Name               string
 	Extensions         []string
 	CommentPrefixValue string
@@ -13,7 +13,7 @@ type Spec struct {
 	PackageDeclaration func(line string) bool
 }
 
-type handler struct{ spec Spec }
+type handler struct{ spec languageSpec }
 
 var _ pass.Language = handler{}
 

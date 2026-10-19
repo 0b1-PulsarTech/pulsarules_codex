@@ -2,6 +2,7 @@ package dartsyntax
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,9 +45,6 @@ func fixture(t *testing.T, name string) string {
 func TestProviderIdentity(t *testing.T) {
 	t.Parallel()
 	provider := New()
-	if provider.buildBound != BuildTimeout {
-		t.Errorf("buildBound = %v, want %v", provider.buildBound, BuildTimeout)
-	}
 	if provider.Language() != syntax.LangDart {
 		t.Errorf("Language = %q", provider.Language())
 	}
@@ -325,19 +323,21 @@ func TestProviderPrepare(t *testing.T) {
 	}
 }
 
-func TestProviderBuildBound(t *testing.T) {
+func TestProviderPrepareHonorsContextDeadline(t *testing.T) {
 	skipWhereXDGIsIgnored(t)
 	dart := writeFakeDart(t)
 	t.Setenv("PATH", filepath.Dir(dart)+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("FAKE_FAIL", "hang")
 	base := t.TempDir()
 	t.Setenv("XDG_CACHE_HOME", base)
-	_, err := (&Provider{buildBound: 300 * time.Millisecond}).prepare(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+	_, err := New().prepare(ctx)
 	if err == nil {
 		t.Fatal("prepare succeeded with a hanging dart")
 	}
-	if _, marked := loadMarker(currentDir(t, base)); !marked {
-		t.Errorf("no failure marker after the build bound expired: %v", err)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("prepare error = %v, want context deadline exceeded", err)
 	}
 }
 

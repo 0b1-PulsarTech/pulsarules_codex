@@ -19,7 +19,9 @@ type Unavailable struct {
 
 type Cache struct {
 	once        sync.Once
-	build       func()
+	ctx         context.Context //nolint:containedctx // the lazy build outlives NewCache
+	providers   []Provider
+	corpus      Corpus
 	files       map[string]*File
 	unavailable []Unavailable
 }
@@ -31,14 +33,14 @@ type Corpus struct {
 }
 
 func NewCache(ctx context.Context, providers []Provider, corpus Corpus) *Cache {
-	cache := &Cache{files: map[string]*File{}}
-	// A provider applies its own timeout inside Summarize, because the
-	// context outlives Load.
-	cache.build = func() { cache.run(ctx, providers, corpus) }
-	return cache
+	// Providers time-box themselves inside Summarize: ctx outlives Load.
+	return &Cache{
+		ctx: ctx, providers: providers, corpus: corpus, files: map[string]*File{},
+	}
 }
 
-func (cache *Cache) run(ctx context.Context, providers []Provider, corpus Corpus) {
+func (cache *Cache) run() {
+	ctx, providers, corpus := cache.ctx, cache.providers, cache.corpus
 	grouped := make([][]Source, len(providers))
 	for _, source := range corpus.Sources {
 		if _, ok := corpus.Read(source.Path); !ok {
@@ -103,9 +105,7 @@ func (cache *Cache) recordMissing(fallback Language, missing []string, reason st
 }
 
 func (cache *Cache) ensure() {
-	if cache.build != nil {
-		cache.once.Do(cache.build)
-	}
+	cache.once.Do(cache.run)
 }
 
 func (cache *Cache) Get(path string) (*File, bool) {

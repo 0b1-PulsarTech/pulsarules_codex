@@ -44,7 +44,7 @@ func TestIsDirectiveHeaderLine_Grammar(t *testing.T) {
 			t.Parallel()
 			if got := isDirectiveHeaderLine(testCase.line); got != testCase.want {
 				t.Fatalf(
-					"IsDirectiveHeaderLine(%q) = %v, want %v",
+					"isDirectiveHeaderLine(%q) = %v, want %v",
 					testCase.line,
 					got,
 					testCase.want,

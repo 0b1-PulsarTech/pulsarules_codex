@@ -65,7 +65,7 @@ func TestCheckSpeculative(t *testing.T) {
 		return "x = " + strings.Repeat(opener, depth) + "0" + strings.Repeat(closer, depth) + ";\n"
 	}
 	runCheck(t, []checkCase{
-		{name: "async defaults at the limit", text: shape("async(a=", ")", MaxSpeculative)},
+		{name: "async defaults at the limit", text: shape("async(a=", ")", maxSpeculative)},
 		{name: "async defaults", text: shape("async(a=", ")", 22), wantReason: reason},
 		{name: "async calls", text: shape("async(", ")", 11), wantReason: reason},
 		{name: "async commas", text: shape("async(a,", ")", 11), wantReason: reason},
@@ -112,7 +112,7 @@ func TestCheckSpeculativeDepths(t *testing.T) {
 
 	const reason = "skipped: 11 nested arrow-like parentheses is over the 10 parse limit"
 	var testCases []checkCase
-	for depth := MaxSpeculative + 1; depth <= 2*MaxSpeculative+2; depth++ {
+	for depth := maxSpeculative + 1; depth <= 2*maxSpeculative+2; depth++ {
 		text := strings.Repeat("async(a=", depth) + "0" + strings.Repeat(")", depth) + ";\n"
 		testCases = append(testCases, checkCase{
 			name:       fmt.Sprintf("async defaults %d deep", depth),

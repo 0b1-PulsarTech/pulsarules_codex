@@ -76,7 +76,7 @@ func (session *Session) failed(ctx context.Context, cause error) (Outcome, error
 	case expired:
 		return Outcome{Skip: fmt.Sprintf(
 			"skipped: parse exceeded the %s time limit", session.runner.Wall)}, nil
-	case status.code == ExitMemory:
+	case status.code == exitMemory:
 		return Outcome{Skip: fmt.Sprintf(
 			"skipped: parse exceeded the %d MiB memory limit", session.runner.Memory/MiB)}, nil
 	}

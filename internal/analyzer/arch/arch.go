@@ -51,8 +51,8 @@ func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Fi
 		return findings
 	}
 
-	idx := loadProjectIndex(ctx.Sources, modulePath)
-	violations := checkBoundaries(idx.graph, modulePath)
+	graph := loadDepGraph(ctx.Sources, modulePath)
+	violations := checkBoundaries(graph, modulePath)
 
 	for _, violation := range violations {
 		findings = append(findings, reporter.At(
@@ -89,8 +89,8 @@ func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []finding.Findin
 		return findings
 	}
 
-	idx := loadProjectIndex(ctx.Sources, modulePath)
-	cycles := findCycles(idx.graph)
+	graph := loadDepGraph(ctx.Sources, modulePath)
+	cycles := findCycles(graph)
 
 	for _, cycle := range cycles {
 		var builder strings.Builder

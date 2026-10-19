@@ -41,8 +41,8 @@ func TestWatchFiresOnTheCeiling(t *testing.T) {
 		}()
 		select {
 		case code := <-exited:
-			if code != ExitMemory {
-				t.Errorf("exit %d, want %d", code, ExitMemory)
+			if code != exitMemory {
+				t.Errorf("exit %d, want %d", code, exitMemory)
 			}
 		case <-time.After(time.Second):
 			t.Error("the watchdog never fired")
