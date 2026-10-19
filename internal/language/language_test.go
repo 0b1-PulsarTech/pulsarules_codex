@@ -20,7 +20,7 @@ func extensionCases() []extensionCase {
 		Line:   []string{"//"},
 		Blocks: []lexer.BlockDelim{{Open: "/*", Close: "*/"}},
 	}
-	dart := lexer.CommentSyntax{
+	nested := lexer.CommentSyntax{
 		Line:   []string{"//"},
 		Blocks: []lexer.BlockDelim{{Open: "/*", Close: "*/", Nested: true}},
 	}
@@ -40,7 +40,7 @@ func extensionCases() []extensionCase {
 	markup := lexer.CommentSyntax{Blocks: []lexer.BlockDelim{{Open: "<!--", Close: "-->"}}}
 	return []extensionCase{
 		{".go", Go, slash, true},
-		{".dart", Dart, dart, true},
+		{".dart", Dart, nested, true},
 		{".ts", TypeScript, slash, true},
 		{".tsx", TypeScript, slash, true},
 		{".mts", TypeScript, slash, true},
@@ -56,7 +56,7 @@ func extensionCases() []extensionCase {
 		{".kts", Kotlin, slash, true},
 		{".scala", Scala, slash, true},
 		{".swift", Swift, slash, true},
-		{".rs", Rust, slash, true},
+		{".rs", Rust, nested, true},
 		{".c", CLang, slash, true},
 		{".h", CLang, slash, true},
 		{".cpp", CPP, slash, true},
@@ -77,7 +77,7 @@ func extensionCases() []extensionCase {
 		{".yml", YAML, hash, true},
 		{".toml", TOML, hash, true},
 		{".GO", Go, slash, false},
-		{".Dart", Dart, dart, false},
+		{".Dart", Dart, nested, false},
 		{".xml", "", lexer.CommentSyntax{}, false},
 		{"", "", lexer.CommentSyntax{}, false},
 	}

@@ -200,6 +200,10 @@ func nestedBlockCases() []directiveCase {
 			file: "a.dart", src: nested, want: 1,
 		},
 		{
+			name: "rust nested block comment is one comment counted once",
+			file: "a.rs", src: nested, want: 1,
+		},
+		{
 			name: "mts is a source extension",
 			file: "a.mts", src: "// one\n// two\n// three\n// four\nx\n", want: 1,
 		},

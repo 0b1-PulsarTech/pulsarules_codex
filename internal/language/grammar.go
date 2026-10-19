@@ -2,8 +2,8 @@ package language
 
 import "github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 
-func dartStyle() lexer.CommentSyntax {
-	// Dart block comments nest, unlike the C family's.
+func nestedSlashStyle() lexer.CommentSyntax {
+	// Dart and Rust block comments nest, unlike the C family's.
 	syntax := lexer.SlashSyntax()
 	syntax.Blocks[0].Nested = true
 	return syntax

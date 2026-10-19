@@ -19,7 +19,12 @@ func compiledLanguages() []Language {
 		slashLanguage(Kotlin, likeStrings(), ".kt", ".kts"),
 		slashLanguage(Scala, likeStrings(), ".scala"),
 		slashLanguage(Swift, likeStrings(), ".swift"),
-		slashLanguage(Rust, rustStrings(), ".rs"),
+		{
+			ID:         Rust,
+			extensions: []string{".rs"},
+			Comments:   nestedSlashStyle(),
+			prose:      rustStrings(),
+		},
 		slashLanguage(CLang, likeStrings(), ".c", ".h"),
 		slashLanguage(CPP, likeStrings(), ".cpp", ".hpp"),
 		slashLanguage(CSharp, csharpStrings(), ".cs"),
@@ -89,7 +94,7 @@ func scriptLanguages() []Language {
 		{
 			ID:         Dart,
 			extensions: []string{".dart"},
-			Comments:   dartStyle(),
+			Comments:   nestedSlashStyle(),
 			strings:    dartStrings(),
 			prose:      likeStrings(),
 			astral:     braced,

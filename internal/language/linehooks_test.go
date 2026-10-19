@@ -211,6 +211,7 @@ func rustLiteralCases() []scanCase {
 			"let s = r#\"a\" // the old code\"#;\n",
 			0,
 		},
+		{"rust block comments nest", "rs", "/* a /* b */ the old code */\nlet x = 1;\n", 1},
 		{
 			"rust hashed raw string then a comment",
 			"rs",
