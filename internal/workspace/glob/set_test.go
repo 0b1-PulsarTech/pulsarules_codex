@@ -54,3 +54,37 @@ func TestSetIsOpen(t *testing.T) {
 		})
 	}
 }
+
+func TestCompileAll(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		sources []string
+		want    int
+		wantErr bool
+	}{
+		{name: "empty", sources: nil, want: 0},
+		{name: "all valid", sources: []string{"a/**", "*.go"}, want: 2},
+		{name: "one bad fails the list", sources: []string{"a/**", "["}, wantErr: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := CompileAll(testCase.sources)
+			if (err != nil) != testCase.wantErr || len(got) != testCase.want {
+				t.Fatalf("CompileAll(%v) = %d, %v", testCase.sources, len(got), err)
+			}
+		})
+	}
+}
+
+func TestZeroSetIsOpen(t *testing.T) {
+	t.Parallel()
+
+	var zero Set
+	if !zero.IsOpen() || !zero.Match("anything") {
+		t.Fatal("zero Set must be open")
+	}
+}

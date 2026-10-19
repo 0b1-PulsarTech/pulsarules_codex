@@ -48,7 +48,7 @@ func FormatFindings(findings []finding.Finding, style FindingStyle, header strin
 }
 
 func writeFinding(out *strings.Builder, finding finding.Finding, form layout) {
-	label := severityLabel(finding.Severity)
+	label := finding.Severity.String()
 	if form.upper {
 		label = strings.ToUpper(label)
 	}
@@ -85,15 +85,4 @@ func location(finding finding.Finding) string {
 		return fmt.Sprintf("%s:%d", printable.Path(finding.File), finding.Line)
 	}
 	return printable.Path(finding.File)
-}
-
-func severityLabel(severity finding.Severity) string {
-	switch severity {
-	case finding.SeverityWarning:
-		return "warning"
-	case finding.SeverityError:
-		return "error"
-	default:
-		return "info"
-	}
 }

@@ -43,9 +43,9 @@ func severityOverrides(severities map[string]string) []pass.Override {
 	// One rule with no file scope reaches analyzers that never read a severity param.
 	overrides := make([]pass.Override, 0, len(severities))
 	for _, id := range slices.Sorted(maps.Keys(severities)) {
-		overrides = append(overrides, pass.Override{
-			Analyzers: map[string]pass.OverrideConfig{id: {Severity: severities[id]}},
-		})
+		overrides = append(overrides, pass.NewOverride(
+			nil, map[string]pass.OverrideConfig{id: {Severity: severities[id]}},
+		))
 	}
 	return overrides
 }

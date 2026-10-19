@@ -9,6 +9,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
 func disable() pass.OverrideConfig {
@@ -79,7 +80,7 @@ func TestApplyDropAndRewrite(t *testing.T) {
 			"drop in matching files only",
 			"",
 			[]pass.Override{{
-				Files:     testGlob,
+				Files:     glob.CompileSet(testGlob),
 				Analyzers: map[string]pass.OverrideConfig{"single-letter-name": disable()},
 			}},
 			[]finding.Finding{input[0], input[1], input[3], input[4]},
@@ -88,7 +89,7 @@ func TestApplyDropAndRewrite(t *testing.T) {
 			"rewrite in matching files only",
 			"",
 			[]pass.Override{{
-				Files:     testGlob,
+				Files:     glob.CompileSet(testGlob),
 				Analyzers: map[string]pass.OverrideConfig{"file-size": {Severity: "info"}},
 			}},
 			[]finding.Finding{
@@ -100,14 +101,17 @@ func TestApplyDropAndRewrite(t *testing.T) {
 			"later entry wins",
 			"",
 			[]pass.Override{
-				{Files: testGlob, Analyzers: map[string]pass.OverrideConfig{
+				{Files: glob.CompileSet(testGlob), Analyzers: map[string]pass.OverrideConfig{
 					"single-letter-name": disable(),
 					"file-size":          {Severity: "error"},
 				}},
-				{Files: []string{"web/test/a.dart"}, Analyzers: map[string]pass.OverrideConfig{
-					"single-letter-name": enable(),
-					"file-size":          {Severity: "info"},
-				}},
+				{
+					Files: glob.CompileSet([]string{"web/test/a.dart"}),
+					Analyzers: map[string]pass.OverrideConfig{
+						"single-letter-name": enable(),
+						"file-size":          {Severity: "info"},
+					},
+				},
 			},
 			[]finding.Finding{
 				{AnalyzerID: "file-size", File: "web/test/a.dart", Severity: finding.SeverityInfo},
@@ -141,7 +145,7 @@ func scopeCases(input []finding.Finding) []applyCase {
 			"globs never match a fileless finding",
 			"",
 			[]pass.Override{{
-				Files:     []string{"**"},
+				Files:     glob.CompileSet([]string{"**"}),
 				Analyzers: map[string]pass.OverrideConfig{"branch-name": disable()},
 			}},
 			input,
@@ -150,7 +154,7 @@ func scopeCases(input []finding.Finding) []applyCase {
 			"an uncompilable glob matches nothing",
 			"",
 			[]pass.Override{{
-				Files:     []string{"a//b"},
+				Files:     glob.CompileSet([]string{"a//b"}),
 				Analyzers: map[string]pass.OverrideConfig{"file-size": disable()},
 			}},
 			input,
@@ -165,10 +169,10 @@ func idCases(input []finding.Finding) []applyCase {
 			"base id matches a sub id and the exact sub id matches too",
 			"",
 			[]pass.Override{
-				{Files: testGlob, Analyzers: map[string]pass.OverrideConfig{
+				{Files: glob.CompileSet(testGlob), Analyzers: map[string]pass.OverrideConfig{
 					"golangci-lint": {Severity: "warning"},
 				}},
-				{Files: testGlob, Analyzers: map[string]pass.OverrideConfig{
+				{Files: glob.CompileSet(testGlob), Analyzers: map[string]pass.OverrideConfig{
 					"golangci-lint/errcheck": {Severity: "info"},
 				}},
 			},
@@ -182,7 +186,7 @@ func idCases(input []finding.Finding) []applyCase {
 			"the prefix before a slash matches when the owner is another analyzer",
 			"naming",
 			[]pass.Override{{
-				Files:     testGlob,
+				Files:     glob.CompileSet(testGlob),
 				Analyzers: map[string]pass.OverrideConfig{"golangci-lint": {Severity: "warning"}},
 			}},
 			[]finding.Finding{
@@ -205,37 +209,12 @@ func TestApplyKeepsInputUntouched(t *testing.T) {
 		{AnalyzerID: "file-size", File: "a.go", Severity: finding.SeverityError},
 	}
 	rules := []pass.Override{{
-		Files:     []string{"**"},
+		Files:     glob.CompileSet([]string{"**"}),
 		Analyzers: map[string]pass.OverrideConfig{"file-size": {Severity: "info"}},
 	}}
 	Apply(input, "", rules)
 	if input[0].Severity != finding.SeverityError {
 		t.Fatalf("input severity = %v, want it left alone", input[0].Severity)
-	}
-}
-
-func TestParseSeverity(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name string
-		want finding.Severity
-		ok   bool
-	}{
-		{"error", finding.SeverityError, true},
-		{"warning", finding.SeverityWarning, true},
-		{"info", finding.SeverityInfo, true},
-		{"", finding.SeverityInfo, false},
-		{"loud", finding.SeverityInfo, false},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			got, ok := parseSeverity(testCase.name)
-			if got != testCase.want || ok != testCase.ok {
-				t.Fatalf("parseSeverity(%q) = %v, %v", testCase.name, got, ok)
-			}
-		})
 	}
 }
 

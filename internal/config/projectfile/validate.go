@@ -88,7 +88,7 @@ func (val *validator) checkOverrideAnalyzer(field *Field, id string) {
 }
 
 func (val *validator) checkSeverity(field *Field, severity string) {
-	if severity != "" && !finding.ValidSeverityName(severity) {
+	if err := finding.ValidateSeverityName(severity); err != nil {
 		val.fail(field, "invalid severity %q (want %s)",
 			clipValue(severity), strings.Join(finding.SeverityNames(), "|"))
 	}

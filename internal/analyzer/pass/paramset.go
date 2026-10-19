@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
 type ParamSet map[string]any
@@ -98,7 +97,7 @@ func (params ParamSet) String(key string, fallback string) string {
 const ParamSeverity = "severity"
 
 func (params ParamSet) Severity(fallback finding.Severity) finding.Severity {
-	if severity, ok := finding.SeverityByName()[params.String(ParamSeverity, "")]; ok {
+	if severity, err := finding.ParseSeverity(params.String(ParamSeverity, "")); err == nil {
 		return severity
 	}
 	return fallback
@@ -123,7 +122,7 @@ func (ctx *Context) ParamsAt(analyzerID, path string) ParamSet {
 	// Later matching overrides win key by key, the order severity and enabled resolve in.
 	for _, override := range ctx.Config.Overrides {
 		rules := override.Analyzers[analyzerID]
-		if len(rules.Params) == 0 || !override.covers(path) {
+		if len(rules.Params) == 0 || !override.Covers(path) {
 			continue
 		}
 		if merged == nil {
@@ -132,8 +131,4 @@ func (ctx *Context) ParamsAt(analyzerID, path string) ParamSet {
 		maps.Copy(merged, rules.Params)
 	}
 	return merged
-}
-
-func (override Override) covers(path string) bool {
-	return glob.CompileSet(override.Files).Match(path)
 }

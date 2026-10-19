@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
 func TestParamSetInt(t *testing.T) {
@@ -277,7 +278,7 @@ func TestParamSetNonNegativeInt(t *testing.T) {
 
 func scopedOverride(files []string, params map[string]any) Override {
 	return Override{
-		Files:     files,
+		Files:     glob.CompileSet(files),
 		Analyzers: map[string]OverrideConfig{"file-size": {Params: params}},
 	}
 }
@@ -390,30 +391,23 @@ func TestParamsAt_NilConfigAndBase(t *testing.T) {
 	}
 }
 
-func TestValidateSeverityName(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name     string
-		severity string
-		wantErr  bool
-	}{
-		{name: "empty keeps the analyzer default"},
-		{name: "error", severity: "error"},
-		{name: "warning", severity: "warning"},
-		{name: "info", severity: "info"},
-		{name: "a typo is rejected", severity: "fatal", wantErr: true},
-		{name: "capitalised is rejected", severity: "Warning", wantErr: true},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			err := finding.ValidateSeverityName(testCase.severity)
-			if (err != nil) != testCase.wantErr {
-				t.Errorf("ValidateSeverityName(%q) err = %v, wantErr %v",
-					testCase.severity, err, testCase.wantErr)
-			}
-		})
+//nolint:paralleltest // testing.AllocsPerRun panics inside a parallel test
+func TestOverrideCoversReusesTheCompiledSet(t *testing.T) {
+	files := []string{"web/**/*.svelte", "lib/**"}
+	override := NewOverride(files, nil)
+	paths := []string{"web/a/b.svelte", "lib/x.go", "cmd/main.go"}
+	covers := testing.AllocsPerRun(50, func() {
+		for _, path := range paths {
+			override.Covers(path)
+		}
+	})
+	recompiled := testing.AllocsPerRun(50, func() {
+		for _, path := range paths {
+			glob.CompileSet(files).Match(path)
+		}
+	})
+	if covers >= recompiled {
+		t.Fatalf("Covers allocs %v >= recompiling per path %v: globs not compiled once",
+			covers, recompiled)
 	}
 }

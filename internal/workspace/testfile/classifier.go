@@ -23,13 +23,11 @@ func Defaults() Classifier {
 
 func New(globs []string) (Classifier, error) {
 	policy := Defaults()
-	for _, globItem := range globs {
-		pattern, err := glob.Compile(globItem)
-		if err != nil {
-			return Classifier{}, fmt.Errorf("test glob: %w", err)
-		}
-		policy.globs = append(policy.globs, pattern)
+	patterns, err := glob.CompileAll(globs)
+	if err != nil {
+		return Classifier{}, fmt.Errorf("test glob: %w", err)
 	}
+	policy.globs = patterns
 	return policy, nil
 }
 

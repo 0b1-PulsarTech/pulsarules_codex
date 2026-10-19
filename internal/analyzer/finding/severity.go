@@ -1,8 +1,8 @@
 package finding
 
 import (
+	"errors"
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 )
@@ -36,28 +36,40 @@ const (
 	StageOutput
 )
 
-func SeverityByName() map[string]Severity {
-	return map[string]Severity{
-		"error":   SeverityError,
-		"warning": SeverityWarning,
-		"info":    SeverityInfo,
+var ErrUnknownSeverity = errors.New("unknown severity")
+
+func (severity Severity) String() string {
+	switch severity {
+	case SeverityWarning:
+		return "warning"
+	case SeverityError:
+		return "error"
+	default:
+		return "info"
 	}
 }
 
 func SeverityNames() []string {
-	return slices.Sorted(maps.Keys(SeverityByName()))
+	names := []string{SeverityInfo.String(), SeverityWarning.String(), SeverityError.String()}
+	slices.Sort(names)
+	return names
 }
 
-func ValidateSeverityName(name string) error {
-	if name == "" || ValidSeverityName(name) {
-		return nil
+func ParseSeverity(name string) (Severity, error) {
+	for _, severity := range []Severity{SeverityInfo, SeverityWarning, SeverityError} {
+		if severity.String() == name {
+			return severity, nil
+		}
 	}
-	return fmt.Errorf(
-		"unknown severity %q (want %s)", name, strings.Join(SeverityNames(), "|"),
+	return SeverityInfo, fmt.Errorf(
+		"%w %q (want %s)", ErrUnknownSeverity, name, strings.Join(SeverityNames(), "|"),
 	)
 }
 
-func ValidSeverityName(name string) bool {
-	_, ok := SeverityByName()[name]
-	return ok
+func ValidateSeverityName(name string) error {
+	if name == "" {
+		return nil
+	}
+	_, err := ParseSeverity(name)
+	return err
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
 func TestToAnalysisConfig(t *testing.T) {
@@ -99,7 +100,7 @@ func checkTestsAndDelegated(t *testing.T, cfg *config.GovernanceConfig, got *pas
 
 func setSeverityRules(cfg *config.GovernanceConfig) {
 	cfg.Severities = map[string]string{"naming": "info", "big-comment": "error"}
-	cfg.Overrides = []pass.Override{{Files: []string{"a/**"}}}
+	cfg.Overrides = []pass.Override{{Files: glob.CompileSet([]string{"a/**"})}}
 }
 
 func checkSeverityRules(t *testing.T, _ *config.GovernanceConfig, got *pass.AnalysisConfig) {
@@ -110,7 +111,7 @@ func checkSeverityRules(t *testing.T, _ *config.GovernanceConfig, got *pass.Anal
 	if _, first := got.Overrides[0].Analyzers["big-comment"]; !first {
 		t.Errorf("severity rules not sorted by analyzer ID: %+v", got.Overrides)
 	}
-	if got.Overrides[2].Files[0] != "a/**" {
+	if !got.Overrides[2].Covers("a/x") || got.Overrides[2].Covers("b/x") {
 		t.Errorf("file rule must come after the severity rules: %+v", got.Overrides)
 	}
 }

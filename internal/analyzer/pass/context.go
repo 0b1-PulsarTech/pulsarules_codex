@@ -7,6 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/testfile"
 )
@@ -88,8 +89,20 @@ type AnalysisConfig struct {
 }
 
 type Override struct {
-	Files     []string
+	Files     glob.Set
 	Analyzers map[string]OverrideConfig
+}
+
+func NewOverride(files []string, analyzers map[string]OverrideConfig) Override {
+	return Override{Files: glob.CompileSet(files), Analyzers: analyzers}
+}
+
+func (override Override) Covers(path string) bool {
+	// A scoped override never claims a finding that has no file.
+	if !override.Files.IsOpen() && path == "" {
+		return false
+	}
+	return override.Files.Match(path)
 }
 
 type OverrideConfig struct {

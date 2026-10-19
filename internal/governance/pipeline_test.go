@@ -6,6 +6,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
 type stubAnalyzer struct {
@@ -171,7 +172,7 @@ func TestStageRunnerAppliesOverrides(t *testing.T) {
 	cfg := toAnalysisConfig(&config.GovernanceConfig{
 		Severities: map[string]string{"golangci-lint": "info"},
 		Overrides: []pass.Override{{
-			Files:     []string{"web/test/**"},
+			Files:     glob.CompileSet([]string{"web/test/**"}),
 			Analyzers: map[string]pass.OverrideConfig{"file-size": {Severity: "warning"}},
 		}},
 	})

@@ -5,57 +5,44 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
-
-type rule struct {
-	analyzers map[string]pass.OverrideConfig
-	files     glob.Set
-}
 
 func Apply(findings []finding.Finding, owner string, rules []pass.Override) []finding.Finding {
 	if len(rules) == 0 {
 		return findings
 	}
-	return applyRules(findings, owner, prepare(rules))
+	return applyRules(findings, owner, rules)
 }
 
-func applyRules(findings []finding.Finding, owner string, prepared []*rule) []finding.Finding {
+func applyRules(findings []finding.Finding, owner string, rules []pass.Override) []finding.Finding {
 	kept := make([]finding.Finding, 0, len(findings))
 	for _, finding := range findings {
-		if resolved, keep := resolve(finding, owner, prepared); keep {
+		if resolved, keep := resolve(finding, owner, rules); keep {
 			kept = append(kept, resolved)
 		}
 	}
 	return kept
 }
 
-func prepare(rules []pass.Override) []*rule {
-	prepared := make([]*rule, len(rules))
-	for idx, source := range rules {
-		prepared[idx] = &rule{
-			analyzers: source.Analyzers,
-			files:     glob.CompileSet(source.Files),
-		}
-	}
-	return prepared
-}
-
-func resolve(finding finding.Finding, owner string, rules []*rule) (finding.Finding, bool) {
+func resolve(
+	findingItem finding.Finding,
+	owner string,
+	rules []pass.Override,
+) (finding.Finding, bool) {
 	enabled := true
 	for _, item := range rules {
-		override, found := lookup(item.analyzers, finding.AnalyzerID, owner)
-		if !found || !item.matches(finding.File) {
+		override, found := lookup(item.Analyzers, findingItem.AnalyzerID, owner)
+		if !found || !item.Covers(findingItem.File) {
 			continue
 		}
 		if override.Enabled != nil {
 			enabled = *override.Enabled
 		}
-		if severity, ok := parseSeverity(override.Severity); ok {
-			finding.Severity = severity
+		if severity, err := finding.ParseSeverity(override.Severity); err == nil {
+			findingItem.Severity = severity
 		}
 	}
-	return finding, enabled
+	return findingItem, enabled
 }
 
 func lookup(
@@ -73,23 +60,4 @@ func lookup(
 	// spells another analyzer's finding ID cannot capture it.
 	override, found := analyzers[owner]
 	return override, found
-}
-
-func (item *rule) matches(file string) bool {
-	if !item.files.IsOpen() && file == "" {
-		return false
-	}
-	return item.files.Match(file)
-}
-
-func parseSeverity(name string) (finding.Severity, bool) {
-	switch name {
-	case "error":
-		return finding.SeverityError, true
-	case "warning":
-		return finding.SeverityWarning, true
-	case "info":
-		return finding.SeverityInfo, true
-	}
-	return finding.SeverityInfo, false
 }

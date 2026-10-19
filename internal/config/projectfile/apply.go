@@ -88,7 +88,7 @@ func toCoreOverride(entry OverrideEntry) pass.Override {
 			Enabled: rules.Enabled, Severity: rules.Severity, Params: maps.Clone(rules.Params),
 		}
 	}
-	return pass.Override{Files: slices.Clone(entry.Files), Analyzers: analyzers}
+	return pass.NewOverride(entry.Files, analyzers)
 }
 
 func (val *validator) checkOverrides(entries []OverrideEntry) {

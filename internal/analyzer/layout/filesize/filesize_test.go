@@ -9,6 +9,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
@@ -365,7 +366,7 @@ func TestAnalyze_CapMessages(t *testing.T) {
 
 func scopedConfig(files []string, params map[string]any) *pass.AnalysisConfig {
 	return &pass.AnalysisConfig{Overrides: []pass.Override{{
-		Files:     files,
+		Files:     glob.CompileSet(files),
 		Analyzers: map[string]pass.OverrideConfig{"file-size": {Params: params}},
 	}}}
 }
