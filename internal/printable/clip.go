@@ -29,21 +29,25 @@ func Head(text string, limit int) string {
 	return Line(text[:HeadEnd(text, max(limit, 0), lineSize)])
 }
 
-func Tail(text string, limit int) string {
-	if lineSize(text) <= limit {
-		return text
-	}
+func tailStart(text string, limit int, size func(string) int) int {
 	used := 0
 	pos := len(text)
 	for pos > 0 {
 		_, width := utf8.DecodeLastRuneInString(text[:pos])
-		used += lineSize(text[pos-width : pos])
+		used += size(text[pos-width : pos])
 		if used > max(limit, 0) {
 			break
 		}
 		pos -= width
 	}
-	return Line(text[pos:])
+	return pos
+}
+
+func Tail(text string, limit int) string {
+	if lineSize(text) <= limit {
+		return text
+	}
+	return Line(text[tailStart(text, limit, lineSize):])
 }
 
 const Ellipsis = "..."

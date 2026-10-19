@@ -103,7 +103,7 @@ func shown(char rune) rune {
 	return char
 }
 
-func RelativeTo(root, base, file string) (string, bool) {
+func relativeTo(root, base, file string) (string, bool) {
 	if !filepath.IsAbs(file) {
 		file = filepath.Join(base, file)
 	}

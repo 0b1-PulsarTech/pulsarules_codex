@@ -85,3 +85,38 @@ func wholeEscapes(text string) bool {
 	whole := regexp.MustCompile(`\\(x[0-9a-f]{2}|u[0-9a-f]{4}|U[0-9a-f]{8}|[abfnrtv"\\])`)
 	return !strings.Contains(whole.ReplaceAllString(text, ""), `\`) && utf8.ValidString(text)
 }
+
+func TestTailStartVisitsOnlyTheTail(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		text        string
+		limit       int
+		wantStart   int
+		wantVisited int
+	}{
+		{"ascii", strings.Repeat("x", 1<<20), 100, 1<<20 - 100, 101},
+		{"two byte runes", strings.Repeat("\u00e9", 1<<19), 100, 1<<20 - 100, 51},
+		{"limit zero", strings.Repeat("x", 1<<20), 0, 1 << 20, 1},
+		{"limit above the text", "short", 100, 0, 5},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			visited := 0
+			size := func(unit string) int {
+				visited++
+				return len(unit)
+			}
+
+			if got := tailStart(testCase.text, testCase.limit, size); got != testCase.wantStart {
+				t.Errorf("tailStart = %d, want %d", got, testCase.wantStart)
+			}
+			if visited > testCase.wantVisited {
+				t.Errorf("sized %d units, want at most %d", visited, testCase.wantVisited)
+			}
+		})
+	}
+}

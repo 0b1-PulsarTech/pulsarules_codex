@@ -92,7 +92,9 @@ func Classify(err error, reportingExits []int) (Outcome, int) {
 }
 
 func Execute(cmd process.Command) (process.Result, error) {
-	cmd.MaxOutput = MaxOutputBytes // per stream; a no-pub-get dart run reported 13.8 MB
+	if cmd.MaxOutput == 0 {
+		cmd.MaxOutput = MaxOutputBytes // per stream; a delegated tool once printed 13.8 MB
+	}
 	return process.Run(context.Background(), cmd)
 }
 
@@ -112,7 +114,7 @@ func classify(inv invocation, err error, result process.Result) (*finding.Findin
 		failure = inv.rep.failed(
 			fmt.Sprintf("%s exited with code %d", inv.name, code), result.Stderr,
 		)
-	default:
+	case NotRun:
 		failure = inv.rep.failed(
 			fmt.Sprintf("%s did not run: %v", inv.name, cause(err)), result.Stderr,
 		)
@@ -142,7 +144,7 @@ func (where scope) place(file string) placed {
 	if file == "" {
 		return placed{outcome: kept}
 	}
-	rel, inside := RelativeTo(where.root, where.dir, file)
+	rel, inside := relativeTo(where.root, where.dir, file)
 	if !inside {
 		return placed{outcome: dropped}
 	}

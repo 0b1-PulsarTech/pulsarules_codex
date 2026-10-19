@@ -69,26 +69,31 @@ func (runner *Runner) exitFailure(result process.Result, cmdErr error) []finding
 	switch outcome {
 	case command.Completed, command.Reported:
 		return nil
-	case command.Exited:
+	case command.Exited, command.TimedOut:
 		if unavailable(result.Stderr) {
 			return []finding.Finding{runner.warning.New(
 				"golangci-lint was busy elsewhere; its checks did not run",
 			)}
 		}
-		return []finding.Finding{runner.failure.New(
-			"golangci-lint failed: " + printable.Tail(result.Stderr, maxMessageBytes),
-		)}
+		return []finding.Finding{runner.failed("golangci-lint failed", result.Stderr)}
 	case command.OutputExceeded:
-		return []finding.Finding{runner.failure.New(
-			"golangci-lint failed: output exceeded its size limit: " +
-				printable.Tail(result.Stderr, maxMessageBytes),
-		)}
+		reason := fmt.Sprintf(
+			"golangci-lint failed: output exceeded %d bytes", command.MaxOutputBytes,
+		)
+		return []finding.Finding{runner.failed(reason, result.Stderr)}
 	}
 	// Otherwise the command never produced stdout to parse; report the real
 	// cause, not a JSON parse failure on empty output.
 	return []finding.Finding{runner.failure.New(
 		"golangci-lint failed: " + printable.Head(cmdErr.Error(), maxMessageBytes),
 	)}
+}
+
+func (runner *Runner) failed(reason, stderr string) finding.Finding {
+	if detail := printable.Tail(stderr, maxMessageBytes); detail != "" {
+		reason += ": " + detail
+	}
+	return runner.failure.New(reason)
 }
 
 func issueFindings(issues []lintIssue) (findings []finding.Finding, escaped int) {
@@ -123,6 +128,5 @@ func (runner *Runner) escapedWarning(escaped int) finding.Finding {
 
 func escapesProject(path string) bool {
 	// A path that climbs out of cmd.Dir comes from a stale cache keyed to a missing directory.
-	_, inside := command.RelativeTo(".", ".", path)
-	return !filepath.IsAbs(path) && !inside
+	return strings.HasPrefix(filepath.ToSlash(filepath.Clean(path)), "../")
 }

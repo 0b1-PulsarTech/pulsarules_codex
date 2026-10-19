@@ -71,7 +71,7 @@ func TestRelativeTo(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, inside := RelativeTo(root, testCase.base, testCase.file)
+			got, inside := relativeTo(root, testCase.base, testCase.file)
 			if got != testCase.want || inside != testCase.inside {
 				t.Errorf("relativeTo = %q, %v; want %q, %v",
 					got, inside, testCase.want, testCase.inside)

@@ -1,12 +1,14 @@
 package golangcilint
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
 	"time"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
@@ -49,6 +51,28 @@ func TestRun_TimeoutIsARealFailureNotASilentSkip(t *testing.T) {
 	}
 	if findings[0].AnalyzerID != "golangci-lint" {
 		t.Errorf("AnalyzerID = %q, want %q", findings[0].AnalyzerID, "golangci-lint")
+	}
+	if want := "golangci-lint failed"; findings[0].Message != want {
+		t.Errorf("Message = %q, want %q", findings[0].Message, want)
+	}
+}
+
+func TestRun_BoundsOutput(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "noisy-golangci-lint")
+	script := fmt.Sprintf("#!/bin/sh\nhead -c %d /dev/zero\n", command.MaxOutputBytes+1)
+	if err := os.WriteFile(path, []byte(script), 0o700); err != nil {
+		t.Fatalf("write noisy script: %v", err)
+	}
+
+	findings := NewRunner(path).Run(t.TempDir(), "")
+	if len(findings) != 1 {
+		t.Fatalf("got %d findings, want 1: %+v", len(findings), findings)
+	}
+	want := fmt.Sprintf("golangci-lint failed: output exceeded %d bytes", command.MaxOutputBytes)
+	if findings[0].Message != want {
+		t.Errorf("Message = %q, want %q", findings[0].Message, want)
 	}
 }
 

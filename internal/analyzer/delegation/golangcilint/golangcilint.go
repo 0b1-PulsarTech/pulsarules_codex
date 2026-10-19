@@ -93,7 +93,7 @@ func (runner *Runner) run(projectDir string, args []string) (process.Result, err
 	})
 	if err != nil {
 		// %w keeps *execx.Error (and the *exec.ExitError it wraps) reachable through
-		// parseOutput's errors.As.
+		// command.Classify.
 		return result, fmt.Errorf("run golangci-lint: %w", err)
 	}
 	return result, nil

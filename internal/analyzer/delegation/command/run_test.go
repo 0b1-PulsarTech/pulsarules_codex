@@ -219,16 +219,6 @@ func decodeOutputCases() []runCase {
 			[]finding.Severity{finding.SeverityError},
 			"undecodable output",
 		},
-		{
-			"output past the cap",
-			entryRunning(func(*testing.T, string) string {
-				return fmt.Sprintf("head -c %d /dev/zero\n", MaxOutputBytes+1)
-			}),
-			[]string{entryID + "/failed"},
-			[]string{""},
-			[]finding.Severity{finding.SeverityError},
-			fmt.Sprintf("output exceeded %d bytes", MaxOutputBytes),
-		},
 	}
 }
 
