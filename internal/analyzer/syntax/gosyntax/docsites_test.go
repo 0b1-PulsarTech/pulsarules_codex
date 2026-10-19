@@ -80,6 +80,133 @@ func docSiteCases() []docSiteCase {
 	}
 }
 
+func goDocSiteCases() []docSiteCase {
+	return []docSiteCase{
+		{
+			name: "multi-line block deprecated is exempt", source: plainSource(),
+			body: "package x\n\n/*\nDeprecated: a\n*/\nfunc run() {}\n",
+			want: []syntax.DocSite{
+				{Symbol: "run", Kind: syntax.DocFunction, Line: 3, Exempt: true},
+			},
+		},
+		{
+			name: "multi-line block over the cap is prose", source: plainSource(),
+			body: "package x\n\n/*\nDeprecated: a\nb\nc\nd\n*/\nfunc run() {}\n",
+			want: []syntax.DocSite{{Symbol: "run", Kind: syntax.DocFunction, Line: 3}},
+		},
+		{
+			name: "at-deprecated is prose in Go", source: plainSource(),
+			body: "package x\n\n// @deprecated use other.\nfunc run() {}\n",
+			want: []syntax.DocSite{{Symbol: "run", Kind: syntax.DocFunction, Line: 3}},
+		},
+		{
+			name: "deprecated plus a directive stays within the cap", source: plainSource(),
+			body: "package x\n\n// Deprecated: a\n// b\n// c\n//go:noinline\nfunc run() {}\n",
+			want: []syntax.DocSite{{
+				Symbol: "run", Kind: syntax.DocFunction, Line: 3, Exempt: true,
+				MixedDirective: true,
+			}},
+		},
+		{
+			name: "export directive is exempt", source: plainSource(),
+			body: "package x\n\n//export run\nfunc run() {}\n",
+			want: []syntax.DocSite{
+				{Symbol: "run", Kind: syntax.DocFunction, Line: 3, Exempt: true},
+			},
+		},
+		{
+			name: "ignore and eslint lines are prose in Go", source: plainSource(),
+			body: "package x\n\n// ignore: unused\n// eslint-foo\nfunc run() {}\n",
+			want: []syntax.DocSite{{Symbol: "run", Kind: syntax.DocFunction, Line: 3}},
+		},
+		{
+			name: "empty star block is prose in Go", source: plainSource(),
+			body: "package x\n\n/** */\nfunc run() {}\n",
+			want: []syntax.DocSite{{Symbol: "run", Kind: syntax.DocFunction, Line: 3}},
+		},
+		{
+			name: "closer-only comments are blank", source: plainSource(),
+			body: "package x\n\n//*/\n// */\nfunc run() {}\n",
+			want: []syntax.DocSite{
+				{Symbol: "run", Kind: syntax.DocFunction, Line: 3, Exempt: true},
+			},
+		},
+		{
+			name: "simplification after a directive is exempt", source: plainSource(),
+			body: "package x\n\n//go:noinline\n// simplification: no cache.\nfunc run() {}\n",
+			want: []syntax.DocSite{{
+				Symbol: "run", Kind: syntax.DocFunction, Line: 3, Exempt: true,
+				MixedDirective: true,
+			}},
+		},
+	}
+}
+
+func goToolchainTextCases() []docSiteCase {
+	exempt := []syntax.DocSite{{Symbol: "run", Kind: syntax.DocFunction, Line: 3, Exempt: true}}
+	prose := []syntax.DocSite{{Symbol: "run", Kind: syntax.DocFunction, Line: 3}}
+	const tail = "func run() {}\n"
+	return []docSiteCase{
+		{
+			name: "generic tool directive before deprecated", source: plainSource(),
+			body: "package x\n\n//revive:disable:exported\n// Deprecated: use B.\n" + tail,
+			want: []syntax.DocSite{{
+				Symbol: "run", Kind: syntax.DocFunction, Line: 3, Exempt: true,
+			}},
+		},
+		{
+			name: "kubebuilder directive before deprecated", source: plainSource(),
+			body: "package x\n\n//kubebuilder:object:root=true\n// Deprecated: use C.\n" + tail,
+			want: exempt,
+		},
+		{
+			name: "lowercase generic directive before deprecated", source: plainSource(),
+			body: "package x\n\n//deprecated:x\n// Deprecated: y\n" + tail,
+			want: exempt,
+		},
+		{
+			name: "generic directive stays within the cap", source: plainSource(),
+			body: "package x\n\n// Deprecated: a\n// b\n// c\n//todo:remove\n" + tail,
+			want: exempt,
+		},
+		{
+			name: "sqlc directive stays within the cap", source: plainSource(),
+			body: "package x\n\n// Deprecated: a\n// b\n// c\n//sqlc:skip\n" + tail,
+			want: exempt,
+		},
+		{
+			name: "export with a trailing space stays within the cap", source: plainSource(),
+			body: "package x\n\n// Deprecated: a\n// b\n//export \n// d\n" + tail,
+			want: exempt,
+		},
+		{
+			name: "closer-only comment inside deprecated is text", source: plainSource(),
+			body: "package x\n\n// Deprecated: a\n//*/\n// more.\n" + tail,
+			want: exempt,
+		},
+		{
+			name: "spaced closer-only comment inside deprecated is text", source: plainSource(),
+			body: "package x\n\n// Deprecated: a\n// */\n// more.\n" + tail,
+			want: exempt,
+		},
+		{
+			name: "slash line inside a deprecated block is text", source: plainSource(),
+			body: "package x\n\n/*\nDeprecated: a\n//\nmore.\n*/\n" + tail,
+			want: exempt,
+		},
+		{
+			name: "opener inside a deprecated block is text", source: plainSource(),
+			body: "package x\n\n/*\nDeprecated: a\n/*\nmore.\n*/\n" + tail,
+			want: exempt,
+		},
+		{
+			name: "directive inside a block is text", source: plainSource(),
+			body: "package x\n\n/*\nreal prose.\n//go:noinline\n*/\n" + tail,
+			want: prose,
+		},
+	}
+}
+
 func testDocSiteCases() []docSiteCase {
 	return []docSiteCase{
 		{
@@ -110,7 +237,9 @@ func testDocSiteCases() []docSiteCase {
 func TestDocSites(t *testing.T) {
 	t.Parallel()
 
-	for _, testCase := range append(docSiteCases(), testDocSiteCases()...) {
+	for _, testCase := range slices.Concat(
+		docSiteCases(), goDocSiteCases(), goToolchainTextCases(), testDocSiteCases(),
+	) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 

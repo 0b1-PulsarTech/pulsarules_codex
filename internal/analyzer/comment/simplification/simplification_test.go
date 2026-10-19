@@ -14,6 +14,8 @@ func testLangs() *pass.LanguageRegistry {
 	langs := pass.NewLanguageRegistry()
 	langs.Register(language.Lookup("go"))
 	langs.Register(language.Lookup("clike"))
+	langs.Register(language.Lookup("markup"))
+	langs.Register(language.Lookup("lua"))
 	return langs
 }
 
@@ -70,12 +72,22 @@ func analyzeCases() []analyzeCase {
 			0,
 		},
 		{
-			"block comment marker with no label fires", "block_marker.go",
-			"package foo\n\n/* simplification: skip the rare case. */\nfunc f() {}\n",
+			"html comment marker with no label fires", "page.html",
+			"<!-- simplification: skip the rare case -->\n<p>a</p>\n",
 			1,
 		},
 		{
-			"block comment marker with a label on a later line", "block_label.go",
+			"lua block marker is not a line marker", "block.lua",
+			"--[[ simplification: skip the rare case ]]\nlocal a = 1\n",
+			0,
+		},
+		{
+			"block comment marker is not a line marker", "block_marker.go",
+			"package foo\n\n/* simplification: skip the rare case. */\nfunc f() {}\n",
+			0,
+		},
+		{
+			"block comment marker with a label is not a line marker", "block_label.go",
 			"package foo\n\n/* simplification: skip the rare case.\n" +
 				" * Upgrade path: handle it once seen twice.\n */\nfunc f() {}\n",
 			0,

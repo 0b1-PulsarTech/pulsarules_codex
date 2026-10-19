@@ -14,6 +14,8 @@ type BlockDelim struct {
 type CommentSyntax struct {
 	Line   []string
 	Blocks []BlockDelim
+	// keepStars keeps a leading "*" as text, as go/ast does; unset, it is JSDoc gutter.
+	keepStars bool
 }
 
 func AnyCommentSyntax() CommentSyntax {
@@ -48,26 +50,44 @@ func CommentBody(text string, syntax CommentSyntax) string {
 	if body, ok := openedBody(text, syntax); ok {
 		return body
 	}
-	body := strings.TrimSpace(text)
-	for _, block := range syntax.Blocks {
-		body = strings.TrimSuffix(body, block.Close)
-	}
-	return trimStars(body)
+	return tidy(trimClosers(strings.TrimSpace(text), syntax), syntax)
 }
 
 func openedBody(text string, syntax CommentSyntax) (string, bool) {
 	body := strings.TrimSpace(text)
 	for _, block := range syntax.Blocks {
 		if rest, ok := strings.CutPrefix(body, block.Open); ok {
-			return trimStars(strings.TrimSuffix(strings.TrimSpace(rest), block.Close)), true
+			return tidy(openedRest(rest, block, syntax), syntax), true
 		}
 	}
 	for _, prefix := range syntax.Line {
 		if rest, ok := strings.CutPrefix(body, prefix); ok {
-			return trimStars(rest), true
+			return tidy(trimClosers(strings.TrimSpace(rest), syntax), syntax), true
 		}
 	}
 	return "", false
+}
+
+func openedRest(rest string, block BlockDelim, syntax CommentSyntax) string {
+	body := strings.TrimSuffix(strings.TrimSpace(rest), block.Close)
+	if syntax.keepStars {
+		return body
+	}
+	return strings.TrimPrefix(body, "*")
+}
+
+func trimClosers(body string, syntax CommentSyntax) string {
+	for _, block := range syntax.Blocks {
+		body = strings.TrimSuffix(body, block.Close)
+	}
+	return body
+}
+
+func tidy(text string, syntax CommentSyntax) string {
+	if syntax.keepStars {
+		return strings.TrimSpace(text)
+	}
+	return trimStars(text)
 }
 
 func trimStars(text string) string {

@@ -91,20 +91,70 @@ func PulsarulesMarker(body string) (string, bool) {
 	return token, true
 }
 
-func directiveBodyPrefixes() []string {
-	return []string{
-		"eslint-", "@ts-", "pulsarules:", "ignore:", "ignore_for_file:", "prettier-ignore",
-		"istanbul ignore", "c8 ignore", "svelte-ignore", "biome-ignore", "noinspection",
+type Dialect string
+
+const (
+	DialectGo Dialect = "go"
+	DialectTS Dialect = "ts"
+)
+
+type dialectSpec struct {
+	syntax       CommentSyntax
+	linePrefixes []string
+	bodyPrefixes []string
+	header       bool
+	deprecated   []string
+	// toolchainText: the toolchain (go/ast CommentGroup.Text) decides what counts as doc text.
+	toolchainText bool
+}
+
+func dialectSpecs() map[Dialect]dialectSpec {
+	slashes := CommentSyntax{
+		Line:   []string{"//"},
+		Blocks: []BlockDelim{{Open: "/*", Close: "*/"}},
+	}
+	goSyntax := slashes
+	goSyntax.keepStars = true
+	return map[Dialect]dialectSpec{
+		DialectGo: {
+			syntax: goSyntax,
+			linePrefixes: []string{
+				"//go:", "//nolint", "//lint:",
+				"//goverter:", "// goverter:", "//pulsarules:", "// pulsarules:",
+				"//line ", "//extern ", "//export ",
+			},
+			header:        true,
+			deprecated:    []string{"Deprecated:"},
+			toolchainText: true,
+		},
+		DialectTS: {
+			syntax: slashes,
+			bodyPrefixes: []string{
+				"eslint-", "@ts-", "pulsarules:", "ignore:", "ignore_for_file:",
+				"prettier-ignore", "istanbul ignore", "c8 ignore", "svelte-ignore",
+				"biome-ignore", "noinspection",
+			},
+			deprecated: []string{"@deprecated", "Deprecated:"},
+		},
 	}
 }
 
-func commentDirectivePrefixes() []string {
-	return []string{"//go:", "//nolint", "//lint:"}
+func (dialect Dialect) Syntax() CommentSyntax { return dialectSpecs()[dialect].syntax }
+
+func (dialect Dialect) ToolchainText() bool { return dialectSpecs()[dialect].toolchainText }
+
+func (dialect Dialect) IsDeprecatedMarker(body string) bool {
+	return hasAnyPrefix(body, dialectSpecs()[dialect].deprecated)
 }
 
-func IsDirectiveLine(line string) bool {
+func IsDirectiveLine(dialect Dialect, line string) bool {
+	spec := dialectSpecs()[dialect]
 	trimmed := strings.TrimSpace(line)
-	return IsGeneratedMarkerLine(trimmed) || IsMachineReadCommentLine(trimmed) ||
-		hasAnyPrefix(trimmed, commentDirectivePrefixes()) ||
-		hasAnyPrefix(CommentBody(trimmed, AnyCommentSyntax()), directiveBodyPrefixes())
+	return spec.header && IsExemptHeaderLine(trimmed) ||
+		hasAnyPrefix(trimmed, spec.linePrefixes) ||
+		IsDirectiveBody(dialect, CommentBody(trimmed, spec.syntax))
+}
+
+func IsDirectiveBody(dialect Dialect, body string) bool {
+	return hasAnyPrefix(body, dialectSpecs()[dialect].bodyPrefixes)
 }

@@ -73,13 +73,13 @@ func ExemptHeaderSpan(lines []string) int {
 	first := strings.TrimSpace(lines[0])
 	switch {
 	case strings.HasPrefix(first, "/*"):
-		span := blockSpan(lines, "/*")
+		span := blockSpan(lines, BlockDelim{Open: "/*", Close: "*/"})
 		if isDirectiveHeaderLine(first) || hasDocblockPragma(lines[:span]) {
 			return span
 		}
 	case strings.HasPrefix(first, "<!--"):
 		if isDirectiveHeaderLine(first) {
-			return blockSpan(lines, "<!--")
+			return blockSpan(lines, BlockDelim{Open: "<!--", Close: "-->"})
 		}
 	case isDirectiveHeaderLine(first):
 		return 1
@@ -87,10 +87,8 @@ func ExemptHeaderSpan(lines []string) int {
 	return 0
 }
 
-func blockSpan(lines []string, open string) int {
-	anyBlocks := AnyCommentSyntax().Blocks
-	idx := slices.IndexFunc(anyBlocks, func(block BlockDelim) bool { return block.Open == open })
-	end, _ := BlockEnd(lines, anyBlocks[idx])
+func blockSpan(lines []string, delim BlockDelim) int {
+	end, _ := BlockEnd(lines, delim)
 	return end + 1
 }
 

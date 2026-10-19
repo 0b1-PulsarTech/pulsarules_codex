@@ -7,37 +7,44 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
-type Shape struct{ Exempt, Mixed bool }
-
-func Classify(own, adjacent []string) Shape {
-	bodies := trimBlankEdges(bodiesOf(own))
-	prose := Prose(own)
-	hasDirective := slices.ContainsFunc(own, lexer.IsDirectiveLine) ||
-		slices.ContainsFunc(adjacent, lexer.IsDirectiveLine)
-	return Shape{
-		Exempt: len(prose) == 0 || isDeprecatedOnly(prose, bodies) ||
-			strings.HasPrefix(prose[0], lexer.SimplificationMarker),
-		Mixed: len(prose) > 0 && hasDirective,
-	}
+type Shape struct {
+	Exempt, Mixed bool
+	Prose         []string
 }
 
-func Prose(own []string) []string {
-	var prose []string
+func Classify(dialect lexer.Dialect, own, adjacent, text []string) Shape {
+	hasDirective := slices.ContainsFunc(adjacent, func(line string) bool {
+		return lexer.IsDirectiveLine(dialect, line)
+	})
+	scan := lexer.NewCommentScanner(dialect.Syntax())
+	var prose, bodies []string
 	for _, line := range own {
-		if body := lexer.CommentBody(line, lexer.AnyCommentSyntax()); body != "" &&
-			!lexer.IsDirectiveLine(line) {
+		body, inBlock := scan.Body(line)
+		bodies = append(bodies, body)
+		directive := lexer.IsDirectiveLine(dialect, line)
+		if inBlock {
+			directive = lexer.IsDirectiveBody(dialect, body)
+		}
+		if directive {
+			hasDirective = true
+			continue
+		}
+		if body != "" {
 			prose = append(prose, body)
 		}
 	}
-	return prose
-}
-
-func bodiesOf(own []string) []string {
-	bodies := make([]string, len(own))
-	for idx, line := range own {
-		bodies[idx] = lexer.CommentBody(line, lexer.AnyCommentSyntax())
+	if len(prose) == 0 {
+		return Shape{Exempt: true}
 	}
-	return bodies
+	if dialect.ToolchainText() {
+		bodies = text
+	}
+	return Shape{
+		Prose: prose,
+		Exempt: isDeprecatedOnly(dialect, prose[0], trimBlankEdges(bodies)) ||
+			strings.HasPrefix(prose[0], lexer.SimplificationMarker),
+		Mixed: hasDirective,
+	}
 }
 
 func trimBlankEdges(bodies []string) []string {
@@ -50,10 +57,15 @@ func trimBlankEdges(bodies []string) []string {
 	return bodies
 }
 
-func isDeprecatedOnly(prose, bodies []string) bool {
+func isDeprecatedOnly(dialect lexer.Dialect, first string, bodies []string) bool {
 	const maxDeprecatedLines = 3
 
-	marked := strings.HasPrefix(prose[0], "@deprecated") ||
-		strings.HasPrefix(prose[0], "Deprecated:")
-	return marked && len(bodies) <= maxDeprecatedLines && !slices.Contains(bodies, "")
+	if dialect.ToolchainText() {
+		first = ""
+		if len(bodies) > 0 {
+			first = bodies[0]
+		}
+	}
+	return dialect.IsDeprecatedMarker(first) && len(bodies) <= maxDeprecatedLines &&
+		!slices.Contains(bodies, "")
 }

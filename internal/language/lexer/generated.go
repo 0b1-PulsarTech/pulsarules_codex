@@ -35,7 +35,7 @@ func IsGeneratedSource(src []byte) bool {
 	// A marker counts on a line comment ahead of the first real content; one inside
 	// a block comment never does, except generatedBlockPhrases.
 	for line := range bytes.Lines(TrimBOM(src)) {
-		pieces, hasCode := scanner.Scan(string(line))
+		pieces, hasCode := scanner.scan(string(line))
 		if slices.ContainsFunc(pieces, isGeneratedPiece) {
 			return true
 		}
@@ -48,10 +48,9 @@ func IsGeneratedSource(src []byte) bool {
 	return false
 }
 
-func isGeneratedPiece(piece CommentPiece) bool {
+func isGeneratedPiece(piece commentPiece) bool {
 	if piece.InBlock {
-		banner := strings.TrimSpace(strings.TrimLeft(piece.Rest, "*"))
-		return slices.Contains(generatedBlockPhrases(), banner)
+		return slices.Contains(generatedBlockPhrases(), trimStars(piece.Rest))
 	}
 	return isGeneratedMarker(piece.Rest)
 }
@@ -99,8 +98,13 @@ func isMockitoVersion(version string) bool {
 const SimplificationMarker = "simplification:"
 
 func IsSimplificationMarker(line string, syntax CommentSyntax) bool {
-	body, ok := openedBody(line, syntax)
-	return ok && strings.HasPrefix(body, SimplificationMarker)
+	trimmed := strings.TrimSpace(line)
+	for _, prefix := range syntax.Line {
+		if body, ok := strings.CutPrefix(trimmed, prefix); ok {
+			return strings.HasPrefix(strings.TrimSpace(body), SimplificationMarker)
+		}
+	}
+	return false
 }
 
 func IsGeneratedMarkerLine(line string) bool {

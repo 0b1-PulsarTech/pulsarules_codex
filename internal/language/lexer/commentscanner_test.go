@@ -161,42 +161,42 @@ func TestCommentScanner_Scan(t *testing.T) {
 	testCases := []struct {
 		name     string
 		lines    []string
-		want     []CommentPiece
+		want     []commentPiece
 		wantCode bool
 	}{
 		{"blank line", []string{""}, nil, false},
 		{"code line", []string{"package a"}, nil, true},
-		{"line comment", []string{"// note "}, []CommentPiece{{Rest: "note"}}, false},
-		{"hash comment", []string{"# note"}, []CommentPiece{{Rest: "note"}}, false},
+		{"line comment", []string{"// note "}, []commentPiece{{Rest: "note"}}, false},
+		{"hash comment", []string{"# note"}, []commentPiece{{Rest: "note"}}, false},
 		{
 			"one-line block",
 			[]string{"/* note */"},
-			[]CommentPiece{{InBlock: true, Rest: "note */"}},
+			[]commentPiece{{InBlock: true, Rest: "note */"}},
 			false,
 		},
-		{"opener alone", []string{"/*"}, []CommentPiece{{InBlock: true}}, false},
+		{"opener alone", []string{"/*"}, []commentPiece{{InBlock: true}}, false},
 		{
 			"block then line comment",
 			[]string{"/* a */ // b"},
-			[]CommentPiece{{InBlock: true, Rest: "a */ // b"}, {Rest: "b"}},
+			[]commentPiece{{InBlock: true, Rest: "a */ // b"}, {Rest: "b"}},
 			false,
 		},
 		{
 			"block then code",
 			[]string{"/* a */ package a"},
-			[]CommentPiece{{InBlock: true, Rest: "a */ package a"}},
+			[]commentPiece{{InBlock: true, Rest: "a */ package a"}},
 			true,
 		},
 		{
 			"continued block",
 			[]string{"/*", " * a", " */ // b"},
-			[]CommentPiece{{InBlock: true, Rest: "*/ // b"}, {Rest: "b"}},
+			[]commentPiece{{InBlock: true, Rest: "*/ // b"}, {Rest: "b"}},
 			false,
 		},
 		{
 			"lua block before line prefix",
 			[]string{"--[[ a"},
-			[]CommentPiece{{InBlock: true, Rest: "a"}},
+			[]commentPiece{{InBlock: true, Rest: "a"}},
 			false,
 		},
 	}
@@ -205,10 +205,10 @@ func TestCommentScanner_Scan(t *testing.T) {
 			t.Parallel()
 
 			scanner := NewCommentScanner(AnyCommentSyntax())
-			var got []CommentPiece
+			var got []commentPiece
 			var hasCode bool
 			for _, line := range testCase.lines {
-				got, hasCode = scanner.Scan(line)
+				got, hasCode = scanner.scan(line)
 			}
 			if !slices.Equal(got, testCase.want) || hasCode != testCase.wantCode {
 				t.Fatalf(
@@ -218,6 +218,80 @@ func TestCommentScanner_Scan(t *testing.T) {
 					testCase.want,
 					testCase.wantCode,
 				)
+			}
+		})
+	}
+}
+
+func TestCommentScanner_Body(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		syntax CommentSyntax
+		lines  []string
+		want   []string
+		wantIn []bool
+	}{
+		{
+			name: "ts continuation keeps slashes as text", syntax: DialectTS.Syntax(),
+			lines:  []string{"/**", " * a", " //", " /*", " */", "// b"},
+			want:   []string{"", "a", "//", "/*", "", "b"},
+			wantIn: []bool{false, true, true, true, true, false},
+		},
+		{
+			name: "go continuation keeps stars", syntax: DialectGo.Syntax(),
+			lines:  []string{"/*", "* a", "*/"},
+			want:   []string{"", "* a", ""},
+			wantIn: []bool{false, true, true},
+		},
+		{
+			name: "one-line block never continues", syntax: DialectGo.Syntax(),
+			lines:  []string{"/* a */", "// b"},
+			want:   []string{"a", "b"},
+			wantIn: []bool{false, false},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			scan := NewCommentScanner(testCase.syntax)
+			for idx, line := range testCase.lines {
+				body, inBlock := scan.Body(line)
+				if body != testCase.want[idx] || inBlock != testCase.wantIn[idx] {
+					t.Fatalf("Body(%q) = (%q, %v), want (%q, %v)",
+						line, body, inBlock, testCase.want[idx], testCase.wantIn[idx])
+				}
+			}
+		})
+	}
+}
+
+func TestCommentScanner_NestedBlock(t *testing.T) {
+	t.Parallel()
+
+	lines := []string{"/* one", " /* two */", " three", " four */", "x"}
+	testCases := []struct {
+		name   string
+		nested bool
+		want   []bool
+	}{
+		{"nested keeps the outer block open", true, []bool{true, true, true, true, false}},
+		{"flat block ends at the first closer", false, []bool{true, true, false, false, false}},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			scanner := NewCommentScanner(CommentSyntax{
+				Blocks: []BlockDelim{{Open: "/*", Close: "*/", Nested: testCase.nested}},
+			})
+			got := make([]bool, 0, len(lines))
+			for _, line := range lines {
+				got = append(got, scanner.IsCommentLine(line))
+			}
+			if !slices.Equal(got, testCase.want) {
+				t.Fatalf("IsCommentLine over %q = %v, want %v", lines, got, testCase.want)
 			}
 		})
 	}

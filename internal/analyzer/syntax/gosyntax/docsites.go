@@ -9,6 +9,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/docshape"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 type docTarget struct {
@@ -25,7 +26,10 @@ func docSites(fset *token.FileSet, source syntax.Source, file *ast.File) []synta
 			if target.group == nil {
 				continue
 			}
-			shape := docshape.Classify(commentLines(target.group), nil)
+			text := strings.Split(strings.TrimSpace(target.group.Text()), "\n")
+			shape := docshape.Classify(
+				lexer.DialectGo, commentLines(target.group), nil, text,
+			)
 			found = append(found, syntax.DocSite{
 				Symbol:         target.symbol,
 				Kind:           target.kind,

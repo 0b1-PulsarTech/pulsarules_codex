@@ -63,12 +63,46 @@ func TestCommentBody(t *testing.T) {
 		{"/// triple", "/ triple"},
 		{"plain text", "plain text"},
 		{"", ""},
+		{"//*/", ""},
+		{"// */", ""},
+		{"// ***", ""},
+		{"/***/", ""},
+		{"/** */", ""},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.text, func(t *testing.T) {
 			t.Parallel()
 
 			if got := CommentBody(testCase.text, AnyCommentSyntax()); got != testCase.want {
+				t.Fatalf("CommentBody(%q) = %q, want %q", testCase.text, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestCommentBody_KeepStars(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		text string
+		want string
+	}{
+		{"// ***", "***"},
+		{"/** */", "*"},
+		{"/***/", "*"},
+		{"/**/", ""},
+		{"/* */", ""},
+		{"//*/", ""},
+		{"// */", ""},
+		{"// note", "note"},
+		{"/* * star */", "* star"},
+	}
+	syntax := DialectGo.Syntax()
+	for _, testCase := range testCases {
+		t.Run(testCase.text, func(t *testing.T) {
+			t.Parallel()
+
+			if got := CommentBody(testCase.text, syntax); got != testCase.want {
 				t.Fatalf("CommentBody(%q) = %q, want %q", testCase.text, got, testCase.want)
 			}
 		})

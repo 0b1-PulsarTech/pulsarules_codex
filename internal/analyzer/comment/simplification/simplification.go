@@ -55,8 +55,9 @@ func scanFile(
 	// scanner runs in file order first, so continuations match big-comment's reading.
 	syntax := lang.CommentSyntax()
 	isComment := scanComments(lines, syntax)
+	marker := lexer.CommentSyntax{Line: []string{lang.CommentPrefix()}}
 	for lineIdx := 0; lineIdx < len(lines); lineIdx++ {
-		if !lexer.IsSimplificationMarker(lines[lineIdx], syntax) {
+		if !lexer.IsSimplificationMarker(lines[lineIdx], marker) {
 			continue
 		}
 		blockEnd := lineIdx + 1

@@ -9,11 +9,11 @@ import (
 )
 
 func isBlankComment(text string) bool {
-	return lexer.CommentBody(text, lexer.AnyCommentSyntax()) == ""
+	return lexer.CommentBody(text, lexer.DialectGo.Syntax()) == ""
 }
 
 func IsDirectiveLine(text string) bool {
-	return isBlankComment(text) || lexer.IsDirectiveLine(text)
+	return isBlankComment(text) || lexer.IsDirectiveLine(lexer.DialectGo, text)
 }
 
 func IsDirectiveGroup(group *ast.CommentGroup) bool {
