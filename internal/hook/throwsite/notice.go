@@ -2,9 +2,9 @@ package throwsite
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
@@ -24,7 +24,7 @@ func Notice(file string, hits []Hit, skill string) string {
 	for _, hit := range hits {
 		lines.Add(hit.Line)
 	}
-	where := lines.Noun() + " " + lines.Head(maxListed)
+	where := lines.Label(maxListed)
 	if extra := lines.Extra(maxListed); extra > 0 {
 		where += fmt.Sprintf(" and %d more", extra)
 	}
@@ -40,17 +40,15 @@ func Notice(file string, hits []Hit, skill string) string {
 }
 
 func matched(hits []Hit) string {
-	var words []string
+	words := make([]string, 0, len(hits))
 	for _, hit := range hits {
-		if !slices.Contains(words, hit.Word) {
-			words = append(words, hit.Word)
-		}
+		words = append(words, hit.Word)
 	}
-	return "`" + strings.Join(words, "` / `") + "`"
+	return "`" + strings.Join(ordered.Dedupe(words), "` / `") + "`"
 }
 
 func instead(hits []Hit) string {
-	var phrases []string
+	phrases := make([]string, 0, len(hits))
 	for _, hit := range hits {
 		phrase := "throwing"
 		switch hit.Word {
@@ -59,9 +57,7 @@ func instead(hits []Hit) string {
 		case "Future.error":
 			phrase = "returning a failed future"
 		}
-		if !slices.Contains(phrases, phrase) {
-			phrases = append(phrases, phrase)
-		}
+		phrases = append(phrases, phrase)
 	}
-	return strings.Join(phrases, " or ")
+	return strings.Join(ordered.Dedupe(phrases), " or ")
 }

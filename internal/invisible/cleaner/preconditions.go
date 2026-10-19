@@ -9,6 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/markdown"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/projectroot"
 )
 
@@ -77,5 +78,5 @@ func Handles(ext string) bool { return eligibleExt(strings.ToLower(ext)) }
 
 func eligibleExt(ext string) bool {
 	// The mutation blast radius: only Go and Markdown files are rewritten.
-	return ext == ".go" || ext == ".md"
+	return ext == ".go" || markdown.IsMarkdown(ext)
 }

@@ -21,7 +21,7 @@ func nonASCIIProblems(root fs.FS) []string {
 			return readErr
 		}
 		src := string(content)
-		code := markdown.CodeRegions(src)
+		code := markdown.MarkdownCode(".md", src)
 		line := 1
 		for offset, char := range src {
 			if char == '\n' {

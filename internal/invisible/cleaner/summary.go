@@ -79,11 +79,8 @@ func markerLines(marks []invisible.Mark) string {
 	var lines printable.LineList
 	for _, found := range marks {
 		lines.Add(found.Line)
-		if lines.Len() > shown {
-			break
-		}
 	}
-	text := "markers on " + lines.Noun() + " " + lines.Head(shown)
+	text := "markers on " + lines.Label(shown)
 	if lines.Extra(shown) > 0 {
 		text += ", ..."
 	}

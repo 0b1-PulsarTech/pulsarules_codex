@@ -55,7 +55,7 @@ func carrierAdvice(
 		return hint{codeNote, unscanned}
 	case cleaner.Handles(ext) && !literals.Incomplete():
 		return hint{"run `pulsarules_cli clean --write`, which removes this class", plain}
-	case !literals.Covers(found.Offset) || literals.Incomplete():
+	case unread(found, ext, literals):
 		return hint{"remove it by hand" + unreadNote(literals, found), unscanned}
 	}
 	return hint{"remove it by hand", plain}

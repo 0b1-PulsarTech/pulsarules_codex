@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/markdown"
 )
 
 func isProvenanceKey(key string) bool {
@@ -26,7 +27,7 @@ func frontmatterFindings(
 	src string,
 	reporter finding.Reporter,
 ) []finding.Finding {
-	if strings.ToLower(fc.Extension) != ".md" {
+	if !markdown.IsMarkdown(fc.Extension) {
 		return nil
 	}
 	var findings []finding.Finding

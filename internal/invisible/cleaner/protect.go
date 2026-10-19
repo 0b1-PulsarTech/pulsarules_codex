@@ -10,11 +10,10 @@ import (
 
 func protection(path, src string, literals language.Literals) func(offset int) bool {
 	ext := filepath.Ext(path)
-	if !markdown.IsMarkdown(ext) {
-		return literals.Contains
-	}
+	code := markdown.MarkdownCode(ext, src)
 	// Whatever might be code is left alone: rewriting shown code is the one unsafe mistake.
-	return markdown.MarkdownCode(ext, src).Possible
+	// Literals are empty for Markdown and code regions are empty elsewhere, so one holds at a time.
+	return func(offset int) bool { return literals.Contains(offset) || code.Possible(offset) }
 }
 
 func rescan(report Report, text string) Report {

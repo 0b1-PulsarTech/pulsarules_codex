@@ -18,11 +18,11 @@ type Code struct {
 func IsMarkdown(ext string) bool { return strings.EqualFold(ext, ".md") }
 
 func MarkdownCode(ext, src string) Code {
-	// Only Markdown has fences to skip; a literal in a language file gets the escape hint.
+	// Only Markdown has fenced or indented code.
 	if !IsMarkdown(ext) {
 		return Code{}
 	}
-	return CodeRegions(src)
+	return codeRegions(src)
 }
 
 func (code Code) Certain(offset int) bool { return inRegions(code.certain, offset) }
@@ -32,7 +32,7 @@ func (code Code) Possible(offset int) bool { return inRegions(code.possible, off
 // simplification: quotes, lists and tabs nest a fence in ways only a full CommonMark parser
 // settles, so several readings are scanned side by side. Upgrade path: a pinned goldmark, once
 // its code blocks cover Certain and stay inside Possible on a recorded corpus.
-func CodeRegions(src string) Code {
+func codeRegions(src string) Code {
 	scans := make([]*readingScan, 0, len(readings()))
 	for _, how := range readings() {
 		scans = append(scans, &readingScan{how: how})
