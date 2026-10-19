@@ -5,34 +5,6 @@ import (
 	"testing"
 )
 
-func TestIsHead(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		word string
-		want bool
-	}{
-		{word: "if", want: true},
-		{word: "while", want: true},
-		{word: "for", want: true},
-		{word: "with", want: true},
-		{word: "switch"},
-		{word: "catch"},
-		{word: "function"},
-		{word: "iff"},
-		{word: ""},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.word, func(t *testing.T) {
-			t.Parallel()
-
-			if got := isHead(testCase.word); got != testCase.want {
-				t.Fatalf("isHead %v, want %v", got, testCase.want)
-			}
-		})
-	}
-}
-
 type valueCase struct {
 	name string
 	word string
@@ -46,6 +18,9 @@ func valueCases() []valueCase {
 		{name: "start of file"},
 		{name: "return", word: "return", want: true},
 		{name: "typeof", word: "typeof", want: true},
+		{name: "else opens a block", word: "else"},
+		{name: "do opens a block", word: "do"},
+		{name: "default", word: "default", want: true},
 		{name: "plain name", word: "Box"},
 		{name: "class keyword", word: "class"},
 		{name: "close paren", char: ')'},

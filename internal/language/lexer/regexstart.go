@@ -6,6 +6,11 @@ import (
 	"unicode/utf8"
 )
 
+const (
+	regexWords  = "return typeof case in of void yield await delete throw new"
+	headerWords = "if while for with"
+)
+
 type RegexContext struct {
 	After      string
 	Words      []string
@@ -23,7 +28,7 @@ func (scan *literalScan) regexAllowed() bool {
 	}
 	prev := scan.src[end-1]
 	switch {
-	case isWordByte(prev):
+	case IsIdentByte(prev):
 		return scan.keywordBefore(end, scan.syntax.RegexAfter.Words)
 	// The ")" of an "if (...)" header ends a condition, not an operand.
 	case prev == ')' && end == scan.headerEnd:
@@ -51,12 +56,12 @@ func (scan *literalScan) postfixBefore(end int) bool {
 		return false
 	}
 	before := scan.src[opStart-1]
-	return isWordByte(before) || before == ')' || before == ']'
+	return IsIdentByte(before) || before == ')' || before == ']'
 }
 
 func (scan *literalScan) keywordBefore(end int, words []string) bool {
 	start := end
-	for start > 0 && isWordByte(scan.src[start-1]) {
+	for start > 0 && IsIdentByte(scan.src[start-1]) {
 		start--
 	}
 	scan.work += end - start
@@ -72,7 +77,7 @@ func (scan *literalScan) trackParen(char byte) {
 	switch {
 	case len(headers) == 0:
 	case char == '(':
-		isHeader := scan.lastEnd > 0 && isWordByte(scan.src[scan.lastEnd-1]) &&
+		isHeader := scan.lastEnd > 0 && IsIdentByte(scan.src[scan.lastEnd-1]) &&
 			scan.keywordBefore(scan.lastEnd, headers)
 		scan.parens = append(scan.parens, isHeader)
 	case char == ')' && len(scan.parens) > 0:
@@ -120,7 +125,26 @@ func (scan *literalScan) divide(resume, lineEnd int) {
 
 func isSpace(char byte) bool { return char == ' ' || char == '\t' || char == '\r' || char == '\n' }
 
-func isWordByte(char byte) bool {
+func StartsExpression(word string) bool {
+	// These begin an operand but never opened a regex for the string scanner.
+	const operandStarters = "instanceof else do extends default"
+	return hasWord(regexWords, word) || hasWord(operandStarters, word)
+}
+
+func IsHeaderWord(word string) bool { return hasWord(headerWords, word) }
+
+func hasWord(list, word string) bool {
+	for rest := list; rest != ""; {
+		var field string
+		field, rest, _ = strings.Cut(rest, " ")
+		if field == word {
+			return true
+		}
+	}
+	return false
+}
+
+func IsIdentByte(char byte) bool {
 	letter := char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z'
 	digit := char >= '0' && char <= '9'
 	return letter || digit || char == '_' || char == '$' || char >= utf8.RuneSelf

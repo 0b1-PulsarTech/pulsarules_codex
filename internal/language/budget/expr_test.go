@@ -32,6 +32,12 @@ func TestBraceEnd(t *testing.T) {
 		{name: "post-increment then a slash", text: "x++ / 2}\ny", want: closedAt(8)},
 		{name: "post-decrement then a slash", text: "x-- / 2}\ny", want: closedAt(8)},
 		{name: "plus then a regex", text: "a + /}/.test(b)}y", want: closedAt(16)},
+		{
+			name: "else opens a block", text: "if (a) {} else { b() } /}/.test(s) }",
+			want: closedAt(36),
+		},
+		{name: "do opens a block", text: "do { b() } /}/.test(s) }", want: closedAt(24)},
+		{name: "default opens an object", text: "default { a: 1 } / 2 }", want: closedAt(22)},
 		{name: "comment brace", text: "a /* } */}y", want: closedAt(10)},
 		{name: "comparison", text: "a < b}y", want: closedAt(6)},
 		{name: "from the middle", text: "ab c}d", from: 2, want: closedAt(5)},

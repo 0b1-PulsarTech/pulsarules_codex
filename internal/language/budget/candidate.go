@@ -2,7 +2,8 @@ package budget
 
 import (
 	"strings"
-	"unicode/utf8"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 const blanks = " \t\r\n"
@@ -30,11 +31,11 @@ func wordBefore(prefix string) (string, byte) {
 		return "", 0
 	}
 	last := trimmed[len(trimmed)-1]
-	if !isIdentByte(last) {
+	if !lexer.IsIdentByte(last) {
 		return "", last
 	}
 	start := len(trimmed)
-	for start > 0 && isIdentByte(trimmed[start-1]) {
+	for start > 0 && lexer.IsIdentByte(trimmed[start-1]) {
 		start--
 	}
 	return trimmed[start:], last
@@ -42,18 +43,9 @@ func wordBefore(prefix string) (string, byte) {
 
 func isCall(word string, last byte) bool {
 	if word != "" {
-		return !startsExpression(word)
+		return !lexer.StartsExpression(word)
 	}
 	return last == ')' || last == ']'
-}
-
-func startsExpression(word string) bool {
-	switch word {
-	case "return", "typeof", "void", "delete", "await", "yield", "new", "throw",
-		"case", "in", "of", "instanceof", "else", "do", "extends", "default":
-		return true
-	}
-	return false
 }
 
 func startsParameters(rest string) bool {
@@ -67,18 +59,13 @@ func startsParameters(rest string) bool {
 	case '.':
 		return strings.HasPrefix(rest, "...")
 	}
-	if !isIdentByte(rest[0]) || '0' <= rest[0] && rest[0] <= '9' {
+	if !lexer.IsIdentByte(rest[0]) || '0' <= rest[0] && rest[0] <= '9' {
 		return false
 	}
 	end := 0
-	for end < len(rest) && isIdentByte(rest[end]) {
+	for end < len(rest) && lexer.IsIdentByte(rest[end]) {
 		end++
 	}
 	rest = strings.TrimLeft(rest[end:], blanks)
 	return rest != "" && strings.IndexByte(",=):?", rest[0]) >= 0
-}
-
-func isIdentByte(char byte) bool {
-	return char == '_' || char == '$' || char >= utf8.RuneSelf ||
-		'0' <= char && char <= '9' || 'a' <= char && char <= 'z' || 'A' <= char && char <= 'Z'
 }

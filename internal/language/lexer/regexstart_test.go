@@ -182,3 +182,128 @@ func TestLiterals_RegexHostileStaysLinear(t *testing.T) {
 		})
 	}
 }
+
+func TestJSStrings_RegexWordsAreTheUnionOfTheOldLists(t *testing.T) {
+	t.Parallel()
+
+	stringScanner := strings.Fields(
+		"return typeof case in of void yield await delete throw new",
+	)
+	braceMatcher := strings.Fields(
+		"return typeof void delete await yield new throw " +
+			"case in of instanceof else do extends default",
+	)
+	union := slices.Concat(stringScanner, braceMatcher)
+	slices.Sort(union)
+	union = slices.Compact(union)
+
+	got := JSStrings().RegexAfter.Words
+	for _, word := range stringScanner {
+		if !slices.Contains(got, word) {
+			t.Errorf("string scanner lost %q", word)
+		}
+	}
+	for _, word := range union {
+		if !StartsExpression(word) {
+			t.Errorf("StartsExpression(%q) = false, want true", word)
+		}
+	}
+	for _, word := range []string{"instanceof", "else", "do", "extends", "default"} {
+		if slices.Contains(got, word) {
+			t.Errorf("string scanner gained %q, which changes where a regex opens", word)
+		}
+	}
+	if len(got) != len(stringScanner) {
+		t.Errorf("string scanner words %v, want %v", got, stringScanner)
+	}
+}
+
+func TestStartsExpression(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		word string
+		want bool
+	}{
+		{"return", true},
+		{"instanceof", true},
+		{"default", true},
+		{"class", false},
+		{"returns", false},
+		{"", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.word, func(t *testing.T) {
+			t.Parallel()
+
+			if got := StartsExpression(testCase.word); got != testCase.want {
+				t.Fatalf("StartsExpression(%q) = %v, want %v", testCase.word, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestIsHeaderWord(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		word string
+		want bool
+	}{
+		{"if", true},
+		{"while", true},
+		{"for", true},
+		{"with", true},
+		{"switch", false},
+		{"catch", false},
+		{"iff", false},
+		{"", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.word, func(t *testing.T) {
+			t.Parallel()
+
+			if got := IsHeaderWord(testCase.word); got != testCase.want {
+				t.Fatalf("IsHeaderWord(%q) = %v, want %v", testCase.word, got, testCase.want)
+			}
+			inScanner := slices.Contains(JSStrings().RegexAfter.ParenWords, testCase.word)
+			if inScanner != testCase.want {
+				t.Fatalf(
+					"scanner ParenWords has %q = %v, want %v",
+					testCase.word,
+					inScanner,
+					testCase.want,
+				)
+			}
+		})
+	}
+}
+
+func TestIsIdentByte(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		char byte
+		want bool
+	}{
+		{"lower", 'q', true},
+		{"upper", 'Q', true},
+		{"digit", '7', true},
+		{"underscore", '_', true},
+		{"dollar", '$', true},
+		{"utf8 lead", 0xC3, true},
+		{"dot", '.', false},
+		{"space", ' ', false},
+		{"quote", '\'', false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := IsIdentByte(testCase.char); got != testCase.want {
+				t.Fatalf("IsIdentByte(%q) = %v, want %v", testCase.char, got, testCase.want)
+			}
+		})
+	}
+}

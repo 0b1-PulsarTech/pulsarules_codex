@@ -1,18 +1,16 @@
 package budget
 
-import "strings"
+import (
+	"strings"
 
-func isHead(word string) bool {
-	switch word {
-	case "if", "while", "for", "with":
-		return true
-	}
-	return false
-}
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+)
 
 func (scan *scanner) valueNext() bool {
 	if scan.prevWord != "" {
-		return startsExpression(scan.prevWord)
+		// A regex may follow else/do, but the statement after them is a block, not an object.
+		return lexer.StartsExpression(scan.prevWord) &&
+			scan.prevWord != "else" && scan.prevWord != "do"
 	}
 	return scan.prevByte != 0 && strings.IndexByte("=(,[:?&|!+-*%<~^", scan.prevByte) >= 0
 }

@@ -3,6 +3,8 @@ package budget
 import (
 	"strings"
 	"unicode"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 type scanner struct {
@@ -48,7 +50,7 @@ func (scan *scanner) step() {
 	case char == '`':
 		scan.pos++
 		scan.skipTemplate()
-	case isIdentByte(char):
+	case lexer.IsIdentByte(char):
 		scan.word()
 	default:
 		scan.bracket(char)
@@ -57,11 +59,11 @@ func (scan *scanner) step() {
 
 func (scan *scanner) word() {
 	start := scan.pos
-	for scan.pos < len(scan.text) && isIdentByte(scan.text[scan.pos]) {
+	for scan.pos < len(scan.text) && lexer.IsIdentByte(scan.text[scan.pos]) {
 		scan.pos++
 	}
 	scan.prevWord = scan.text[start:scan.pos]
-	scan.regexOK = startsExpression(scan.prevWord) && !isProperty(scan.text, start)
+	scan.regexOK = lexer.StartsExpression(scan.prevWord) && !isProperty(scan.text, start)
 }
 
 func (scan *scanner) bracket(char byte) {
@@ -103,7 +105,7 @@ func (scan *scanner) openParen() {
 	switch word, _ := wordBefore(scan.text[:wordEnd]); {
 	case speculative(scan.text, wordEnd, scan.pos):
 		scan.open(kindArrow)
-	case isHead(word):
+	case lexer.IsHeaderWord(word):
 		scan.open(kindHead)
 	default:
 		scan.open(kindParen)

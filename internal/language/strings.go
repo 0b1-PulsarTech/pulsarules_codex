@@ -27,32 +27,8 @@ func dartStrings() lexer.StringSyntax {
 	}}
 }
 
-func jsStrings() lexer.StringSyntax {
-	interp := "${"
-	return lexer.StringSyntax{
-		Delims: []lexer.StringDelim{
-			{Open: `"`, Close: `"`, Escapes: true, Continues: true},
-			{Open: `'`, Close: `'`, Escapes: true, Continues: true},
-			{Open: "`", Close: "`", Escapes: true, Multiline: true, Interp: interp},
-			{
-				Open: "`", Close: "`", Escapes: true, Multiline: true,
-				Raw: true, Interp: interp, Tag: "String.raw",
-			},
-			{Open: "/", Close: "/", Escapes: true, Regex: true},
-		},
-		RegexAfter: lexer.RegexContext{
-			After: "(,=:[!&|?{};+-*%<>~^",
-			Words: []string{
-				"return", "typeof", "case", "in", "of", "void", "yield", "await",
-				"delete", "throw", "new",
-			},
-			ParenWords: []string{"if", "while", "for", "with"},
-		},
-	}
-}
-
 func sfcStrings(regions func(src string) []sfc.Region) lexer.StringSyntax {
-	syntax := jsStrings()
+	syntax := lexer.JSStrings()
 	syntax.Within = func(src string) []lexer.Span {
 		var scripts []lexer.Span
 		for _, region := range regions(src) {

@@ -46,7 +46,7 @@ func (scan *literalScan) tagBefore(tag string) bool {
 		return false
 	}
 	before := len(head) - len(tag)
-	return before == 0 || !isWordByte(scan.src[before-1])
+	return before == 0 || !IsIdentByte(scan.src[before-1])
 }
 
 type StringDelim struct {
@@ -73,7 +73,7 @@ type StringDelim struct {
 
 func IdentBefore(src string, at int) string {
 	start := at
-	for start > 0 && isIdentByte(src[start-1]) {
+	for start > 0 && isPrefixByte(src[start-1]) {
 		start--
 	}
 	return src[start:at]
@@ -136,7 +136,27 @@ func charLen(body string, delim *StringDelim) int {
 	return size + 1
 }
 
-func isIdentByte(char byte) bool {
-	return char == '_' || char >= '0' && char <= '9' ||
-		char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z'
+func isPrefixByte(char byte) bool {
+	return IsIdentByte(char) && char != '$' && char < utf8.RuneSelf
+}
+
+func JSStrings() StringSyntax {
+	interp := "${"
+	return StringSyntax{
+		Delims: []StringDelim{
+			{Open: `"`, Close: `"`, Escapes: true, Continues: true},
+			{Open: `'`, Close: `'`, Escapes: true, Continues: true},
+			{Open: "`", Close: "`", Escapes: true, Multiline: true, Interp: interp},
+			{
+				Open: "`", Close: "`", Escapes: true, Multiline: true,
+				Raw: true, Interp: interp, Tag: "String.raw",
+			},
+			{Open: "/", Close: "/", Escapes: true, Regex: true},
+		},
+		RegexAfter: RegexContext{
+			After:      "(,=:[!&|?{};+-*%<>~^",
+			Words:      strings.Fields(regexWords),
+			ParenWords: strings.Fields(headerWords),
+		},
+	}
 }
