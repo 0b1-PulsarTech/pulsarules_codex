@@ -202,28 +202,79 @@ func TestNewCatalogFS_LoadsEveryFileOnceFromTheGivenFS(t *testing.T) {
 		"data/types.txt":   {Data: []byte("build\twrench\t3\n")},
 		"data/themes.txt":  {Data: []byte("move,rename\twrench\n")},
 	}}
-	catalog, err := NewCatalogFS(recorder)
+	catalog, err := newCatalogFS(recorder)
 	if err != nil {
-		t.Fatalf("NewCatalogFS: %v", err)
+		t.Fatalf("newCatalogFS: %v", err)
 	}
 	wantOpened := []string{"data/catalog.txt", "data/types.txt", "data/themes.txt"}
 	if !slices.Equal(recorder.opened, wantOpened) {
 		t.Errorf("opened = %v, want %v once each", recorder.opened, wantOpened)
 	}
-	anchors := catalog.Anchors()
-	if len(anchors) != 1 || anchors[0].Area != "move" {
-		t.Errorf("Anchors() = %v, want one anchor for area move", anchors)
+	if got := catalog.byType["build"]; !slices.Equal(got, []string{"wrench"}) {
+		t.Errorf("byType[build] = %v, want [wrench]", got)
 	}
-	if len(recorder.opened) != len(wantOpened) {
-		t.Errorf("Anchors() reopened files: %v", recorder.opened)
+	entry := catalog.allowed["wrench"]
+	if entry.group != "Objects" || entry.subgroup != "tool" || entry.useCount != 3 {
+		t.Errorf("allowed[wrench] = %+v, want the columns the CatalogXxx indexes name", entry)
+	}
+}
+
+func TestAnchorsFS_ReadsOnlyThemes(t *testing.T) {
+	t.Parallel()
+
+	recorder := &openRecorder{MapFS: fstest.MapFS{
+		"data/themes.txt": {Data: []byte("move,rename\twrench\n")},
+	}}
+	anchors, err := anchorsFS(recorder)
+	if err != nil {
+		t.Fatalf("anchorsFS: %v", err)
+	}
+	if len(anchors) != 1 || anchors[0].Area != "move" {
+		t.Errorf("anchors = %v, want one anchor for area move", anchors)
+	}
+	if !slices.Equal(recorder.opened, []string{"data/themes.txt"}) {
+		t.Errorf("opened = %v, want only data/themes.txt", recorder.opened)
 	}
 }
 
 func TestNewCatalogFS_MissingFileFails(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewCatalogFS(fstest.MapFS{})
-	if !errors.Is(err, fs.ErrNotExist) {
-		t.Fatalf("error = %v, want fs.ErrNotExist", err)
+	const (
+		catalogText = "wrench\tObjects\ttool\t3\n"
+		typesText   = "build\twrench\t3\n"
+	)
+	testCases := []struct {
+		name     string
+		fsys     fstest.MapFS
+		wantText string
+	}{
+		{"empty fs", fstest.MapFS{}, "data/catalog.txt"},
+		{
+			"catalog only",
+			fstest.MapFS{"data/catalog.txt": {Data: []byte(catalogText)}},
+			"data/types.txt",
+		},
+		{
+			"catalog and types",
+			fstest.MapFS{
+				"data/catalog.txt": {Data: []byte(catalogText)},
+				"data/types.txt":   {Data: []byte(typesText)},
+			},
+			"load themes",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := newCatalogFS(testCase.fsys)
+			if !errors.Is(err, fs.ErrNotExist) {
+				t.Fatalf("error = %v, want fs.ErrNotExist", err)
+			}
+			if !strings.Contains(err.Error(), testCase.wantText) {
+				t.Errorf("error = %q, want it to mention %q", err, testCase.wantText)
+			}
+		})
 	}
 }

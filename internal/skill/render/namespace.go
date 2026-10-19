@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"strings"
-	"sync"
 	"text/template"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
@@ -18,22 +17,18 @@ func topTemplates() []string {
 }
 
 func funcs() template.FuncMap {
-	// The catalog loads on first use and is shared by every later emojiAnchors call.
-	loadCatalog := sync.OnceValues(emoji.NewCatalog)
 	return template.FuncMap{
-		"inc": func(value int) int { return value + 1 },
-		"emojiAnchors": func() (string, error) {
-			catalog, err := loadCatalog()
-			if err != nil {
-				// An error must fail the render rather than produce a wrong commits skill.
-				return "", fmt.Errorf("render emoji anchors: %w", err)
-			}
-			return anchorsText(catalog.Anchors()), nil
-		},
+		"inc":          func(value int) int { return value + 1 },
+		"emojiAnchors": emojiAnchorsText,
 	}
 }
 
-func anchorsText(anchors []emoji.Anchor) string {
+func emojiAnchorsText() (string, error) {
+	anchors, err := emoji.Anchors()
+	if err != nil {
+		// An error must fail the render rather than produce a wrong commits skill.
+		return "", fmt.Errorf("render emoji anchors: %w", err)
+	}
 	areas := make([]string, len(anchors))
 	for anchorIdx, anchor := range anchors {
 		shortcodes := make([]string, len(anchor.Shortcodes))
@@ -42,7 +37,7 @@ func anchorsText(anchors []emoji.Anchor) string {
 		}
 		areas[anchorIdx] = anchor.Area + " (" + strings.Join(shortcodes, ", ") + ")"
 	}
-	return strings.Join(areas, ", ")
+	return strings.Join(areas, ", "), nil
 }
 
 func buildNamespace(templates fs.FS) (*template.Template, error) {

@@ -20,15 +20,30 @@ type Catalog struct {
 	themes  []theme
 }
 
+const (
+	CatalogName = iota
+	CatalogGroup
+	CatalogSubgroup
+	CatalogUseCount
+	CatalogFieldCount
+)
+
+const (
+	TypesType = iota
+	TypesName
+	TypesCount
+	TypesFieldCount
+)
+
 type entry struct {
 	group    string
 	subgroup string
 	useCount int
 }
 
-func NewCatalog() (*Catalog, error) { return NewCatalogFS(dataFS) }
+func NewCatalog() (*Catalog, error) { return newCatalogFS(dataFS) }
 
-func NewCatalogFS(fsys fs.FS) (*Catalog, error) {
+func newCatalogFS(fsys fs.FS) (*Catalog, error) {
 	const (
 		estimatedCatalogSize     = 1100
 		estimatedCommitTypeCount = 16
@@ -53,39 +68,35 @@ func NewCatalogFS(fsys fs.FS) (*Catalog, error) {
 }
 
 func (catalog *Catalog) readCatalog(fsys fs.FS) error {
-	const (
-		catalogFieldCount  = 4
-		useCountFieldIndex = 3
-	)
-	// The catalog.txt columns are name, group, subgroup and use_count, the last being
-	// the measured usage count.
-	records, err := readRecords(fsys, "data/catalog.txt", catalogFieldCount)
+	records, err := readRecords(fsys, "data/catalog.txt", CatalogFieldCount)
 	if err != nil {
 		return err
 	}
 	for _, fields := range records {
-		count, countErr := strconv.Atoi(fields[useCountFieldIndex])
+		count, countErr := strconv.Atoi(fields[CatalogUseCount])
 		if countErr != nil {
 			// A malformed record is a generator defect; fail rather than narrow the catalog.
 			return fmt.Errorf(
 				"catalog.txt: shortcode %q has an unparseable usage count %q: %w",
-				fields[0], fields[useCountFieldIndex], countErr,
+				fields[CatalogName], fields[CatalogUseCount], countErr,
 			)
 		}
-		catalog.allowed[fields[0]] = entry{group: fields[1], subgroup: fields[2], useCount: count}
+		catalog.allowed[fields[CatalogName]] = entry{
+			group:    fields[CatalogGroup],
+			subgroup: fields[CatalogSubgroup],
+			useCount: count,
+		}
 	}
 	return nil
 }
 
 func (catalog *Catalog) readTypes(fsys fs.FS) error {
-	const typesFieldCount = 3
-	// The types.txt columns are type, name and count.
-	records, err := readRecords(fsys, "data/types.txt", typesFieldCount)
+	records, err := readRecords(fsys, "data/types.txt", TypesFieldCount)
 	if err != nil {
 		return err
 	}
 	for _, fields := range records {
-		commitType, shortcode := fields[0], fields[1]
+		commitType, shortcode := fields[TypesType], fields[TypesName]
 		if _, ok := catalog.allowed[shortcode]; !ok {
 			continue
 		}

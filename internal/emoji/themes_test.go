@@ -90,8 +90,11 @@ func TestThemeMatchesIsCaseAndSuffixTolerant(t *testing.T) {
 func loadAnchorFixture(t *testing.T) ([]Anchor, []theme) {
 	t.Helper()
 
-	catalog := mustCatalog(t)
-	return catalog.Anchors(), catalog.themes
+	anchors, err := Anchors()
+	if err != nil {
+		t.Fatalf("Anchors: %v", err)
+	}
+	return anchors, mustCatalog(t).themes
 }
 
 func TestAnchors_MirrorsTheLoadedThemeTableInOrder(t *testing.T) {
