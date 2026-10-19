@@ -95,10 +95,80 @@ func TestFinder_For(t *testing.T) {
 			t.Parallel()
 			finder := NewFinder(readerOf(testCase.files))
 			for range 2 {
-				got := finder.For(testCase.file)
+				_, got := finder.Lookup(testCase.file)
 				if !slices.Equal(got, testCase.want) {
 					t.Fatalf("aliases\n got %v\nwant %v", got, testCase.want)
 				}
+			}
+		})
+	}
+}
+
+func TestFinderLookupRoot(t *testing.T) {
+	t.Parallel()
+
+	files := map[string]string{
+		"web/package.json": `{"imports": {"#a": "./src/a.ts"}}`,
+		"other/readme.md":  "no manifest",
+	}
+	testCases := []struct {
+		name        string
+		lookups     []string
+		wantRoot    string
+		wantAliases int
+	}{
+		{"file under a manifest", []string{"web/src/deep/x.ts"}, "web", 1},
+		{"file without a manifest", []string{"other/x.ts"}, "", 0},
+		{
+			"second file of a project is served from the cache",
+			[]string{"web/a.ts", "web/b/c.ts"},
+			"web",
+			1,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			finder := NewFinder(readerOf(files))
+			for _, file := range testCase.lookups {
+				root, aliases := finder.Lookup(file)
+				if root != testCase.wantRoot || len(aliases) != testCase.wantAliases {
+					t.Fatalf("Lookup(%q) = %q, %v; want %q and %d aliases",
+						file, root, aliases, testCase.wantRoot, testCase.wantAliases)
+				}
+			}
+		})
+	}
+}
+
+func TestUnique(t *testing.T) {
+	t.Parallel()
+
+	first := Alias{Spec: "$x", Target: "a", Origin: OriginPaths}
+	testCases := []struct {
+		name  string
+		input []Alias
+		want  []Alias
+	}{
+		{name: "empty"},
+		{
+			name:  "same origin and spec keeps the first",
+			input: []Alias{first, {Spec: "$x", Target: "b", Origin: OriginPaths}},
+			want:  []Alias{first},
+		},
+		{
+			name:  "same spec from another origin stays",
+			input: []Alias{first, {Spec: "$x", Target: "b", Origin: OriginKit}},
+			want:  []Alias{first, {Spec: "$x", Target: "b", Origin: OriginKit}},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := unique(testCase.input); !slices.Equal(got, testCase.want) {
+				t.Fatalf("unique = %v, want %v", got, testCase.want)
 			}
 		})
 	}

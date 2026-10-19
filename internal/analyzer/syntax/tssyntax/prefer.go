@@ -14,9 +14,12 @@ type importSite struct {
 	aliases         []pathalias.Alias
 }
 
+func newImportSite(file, root string, aliases []pathalias.Alias) importSite {
+	slashed := filepath.ToSlash(file)
+	return importSite{file: slashed, dir: path.Dir(slashed), root: root, aliases: aliases}
+}
+
 func applyPrefer(file *syntax.File, from importSite) {
-	from.file = filepath.ToSlash(file.Path)
-	from.dir = path.Dir(from.file)
 	for idx := range file.Imports {
 		imported := &file.Imports[idx]
 		spec, ok := unquote(imported.Literal)

@@ -80,7 +80,7 @@ func TestFinder_ForReadsKitAliases(t *testing.T) {
 		"web/package.json":     `{"devDependencies": {"@sveltejs/kit": "^2"}}`,
 		"web/svelte.config.js": `export default { kit: { alias: { '$ui': 'src/ui' } } };`,
 	}
-	got := NewFinder(readerOf(files)).For("web/src/a.svelte")
+	_, got := NewFinder(readerOf(files)).Lookup("web/src/a.svelte")
 	want := []Alias{
 		kitAlias("web", "$lib/*", "web/src/lib/*"),
 		kitAlias("web", "$ui", "web/src/ui"),

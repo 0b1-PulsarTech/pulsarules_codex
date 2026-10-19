@@ -2,7 +2,6 @@ package pathalias
 
 import (
 	"encoding/json"
-	"fmt"
 	"maps"
 	"path"
 	"slices"
@@ -28,21 +27,17 @@ func NewFinder(read func(string) ([]byte, bool)) *Finder {
 	}
 }
 
-func (finder *Finder) Root(file string) (string, bool) {
-	return finder.project(path.Dir(path.Clean(file)))
-}
-
-func (finder *Finder) For(file string) []Alias {
-	root, ok := finder.Root(file)
+func (finder *Finder) Lookup(file string) (string, []Alias) {
+	root, ok := finder.project(path.Dir(path.Clean(file)))
 	if !ok {
-		return nil
+		return "", nil
 	}
 	if cached, seen := finder.aliases[root]; seen {
-		return cached
+		return root, cached
 	}
 	found := finder.discover(root)
 	finder.aliases[root] = found
-	return found
+	return root, found
 }
 
 func (finder *Finder) project(dir string) (string, bool) {
@@ -101,10 +96,15 @@ func kitDefault(root string) Alias {
 	}
 }
 
+type aliasKey struct {
+	origin Origin
+	spec   string
+}
+
 func unique(aliases []Alias) []Alias {
-	seen := map[string]bool{}
+	seen := map[aliasKey]bool{}
 	return slices.DeleteFunc(aliases, func(alias Alias) bool {
-		key := fmt.Sprint(alias.Origin, alias.Spec)
+		key := aliasKey{origin: alias.Origin, spec: alias.Spec}
 		duplicate := seen[key]
 		seen[key] = true
 		return duplicate

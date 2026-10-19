@@ -46,13 +46,12 @@ func (provider *Provider) Summarize(
 	session := provider.runner.Open()
 	defer session.Close()
 	for _, source := range corpus.Sources {
-		aliases := finder.For(source.Path)
+		home, aliases := finder.Lookup(source.Path)
 		summary, err := summarize(ctx, session, source, pathalias.Specs(aliases))
 		if err != nil {
 			return summaries, fmt.Errorf("summarize typescript sources: %w", err)
 		}
-		home, _ := finder.Root(source.Path)
-		applyPrefer(summary, importSite{root: home, aliases: aliases})
+		applyPrefer(summary, newImportSite(source.Path, home, aliases))
 		summaries[source.Path] = summary
 	}
 	return summaries, nil

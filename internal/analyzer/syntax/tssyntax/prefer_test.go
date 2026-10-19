@@ -209,7 +209,7 @@ func TestApplyPrefer(t *testing.T) {
 			for _, literal := range testCase.literals {
 				file.Imports = append(file.Imports, syntax.Import{Literal: literal})
 			}
-			applyPrefer(file, importSite{root: testCase.root, aliases: testCase.aliases})
+			applyPrefer(file, newImportSite(testCase.path, testCase.root, testCase.aliases))
 			prefer := make([]string, 0, len(file.Imports))
 			upward := make([]bool, 0, len(file.Imports))
 			foreign := make([]bool, 0, len(file.Imports))
