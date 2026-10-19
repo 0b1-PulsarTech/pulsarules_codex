@@ -1,11 +1,11 @@
-package goast
+package gosyntax
 
 import (
 	"go/ast"
 	"go/token"
 )
 
-func CyclomaticComplexity(fn *ast.FuncDecl) int {
+func cyclomaticComplexity(fn *ast.FuncDecl) int {
 	score := 1
 	ast.Inspect(fn, func(node ast.Node) bool {
 		switch typed := node.(type) {
@@ -23,12 +23,4 @@ func CyclomaticComplexity(fn *ast.FuncDecl) int {
 		return true
 	})
 	return score
-}
-
-func ParamCount(fields *ast.FieldList) int {
-	total := 0
-	for _, field := range fields.List {
-		total += max(1, len(field.Names))
-	}
-	return total
 }

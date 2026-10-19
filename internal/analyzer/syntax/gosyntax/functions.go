@@ -35,10 +35,8 @@ func summarizeFunc(fset *token.FileSet, fn *ast.FuncDecl) syntax.Function {
 		Line:       lineOf(fset, fn.Pos()),
 		BodyStart:  lineOf(fset, fn.Body.Lbrace),
 		BodyEnd:    lineOf(fset, fn.Body.Rbrace),
-		Complexity: goast.CyclomaticComplexity(fn),
-	}
-	if fn.Type.Params != nil {
-		summary.Params = goast.ParamCount(fn.Type.Params)
+		Complexity: cyclomaticComplexity(fn),
+		Params:     goast.FieldCount(fn.Type.Params),
 	}
 	return summary
 }

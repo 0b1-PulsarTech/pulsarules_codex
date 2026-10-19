@@ -43,7 +43,7 @@ func (rule rule) check(fset *token.FileSet, fc pass.FileChange, file *ast.File) 
 	var findings []finding.Finding
 	ast.Inspect(file, func(node ast.Node) bool {
 		for _, site := range sitesOf(node) {
-			count := countResults(site.Results)
+			count := goast.FieldCount(site.Results)
 			if count <= rule.limit {
 				continue
 			}
@@ -85,15 +85,4 @@ func sitesOf(decl ast.Node) []goast.ResultSite {
 		return goast.InterfaceMethodSites(node)
 	}
 	return nil
-}
-
-func countResults(results *ast.FieldList) int {
-	if results == nil {
-		return 0
-	}
-	total := 0
-	for _, field := range results.List {
-		total += max(1, len(field.Names))
-	}
-	return total
 }

@@ -105,6 +105,17 @@ func checkFileNumberedCases() []checkFileTestCase {
 			source: "package foo\nfunc f() { x1 := 1; x2 := 2; _, _ = x1, x2 }\n",
 			expect: 2,
 		},
+		{
+			name:   "numbered receivers are never judged",
+			source: "package foo\ntype T struct{}\nfunc (r1 *T) m() {}\nfunc (r2 *T) n() {}\n",
+			expect: 0,
+		},
+		{
+			name: "plain assignment is never judged",
+			source: "package foo\nfunc f() { var x1, x2 int; x1 = 1; x2 = 2; " +
+				"_, _ = x1, x2 }\n",
+			expect: 2,
+		},
 	}
 }
 

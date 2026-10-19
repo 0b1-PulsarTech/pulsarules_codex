@@ -35,9 +35,7 @@ func (analyzer *Analyzer) checkFile(
 	reporter finding.Reporter,
 ) []finding.Finding {
 	var findings []finding.Finding
-	// newFileIndex is the one walk: the sequential-name and noise rules need the
-	// whole file (siblings, and the types names are built from) before any
-	// identifier can be judged.
+	// The sequential and noise rules need the whole file before any name is judged.
 	checker := fileChecker{
 		index: newFileIndex(file),
 		emit: func(pos token.Pos, msg, suggestion string) {
