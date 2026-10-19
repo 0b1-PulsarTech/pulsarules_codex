@@ -20,19 +20,8 @@ func (scan *literalScan) commentLen(rest string) int {
 }
 
 func (scan *literalScan) blockLen(rest string, block BlockDelim) int {
-	depth, at := 1, len(block.Open)
-	for at < len(rest) && depth > 0 {
-		switch {
-		case strings.HasPrefix(rest[at:], block.Close):
-			depth--
-			at += len(block.Close)
-		case block.Nested && strings.HasPrefix(rest[at:], block.Open):
-			depth++
-			at += len(block.Open)
-		default:
-			at++
-		}
-	}
+	end, depth := blockEnd(rest[len(block.Open):], block, 1)
+	at := len(block.Open) + end
 	scan.work += at
 	// A block still open at EOF swallows the rest of the file.
 	if depth > 0 {

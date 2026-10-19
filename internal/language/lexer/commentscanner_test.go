@@ -271,14 +271,27 @@ func TestCommentScanner_Body(t *testing.T) {
 func TestCommentScanner_NestedBlock(t *testing.T) {
 	t.Parallel()
 
-	lines := []string{"/* one", " /* two */", " three", " four */", "x"}
 	testCases := []struct {
 		name   string
 		nested bool
+		lines  []string
 		want   []bool
 	}{
-		{"nested keeps the outer block open", true, []bool{true, true, true, true, false}},
-		{"flat block ends at the first closer", false, []bool{true, true, false, false, false}},
+		{
+			"nested keeps the outer block open", true,
+			[]string{"/* one", " /* two */", " three", " four */", "x"},
+			[]bool{true, true, true, true, false},
+		},
+		{
+			"flat block ends at the first closer", false,
+			[]string{"/* one", " /* two */", " three", " four */", "x"},
+			[]bool{true, true, false, false, false},
+		},
+		{
+			"depth two carries across lines", true,
+			[]string{"/* a /* b", "*/", "still */", "x"},
+			[]bool{true, true, true, false},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -286,12 +299,12 @@ func TestCommentScanner_NestedBlock(t *testing.T) {
 			scanner := NewCommentScanner(CommentSyntax{
 				Blocks: []BlockDelim{{Open: "/*", Close: "*/", Nested: testCase.nested}},
 			})
-			got := make([]bool, 0, len(lines))
-			for _, line := range lines {
+			got := make([]bool, 0, len(testCase.lines))
+			for _, line := range testCase.lines {
 				got = append(got, scanner.IsCommentLine(line))
 			}
 			if !slices.Equal(got, testCase.want) {
-				t.Fatalf("IsCommentLine over %q = %v, want %v", lines, got, testCase.want)
+				t.Fatalf("IsCommentLine over %q = %v, want %v", testCase.lines, got, testCase.want)
 			}
 		})
 	}

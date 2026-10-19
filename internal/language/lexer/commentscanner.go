@@ -79,7 +79,8 @@ func (scan *CommentScanner) openingBlock(rest string) (BlockDelim, bool) {
 	return BlockDelim{}, false
 }
 
-func blockEnd(rest string, block BlockDelim, depth int) (end, remaining int) {
+func blockEnd(rest string, block BlockDelim, opened int) (end, depth int) {
+	depth = opened
 	for end < len(rest) && depth > 0 {
 		switch {
 		case strings.HasPrefix(rest[end:], block.Close):
