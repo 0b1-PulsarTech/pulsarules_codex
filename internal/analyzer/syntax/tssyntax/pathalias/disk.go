@@ -1,9 +1,10 @@
 package pathalias
 
 import (
-	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 )
 
 func DiskReader(root string, fallback func(string) ([]byte, bool)) func(string) ([]byte, bool) {
@@ -12,26 +13,13 @@ func DiskReader(root string, fallback func(string) ([]byte, bool)) func(string) 
 			return fallback(name)
 		}
 		full := filepath.Join(root, filepath.FromSlash(name))
-		stat, err := os.Stat(full)
-		if err != nil {
+		if _, err := os.Stat(full); err != nil {
 			return fallback(name)
 		}
-		if !stat.Mode().IsRegular() {
+		body, err := disk.ReadBounded(full, maxConfigBytes)
+		if err != nil || len(body) > maxConfigBytes {
 			return nil, false
 		}
-		return readCapped(full)
+		return body, true
 	}
-}
-
-func readCapped(full string) ([]byte, bool) {
-	file, err := os.Open(full) //nolint:gosec // The name is a project file already stat-checked.
-	if err != nil {
-		return nil, false
-	}
-	defer func() { _ = file.Close() }()
-	body, err := io.ReadAll(io.LimitReader(file, maxConfigBytes+1))
-	if err != nil || len(body) > maxConfigBytes {
-		return nil, false
-	}
-	return body, true
 }
