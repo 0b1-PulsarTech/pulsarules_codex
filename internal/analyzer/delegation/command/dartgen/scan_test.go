@@ -26,6 +26,10 @@ func writeTree(t *testing.T, files map[string]string) (string, []string) {
 	return root, names
 }
 
+func padTo(size int, tail string) string {
+	return strings.Repeat("/", size-len(tail)-1) + "\n" + tail
+}
+
 type missingCase struct {
 	name   string
 	files  map[string]string
@@ -97,6 +101,18 @@ func moreMissingCases() []missingCase {
 			},
 			"",
 			[]string{},
+		},
+		{
+			"directive ending one byte past the read cap is not seen",
+			map[string]string{"lib/n.dart": padTo(64<<10+1, "export 'c.g.dart'")},
+			"",
+			[]string{},
+		},
+		{
+			"directive ending at the read cap is seen",
+			map[string]string{"lib/n.dart": padTo(64<<10, "export 'c.g.dart'")},
+			"",
+			[]string{"lib/c.g.dart"},
 		},
 		{
 			"same target from two files is reported once",

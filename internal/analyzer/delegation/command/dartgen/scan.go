@@ -2,13 +2,14 @@ package dartgen
 
 import (
 	"errors"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 )
 
 func Missing(root, prefix string, files []string) []string {
@@ -44,16 +45,15 @@ func head(root, file string) string {
 		return ""
 	}
 	defer func() { _ = confined.Close() }()
-	handle, err := confined.Open(file)
+	// The root refuses a link that leaves the project; the read below does not.
+	if _, err = confined.Stat(file); err != nil {
+		return ""
+	}
+	text, err := disk.ReadBounded(filepath.Join(root, file), readCap)
 	if err != nil {
 		return ""
 	}
-	defer func() { _ = handle.Close() }()
-	text, err := io.ReadAll(io.LimitReader(handle, readCap))
-	if err != nil {
-		return ""
-	}
-	return string(text)
+	return string(text[:min(len(text), readCap)])
 }
 
 func exists(root, target string) bool {
