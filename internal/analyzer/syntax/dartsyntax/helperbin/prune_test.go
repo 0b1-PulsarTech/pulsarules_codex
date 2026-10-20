@@ -245,7 +245,7 @@ func TestEnsureHelperCacheLayout(t *testing.T) {
 				entry.name = expand(entry.name)
 				seedEntry(t, root, entry)
 			}
-			if _, err := ensureHelper(context.Background(), testFiles(), base, dart); err != nil {
+			if _, err := ensureHelper(context.Background(), testSource(), base, dart); err != nil {
 				t.Fatalf("ensureHelper: %v", err)
 			}
 			for _, name := range testCase.wantKept {

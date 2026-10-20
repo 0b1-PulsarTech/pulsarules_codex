@@ -16,13 +16,15 @@ func testFiles() fstest.MapFS {
 	}
 }
 
+func testSource() source { return source{files: testFiles(), root: "."} }
+
 func TestHelperHash(t *testing.T) {
 	t.Parallel()
-	first, err := helperHash(testFiles())
+	first, err := testSource().hash()
 	if err != nil {
 		t.Fatalf("helperHash: %v", err)
 	}
-	second, err := helperHash(testFiles())
+	second, err := testSource().hash()
 	if err != nil {
 		t.Fatalf("helperHash again: %v", err)
 	}
@@ -51,7 +53,7 @@ func TestMaterialise(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			err := materialise(testFiles(), testCase.target)
+			err := testSource().materialise(testCase.target)
 			if (err != nil) != testCase.wantErr {
 				t.Fatalf("materialise error = %v, wantErr %v", err, testCase.wantErr)
 			}
@@ -66,4 +68,51 @@ func TestMaterialise(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHelperHashKey(t *testing.T) {
+	t.Parallel()
+	renamed := testFiles()
+	renamed["bin/main.dart"] = renamed["bin/summary.dart"]
+	delete(renamed, "bin/summary.dart")
+	edited := testFiles()
+	edited["pubspec.yaml"] = &fstest.MapFile{Data: []byte("name: other\n")}
+	nested := fstest.MapFS{}
+	for name, file := range testFiles() {
+		nested["helper/"+name] = file
+	}
+	testCases := []struct {
+		name   string
+		source source
+		want   string
+	}{
+		{"root and names are hashed", source{files: nested, root: "helper"}, "f54c7c127101f8ce"},
+		{"renamed file same content", source{files: renamed, root: "."}, ""},
+		{"edited content", source{files: edited, root: "."}, ""},
+	}
+	plain, err := testSource().hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got, hashErr := testCase.source.hash()
+			if hashErr != nil {
+				t.Fatalf("hash: %v", hashErr)
+			}
+			if testCase.want != "" && got != testCase.want {
+				t.Errorf("hash = %q, want the key an older binary computed, %q", got, testCase.want)
+			}
+			if testCase.want == "" && got == plain {
+				t.Errorf("hash %q did not change", got)
+			}
+		})
+	}
+}
+
+func TestSourceMissingRoot(t *testing.T) {
+	t.Parallel()
+	_, err := source{files: testFiles(), root: "/"}.hash()
+	assertErrContains(t, err, "open embedded helper")
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -127,4 +128,53 @@ func TestLocatorHonorsContextDeadline(t *testing.T) {
 	if _, marked := helperDir(currentDir(t, base)).loadMarker(); marked {
 		t.Error("a parent deadline wrote a failure marker")
 	}
+}
+
+func TestBoundBuild(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		elapsed  time.Duration
+		wantDone bool
+	}{
+		{"just before the bound", BuildTimeout - time.Nanosecond, false},
+		{"at the bound", BuildTimeout, true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := boundBuild(context.Background())
+				defer cancel()
+				synctest.Sleep(testCase.elapsed)
+				if isDone := ctx.Err() != nil; isDone != testCase.wantDone {
+					t.Fatalf(
+						"done = %v after %v, want %v",
+						isDone,
+						testCase.elapsed,
+						testCase.wantDone,
+					)
+				}
+				if testCase.wantDone && !errors.Is(context.Cause(ctx), errBuildBound) {
+					t.Errorf("cause = %v, want errBuildBound", context.Cause(ctx))
+				}
+			})
+		})
+	}
+}
+
+func TestLocatorWaitHonorsContext(t *testing.T) {
+	t.Parallel()
+
+	synctest.Test(t, func(t *testing.T) {
+		locator := NewLocator(testFiles(), ".")
+		locator.slot <- struct{}{}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_, err := locator.Exe(ctx)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("Exe error = %v, want a deadline while waiting for the build slot", err)
+		}
+	})
 }

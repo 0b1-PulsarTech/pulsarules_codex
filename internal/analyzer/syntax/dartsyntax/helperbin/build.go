@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -14,12 +13,12 @@ import (
 
 var errBuildBound = errors.New("dart helper build exceeded its time bound")
 
-func ensureHelper(ctx context.Context, files fs.FS, base, dart string) (string, error) {
+func ensureHelper(ctx context.Context, src source, base, dart string) (string, error) {
 	version, err := sdkVersion(ctx, dart)
 	if err != nil {
 		return "", err
 	}
-	hash, err := helperHash(files)
+	hash, err := src.hash()
 	if err != nil {
 		return "", err
 	}
@@ -31,7 +30,7 @@ func ensureHelper(ctx context.Context, files fs.FS, base, dart string) (string, 
 	if recent := dir.recentFailure(); recent != nil {
 		return "", recent
 	}
-	if buildErr := buildHelper(ctx, files, dart, dir); buildErr != nil {
+	if buildErr := buildHelper(ctx, src, dart, dir); buildErr != nil {
 		return "", rememberFailure(ctx, dir, buildErr)
 	}
 	// Tidying is hygiene; a leftover file must not fail a good build.
@@ -49,7 +48,7 @@ func rememberFailure(ctx context.Context, dir helperDir, buildErr error) error {
 	return buildErr
 }
 
-func buildHelper(ctx context.Context, files fs.FS, dart string, dir helperDir) error {
+func buildHelper(ctx context.Context, src source, dart string, dir helperDir) error {
 	if err := os.MkdirAll(dir.parent(), disk.DirPrivate); err != nil {
 		return fmt.Errorf("create helper cache: %w", err)
 	}
@@ -57,15 +56,15 @@ func buildHelper(ctx context.Context, files fs.FS, dart string, dir helperDir) e
 	if err != nil {
 		return fmt.Errorf("create helper build dir: %w", err)
 	}
-	buildErr := compileAndPublish(ctx, files, toolchain{dir: work, dart: dart}, dir)
+	buildErr := compileAndPublish(ctx, src, toolchain{dir: work, dart: dart}, dir)
 	if cleanErr := os.RemoveAll(work); cleanErr != nil {
 		return errors.Join(buildErr, fmt.Errorf("remove helper build dir: %w", cleanErr))
 	}
 	return buildErr
 }
 
-func compileAndPublish(ctx context.Context, files fs.FS, tool toolchain, dir helperDir) error {
-	if err := materialise(files, tool.dir); err != nil {
+func compileAndPublish(ctx context.Context, src source, tool toolchain, dir helperDir) error {
+	if err := src.materialise(tool.dir); err != nil {
 		return err
 	}
 	if err := pubGet(ctx, tool); err != nil {

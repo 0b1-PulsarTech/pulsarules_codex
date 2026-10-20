@@ -66,7 +66,7 @@ func fakeArgv(t *testing.T) string {
 
 func currentDir(t *testing.T, base string) string {
 	t.Helper()
-	hash, err := helperHash(testFiles())
+	hash, err := testSource().hash()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestEnsureHelper(t *testing.T) {
 			base := t.TempDir()
 			t.Setenv("FAKE_FAIL", testCase.fail)
 			log, argv := fakeLog(t), fakeArgv(t)
-			exe, err := ensureHelper(context.Background(), testFiles(), base, dart)
+			exe, err := ensureHelper(context.Background(), testSource(), base, dart)
 			if err != nil {
 				t.Fatalf("ensureHelper: %v", err)
 			}
@@ -112,7 +112,7 @@ func TestEnsureHelper(t *testing.T) {
 				t.Errorf("pub calls = %q, want %q", got, testCase.wantPub)
 			}
 			t.Setenv("FAKE_FAIL", "compile")
-			again, err := ensureHelper(context.Background(), testFiles(), base, dart)
+			again, err := ensureHelper(context.Background(), testSource(), base, dart)
 			if err != nil || again != exe {
 				t.Errorf("reuse = %q, %v; want %q", again, err, exe)
 			}
@@ -180,7 +180,7 @@ func TestEnsureHelperErrors(t *testing.T) {
 				defer cancel()
 			}
 			start := time.Now()
-			_, err := ensureHelper(ctx, testFiles(), base, dart)
+			_, err := ensureHelper(ctx, testSource(), base, dart)
 			assertEnsureFailure(t, err, testCase.wantErr, time.Since(start))
 			if testCase.wantNoPub && len(readLines(log)) != 0 {
 				t.Errorf("pub was invoked: %q", readLines(log))
@@ -290,7 +290,7 @@ func TestEnsureHelperConcurrent(t *testing.T) {
 	var group sync.WaitGroup
 	for index := range workers {
 		group.Go(func() {
-			exes[index], errs[index] = ensureHelper(context.Background(), testFiles(), base, dart)
+			exes[index], errs[index] = ensureHelper(context.Background(), testSource(), base, dart)
 		})
 	}
 	group.Wait()
@@ -315,7 +315,7 @@ func TestEnsureHelperAlternatingSDKs(t *testing.T) {
 	t.Setenv("FAKE_COMPILES", compiles)
 	for _, version := range []string{"9.9.9", "8.8.8", "9.9.9", "8.8.8"} {
 		t.Setenv("FAKE_VERSION", version)
-		if _, err := ensureHelper(context.Background(), testFiles(), base, dart); err != nil {
+		if _, err := ensureHelper(context.Background(), testSource(), base, dart); err != nil {
 			t.Fatalf("ensureHelper %s: %v", version, err)
 		}
 	}
@@ -332,7 +332,7 @@ func TestEnsureHelperAlternatingHashes(t *testing.T) {
 	rival := filepath.Join(cacheRoot(base), keyPrefix("9.9.9")+"0123456789abcdef")
 	seedEntry(t, cacheRoot(base), seed{name: filepath.Base(rival), file: exeName()})
 	for round := range 3 {
-		if _, err := ensureHelper(context.Background(), testFiles(), base, dart); err != nil {
+		if _, err := ensureHelper(context.Background(), testSource(), base, dart); err != nil {
 			t.Fatalf("round %d: %v", round, err)
 		}
 		if !helperDir(rival).exists() {
@@ -364,7 +364,7 @@ func TestEnsureHelperMarkerWindow(t *testing.T) {
 			writeMarker(t, dir, failureMarker{
 				Key: filepath.Base(dir), At: time.Now().Add(-testCase.age), Message: "old failure",
 			})
-			exe, err := ensureHelper(context.Background(), testFiles(), base, dart)
+			exe, err := ensureHelper(context.Background(), testSource(), base, dart)
 			if testCase.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) ||
 					!strings.Contains(err.Error(), "old failure") || helperDir(dir).exists() {

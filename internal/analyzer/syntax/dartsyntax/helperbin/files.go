@@ -6,22 +6,32 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 )
 
-func eachFile(files fs.FS, visit func(name string, content []byte, isDir bool) error) error {
-	err := fs.WalkDir(files, ".", func(name string, entry fs.DirEntry, walkErr error) error {
+type source struct {
+	files fs.FS
+	root  string
+}
+
+func (src source) each(visit func(name string, content []byte, isDir bool) error) error {
+	sub, err := fs.Sub(src.files, src.root)
+	if err != nil {
+		return fmt.Errorf("open embedded helper: %w", err)
+	}
+	err = fs.WalkDir(sub, ".", func(name string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
 		if entry.IsDir() {
 			return visit(name, nil, true)
 		}
-		content, err := fs.ReadFile(files, name)
-		if err != nil {
-			return fmt.Errorf("read %s: %w", name, err)
+		content, readErr := fs.ReadFile(sub, name)
+		if readErr != nil {
+			return fmt.Errorf("read %s: %w", name, readErr)
 		}
 		return visit(name, content, false)
 	})
@@ -31,13 +41,14 @@ func eachFile(files fs.FS, visit func(name string, content []byte, isDir bool) e
 	return nil
 }
 
-func helperHash(files fs.FS) (string, error) {
+func (src source) hash() (string, error) {
 	digest := sha256.New()
-	err := eachFile(files, func(name string, content []byte, isDir bool) error {
+	err := src.each(func(name string, content []byte, isDir bool) error {
 		if isDir {
 			return nil
 		}
-		digest.Write([]byte(name))
+		// The root stays in the key so a cache built by an older binary is still found.
+		digest.Write([]byte(path.Join(src.root, name)))
 		digest.Write([]byte{0})
 		digest.Write(content)
 		digest.Write([]byte{0})
@@ -50,8 +61,8 @@ func helperHash(files fs.FS) (string, error) {
 	return hex.EncodeToString(digest.Sum(nil))[:hashChars], nil
 }
 
-func materialise(files fs.FS, target string) error {
-	err := eachFile(files, func(name string, content []byte, isDir bool) error {
+func (src source) materialise(target string) error {
+	err := src.each(func(name string, content []byte, isDir bool) error {
 		destination := filepath.Join(target, filepath.FromSlash(name))
 		if isDir {
 			return os.MkdirAll(destination, disk.DirPrivate)
