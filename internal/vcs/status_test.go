@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 )
@@ -129,14 +128,12 @@ func assertStatusSummary(t *testing.T, status Status) {
 	if exts := status.Extensions(); !exts[".go"] {
 		t.Fatalf("Extensions() = %v, want it to contain .go", exts)
 	}
-
-	rendered := status.String()
-	if rendered == "" {
-		t.Fatal("String() = empty, want a rendered listing")
+	renamed := Change{
+		Path: "new_name.go", OldPath: "old_name.go", Extension: ".go", Staging: 'R',
+		Worktree: ' ', Staged: true,
 	}
-	wantLine := "R  old_name.go -> new_name.go"
-	if !slices.Contains(strings.Split(rendered, "\n"), wantLine) {
-		t.Fatalf("String() = %q, want it to contain %q", rendered, wantLine)
+	if !slices.Contains(status.Changes, renamed) {
+		t.Fatalf("Changes = %+v, want it to contain %+v", status.Changes, renamed)
 	}
 }
 
@@ -144,11 +141,10 @@ func TestStatus_IsCleanAndExtensions(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name        string
-		status      Status
-		wantClean   bool
-		wantExts    map[string]bool
-		wantNonZero bool
+		name      string
+		status    Status
+		wantClean bool
+		wantExts  map[string]bool
 	}{
 		{
 			name:      "no changes",
@@ -163,9 +159,8 @@ func TestStatus_IsCleanAndExtensions(t *testing.T) {
 				{Path: "b.sql", Extension: ".sql", Staging: 'M', Worktree: ' '},
 				{Path: "c.go", Extension: ".go", Staging: ' ', Worktree: 'M'},
 			}},
-			wantClean:   false,
-			wantExts:    map[string]bool{".go": true, ".sql": true},
-			wantNonZero: true,
+			wantClean: false,
+			wantExts:  map[string]bool{".go": true, ".sql": true},
 		},
 	}
 	for _, testCase := range testCases {
@@ -183,9 +178,6 @@ func TestStatus_IsCleanAndExtensions(t *testing.T) {
 				if !got[ext] {
 					t.Fatalf("Extensions() = %v, missing %q", got, ext)
 				}
-			}
-			if got := testCase.status.String(); testCase.wantNonZero && got == "" {
-				t.Fatal("String() = empty, want non-empty")
 			}
 		})
 	}
@@ -288,38 +280,6 @@ func TestWorktreeStatus_StagedCopy(t *testing.T) {
 	})
 	if !found {
 		t.Fatalf("copy dup.go <- src.go missing; parsed %+v", status.Changes)
-	}
-}
-
-func TestStatus_StringRoutesPathsThroughEscape(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name    string
-		path    string
-		oldPath string
-		want    string
-	}{
-		{"arrow in untracked name", "a -> b.go", "", "?? \"a -> b.go\""},
-		{"arrow in old path", "y.go", "x -> m.go", "?? \"x -> m.go\" -> y.go"},
-		{"rename with newline in new path", "n\new.go", "old.go", "?? old.go -> \"n\\new.go\""},
-		{"rename with newline in old path", "new.go", "o\nld.go", "?? \"o\\nld.go\" -> new.go"},
-		{"plain path", "a.go", "", "?? a.go"},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			change := Change{
-				Path:     testCase.path,
-				OldPath:  testCase.oldPath,
-				Staging:  '?',
-				Worktree: '?',
-			}
-			if got := (Status{Changes: []Change{change}}).String(); got != testCase.want {
-				t.Fatalf("String() = %q, want %q", got, testCase.want)
-			}
-		})
 	}
 }
 

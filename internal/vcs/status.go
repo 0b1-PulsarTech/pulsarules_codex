@@ -2,10 +2,7 @@ package vcs
 
 import (
 	"fmt"
-	"strings"
 	"time"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 type Change struct {
@@ -31,24 +28,6 @@ func (status Status) Extensions() map[string]bool {
 		exts[change.Extension] = true
 	}
 	return exts
-}
-
-func (status Status) String() string {
-	lines := make([]string, 0, len(status.Changes))
-	for _, change := range status.Changes {
-		xy := string([]byte{change.Staging, change.Worktree})
-		if change.OldPath != "" {
-			lines = append(
-				lines,
-				fmt.Sprintf(
-					"%s %s -> %s", xy, printable.Path(change.OldPath), printable.Path(change.Path),
-				),
-			)
-			continue
-		}
-		lines = append(lines, xy+" "+printable.Path(change.Path))
-	}
-	return strings.Join(lines, "\n")
 }
 
 func (repo *repository) WorktreeStatus() (Status, error) {

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -132,8 +133,25 @@ func (disp *Dispatcher) stopHeader(result governanceResult) (string, error) {
 func cappedStatus(status vcs.Status) string {
 	const maxListedChanges = 50
 	if len(status.Changes) <= maxListedChanges {
-		return status.String()
+		return formatChanges(status.Changes)
 	}
-	shown := vcs.Status{Changes: status.Changes[:maxListedChanges]}
-	return fmt.Sprintf("%s\n... and %d more", shown.String(), len(status.Changes)-maxListedChanges)
+	return fmt.Sprintf(
+		"%s\n... and %d more",
+		formatChanges(status.Changes[:maxListedChanges]), len(status.Changes)-maxListedChanges,
+	)
+}
+
+func formatChanges(changes []vcs.Change) string {
+	lines := make([]string, 0, len(changes))
+	for _, change := range changes {
+		flags := string([]byte{change.Staging, change.Worktree})
+		if change.OldPath != "" {
+			lines = append(lines, fmt.Sprintf(
+				"%s %s -> %s", flags, printable.Path(change.OldPath), printable.Path(change.Path),
+			))
+			continue
+		}
+		lines = append(lines, flags+" "+printable.Path(change.Path))
+	}
+	return strings.Join(lines, "\n")
 }
