@@ -45,11 +45,7 @@ func head(root, file string) string {
 		return ""
 	}
 	defer func() { _ = confined.Close() }()
-	// The root refuses a link that leaves the project; the read below does not.
-	if _, err = confined.Stat(file); err != nil {
-		return ""
-	}
-	text, err := disk.ReadBounded(filepath.Join(root, file), readCap)
+	text, err := disk.ReadBoundedIn(confined, file, readCap)
 	if err != nil {
 		return ""
 	}

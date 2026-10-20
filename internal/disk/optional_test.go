@@ -44,7 +44,7 @@ func TestReadBounded(t *testing.T) {
 			writeFile(t, path, 10*testLimit)
 			return path
 		}, testLimit + 1, nil},
-		{"a directory", func(_ *testing.T, dir string) string { return dir }, 0, ErrNotRegular},
+		{"a directory", func(_ *testing.T, dir string) string { return dir }, 0, errNotRegular},
 		{"a missing file", func(_ *testing.T, dir string) string {
 			return filepath.Join(dir, "nope")
 		}, 0, fs.ErrNotExist},
@@ -55,7 +55,7 @@ func TestReadBounded(t *testing.T) {
 				t.Skipf("symlink unavailable: %v", err)
 			}
 			return path
-		}, 0, ErrNotRegular},
+		}, 0, errNotRegular},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -93,9 +93,9 @@ func TestReadFileOpensOnlyRegularFiles(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			opened := 0
-			_, _ = readFile(testCase.path, func(name string) (*os.File, error) {
+			_, _ = readFile(testCase.path, os.Stat, func(name string) (*os.File, error) {
 				opened++
-				return openNonBlocking(name)
+				return nonBlocking(os.OpenFile)(name)
 			}, testLimit)
 			if opened != testCase.wantOpened {
 				t.Fatalf("readFile() opened %d times, want %d", opened, testCase.wantOpened)
@@ -117,10 +117,10 @@ func TestReadFileChecksTheOpenedHandle(t *testing.T) {
 	}{
 		{"swapped for a directory", func(string) (*os.File, error) {
 			return os.Open(dir)
-		}, ErrNotRegular},
+		}, errNotRegular},
 		{"swapped for a device", func(string) (*os.File, error) {
 			return os.Open(os.DevNull)
-		}, ErrNotRegular},
+		}, errNotRegular},
 		{"the open fails", func(string) (*os.File, error) {
 			return nil, fs.ErrPermission
 		}, fs.ErrPermission},
@@ -136,7 +136,7 @@ func TestReadFileChecksTheOpenedHandle(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := readFile(path, testCase.open, testLimit)
+			_, err := readFile(path, os.Stat, testCase.open, testLimit)
 			if !errors.Is(err, testCase.wantErr) {
 				t.Fatalf("readFile() error = %v, want %v", err, testCase.wantErr)
 			}
@@ -167,6 +167,56 @@ func TestRefused(t *testing.T) {
 			t.Parallel()
 			if got := refused(testCase.mode); got != testCase.want {
 				t.Errorf("refused(%v) = %v, want %v", testCase.mode, got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestReadBoundedIn(t *testing.T) {
+	t.Parallel()
+
+	base := t.TempDir()
+	inside := filepath.Join(base, "project")
+	if err := os.Mkdir(inside, 0o700); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	writeFile(t, filepath.Join(base, "secret"), 3)
+	writeFile(t, filepath.Join(inside, "ok"), 3)
+	links := map[string]string{
+		"to-inside":  "ok",
+		"to-outside": filepath.Join("..", "secret"),
+		"absolute":   filepath.Join(base, "secret"),
+	}
+	for name, target := range links {
+		if err := os.Symlink(target, filepath.Join(inside, name)); err != nil {
+			t.Skipf("symlink unavailable: %v", err)
+		}
+	}
+	root, err := os.OpenRoot(inside)
+	if err != nil {
+		t.Fatalf("open root: %v", err)
+	}
+	t.Cleanup(func() { _ = root.Close() })
+	testCases := []struct {
+		name    string
+		file    string
+		want    int
+		wantErr bool
+	}{
+		{"a file in the root", "ok", 3, false},
+		{"a link that stays in the root", "to-inside", 3, false},
+		{"a link to a file outside the root", "to-outside", 0, true},
+		{"an absolute link outside the root", "absolute", 0, true},
+		{"a path climbing out of the root", "../secret", 0, true},
+		{"a missing file", "nope", 0, true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			content, err := ReadBoundedIn(root, testCase.file, testLimit)
+			if (err != nil) != testCase.wantErr || len(content) != testCase.want {
+				t.Fatalf("ReadBoundedIn() = %d bytes, %v; want %d, error %v",
+					len(content), err, testCase.want, testCase.wantErr)
 			}
 		})
 	}

@@ -9,14 +9,9 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 )
 
-var errNotRegular = errors.New("read config: not a regular file")
-
 func readBounded(path string) ([]byte, error) {
 	// One byte past the cap is enough for Parse to reject the file without reading all of it.
 	content, err := disk.ReadBounded(path, projectfile.MaxFileBytes)
-	if errors.Is(err, disk.ErrNotRegular) {
-		return nil, errNotRegular
-	}
 	if err != nil {
 		return nil, readFault(err)
 	}

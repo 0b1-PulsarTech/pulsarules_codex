@@ -57,8 +57,9 @@ func TestReadBoundedRefusesWhatIsNotRegular(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			_, err := readBounded(testCase.path)
-			if !errors.Is(err, errNotRegular) || err.Error() != "read config: not a regular file" {
-				t.Fatalf("readBounded() error = %v, want %v", err, errNotRegular)
+			const want = "read config: not a regular file"
+			if err == nil || err.Error() != want {
+				t.Fatalf("readBounded() error = %v, want %q", err, want)
 			}
 		})
 	}
