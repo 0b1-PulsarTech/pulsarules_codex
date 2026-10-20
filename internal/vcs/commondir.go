@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
 var ErrGitNotFound = errors.New("vcs: git executable not found")
@@ -30,8 +32,8 @@ func classifyCommonDir(err error) error {
 		return fmt.Errorf("read git common dir: %w: %w", ErrGitNotFound, err)
 	}
 	// Only git's own "nowhere in a repository" wording; a broken gitdir pointer reads differently.
-	if gitErr, ok := errors.AsType[*gitError](err); ok &&
-		strings.Contains(gitErr.stderr, "not a git repository (or any") {
+	if gitErr, ok := errors.AsType[*process.Error](err); ok &&
+		strings.Contains(gitErr.Stderr, "not a git repository (or any") {
 		return fmt.Errorf("read git common dir: %w: %w", ErrNoRepository, err)
 	}
 	return fmt.Errorf("read git common dir: %w", err)

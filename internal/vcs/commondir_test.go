@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
 
 func setupNormal(t *testing.T, root string) (dir, want string) {
@@ -119,17 +121,17 @@ func TestClassifyCommonDir(t *testing.T) {
 		want         error
 		unclassified bool
 	}{
-		{name: "git missing", err: &gitError{err: exec.ErrNotFound}, want: ErrGitNotFound},
-		{name: "no repository", err: &gitError{stderr: noRepo}, want: ErrNoRepository},
-		{name: "timeout", err: &gitError{err: context.DeadlineExceeded}, unclassified: true},
+		{name: "git missing", err: &process.Error{Err: exec.ErrNotFound}, want: ErrGitNotFound},
+		{name: "no repository", err: &process.Error{Stderr: noRepo}, want: ErrNoRepository},
+		{name: "timeout", err: &process.Error{Err: context.DeadlineExceeded}, unclassified: true},
 		{
 			name:         "gitdir pointer to nowhere",
-			err:          &gitError{stderr: "fatal: not a git repository: /x/gone"},
+			err:          &process.Error{Stderr: "fatal: not a git repository: /x/gone"},
 			unclassified: true,
 		},
 		{
 			name:         "dubious ownership",
-			err:          &gitError{stderr: "fatal: detected dubious ownership"},
+			err:          &process.Error{Stderr: "fatal: detected dubious ownership"},
 			unclassified: true,
 		},
 	}

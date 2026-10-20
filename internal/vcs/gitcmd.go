@@ -3,26 +3,11 @@ package vcs
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/process"
 )
-
-type gitError struct {
-	args   []string
-	stderr string
-	err    error
-}
-
-func (gitErr *gitError) Error() string {
-	return fmt.Sprintf("git %s: %v: %s", strings.Join(gitErr.args, " "), gitErr.err, gitErr.stderr)
-}
-
-func (gitErr *gitError) Unwrap() error {
-	return gitErr.err
-}
 
 func runGit(dir string, args ...string) (string, error) {
 	const gitTimeout = 2 * time.Second
@@ -42,20 +27,12 @@ func runGitWithin(timeout time.Duration, dir string, args ...string) (string, er
 		Env: []string{"LC_ALL=C"},
 	})
 	if err != nil {
-		// Unwrap to execx.Error's own cause and stderr so gitError.Error() stays terse.
-		cause, stderr := err, ""
-		if execErr, ok := errors.AsType[*process.Error](err); ok {
-			cause, stderr = execErr.Err, execErr.Stderr
-		}
-		return "", &gitError{args: full, stderr: stderr, err: cause}
+		return "", err
 	}
 	return strings.TrimRight(result.Stdout, "\n"), nil
 }
 
 func isEmptyRepoError(err error) bool {
-	var gitErr *gitError
-	if !errors.As(err, &gitErr) {
-		return false
-	}
-	return strings.Contains(gitErr.stderr, "does not have any commits yet")
+	execErr, ok := errors.AsType[*process.Error](err)
+	return ok && strings.Contains(execErr.Stderr, "does not have any commits yet")
 }
