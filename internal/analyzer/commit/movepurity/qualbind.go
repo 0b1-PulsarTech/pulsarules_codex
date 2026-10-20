@@ -1,10 +1,12 @@
 package movepurity
 
 import (
+	"maps"
 	"path"
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 type nameSide struct {
@@ -25,13 +27,14 @@ func (moves *moveContext) newBinding(
 		snap:    moves.staged,
 		differs: differing(newFile.Imports, oldFile.Imports),
 	}
-	oldPaths, isOldUnknown := moves.importNames(oldFile.Imports, oldSide)
-	newPaths, isNewUnknown := moves.importNames(newFile.Imports, newSide)
+	oldNames := moves.importNames(oldFile.Imports, oldSide)
+	newNames := moves.importNames(newFile.Imports, newSide)
 	return gosrc.Binding{
-		OldPaths:  oldPaths,
-		NewPaths:  newPaths,
+		OldPaths:  oldNames.paths,
+		NewPaths:  newNames.paths,
+		Ambiguous: ambiguousNames(oldNames, newNames),
 		Moves:     moves.moveInfos(),
-		IsUnknown: isOldUnknown || isNewUnknown,
+		IsUnknown: oldNames.isUnknown || newNames.isUnknown,
 	}
 }
 
@@ -48,20 +51,36 @@ func differing(own, other []gosrc.ImportSpec) map[gosrc.ImportSpec]bool {
 	return diff
 }
 
+type importedNames struct {
+	paths     map[string]string
+	clashes   map[string]bool
+	isUnknown bool
+}
+
+func ambiguousNames(oldNames, newNames importedNames) map[string]bool {
+	ambiguous := map[string]bool{}
+	maps.Copy(ambiguous, oldNames.clashes)
+	maps.Copy(ambiguous, newNames.clashes)
+	return ambiguous
+}
+
 func (moves *moveContext) importNames(
 	imports []gosrc.ImportSpec, at nameSide,
-) (names map[string]string, isUnknown bool) {
-	names = make(map[string]string, len(imports))
+) importedNames {
+	names := importedNames{
+		paths:   make(map[string]string, len(imports)),
+		clashes: map[string]bool{},
+	}
 	for _, spec := range imports {
 		name, isKnown := moves.importedName(spec, at)
-		isUnknown = isUnknown || !isKnown
-		if _, taken := names[name]; taken {
-			names[name] = at.snap.clash
+		names.isUnknown = names.isUnknown || !isKnown
+		if _, taken := names.paths[name]; taken {
+			names.clashes[name] = true
 			continue
 		}
-		names[name] = spec.Path
+		names.paths[name] = spec.Path
 	}
-	return names, isUnknown
+	return names
 }
 
 func (moves *moveContext) importedName(spec gosrc.ImportSpec, at nameSide) (string, bool) {
@@ -82,10 +101,10 @@ func (moves *moveContext) importedName(spec gosrc.ImportSpec, at nameSide) (stri
 
 func (moves *moveContext) movedPackage(importPath string, at nameSide) string {
 	for _, info := range moves.moveInfos() {
-		if at.snap == moves.staged && info.NewFull == importPath {
+		if at.snap.side == vcs.Staged && info.NewFull == importPath {
 			return info.NewPkg
 		}
-		if at.snap == moves.head && info.OldFull == importPath {
+		if at.snap.side == vcs.Head && info.OldFull == importPath {
 			return info.OldPkg
 		}
 	}

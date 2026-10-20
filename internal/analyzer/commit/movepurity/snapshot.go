@@ -30,7 +30,6 @@ type (
 	snapshot struct {
 		reader  gitReader
 		side    vcs.Side
-		clash   string
 		blobs   map[string]result[string]
 		entries map[string]result[entry]
 		dirs    map[string]result[[]string]
@@ -43,7 +42,6 @@ func newSnapshot(reader gitReader, side vcs.Side) *snapshot {
 	return &snapshot{
 		reader:  reader,
 		side:    side,
-		clash:   "\x00" + side.String(),
 		blobs:   map[string]result[string]{},
 		entries: map[string]result[entry]{},
 		dirs:    map[string]result[[]string]{},

@@ -7,10 +7,14 @@ type Binding struct {
 	NewPaths  map[string]string
 	Moves     []MoveInfo
 	Captures  CaptureSets
+	Ambiguous map[string]bool
 	IsUnknown bool
 }
 
 func (binding Binding) allows(qualifier, name string) bool {
+	if binding.Ambiguous[qualifier] {
+		return false
+	}
 	oldPath, newPath := binding.OldPaths[qualifier], binding.NewPaths[qualifier]
 	if oldPath == newPath {
 		if oldPath == "" {

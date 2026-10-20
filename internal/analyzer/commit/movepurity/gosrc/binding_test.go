@@ -40,6 +40,14 @@ func TestBinding_Allows(t *testing.T) {
 			OldPaths: map[string]string{"q": "m/a"}, NewPaths: map[string]string{"q": "m/z"},
 			Moves: moves,
 		}, "q", "Foo", false},
+		{"ambiguous qualifier on the same path", Binding{
+			OldPaths: map[string]string{"q": "m/c"}, NewPaths: map[string]string{"q": "m/c"},
+			Ambiguous: map[string]bool{"q": true},
+		}, "q", "X", false},
+		{"another qualifier is ambiguous", Binding{
+			OldPaths: map[string]string{"q": "m/c"}, NewPaths: map[string]string{"q": "m/c"},
+			Ambiguous: map[string]bool{"r": true},
+		}, "q", "X", true},
 		{"newly bound qualifier", Binding{
 			NewPaths: map[string]string{"q": "m/b"},
 			Moves:    []MoveInfo{{NewFull: "m/b", Decls: map[string]bool{"Foo": true}}},
