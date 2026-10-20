@@ -8,12 +8,16 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/throwsite"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
+
+type worktree interface {
+	Root() string
+	WorktreeStatus() (vcs.Status, error)
+}
 
 type Dispatcher struct {
 	templates  templates.Set
@@ -25,8 +29,8 @@ type Dispatcher struct {
 	errOut     io.Writer
 	projectDir string
 	skillsDirs []string
-	governance func(repo governance.Repository, status vcs.Status) (string, int)
-	open       func(dir string) (governance.Repository, error)
+	governance func(root string, status vcs.Status) (string, int)
+	open       func(dir string) (worktree, error)
 }
 
 type Deps struct {
@@ -37,7 +41,7 @@ type Deps struct {
 	ErrOut     io.Writer
 	ProjectDir string
 	SkillsDir  string
-	Governance func(repo governance.Repository, status vcs.Status) (block string, count int)
+	Governance func(root string, status vcs.Status) (block string, count int)
 }
 
 func NewDispatcher(deps Deps) *Dispatcher {
@@ -49,9 +53,9 @@ func NewDispatcher(deps Deps) *Dispatcher {
 	if errOut == nil {
 		errOut = os.Stderr
 	}
-	governanceItem := deps.Governance
-	if governanceItem == nil {
-		governanceItem = func(governance.Repository, vcs.Status) (string, int) { return "", 0 }
+	governance := deps.Governance
+	if governance == nil {
+		governance = func(string, vcs.Status) (string, int) { return "", 0 }
 	}
 	logger := deps.Logger
 	if logger == nil {
@@ -67,15 +71,8 @@ func NewDispatcher(deps Deps) *Dispatcher {
 		errOut:     errOut,
 		projectDir: deps.ProjectDir,
 		skillsDirs: filepath.SplitList(deps.SkillsDir),
-		governance: governanceItem,
-		open: func(dir string) (governance.Repository, error) {
-			repo, err := vcs.Open(dir)
-			if err != nil {
-				// A nil *vcs.Repository inside the port would not compare equal to nil.
-				return nil, err
-			}
-			return repo, nil
-		},
+		governance: governance,
+		open:       func(dir string) (worktree, error) { return vcs.Open(dir) },
 	}
 }
 
@@ -115,7 +112,7 @@ type governanceResult struct {
 }
 
 func (disp *Dispatcher) governanceWithin(
-	repo governance.Repository,
+	root string,
 	status vcs.Status,
 	entered time.Time,
 ) governanceResult {
@@ -128,7 +125,7 @@ func (disp *Dispatcher) governanceWithin(
 	// The host/claude test keeps the rendered Stop timeout above this deadline by a margin.
 	// No context reaches the analysis: an expired run is abandoned to die with the process.
 	go func() {
-		block, count := disp.governance(repo, status)
+		block, count := disp.governance(root, status)
 		done <- governanceResult{block: block, count: count}
 	}()
 	timer := time.NewTimer(remaining)

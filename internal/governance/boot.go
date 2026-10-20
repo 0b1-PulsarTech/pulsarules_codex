@@ -52,13 +52,13 @@ func (sess *Session) attachSources(discovery *Request) {
 type (
 	Repository interface {
 		registry.Repository
-		Listing
+		Lister
 		WorktreeStatus() (vcs.Status, error)
 		StagedRenames(minScore int) ([]vcs.Rename, error)
 		RecentSubjects(limit int) ([]string, error)
 		HeadAuthorEpoch() (int64, bool, error)
 	}
-	Listing interface {
+	Lister interface {
 		Root() string
 		ListFiles() ([]string, error)
 	}
@@ -66,7 +66,7 @@ type (
 
 //nolint:ireturn // factory constructor returns interface
 func ListedSources(
-	repo Listing, skips, gitSkips source.SkipSet, logger *slog.Logger,
+	repo Lister, skips, gitSkips source.SkipSet, logger *slog.Logger,
 ) (source.Provider, source.SkipSet) {
 	root := repo.Root()
 	paths, err := repo.ListFiles()

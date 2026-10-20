@@ -82,18 +82,7 @@ func withPreset(file *projectfile.File, presetFlag string) *config.GovernanceCon
 	return cfg
 }
 
-type rooted interface {
-	Root() string
-}
-
-func ForRepo(repo rooted) (*config.GovernanceConfig, []finding.Finding) {
-	if repo == nil {
-		return forRoot("")
-	}
-	return forRoot(repo.Root())
-}
-
-func forRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
+func ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
 	file, err := Load(root, "", "")
 	if err == nil {
 		var cfg *config.GovernanceConfig

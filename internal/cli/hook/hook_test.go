@@ -43,12 +43,21 @@ func TestGovernChanges_EmptyRepo(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	got, count := governChanges(repo, status, nil)
+	got, count := governChanges(dir, status, nil)
 	if got != "" {
 		t.Errorf("block = %q, want empty for an empty repo", got)
 	}
 	if count != 0 {
 		t.Errorf("count = %d, want 0 for an empty repo", count)
+	}
+}
+
+func TestGovernChanges_NotARepository(t *testing.T) {
+	t.Parallel()
+
+	block, count := governChanges(t.TempDir(), vcs.Status{}, nil)
+	if count != 1 || !strings.Contains(block, "open repository:") {
+		t.Fatalf("governChanges() = %q, %d, want the open-repository error", block, count)
 	}
 }
 
@@ -73,7 +82,7 @@ func TestGovernChanges_SuppressionBlock(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	block, count := governChanges(repo, status, nil)
+	block, count := governChanges(dir, status, nil)
 	if count != 1 {
 		t.Fatalf("count = %d, want 1 (the generated file's finding is suppressed)", count)
 	}
@@ -116,7 +125,7 @@ func runDirtyCheck(t *testing.T, configYAML string) (string, int) {
 	if err != nil {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
-	return governChanges(repo, status, nil)
+	return governChanges(dir, status, nil)
 }
 
 type projectConfigCase struct {

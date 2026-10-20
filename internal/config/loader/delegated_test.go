@@ -131,7 +131,7 @@ func TestFailedBaseDoesNotBlameDelegatedIDs(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			spec := layout{base: doc("bogus: 1", declared), private: testCase.private, git: true}
-			_, findings := forRoot(spec.build(t))
+			_, findings := ForRoot(spec.build(t))
 			assertConfigFinding(
 				t, findings, projectfile.Name, ".pulsarules.yaml: line 2: bogus")
 			named := strings.Contains(findings[0].Message, ".git/pulsarules.yaml")

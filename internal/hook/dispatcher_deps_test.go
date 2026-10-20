@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/dartsyntax/helperbin"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -149,7 +148,7 @@ func runGovernanceWithin(
 		release := make(chan struct{})
 		defer close(release)
 		disp := NewDispatcher(Deps{
-			Governance: func(governance.Repository, vcs.Status) (string, int) {
+			Governance: func(string, vcs.Status) (string, int) {
 				started.Store(true)
 				if !testCase.neverReturns {
 					select {
@@ -163,7 +162,7 @@ func runGovernanceWithin(
 			},
 		})
 		begin := time.Now()
-		result = disp.governanceWithin(nil, vcs.Status{}, begin.Add(-testCase.consumed))
+		result = disp.governanceWithin("", vcs.Status{}, begin.Add(-testCase.consumed))
 		elapsed = time.Since(begin)
 	})
 	return result, elapsed, started.Load()
@@ -280,7 +279,7 @@ func dispatchStopWithDirtyFile(t *testing.T, delay time.Duration) stopRun {
 		disp, out := dispatchCapture(Deps{
 			ProjectDir: dir,
 			Logger:     slog.New(slog.NewTextHandler(&logged, nil)),
-			Governance: func(governance.Repository, vcs.Status) (string, int) {
+			Governance: func(string, vcs.Status) (string, int) {
 				select {
 				case <-time.After(delay):
 				case <-release:
@@ -343,9 +342,10 @@ func TestDispatchStop_GovernanceDeadline(t *testing.T) {
 }
 
 type slowStatusRepo struct {
-	governance.Repository
 	delay time.Duration
 }
+
+func (repo slowStatusRepo) Root() string { return "" }
 
 func (repo slowStatusRepo) WorktreeStatus() (vcs.Status, error) {
 	<-time.After(repo.delay)
@@ -368,7 +368,7 @@ func dispatchStopWithSlowStatus(
 		defer close(release)
 		disp, out := dispatchCapture(Deps{
 			ProjectDir: t.TempDir(),
-			Governance: func(governance.Repository, vcs.Status) (string, int) {
+			Governance: func(string, vcs.Status) (string, int) {
 				select {
 				case <-time.After(governanceDelay):
 				case <-release:
@@ -376,7 +376,7 @@ func dispatchStopWithSlowStatus(
 				return "\nfinding\n", 1
 			},
 		})
-		disp.open = func(string) (governance.Repository, error) {
+		disp.open = func(string) (worktree, error) {
 			<-time.After(openDelay)
 			return slowStatusRepo{delay: statusDelay}, nil
 		}

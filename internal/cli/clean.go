@@ -1,7 +1,6 @@
-package clean
+package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -16,7 +15,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible/cleaner"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
@@ -27,7 +25,7 @@ const (
 	rewrite
 )
 
-func RunClean(inj remy.Injector, opts *version.Options) error {
+func runClean(inj remy.Injector, opts *version.Options) error {
 	root := opts.ProjectDir
 	if root == "" {
 		root = "."
@@ -37,18 +35,14 @@ func RunClean(inj remy.Injector, opts *version.Options) error {
 	if opts.Write {
 		how = rewrite
 	}
-	opened, err := remy.Get[*vcs.Repository](inj)
-	if err != nil && !errors.Is(err, vcs.ErrNoRepository) {
-		return fmt.Errorf("open repository: %w", err)
-	}
-	var repo governance.Listing // a nil *vcs.Repository stored here would not compare equal to nil
-	if opened != nil {
-		repo = opened
+	repo, err := optionalRepository(inj)
+	if err != nil {
+		return err
 	}
 	return sweep(os.Stdout, root, how, repo)
 }
 
-func sweep(out io.Writer, dir string, how mode, repo governance.Listing) error {
+func sweep(out io.Writer, dir string, how mode, repo governance.Lister) error {
 	root, scope, err := scopeWithin(dir, repo)
 	if err != nil {
 		return err
@@ -85,7 +79,7 @@ func sweep(out io.Writer, dir string, how mode, repo governance.Listing) error {
 	return nil
 }
 
-func scopeWithin(dir string, repo governance.Listing) (root, scope string, err error) {
+func scopeWithin(dir string, repo governance.Lister) (root, scope string, err error) {
 	if repo == nil {
 		// The walk starts at dir itself, so the scope is the whole walk.
 		return dir, ".", nil
@@ -121,7 +115,7 @@ func within(scope, rel string) bool {
 	return err == nil && rest != ".." && !strings.HasPrefix(rest, ".."+string(filepath.Separator))
 }
 
-func walkSources(root string, repo governance.Listing, visit func(rel, ext string) bool) {
+func walkSources(root string, repo governance.Lister, visit func(rel, ext string) bool) {
 	skips := source.NewSkipSet(source.DefaultSkipDirs())
 	if repo == nil {
 		source.NewProvider(root, skips).Walk(visit)

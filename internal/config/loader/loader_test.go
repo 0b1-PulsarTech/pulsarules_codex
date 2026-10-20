@@ -3,7 +3,6 @@ package loader
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -14,7 +13,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 func writeConfig(t *testing.T, dir, content string) string {
@@ -377,14 +375,14 @@ func TestForRoot(t *testing.T) {
 			if testCase.content != "" {
 				writeConfig(t, dir, testCase.content)
 			}
-			cfg, findings := forRoot(dir)
+			cfg, findings := ForRoot(dir)
 			if cfg.Preset != config.PresetRecommended || len(cfg.Overrides) != 0 {
 				t.Errorf("cfg = %+v, want defaults", cfg)
 			}
 			if testCase.wantMessage == "" {
 				got := cfg.Analyzers["big-comment"].Params["max_lines"]
 				if len(findings) != 0 || got != testCase.wantMaxLines {
-					t.Fatalf("forRoot() = %+v, %+v", got, findings)
+					t.Fatalf("ForRoot() = %+v, %+v", got, findings)
 				}
 				return
 			}
@@ -407,25 +405,12 @@ func assertConfigFinding(t *testing.T, findings []finding.Finding, file, message
 	}
 }
 
-func TestForRepo(t *testing.T) {
+func TestForRoot_EmptyRootUsesDefaults(t *testing.T) {
 	t.Parallel()
 
-	cfg, findings := ForRepo(nil)
+	cfg, findings := ForRoot("")
 	if len(findings) != 0 || cfg.Preset != config.PresetRecommended {
-		t.Fatalf("ForRepo(nil) = %+v, %+v", cfg, findings)
-	}
-
-	dir := t.TempDir()
-	if err := exec.CommandContext(t.Context(), "git", "-C", dir, "init").Run(); err != nil {
-		t.Fatalf("git init: %v", err)
-	}
-	writeConfig(t, dir, "version: 1\nbogus: 1\n")
-	repo, err := vcs.Open(dir)
-	if err != nil {
-		t.Fatalf("vcs.Open: %v", err)
-	}
-	if _, findings = ForRepo(repo); len(findings) != 1 {
-		t.Fatalf("ForRepo(repo) findings = %+v, want the config error", findings)
+		t.Fatalf("ForRoot(empty) = %+v, %+v", cfg, findings)
 	}
 }
 

@@ -53,7 +53,7 @@ func TestLoadBudgetsTheRenderedLine(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, findings := forRoot(testCase.spec.build(t))
+			_, findings := ForRoot(testCase.spec.build(t))
 			if len(findings) != 1 {
 				t.Fatalf("findings = %d, want exactly one", len(findings))
 			}
@@ -335,7 +335,7 @@ func TestLoadCapsEveryConfigError(t *testing.T) {
 			if testCase.spec.unreadable && os.Geteuid() == 0 {
 				t.Skip("root opens a mode 000 file")
 			}
-			_, findings := forRoot(testCase.spec.build(t))
+			_, findings := ForRoot(testCase.spec.build(t))
 			if len(findings) != 1 {
 				t.Fatalf("findings = %d, want exactly one", len(findings))
 			}

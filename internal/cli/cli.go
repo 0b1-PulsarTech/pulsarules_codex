@@ -9,7 +9,6 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/clean"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/generate"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
@@ -37,7 +36,7 @@ func commands() map[string]command {
 		"hook":       hook.RunHook,
 		"commitlint": runCommitLint,
 		"governance": runGovernance,
-		"clean":      clean.RunClean,
+		"clean":      runClean,
 		"evals":      runEvals,
 	}
 }

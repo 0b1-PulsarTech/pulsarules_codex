@@ -76,7 +76,7 @@ func (disp *Dispatcher) emitStop(event string, session *sessionTracker) (stopOut
 	if status.IsClean() {
 		return stopOutcome{}, nil
 	}
-	result := disp.governanceWithin(repo, status, entered)
+	result := disp.governanceWithin(repo.Root(), status, entered)
 	outcome := stopOutcome{findings: result.count, timedOut: result.timedOut}
 	if result.block == "" {
 		// Nothing actionable: stay silent rather than nagging about a

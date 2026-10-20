@@ -66,8 +66,8 @@ func newHookDispatcher(
 		Out:        out,
 		ProjectDir: os.Getenv("PULSARULES_PROJECT_DIR"),
 		SkillsDir:  os.Getenv("PULSARULES_SKILLS_DIR"),
-		Governance: func(repo governance.Repository, status vcs.Status) (string, int) {
-			return governChanges(repo, status, idx)
+		Governance: func(root string, status vcs.Status) (string, int) {
+			return governChanges(root, status, idx)
 		},
 	})
 }
@@ -77,12 +77,16 @@ func printHookError(out io.Writer, label string, err error) {
 }
 
 func governChanges(
-	repo governance.Repository,
+	root string,
 	status vcs.Status,
 	index *knowledge.Index,
 ) (string, int) {
+	repo, err := vcs.Open(root)
+	if err != nil {
+		return "\nGovernance checks:\n  open repository: " + printable.Line(err.Error()) + "\n", 1
+	}
 	// The empty commit message is deliberate: only the git commit-msg hook validates one.
-	cfg, configFindings := loader.ForRepo(repo)
+	cfg, configFindings := loader.ForRoot(repo.Root())
 	sess := governance.NewSession(repo, "", index, cfg)
 	result := sess.Analyze(governance.ScopeChanged, &status, governance.FileSetChanged)
 	findingsItem := slices.Concat(configFindings, result.Findings)

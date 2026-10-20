@@ -33,21 +33,20 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 	// Without a repository there is no git history, so the emoji-repetition
 	// window silently passes; any other resolution failure (e.g. a DI
 	// wiring bug) must still surface as an error.
-	opened, err := remy.Get[*vcs.Repository](inj)
-	if err != nil && !errors.Is(err, vcs.ErrNoRepository) {
-		return fmt.Errorf("open repository: %w", err)
+	repo, err := optionalRepository(inj)
+	if err != nil {
+		return err
 	}
-	// A nil *vcs.Repository inside the port would not compare equal to nil.
-	var repo governance.Repository
-	if opened != nil {
-		repo = opened
+	var root string
+	if repo != nil {
+		root = repo.Root()
 	}
 
 	idx, err := remy.Get[*knowledge.Index](inj)
 	if err != nil {
 		return fmt.Errorf("get knowledge index: %w", err)
 	}
-	cfg, configFindings := loader.ForRepo(repo)
+	cfg, configFindings := loader.ForRoot(root)
 	sess := governance.NewSession(repo, msg, idx, cfg)
 	// An explicit empty status keeps this a pure message linter. A nil
 	// status would have discovery read the worktree, and content findings from
@@ -66,4 +65,18 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 		return ErrFindings
 	}
 	return nil
+}
+
+//nolint:ireturn // returns the consumer port, nil when there is no repository
+func optionalRepository(inj remy.Injector) (governance.Repository, error) {
+	opened, err := remy.Get[*vcs.Repository](inj)
+	if err != nil && !errors.Is(err, vcs.ErrNoRepository) {
+		return nil, fmt.Errorf("open repository: %w", err)
+	}
+	// The one place an absent repository becomes a true nil interface: a nil
+	// *vcs.Repository stored in the port would not compare equal to nil.
+	if opened == nil {
+		return nil, nil //nolint:nilnil // an absent repository is a valid, explicit nil
+	}
+	return opened, nil
 }

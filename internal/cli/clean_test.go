@@ -1,4 +1,4 @@
-package clean
+package cli
 
 import (
 	"errors"
@@ -253,7 +253,7 @@ func TestRunClean_RepositoryResolution(t *testing.T) {
 				func() (*vcs.Repository, error) { return nil, testCase.repoErr },
 			)
 
-			err := RunClean(inj, &version.Options{ProjectDir: t.TempDir()})
+			err := runClean(inj, &version.Options{ProjectDir: t.TempDir()})
 			if !errors.Is(err, testCase.wantErr) {
 				t.Fatalf("runClean() error = %v, want %v", err, testCase.wantErr)
 			}
