@@ -16,9 +16,16 @@ const (
 	GateFullOnly
 )
 
+type Repository interface {
+	CurrentBranch() (string, error)
+	Blob(side vcs.Side, path string) (string, error)
+	Entry(side vcs.Side, path string) (mode, id string, err error)
+	Dir(side vcs.Side, dir string) ([]string, error)
+}
+
 type analyzerBuilder func(
 	index *knowledge.Index,
-	repo vcs.Repository,
+	repo Repository,
 ) pass.Analyzer
 
 type analyzerSpec struct {
@@ -30,7 +37,7 @@ type analyzerSpec struct {
 
 func Analyzers(
 	index *knowledge.Index,
-	repo vcs.Repository,
+	repo Repository,
 	gates []Gate,
 ) []pass.Analyzer {
 	table := specs()
@@ -74,7 +81,7 @@ func specs() []analyzerSpec {
 func gatedSpec[Built pass.Analyzer](id string, gate Gate, ctor func() Built) analyzerSpec {
 	return analyzerSpec{
 		id: id,
-		build: func(_ *knowledge.Index, _ vcs.Repository) pass.Analyzer {
+		build: func(_ *knowledge.Index, _ Repository) pass.Analyzer {
 			return ctor()
 		},
 		gate: gate,

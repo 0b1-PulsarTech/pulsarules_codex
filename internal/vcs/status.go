@@ -30,7 +30,7 @@ func (status Status) Extensions() map[string]bool {
 	return exts
 }
 
-func (repo *repository) WorktreeStatus() (Status, error) {
+func (repo *Repository) WorktreeStatus() (Status, error) {
 	const statusTimeout = 30 * time.Second
 	// --no-optional-locks keeps a background run from rewriting the user's index.
 	// A whole-tree untracked listing on a large repo outlasts the 2s default.

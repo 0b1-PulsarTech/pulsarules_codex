@@ -13,7 +13,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/security/pproflabel"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/rulesummary"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -28,7 +27,7 @@ func pipelineSpecs() []analyzerSpec {
 			// would block work that a rename before pushing fixes.
 			id: "branch-name",
 			build: func(
-				_ *knowledge.Index, repo vcs.Repository,
+				_ *knowledge.Index, repo Repository,
 			) pass.Analyzer {
 				return branch.NewAnalyzer(repo)
 			},
@@ -40,7 +39,7 @@ func pipelineSpecs() []analyzerSpec {
 		{
 			id: "rule-injection",
 			build: func(
-				index *knowledge.Index, _ vcs.Repository,
+				index *knowledge.Index, _ Repository,
 			) pass.Analyzer {
 				return rulesummary.NewAnalyzer(index)
 			},
@@ -50,7 +49,7 @@ func pipelineSpecs() []analyzerSpec {
 		{
 			id: "output",
 			build: func(
-				_ *knowledge.Index, _ vcs.Repository,
+				_ *knowledge.Index, _ Repository,
 			) pass.Analyzer {
 				return output.NewAnalyzer()
 			},
@@ -65,7 +64,7 @@ func delegationSpecs() []analyzerSpec {
 		{
 			id: "golangci-lint",
 			build: func(
-				_ *knowledge.Index, _ vcs.Repository,
+				_ *knowledge.Index, _ Repository,
 			) pass.Analyzer {
 				return golangcilint.NewAnalyzer("golangci-lint")
 			},
@@ -74,7 +73,7 @@ func delegationSpecs() []analyzerSpec {
 		{
 			id: command.ID,
 			build: func(
-				index *knowledge.Index, _ vcs.Repository,
+				index *knowledge.Index, _ Repository,
 			) pass.Analyzer {
 				return command.NewAnalyzer(index)
 			},

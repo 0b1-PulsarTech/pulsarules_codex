@@ -12,7 +12,7 @@ type Rename struct {
 	Score   int
 }
 
-func (repo *repository) StagedRenames(minScore int) ([]Rename, error) {
+func (repo *Repository) StagedRenames(minScore int) ([]Rename, error) {
 	// -z keeps non-ASCII paths unquoted; the --no-* flags keep user diff config out of the parse.
 	out, err := runGit(
 		repo.root, "diff", "--cached", "--name-status", "-z",

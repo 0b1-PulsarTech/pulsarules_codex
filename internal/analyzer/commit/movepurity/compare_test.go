@@ -276,14 +276,6 @@ func TestStrandsCompiled(t *testing.T) {
 	}
 }
 
-type noHeadDirRepo struct{ fakeRepo }
-
-func (noHeadDirRepo) HeadDir(string) ([]string, error) { return nil, errMissing }
-
-type noDirRepo struct{ fakeRepo }
-
-func (noDirRepo) StagedDir(string) ([]string, error) { return nil, errMissing }
-
 func TestDirListingFailure(t *testing.T) {
 	t.Parallel()
 

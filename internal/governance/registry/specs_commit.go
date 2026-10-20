@@ -7,7 +7,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -16,7 +15,7 @@ func commitSpecs() []analyzerSpec {
 		{
 			id: "commit-lint",
 			build: func(
-				_ *knowledge.Index, _ vcs.Repository,
+				_ *knowledge.Index, _ Repository,
 			) pass.Analyzer {
 				catalog, err := emoji.NewCatalog()
 				if err != nil {
@@ -33,7 +32,7 @@ func commitSpecs() []analyzerSpec {
 		{
 			id: "commit-move-purity",
 			build: func(
-				_ *knowledge.Index, repo vcs.Repository,
+				_ *knowledge.Index, repo Repository,
 			) pass.Analyzer {
 				return movepurity.NewAnalyzer(repo)
 			},

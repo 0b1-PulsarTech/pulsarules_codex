@@ -144,7 +144,7 @@ func TestRepository_ListFiles(t *testing.T) {
 			}
 			testCase.setup(t, dir)
 
-			got, err := (&repository{root: dir}).ListFiles()
+			got, err := (&Repository{root: dir}).ListFiles()
 			if (err != nil) != testCase.wantErr {
 				t.Fatalf("ListFiles err = %v, wantErr %v", err, testCase.wantErr)
 			}

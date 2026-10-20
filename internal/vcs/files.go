@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (repo *repository) ListFiles() ([]string, error) {
+func (repo *Repository) ListFiles() ([]string, error) {
 	const listTimeout = 30 * time.Second
 	// --exclude-standard also applies the user's global excludesFile and .git/info/exclude.
 	// A whole-tree listing on a large repo outlasts the 2s default.

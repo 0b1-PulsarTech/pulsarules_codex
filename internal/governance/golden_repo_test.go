@@ -11,7 +11,7 @@ type goldenRepo struct {
 	root string
 }
 
-var _ vcs.Repository = (*goldenRepo)(nil)
+var _ Repository = (*goldenRepo)(nil)
 
 func (repo *goldenRepo) Root() string { return repo.root }
 
@@ -25,17 +25,11 @@ func (repo *goldenRepo) WorktreeStatus() (vcs.Status, error) { return vcs.Status
 
 func (repo *goldenRepo) StagedRenames(int) ([]vcs.Rename, error) { return nil, nil }
 
-func (repo *goldenRepo) HeadBlob(string) (string, error) { return "", nil }
+func (repo *goldenRepo) Blob(vcs.Side, string) (string, error) { return "", nil }
 
-func (repo *goldenRepo) StagedBlob(string) (string, error) { return "", nil }
+func (repo *goldenRepo) Entry(vcs.Side, string) (mode, id string, err error) { return "", "", nil }
 
-func (repo *goldenRepo) HeadEntry(string) (mode, id string, err error) { return "", "", nil }
-
-func (repo *goldenRepo) StagedEntry(string) (mode, id string, err error) { return "", "", nil }
-
-func (repo *goldenRepo) HeadDir(string) ([]string, error) { return nil, nil }
-
-func (repo *goldenRepo) StagedDir(string) ([]string, error) { return nil, nil }
+func (repo *goldenRepo) Dir(vcs.Side, string) ([]string, error) { return nil, nil }
 
 func (repo *goldenRepo) ListFiles() ([]string, error) {
 	var files []string

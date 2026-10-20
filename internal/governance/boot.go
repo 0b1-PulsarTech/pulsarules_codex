@@ -1,7 +1,6 @@
 package governance
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -18,7 +17,7 @@ import (
 
 func (runner *StageRunner) registerForScope(
 	index *knowledge.Index,
-	repo vcs.Repository,
+	repo Repository,
 	scope Scope,
 ) {
 	for _, analyzer := range registry.Analyzers(index, repo, maxGateFor(scope)) {
@@ -50,32 +49,34 @@ func (sess *Session) attachSources(discovery *Request) {
 		sess.repo, sess.skips, sess.gitSkips, sess.logger)
 }
 
-type fileLister interface {
-	ListFiles() ([]string, error)
-}
+type (
+	Repository interface {
+		registry.Repository
+		Listing
+		WorktreeStatus() (vcs.Status, error)
+		StagedRenames(minScore int) ([]vcs.Rename, error)
+		RecentSubjects(limit int) ([]string, error)
+		HeadAuthorEpoch() (int64, bool, error)
+	}
+	Listing interface {
+		Root() string
+		ListFiles() ([]string, error)
+	}
+)
 
 //nolint:ireturn // factory constructor returns interface
 func ListedSources(
-	repo vcs.Repository, skips, gitSkips source.SkipSet, logger *slog.Logger,
+	repo Listing, skips, gitSkips source.SkipSet, logger *slog.Logger,
 ) (source.Provider, source.SkipSet) {
 	root := repo.Root()
-	paths, err := listFiles(repo)
+	paths, err := repo.ListFiles()
 	if err != nil {
-		logger.Warn("walking the filesystem instead of git's file list", slog.Any("error", err))
+		logger.Warn(
+			"walking the filesystem instead of git's file list",
+			slog.Any("error", fmt.Errorf("list repository files: %w", err)),
+		)
 		return source.NewProvider(root, skips), skips
 	}
 	base := source.NewProvider(root, gitSkips)
 	return source.NewListedProvider(base, paths, gitSkips), gitSkips
-}
-
-func listFiles(repo vcs.Repository) ([]string, error) {
-	lister, ok := repo.(fileLister)
-	if !ok {
-		return nil, fmt.Errorf("repository cannot list files: %w", errors.ErrUnsupported)
-	}
-	paths, err := lister.ListFiles()
-	if err != nil {
-		return nil, fmt.Errorf("list repository files: %w", err)
-	}
-	return paths, nil
 }

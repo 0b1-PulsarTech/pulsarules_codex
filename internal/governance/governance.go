@@ -22,7 +22,7 @@ const (
 )
 
 type Session struct {
-	repo        vcs.Repository
+	repo        Repository
 	commitMsg   string
 	index       *knowledge.Index
 	cfgAnalysis *pass.AnalysisConfig
@@ -36,7 +36,7 @@ type Session struct {
 }
 
 func NewSession(
-	repo vcs.Repository,
+	repo Repository,
 	commitMsg string,
 	index *knowledge.Index,
 	cfg *config.GovernanceConfig,

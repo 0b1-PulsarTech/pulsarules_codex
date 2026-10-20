@@ -9,25 +9,11 @@ import (
 
 var ErrNoRepository = errors.New("vcs: not a git repository")
 
-type Repository interface {
-	Root() string
-	HeadAuthorEpoch() (int64, bool, error)
-	RecentSubjects(limit int) ([]string, error)
-	CurrentBranch() (string, error)
-	WorktreeStatus() (Status, error)
-	StagedRenames(minScore int) ([]Rename, error)
-	BlobReader
-	TreeReader
-}
-
-type repository struct {
+type Repository struct {
 	root string
 }
 
-var _ Repository = (*repository)(nil)
-
-//nolint:ireturn // factory constructor returns the consumer-declared interface
-func Open(dir string) (Repository, error) {
+func Open(dir string) (*Repository, error) {
 	root, err := runGit(dir, "rev-parse", "--show-toplevel")
 	if err != nil {
 		return nil, fmt.Errorf("open repository: %w: %w", ErrNoRepository, err)
@@ -35,14 +21,14 @@ func Open(dir string) (Repository, error) {
 	if root == "" {
 		return nil, fmt.Errorf("open repository: %w: empty toplevel", ErrNoRepository)
 	}
-	return &repository{root: root}, nil
+	return &Repository{root: root}, nil
 }
 
-func (repo *repository) Root() string {
+func (repo *Repository) Root() string {
 	return repo.root
 }
 
-func (repo *repository) CurrentBranch() (string, error) {
+func (repo *Repository) CurrentBranch() (string, error) {
 	branch, err := runGit(repo.root, "branch", "--show-current")
 	if err != nil {
 		return "", fmt.Errorf("read current branch: %w", err)
@@ -50,7 +36,7 @@ func (repo *repository) CurrentBranch() (string, error) {
 	return branch, nil
 }
 
-func (repo *repository) HeadAuthorEpoch() (int64, bool, error) {
+func (repo *Repository) HeadAuthorEpoch() (int64, bool, error) {
 	out, err := runGit(repo.root, "log", "-1", "--format=%at")
 	if err != nil {
 		if isEmptyRepoError(err) {
@@ -65,7 +51,7 @@ func (repo *repository) HeadAuthorEpoch() (int64, bool, error) {
 	return epoch, true, nil
 }
 
-func (repo *repository) RecentSubjects(limit int) ([]string, error) {
+func (repo *Repository) RecentSubjects(limit int) ([]string, error) {
 	if limit <= 0 {
 		return nil, nil
 	}

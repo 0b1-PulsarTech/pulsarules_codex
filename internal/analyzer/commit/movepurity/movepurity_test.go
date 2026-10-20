@@ -2,9 +2,6 @@ package movepurity
 
 import (
 	"errors"
-	"maps"
-	"path"
-	"slices"
 	"strings"
 	"testing"
 
@@ -156,70 +153,9 @@ func TestAnalyzer_Analyze_ParamsOverride(t *testing.T) {
 	}
 }
 
-type fakeRepo struct {
-	head        map[string]string
-	staged      map[string]string
-	stagedModes map[string]string
-}
-
-var _ gitReader = fakeRepo{}
-
-func newFakeRepo(head, staged map[string]string) fakeRepo {
-	const goMod = "module example.com/m\n\ngo 1.25\n"
-	fake := fakeRepo{head: maps.Clone(head), staged: maps.Clone(staged)}
-	for _, tree := range []map[string]string{fake.head, fake.staged} {
-		if _, ok := tree["go.mod"]; !ok {
-			tree["go.mod"] = goMod
-		}
-	}
-	return fake
-}
-
-func (repo fakeRepo) HeadBlob(path string) (string, error) { return blobOf(repo.head, path) }
-
-func (repo fakeRepo) StagedBlob(path string) (string, error) { return blobOf(repo.staged, path) }
-
-func (repo fakeRepo) HeadEntry(path string) (mode, id string, err error) {
-	content, readErr := blobOf(repo.head, path)
-	return "100644", content, readErr
-}
-
-func (repo fakeRepo) StagedEntry(path string) (mode, id string, err error) {
-	content, readErr := blobOf(repo.staged, path)
-	mode = "100644"
-	if override, ok := repo.stagedModes[path]; ok {
-		mode = override
-	}
-	return mode, content, readErr
-}
-
-func (repo fakeRepo) HeadDir(dir string) ([]string, error) { return dirOf(repo.head, dir), nil }
-
-func (repo fakeRepo) StagedDir(dir string) ([]string, error) {
-	return dirOf(repo.staged, dir), nil
-}
-
-func blobOf(tree map[string]string, path string) (string, error) {
-	content, ok := tree[path]
-	if !ok {
-		return "", errMissing
-	}
-	return content, nil
-}
-
-func dirOf(tree map[string]string, dir string) []string {
-	return slices.DeleteFunc(slices.Sorted(maps.Keys(tree)), func(name string) bool {
-		return path.Dir(name) != dir
-	})
-}
-
 func pair(oldPath, newPath string) pass.Rename {
 	return pass.Rename{OldPath: oldPath, NewPath: newPath, Score: 50}
 }
-
-type emptyRepo struct{ fakeRepo }
-
-func (emptyRepo) HeadBlob(string) (string, error) { return "", errMissing }
 
 type repoCase struct {
 	name         string

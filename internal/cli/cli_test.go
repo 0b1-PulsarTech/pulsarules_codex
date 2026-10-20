@@ -53,9 +53,10 @@ func TestRunCommitLint_PropagatesRepositoryError(t *testing.T) {
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
 	wantErr := errors.New("boom: injector wiring failed")
-	remy.RegisterConstructorErr(inj, remy.Factory[vcs.Repository], func() (vcs.Repository, error) {
-		return nil, wantErr
-	})
+	remy.RegisterConstructorErr(
+		inj, remy.Factory[*vcs.Repository],
+		func() (*vcs.Repository, error) { return nil, wantErr },
+	)
 
 	err := runCommitLint(inj, &version.Options{CommitMsg: "valid enough message"})
 	if !errors.Is(err, wantErr) {

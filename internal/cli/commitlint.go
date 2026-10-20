@@ -33,9 +33,14 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 	// Without a repository there is no git history, so the emoji-repetition
 	// window silently passes; any other resolution failure (e.g. a DI
 	// wiring bug) must still surface as an error.
-	repo, err := remy.Get[vcs.Repository](inj)
+	opened, err := remy.Get[*vcs.Repository](inj)
 	if err != nil && !errors.Is(err, vcs.ErrNoRepository) {
 		return fmt.Errorf("open repository: %w", err)
+	}
+	// A nil *vcs.Repository inside the port would not compare equal to nil.
+	var repo governance.Repository
+	if opened != nil {
+		repo = opened
 	}
 
 	idx, err := remy.Get[*knowledge.Index](inj)

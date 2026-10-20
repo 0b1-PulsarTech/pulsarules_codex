@@ -122,7 +122,7 @@ func TestSessionReplacesHead_AuthorDate(t *testing.T) {
 }
 
 type failingHistoryRepo struct {
-	vcs.Repository
+	Repository
 }
 
 func (failingHistoryRepo) RecentSubjects(int) ([]string, error) {
@@ -145,7 +145,7 @@ func TestSessionGitHistory_LogsRecentSubjectsFailure(t *testing.T) {
 }
 
 type failingEpochRepo struct {
-	vcs.Repository
+	Repository
 }
 
 func (failingEpochRepo) HeadAuthorEpoch() (int64, bool, error) {
@@ -168,7 +168,7 @@ func TestSessionReplacesHead_LogsAuthorEpochFailure(t *testing.T) {
 }
 
 type limitRecordingRepo struct {
-	vcs.Repository
+	Repository
 	limit int
 }
 

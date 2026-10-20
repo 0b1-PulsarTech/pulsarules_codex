@@ -5,6 +5,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 type (
@@ -40,8 +41,8 @@ func newMoveContext(reader gitReader, renames []pass.Rename) *moveContext {
 		moved:    make(map[string]bool, len(renames)*2),
 		movedTo:  make(map[string]string, len(renames)),
 		renames:  renames,
-		head:     newHeadSnapshot(reader),
-		staged:   newStagedSnapshot(reader),
+		head:     newSnapshot(reader, vcs.Head),
+		staged:   newSnapshot(reader, vcs.Staged),
 		declared: map[pkgKey]map[string]bool{},
 		left:     map[scopeKey]map[string]bool{},
 		taken:    map[scopeKey]map[string]bool{},

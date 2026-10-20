@@ -34,13 +34,13 @@ func validateScope(scope string) error {
 }
 
 type governanceRun struct {
-	repo vcs.Repository
+	repo *vcs.Repository
 	cfg  *config.GovernanceConfig
 	idx  *knowledge.Index
 }
 
 func loadGovernance(inj remy.Injector, opts *version.Options) (governanceRun, error) {
-	repo, err := remy.Get[vcs.Repository](inj)
+	repo, err := remy.Get[*vcs.Repository](inj)
 	if err != nil {
 		return governanceRun{}, fmt.Errorf("open repository: %w", err)
 	}

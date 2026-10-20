@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/dartsyntax/helperbin"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -148,7 +149,7 @@ func runGovernanceWithin(
 		release := make(chan struct{})
 		defer close(release)
 		disp := NewDispatcher(Deps{
-			Governance: func(vcs.Repository, vcs.Status) (string, int) {
+			Governance: func(governance.Repository, vcs.Status) (string, int) {
 				started.Store(true)
 				if !testCase.neverReturns {
 					select {
@@ -279,7 +280,7 @@ func dispatchStopWithDirtyFile(t *testing.T, delay time.Duration) stopRun {
 		disp, out := dispatchCapture(Deps{
 			ProjectDir: dir,
 			Logger:     slog.New(slog.NewTextHandler(&logged, nil)),
-			Governance: func(vcs.Repository, vcs.Status) (string, int) {
+			Governance: func(governance.Repository, vcs.Status) (string, int) {
 				select {
 				case <-time.After(delay):
 				case <-release:
@@ -342,7 +343,7 @@ func TestDispatchStop_GovernanceDeadline(t *testing.T) {
 }
 
 type slowStatusRepo struct {
-	vcs.Repository
+	governance.Repository
 	delay time.Duration
 }
 
@@ -367,7 +368,7 @@ func dispatchStopWithSlowStatus(
 		defer close(release)
 		disp, out := dispatchCapture(Deps{
 			ProjectDir: t.TempDir(),
-			Governance: func(vcs.Repository, vcs.Status) (string, int) {
+			Governance: func(governance.Repository, vcs.Status) (string, int) {
 				select {
 				case <-time.After(governanceDelay):
 				case <-release:
@@ -375,7 +376,7 @@ func dispatchStopWithSlowStatus(
 				return "\nfinding\n", 1
 			},
 		})
-		disp.open = func(string) (vcs.Repository, error) {
+		disp.open = func(string) (governance.Repository, error) {
 			<-time.After(openDelay)
 			return slowStatusRepo{delay: statusDelay}, nil
 		}

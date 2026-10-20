@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/throwsite"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -24,8 +25,8 @@ type Dispatcher struct {
 	errOut     io.Writer
 	projectDir string
 	skillsDirs []string
-	governance func(repo vcs.Repository, status vcs.Status) (string, int)
-	open       func(dir string) (vcs.Repository, error)
+	governance func(repo governance.Repository, status vcs.Status) (string, int)
+	open       func(dir string) (governance.Repository, error)
 }
 
 type Deps struct {
@@ -36,7 +37,7 @@ type Deps struct {
 	ErrOut     io.Writer
 	ProjectDir string
 	SkillsDir  string
-	Governance func(repo vcs.Repository, status vcs.Status) (block string, count int)
+	Governance func(repo governance.Repository, status vcs.Status) (block string, count int)
 }
 
 func NewDispatcher(deps Deps) *Dispatcher {
@@ -48,9 +49,9 @@ func NewDispatcher(deps Deps) *Dispatcher {
 	if errOut == nil {
 		errOut = os.Stderr
 	}
-	governance := deps.Governance
-	if governance == nil {
-		governance = func(vcs.Repository, vcs.Status) (string, int) { return "", 0 }
+	governanceItem := deps.Governance
+	if governanceItem == nil {
+		governanceItem = func(governance.Repository, vcs.Status) (string, int) { return "", 0 }
 	}
 	logger := deps.Logger
 	if logger == nil {
@@ -66,8 +67,15 @@ func NewDispatcher(deps Deps) *Dispatcher {
 		errOut:     errOut,
 		projectDir: deps.ProjectDir,
 		skillsDirs: filepath.SplitList(deps.SkillsDir),
-		governance: governance,
-		open:       vcs.Open,
+		governance: governanceItem,
+		open: func(dir string) (governance.Repository, error) {
+			repo, err := vcs.Open(dir)
+			if err != nil {
+				// A nil *vcs.Repository inside the port would not compare equal to nil.
+				return nil, err
+			}
+			return repo, nil
+		},
 	}
 }
 
@@ -107,7 +115,7 @@ type governanceResult struct {
 }
 
 func (disp *Dispatcher) governanceWithin(
-	repo vcs.Repository,
+	repo governance.Repository,
 	status vcs.Status,
 	entered time.Time,
 ) governanceResult {

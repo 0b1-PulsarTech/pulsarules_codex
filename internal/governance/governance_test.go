@@ -70,8 +70,6 @@ func commitAllowEmptyAt(t *testing.T, dir, msg, authorDate string) {
 	}
 }
 
-type noListRepo struct{ vcs.Repository }
-
 type failingListRepo struct{ *goldenRepo }
 
 func (failingListRepo) ListFiles() ([]string, error) { return nil, errors.New("git unavailable") }
@@ -107,7 +105,7 @@ func reportedFiles(session *Session) map[string]bool {
 
 type skipDirsCase struct {
 	name string
-	repo func(root string) vcs.Repository
+	repo func(root string) Repository
 	want map[string]bool
 }
 
@@ -115,7 +113,7 @@ func skipDirsGitModeCases() []skipDirsCase {
 	return []skipDirsCase{
 		{
 			name: "listed repo sees target and build but honours the configured skip",
-			repo: func(root string) vcs.Repository { return &goldenRepo{root: root} },
+			repo: func(root string) Repository { return &goldenRepo{root: root} },
 			want: map[string]bool{
 				"main.go": true, "target/x.go": true, "build/y.go": true,
 				"thirdparty/z.go": false, "vendor/v.go": false, "ignored.go": true,
@@ -123,23 +121,15 @@ func skipDirsGitModeCases() []skipDirsCase {
 		},
 		{
 			name: "listed repo drops what git ignores",
-			repo: func(root string) vcs.Repository {
+			repo: func(root string) Repository {
 				paths := []string{"main.go", "target/x.go"}
 				return listedRepo{goldenRepo: &goldenRepo{root: root}, paths: paths}
 			},
 			want: map[string]bool{"main.go": true, "target/x.go": true, "ignored.go": false},
 		},
 		{
-			name: "repo without ListFiles falls back to the full skip list",
-			repo: func(root string) vcs.Repository { return noListRepo{&goldenRepo{root: root}} },
-			want: map[string]bool{
-				"main.go": true, "target/x.go": false, "build/y.go": false,
-				"thirdparty/z.go": false, "vendor/v.go": false, "ignored.go": true,
-			},
-		},
-		{
 			name: "failing ListFiles falls back to the full skip list",
-			repo: func(root string) vcs.Repository {
+			repo: func(root string) Repository {
 				return failingListRepo{&goldenRepo{root: root}}
 			},
 			want: map[string]bool{
@@ -176,18 +166,13 @@ func TestSession_Discover_ListingWarning(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		repo     func(root string) vcs.Repository
+		repo     func(root string) Repository
 		wantWarn int
 	}{
-		{"listing works", func(root string) vcs.Repository { return &goldenRepo{root: root} }, 0},
-		{
-			"repo cannot list",
-			func(root string) vcs.Repository { return noListRepo{&goldenRepo{root: root}} },
-			1,
-		},
+		{"listing works", func(root string) Repository { return &goldenRepo{root: root} }, 0},
 		{
 			"listing fails",
-			func(root string) vcs.Repository { return failingListRepo{&goldenRepo{root: root}} },
+			func(root string) Repository { return failingListRepo{&goldenRepo{root: root}} },
 			1,
 		},
 	}
@@ -350,19 +335,19 @@ func TestSession_FileSetChanged_Siblings(t *testing.T) {
 	listed := []string{"pkg/f0.go", "pkg/f1.go", "pkg/f2.go"}
 	testCases := []struct {
 		name      string
-		repo      func(root string) vcs.Repository
+		repo      func(root string) Repository
 		wantCount bool
 	}{
 		{
 			"gitignored siblings stay out of the count",
-			func(root string) vcs.Repository {
+			func(root string) Repository {
 				return listedRepo{goldenRepo: &goldenRepo{root: root}, paths: listed}
 			},
 			false,
 		},
 		{
 			"a walk of the disk counts them",
-			func(root string) vcs.Repository { return noListRepo{&goldenRepo{root: root}} },
+			func(root string) Repository { return failingListRepo{&goldenRepo{root: root}} },
 			true,
 		},
 	}

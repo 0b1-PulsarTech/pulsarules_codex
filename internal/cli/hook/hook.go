@@ -66,7 +66,7 @@ func newHookDispatcher(
 		Out:        out,
 		ProjectDir: os.Getenv("PULSARULES_PROJECT_DIR"),
 		SkillsDir:  os.Getenv("PULSARULES_SKILLS_DIR"),
-		Governance: func(repo vcs.Repository, status vcs.Status) (string, int) {
+		Governance: func(repo governance.Repository, status vcs.Status) (string, int) {
 			return governChanges(repo, status, idx)
 		},
 	})
@@ -77,7 +77,7 @@ func printHookError(out io.Writer, label string, err error) {
 }
 
 func governChanges(
-	repo vcs.Repository,
+	repo governance.Repository,
 	status vcs.Status,
 	index *knowledge.Index,
 ) (string, int) {

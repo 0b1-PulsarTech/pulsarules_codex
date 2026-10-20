@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 type recordingRepo struct {
@@ -17,34 +18,19 @@ func newRecordingRepo(head, staged map[string]string) recordingRepo {
 	return recordingRepo{fakeRepo: newFakeRepo(head, staged), calls: map[string]int{}}
 }
 
-func (repo recordingRepo) HeadBlob(path string) (string, error) {
-	repo.calls["HeadBlob "+path]++
-	return repo.fakeRepo.HeadBlob(path)
+func (repo recordingRepo) Blob(side vcs.Side, path string) (string, error) {
+	repo.calls[side.String()+" blob "+path]++
+	return repo.fakeRepo.Blob(side, path)
 }
 
-func (repo recordingRepo) StagedBlob(path string) (string, error) {
-	repo.calls["StagedBlob "+path]++
-	return repo.fakeRepo.StagedBlob(path)
+func (repo recordingRepo) Entry(side vcs.Side, path string) (mode, id string, err error) {
+	repo.calls[side.String()+" entry "+path]++
+	return repo.fakeRepo.Entry(side, path)
 }
 
-func (repo recordingRepo) HeadEntry(path string) (mode, id string, err error) {
-	repo.calls["HeadEntry "+path]++
-	return repo.fakeRepo.HeadEntry(path)
-}
-
-func (repo recordingRepo) StagedEntry(path string) (mode, id string, err error) {
-	repo.calls["StagedEntry "+path]++
-	return repo.fakeRepo.StagedEntry(path)
-}
-
-func (repo recordingRepo) HeadDir(dir string) ([]string, error) {
-	repo.calls["HeadDir "+dir]++
-	return repo.fakeRepo.HeadDir(dir)
-}
-
-func (repo recordingRepo) StagedDir(dir string) ([]string, error) {
-	repo.calls["StagedDir "+dir]++
-	return repo.fakeRepo.StagedDir(dir)
+func (repo recordingRepo) Dir(side vcs.Side, dir string) ([]string, error) {
+	repo.calls[side.String()+" dir "+dir]++
+	return repo.fakeRepo.Dir(side, dir)
 }
 
 func TestSnapshot_ReadsEachObjectOnce(t *testing.T) {
@@ -62,17 +48,17 @@ func TestSnapshot_ReadsEachObjectOnce(t *testing.T) {
 				_, _ = snap.blob("a/x.go")
 				_, _ = snap.blob("gone.go")
 			},
-			want: map[string]int{"HeadBlob a/x.go": 1, "HeadBlob gone.go": 1},
+			want: map[string]int{"HEAD blob a/x.go": 1, "HEAD blob gone.go": 1},
 		},
 		{
 			name: "entry",
 			read: func(snap *snapshot) { _, _ = snap.entryOf("a/x.go") },
-			want: map[string]int{"HeadEntry a/x.go": 1},
+			want: map[string]int{"HEAD entry a/x.go": 1},
 		},
 		{
 			name: "dir",
 			read: func(snap *snapshot) { _, _ = snap.dir("a") },
-			want: map[string]int{"HeadDir a": 1},
+			want: map[string]int{"HEAD dir a": 1},
 		},
 		{
 			name: "parse reads the blob once",
@@ -80,7 +66,7 @@ func TestSnapshot_ReadsEachObjectOnce(t *testing.T) {
 				_, _ = snap.parse("a/x.go")
 				_, _ = snap.blob("a/x.go")
 			},
-			want: map[string]int{"HeadBlob a/x.go": 1},
+			want: map[string]int{"HEAD blob a/x.go": 1},
 		},
 		{
 			name: "clause and decls share one blob read",
@@ -89,20 +75,20 @@ func TestSnapshot_ReadsEachObjectOnce(t *testing.T) {
 				snap.addDecls("a/x.go", "a", map[string]bool{})
 				snap.addAnyDecls("a/x.go", map[string]bool{})
 			},
-			want: map[string]int{"HeadBlob a/x.go": 1},
+			want: map[string]int{"HEAD blob a/x.go": 1},
 		},
 		{
 			name: "package name lists the dir and reads each clause once",
 			read: func(snap *snapshot) { snap.packageName("a") },
-			want: map[string]int{"HeadDir a": 1, "HeadBlob a/x.go": 1},
+			want: map[string]int{"HEAD dir a": 1, "HEAD blob a/x.go": 1},
 		},
 		{
 			name: "module walks up once",
 			read: func(snap *snapshot) { snap.module("a/b") },
 			want: map[string]int{
-				"HeadBlob a/b/go.mod": 1,
-				"HeadBlob a/go.mod":   1,
-				"HeadBlob go.mod":     1,
+				"HEAD blob a/b/go.mod": 1,
+				"HEAD blob a/go.mod":   1,
+				"HEAD blob go.mod":     1,
 			},
 		},
 	}
@@ -111,10 +97,48 @@ func TestSnapshot_ReadsEachObjectOnce(t *testing.T) {
 			t.Parallel()
 
 			repo := newRecordingRepo(tree, tree)
-			snap := newHeadSnapshot(repo)
+			snap := newSnapshot(repo, vcs.Head)
 			for range 3 {
 				testCase.read(snap)
 			}
+			if !maps.Equal(repo.calls, testCase.want) {
+				t.Fatalf("git calls = %v, want %v", repo.calls, testCase.want)
+			}
+		})
+	}
+}
+
+func TestSnapshot_ReadsFromItsSide(t *testing.T) {
+	t.Parallel()
+
+	tree := map[string]string{"a/x.go": "package a\n"}
+	testCases := []struct {
+		name string
+		side vcs.Side
+		want map[string]int
+	}{
+		{
+			name: "head",
+			side: vcs.Head,
+			want: map[string]int{"HEAD blob a/x.go": 1, "HEAD entry a/x.go": 1, "HEAD dir a": 1},
+		},
+		{
+			name: "staged",
+			side: vcs.Staged,
+			want: map[string]int{
+				"staged blob a/x.go": 1, "staged entry a/x.go": 1, "staged dir a": 1,
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			repo := newRecordingRepo(tree, tree)
+			snap := newSnapshot(repo, testCase.side)
+			_, _ = snap.blob("a/x.go")
+			_, _ = snap.entryOf("a/x.go")
+			_, _ = snap.dir("a")
 			if !maps.Equal(repo.calls, testCase.want) {
 				t.Fatalf("git calls = %v, want %v", repo.calls, testCase.want)
 			}
@@ -141,15 +165,15 @@ func TestSnapshot_Clause(t *testing.T) {
 			t.Parallel()
 
 			repo := newFakeRepo(map[string]string{"f.go": testCase.src}, map[string]string{})
-			name, isIgnored := newHeadSnapshot(repo).clause("f.go")
+			name, isIgnored := newSnapshot(repo, vcs.Head).clause("f.go")
 			if name != testCase.wantName || isIgnored != testCase.wantIgnored {
 				t.Fatalf("clause() = %q, %v, want %q, %v",
 					name, isIgnored, testCase.wantName, testCase.wantIgnored)
 			}
 		})
 	}
-	if name, isIgnored := newHeadSnapshot(
-		newFakeRepo(map[string]string{}, map[string]string{}),
+	if name, isIgnored := newSnapshot(
+		newFakeRepo(map[string]string{}, map[string]string{}), vcs.Head,
 	).clause("gone.go"); name != "" ||
 		isIgnored {
 		t.Fatalf("clause() of a missing blob = %q, %v, want empty", name, isIgnored)
@@ -190,7 +214,7 @@ func TestSnapshot_PackageName(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			snap := newHeadSnapshot(newFakeRepo(testCase.files, map[string]string{}))
+			snap := newSnapshot(newFakeRepo(testCase.files, map[string]string{}), vcs.Head)
 			if got := snap.packageName("d"); got != testCase.want {
 				t.Fatalf("packageName() = %q, want %q", got, testCase.want)
 			}
@@ -200,7 +224,7 @@ func TestSnapshot_PackageName(t *testing.T) {
 
 type failingDirRepo struct{ fakeRepo }
 
-func (failingDirRepo) HeadDir(string) ([]string, error) { return nil, errMissing }
+func (failingDirRepo) Dir(vcs.Side, string) ([]string, error) { return nil, errMissing }
 
 func TestSnapshot_PackageNameDirError(t *testing.T) {
 	t.Parallel()
@@ -208,14 +232,14 @@ func TestSnapshot_PackageNameDirError(t *testing.T) {
 	repo := failingDirRepo{
 		newFakeRepo(map[string]string{"d/a.go": "package a\n"}, map[string]string{}),
 	}
-	if got := newHeadSnapshot(repo).packageName("d"); got != "" {
+	if got := newSnapshot(repo, vcs.Head).packageName("d"); got != "" {
 		t.Fatalf("packageName() = %q, want empty when the directory cannot be read", got)
 	}
 }
 
 type unsortedDirRepo struct{ fakeRepo }
 
-func (unsortedDirRepo) HeadDir(string) ([]string, error) {
+func (unsortedDirRepo) Dir(vcs.Side, string) ([]string, error) {
 	return []string{"d/b.go", "d/a.go"}, nil
 }
 
@@ -225,7 +249,7 @@ func TestSnapshot_PackageNameKeepsDirOrder(t *testing.T) {
 	repo := unsortedDirRepo{newFakeRepo(
 		map[string]string{"d/a.go": "package a\n", "d/b.go": "package b\n"}, map[string]string{},
 	)}
-	snap := newHeadSnapshot(repo)
+	snap := newSnapshot(repo, vcs.Head)
 	if got := snap.packageName("d"); got != "a" {
 		t.Fatalf("packageName() = %q, want a", got)
 	}
@@ -263,8 +287,8 @@ func TestSnapshot_Decls(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			snap := newHeadSnapshot(
-				newFakeRepo(map[string]string{"f.go": testCase.src}, map[string]string{}),
+			snap := newSnapshot(
+				newFakeRepo(map[string]string{"f.go": testCase.src}, map[string]string{}), vcs.Head,
 			)
 			set := map[string]bool{}
 			if testCase.isAny {

@@ -5,15 +5,13 @@ import (
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 type gitReader interface {
-	HeadBlob(path string) (string, error)
-	StagedBlob(path string) (string, error)
-	HeadEntry(path string) (mode, id string, err error)
-	StagedEntry(path string) (mode, id string, err error)
-	HeadDir(dir string) ([]string, error)
-	StagedDir(dir string) ([]string, error)
+	Blob(side vcs.Side, path string) (string, error)
+	Entry(side vcs.Side, path string) (mode, id string, err error)
+	Dir(side vcs.Side, dir string) ([]string, error)
 }
 
 type (
@@ -30,42 +28,27 @@ type (
 		isIgnored bool
 	}
 	snapshot struct {
-		readBlob  func(path string) (string, error)
-		readEntry func(path string) (mode, id string, err error)
-		readDir   func(dir string) ([]string, error)
-		clash     string
-		blobs     map[string]result[string]
-		entries   map[string]result[entry]
-		dirs      map[string]result[[]string]
-		parsed    map[string]result[gosrc.File]
-		clauses   map[string]clauseResult
+		reader  gitReader
+		side    vcs.Side
+		clash   string
+		blobs   map[string]result[string]
+		entries map[string]result[entry]
+		dirs    map[string]result[[]string]
+		parsed  map[string]result[gosrc.File]
+		clauses map[string]clauseResult
 	}
 )
 
-func newHeadSnapshot(reader gitReader) *snapshot {
-	return newSnapshot(reader.HeadBlob, reader.HeadEntry, reader.HeadDir, "\x00old")
-}
-
-func newStagedSnapshot(reader gitReader) *snapshot {
-	return newSnapshot(reader.StagedBlob, reader.StagedEntry, reader.StagedDir, "\x00new")
-}
-
-func newSnapshot(
-	readBlob func(string) (string, error),
-	readEntry func(string) (string, string, error),
-	readDir func(string) ([]string, error),
-	clash string,
-) *snapshot {
+func newSnapshot(reader gitReader, side vcs.Side) *snapshot {
 	return &snapshot{
-		readBlob:  readBlob,
-		readEntry: readEntry,
-		readDir:   readDir,
-		clash:     clash,
-		blobs:     map[string]result[string]{},
-		entries:   map[string]result[entry]{},
-		dirs:      map[string]result[[]string]{},
-		parsed:    map[string]result[gosrc.File]{},
-		clauses:   map[string]clauseResult{},
+		reader:  reader,
+		side:    side,
+		clash:   "\x00" + side.String(),
+		blobs:   map[string]result[string]{},
+		entries: map[string]result[entry]{},
+		dirs:    map[string]result[[]string]{},
+		parsed:  map[string]result[gosrc.File]{},
+		clauses: map[string]clauseResult{},
 	}
 }
 
@@ -80,7 +63,7 @@ func cached[Key comparable, Value any](cache map[Key]Value, key Key, load func()
 
 func (snap *snapshot) blob(file string) (string, error) {
 	got := cached(snap.blobs, file, func() result[string] {
-		content, err := snap.readBlob(file)
+		content, err := snap.reader.Blob(snap.side, file)
 		return result[string]{value: content, err: err}
 	})
 	return got.value, got.err
@@ -88,7 +71,7 @@ func (snap *snapshot) blob(file string) (string, error) {
 
 func (snap *snapshot) entryOf(file string) (entry, error) {
 	got := cached(snap.entries, file, func() result[entry] {
-		mode, id, err := snap.readEntry(file)
+		mode, id, err := snap.reader.Entry(snap.side, file)
 		return result[entry]{value: entry{mode: mode, id: id}, err: err}
 	})
 	return got.value, got.err
@@ -96,7 +79,7 @@ func (snap *snapshot) entryOf(file string) (entry, error) {
 
 func (snap *snapshot) dir(dir string) ([]string, error) {
 	got := cached(snap.dirs, dir, func() result[[]string] {
-		files, err := snap.readDir(dir)
+		files, err := snap.reader.Dir(snap.side, dir)
 		return result[[]string]{value: files, err: err}
 	})
 	return got.value, got.err

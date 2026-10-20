@@ -372,12 +372,7 @@ func TestScrubbedListingMatchesVCS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open repo: %v", err)
 	}
-	lister, isLister := repo.(interface{ ListFiles() ([]string, error) })
-	if !isLister {
-		t.Fatal("repository does not list files")
-	}
-
-	want, err := lister.ListFiles()
+	want, err := repo.ListFiles()
 	if err != nil {
 		t.Fatalf("list files: %v", err)
 	}

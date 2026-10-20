@@ -16,6 +16,7 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/contract"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -226,8 +227,8 @@ func TestDispatchContract_SessionAndSubagent(t *testing.T) {
 	}
 }
 
-func stubGovernance(block string, count int) func(vcs.Repository, vcs.Status) (string, int) {
-	return func(vcs.Repository, vcs.Status) (string, int) {
+func stubGovernance(block string, count int) func(governance.Repository, vcs.Status) (string, int) {
+	return func(governance.Repository, vcs.Status) (string, int) {
 		return block, count
 	}
 }

@@ -49,7 +49,7 @@ func TestDoInjections_ResolvesEveryBinding(t *testing.T) {
 			return err
 		}},
 		{"vcs repository", func(inj remy.Injector) error {
-			_, err := remy.Get[vcs.Repository](inj)
+			_, err := remy.Get[*vcs.Repository](inj)
 			return err
 		}},
 		{"logger", func(inj remy.Injector) error {

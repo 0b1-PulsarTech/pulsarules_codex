@@ -19,8 +19,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-//nolint:ireturn // Hands the port to sweep, which takes the interface.
-func openRepo(tb testing.TB, root string) vcs.Repository {
+func openRepo(tb testing.TB, root string) *vcs.Repository {
 	tb.Helper()
 	repo, err := vcs.Open(root)
 	if err != nil {
@@ -250,8 +249,8 @@ func TestRunClean_RepositoryResolution(t *testing.T) {
 
 			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
 			remy.RegisterConstructorErr(
-				inj, remy.Factory[vcs.Repository],
-				func() (vcs.Repository, error) { return nil, testCase.repoErr },
+				inj, remy.Factory[*vcs.Repository],
+				func() (*vcs.Repository, error) { return nil, testCase.repoErr },
 			)
 
 			err := RunClean(inj, &version.Options{ProjectDir: t.TempDir()})
@@ -451,7 +450,7 @@ func TestSweep_SaysWhySkippedFilesAreLeft(t *testing.T) {
 	}
 }
 
-type unlistableRepo struct{ vcs.Repository }
+type unlistableRepo struct{ *vcs.Repository }
 
 func (unlistableRepo) ListFiles() ([]string, error) { return nil, errors.New("git unavailable") }
 
