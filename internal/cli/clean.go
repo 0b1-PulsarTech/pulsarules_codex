@@ -11,7 +11,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible/cleaner"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
@@ -42,7 +42,7 @@ func runClean(inj remy.Injector, opts *version.Options) error {
 	return sweep(os.Stdout, root, how, repo)
 }
 
-func sweep(out io.Writer, dir string, how mode, repo governance.Lister) error {
+func sweep(out io.Writer, dir string, how mode, repo discovery.Lister) error {
 	root, scope, err := scopeWithin(dir, repo)
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func sweep(out io.Writer, dir string, how mode, repo governance.Lister) error {
 	return nil
 }
 
-func scopeWithin(dir string, repo governance.Lister) (root, scope string, err error) {
+func scopeWithin(dir string, repo discovery.Lister) (root, scope string, err error) {
 	if repo == nil {
 		// The walk starts at dir itself, so the scope is the whole walk.
 		return dir, ".", nil
@@ -115,7 +115,7 @@ func within(scope, rel string) bool {
 	return err == nil && rest != ".." && !strings.HasPrefix(rest, ".."+string(filepath.Separator))
 }
 
-func walkSources(root string, repo governance.Lister, visit func(rel, ext string) bool) {
+func walkSources(root string, repo discovery.Lister, visit func(rel, ext string) bool) {
 	skips := source.NewSkipSet(source.DefaultSkipDirs())
 	if repo == nil {
 		source.NewProvider(root, skips).Walk(visit)
@@ -123,7 +123,7 @@ func walkSources(root string, repo governance.Lister, visit func(rel, ext string
 	}
 	// The gate's own listing, so clean walks the files the gate walks; the skip set it returns
 	// is already applied by the provider.
-	provider, _ := governance.ListedSources(
+	provider, _ := discovery.Listed(
 		repo, skips, source.NewSkipSet(source.GitSkipDirs()), slog.Default(),
 	)
 	provider.Walk(visit)
