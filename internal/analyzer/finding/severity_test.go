@@ -1,7 +1,6 @@
 package finding
 
 import (
-	"errors"
 	"slices"
 	"testing"
 )
@@ -10,35 +9,31 @@ func TestSeverityParseStringRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name    string
-		input   string
-		want    Severity
-		wantErr error
+		name      string
+		input     string
+		want      Severity
+		wantKnown bool
 	}{
-		{name: "error", input: "error", want: SeverityError},
-		{name: "warning", input: "warning", want: SeverityWarning},
-		{name: "info", input: "info", want: SeverityInfo},
-		{name: "empty", input: "", want: SeverityInfo, wantErr: ErrUnknownSeverity},
-		{name: "unknown", input: "loud", want: SeverityInfo, wantErr: ErrUnknownSeverity},
-		{name: "capitalised", input: "Warning", want: SeverityInfo, wantErr: ErrUnknownSeverity},
+		{name: "error", input: "error", want: SeverityError, wantKnown: true},
+		{name: "warning", input: "warning", want: SeverityWarning, wantKnown: true},
+		{name: "info", input: "info", want: SeverityInfo, wantKnown: true},
+		{name: "empty", input: "", want: SeverityInfo},
+		{name: "unknown", input: "loud", want: SeverityInfo},
+		{name: "capitalised", input: "Warning", want: SeverityInfo},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ParseSeverity(testCase.input)
-			if !errors.Is(err, testCase.wantErr) {
-				t.Fatalf(
-					"ParseSeverity(%q) err = %v, want %v",
-					testCase.input,
-					err,
-					testCase.wantErr,
-				)
+			got, known := ParseSeverity(testCase.input)
+			if known != testCase.wantKnown {
+				t.Fatalf("ParseSeverity(%q) known = %v, want %v",
+					testCase.input, known, testCase.wantKnown)
 			}
 			if got != testCase.want {
 				t.Fatalf("ParseSeverity(%q) = %v, want %v", testCase.input, got, testCase.want)
 			}
-			if testCase.wantErr == nil && got.String() != testCase.input {
+			if testCase.wantKnown && got.String() != testCase.input {
 				t.Fatalf("String() = %q, want %q", got.String(), testCase.input)
 			}
 		})

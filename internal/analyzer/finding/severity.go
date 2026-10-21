@@ -44,21 +44,23 @@ func SeverityNames() []string {
 	return names
 }
 
-func ParseSeverity(name string) (Severity, error) {
+func ParseSeverity(name string) (Severity, bool) {
 	for _, severity := range []Severity{SeverityInfo, SeverityWarning, SeverityError} {
 		if severity.String() == name {
-			return severity, nil
+			return severity, true
 		}
 	}
-	return SeverityInfo, fmt.Errorf(
-		"%w %q (want %s)", ErrUnknownSeverity, name, strings.Join(SeverityNames(), "|"),
-	)
+	return SeverityInfo, false
 }
 
 func ValidateSeverityName(name string) error {
 	if name == "" {
 		return nil
 	}
-	_, err := ParseSeverity(name)
-	return err
+	if _, known := ParseSeverity(name); !known {
+		return fmt.Errorf(
+			"%w %q (want %s)", ErrUnknownSeverity, name, strings.Join(SeverityNames(), "|"),
+		)
+	}
+	return nil
 }

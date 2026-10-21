@@ -34,7 +34,7 @@ func resolve(hit finding.Finding, owner string, rules []pass.Override) (finding.
 		if override.Enabled != nil {
 			enabled = *override.Enabled
 		}
-		if severity, err := finding.ParseSeverity(override.Severity); err == nil {
+		if severity, known := finding.ParseSeverity(override.Severity); known {
 			hit.Severity = severity
 		}
 	}
