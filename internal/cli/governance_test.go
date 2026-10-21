@@ -11,6 +11,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
@@ -161,7 +162,8 @@ func TestGovernanceConfig_BranchExtraTypes(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := governanceConfig(&version.Options{BranchExtraTypes: testCase.spec}, "")
+			opts := &version.Options{Tuning: flags.Tuning{BranchExtraTypes: testCase.spec}}
+			cfg, err := governanceConfig(opts, "")
 			if testCase.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
 					t.Fatalf("err = %v, want one naming %q", err, testCase.wantErr)
@@ -240,7 +242,7 @@ func TestGovernanceConfig_ProjectFilePrecedence(t *testing.T) {
 		},
 		{
 			"severity flag beats the file",
-			&version.Options{TypographicSeverity: "warning"},
+			&version.Options{Tuning: flags.Tuning{TypographicSeverity: "warning"}},
 			config.PresetMinimal, "file.yml", "warning",
 		},
 	}

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 )
 
@@ -55,12 +56,12 @@ func TestResolveGitHooks_NamesTheBadFlag(t *testing.T) {
 	}{
 		{
 			name:     "a severity typo names its flag",
-			opts:     &version.Options{TypographicSeverity: "fatal"},
+			opts:     &version.Options{Tuning: flags.Tuning{TypographicSeverity: "fatal"}},
 			wantFlag: "--typographic-severity",
 		},
 		{
 			name:     "an extra-types typo names its flag",
-			opts:     &version.Options{BranchExtraTypes: "Release"},
+			opts:     &version.Options{Tuning: flags.Tuning{BranchExtraTypes: "Release"}},
 			wantFlag: "--branch-extra-types",
 		},
 	}
@@ -169,13 +170,15 @@ func TestInstallPostTargets_BakesOptions(t *testing.T) {
 		{
 			name:      "typographic severity reaches the pre-commit hook",
 			hook:      "pre-commit",
-			opts:      version.Options{TypographicSeverity: "warning"},
+			opts:      version.Options{Tuning: flags.Tuning{TypographicSeverity: "warning"}},
 			wantFlags: []string{"--typographic-severity warning"},
 		},
 		{
-			name:      "branch extra types reach the pre-push hook",
-			hook:      "pre-push",
-			opts:      version.Options{BranchExtraTypes: "spike,experiment"},
+			name: "branch extra types reach the pre-push hook",
+			hook: "pre-push",
+			opts: version.Options{
+				Tuning: flags.Tuning{BranchExtraTypes: "spike,experiment"},
+			},
 			wantFlags: []string{"--branch-extra-types spike,experiment"},
 		},
 	}

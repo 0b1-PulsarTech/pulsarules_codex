@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
@@ -28,7 +29,9 @@ func TestGovernanceConfig_TypographicSeverity(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			opts := &version.Options{TypographicSeverity: testCase.severity}
+			opts := &version.Options{
+				Tuning: flags.Tuning{TypographicSeverity: testCase.severity},
+			}
 			cfg, err := governanceConfig(opts, "")
 			if testCase.wantErr {
 				if err == nil {

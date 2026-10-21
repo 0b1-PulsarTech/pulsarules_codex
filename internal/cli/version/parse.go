@@ -6,6 +6,8 @@ import (
 	"maps"
 	"os"
 	"slices"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
 func ParseArgs(args []string) (*Options, error) {
@@ -131,18 +133,7 @@ func bindGovernanceFlags(fs *flag.FlagSet, opts *Options) {
 		"",
 		"path to .golangci.yml (overrides auto-discovery)",
 	)
-	fs.StringVar(
-		&opts.TypographicSeverity,
-		"typographic-severity",
-		"",
-		"how hard a typographic-marker finding lands (error|warning|info)",
-	)
-	fs.StringVar(
-		&opts.BranchExtraTypes,
-		"branch-extra-types",
-		"",
-		"comma-separated branch types allowed beyond the Conventional Commit and gitflow types",
-	)
+	opts.Tuning.Bind(fs, flags.Analyze)
 	fs.BoolVar(
 		&opts.AllFiles,
 		"all-files",
