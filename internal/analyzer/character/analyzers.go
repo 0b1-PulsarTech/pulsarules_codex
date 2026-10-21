@@ -13,6 +13,7 @@ import (
 const (
 	TextID        = "text-markers"
 	TypographicID = "typographic-markers"
+	FrontmatterID = "ai-frontmatter"
 )
 
 type textReporters struct {
@@ -33,12 +34,8 @@ func NewTextAnalyzer() *TextAnalyzer {
 		carrier: finding.NewReporter(TextID, finding.SeverityError, finding.CatSyntax),
 		// Invisible characters that may be load-bearing (emoji glue, script joiners)
 		// cannot be judged here, so they advise instead of blocking.
-		contextual: finding.NewReporter(TextID, finding.SeverityWarning, finding.CatSyntax),
-		frontmatter: finding.NewReporter(
-			"ai-frontmatter",
-			finding.SeverityError,
-			finding.CatSyntax,
-		),
+		contextual:  finding.NewReporter(TextID, finding.SeverityWarning, finding.CatSyntax),
+		frontmatter: finding.NewReporter(FrontmatterID, finding.SeverityError, finding.CatSyntax),
 	}}
 }
 

@@ -9,7 +9,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-const ID = "shadowing"
+const (
+	ID      = "shadowing"
+	ReuseID = "short-decl-reuse"
+)
 
 type Analyzer struct {
 	shadowReporter finding.Reporter
@@ -20,11 +23,7 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{
 		shadowReporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 		// The two findings share scope machinery but say opposite things.
-		reuseReporter: finding.NewReporter(
-			"short-decl-reuse",
-			finding.SeverityWarning,
-			finding.CatAST,
-		),
+		reuseReporter: finding.NewReporter(ReuseID, finding.SeverityWarning, finding.CatAST),
 	}
 }
 

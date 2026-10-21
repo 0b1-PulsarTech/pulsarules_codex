@@ -346,9 +346,9 @@ func countByRule(t *testing.T, analyzer *Analyzer, source string) (shadows, reus
 	)
 	for _, finding := range findings {
 		switch finding.AnalyzerID {
-		case "shadowing":
+		case ID:
 			shadows++
-		case "short-decl-reuse":
+		case ReuseID:
 			reuses++
 		default:
 			t.Fatalf("unexpected analyzer id %q", finding.AnalyzerID)

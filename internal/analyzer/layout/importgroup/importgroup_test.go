@@ -322,7 +322,7 @@ func TestCheckPaths(t *testing.T) {
 			}
 			if len(got) != 1 || got[0].Message != testCase.wantMessage ||
 				got[0].Suggestion != testCase.wantSuggestion ||
-				got[0].AnalyzerID != "import-groups/path" ||
+				got[0].AnalyzerID != PathID ||
 				got[0].Severity != finding.SeverityWarning || got[0].Line != 2 {
 				t.Fatalf("findings = %+v", got)
 			}
@@ -356,7 +356,7 @@ func TestAnalyze_PathSeverityFromConfig(t *testing.T) {
 		{
 			name: "configured severity overrides the default",
 			config: &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
-				"import-groups/path": {Params: map[string]any{"severity": "error"}},
+				PathID: {Params: map[string]any{"severity": "error"}},
 			}},
 			want: finding.SeverityError,
 		},
