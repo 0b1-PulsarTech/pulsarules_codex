@@ -6,10 +6,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -271,6 +273,25 @@ func TestUninstall_RestoresForeignPlugin(t *testing.T) {
 	got, err := os.ReadFile(pluginPath)
 	if err != nil || string(got) != foreign {
 		t.Errorf("plugin content = %q (%v), want the foreign original back", got, err)
+	}
+}
+
+func TestPluginScript_CallsOnlyModesTheBinaryHandles(t *testing.T) {
+	t.Parallel()
+
+	handled := map[string]bool{}
+	for _, event := range hook.Events() {
+		handled[event.Mode] = true
+	}
+	calls := regexp.MustCompile(`runHook\("([^"]+)"`).
+		FindAllStringSubmatch(pluginScriptSource(t), -1)
+	if len(calls) < 3 {
+		t.Fatalf("found %d runHook calls in the plugin, want at least 3", len(calls))
+	}
+	for _, call := range calls {
+		if !handled[call[1]] {
+			t.Errorf("plugin runs mode %q, which hook.Events() does not handle", call[1])
+		}
 	}
 }
 
