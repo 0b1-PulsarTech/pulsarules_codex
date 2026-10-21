@@ -13,7 +13,6 @@ type fileScan struct {
 	path     string
 	file     *ast.File
 	reporter finding.Reporter
-	reported map[site]bool
 	assigned map[string]bool
 	imports  map[string]bool
 	types    map[string]bool
@@ -69,9 +68,6 @@ func (scan fileScan) nameFindings(vs *ast.ValueSpec) []finding.Finding {
 		}
 		blankReported = blankReported || isBlank
 		line := scan.fset.Position(name.Pos()).Line
-		if scan.reported[site{file: scan.path, line: line, name: name.Name}] {
-			continue
-		}
 		suggestion := "move it into the function or struct that owns it, or make it a const"
 		if isBlank {
 			suggestion = blankSuggestion(vs)

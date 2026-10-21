@@ -4,8 +4,10 @@ import (
 	"go/ast"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/singleuse"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/goast"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -26,7 +28,6 @@ func NewAnalyzer() *Analyzer {
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	reported := alreadyReported(ctx)
 	dirScans := scanDirs(ctx)
 	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		dir := dirOf(fc.Path)
@@ -40,7 +41,6 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 			path:     fc.Path,
 			file:     file,
 			reporter: reporter,
-			reported: reported,
 			imports:  imports,
 			types:    siblings.types,
 			errFuncs: siblings.errFuncs,
@@ -54,28 +54,29 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	})
 }
 
-type site struct {
-	file string
-	line int
-	name string
-}
-
-func alreadyReported(ctx *pass.Context) map[site]bool {
-	reported := make(map[site]bool)
-	// single-use-declaration runs first; skipping its sites avoids a double report.
-	for _, finding := range ctx.Findings {
-		if finding.AnalyzerID != "single-use-declaration" {
-			continue
-		}
-		reported[site{file: finding.File, line: finding.Line, name: finding.Symbol}] = true
-	}
-	return reported
-}
-
 func isTestFile(file string) bool { return strings.HasSuffix(file, "_test.go") }
 
 func dirOf(file string) string { return path.Dir(filepath.ToSlash(file)) }
 
 func Describe() pass.Descriptor {
 	return pass.Descriptor{ID: ID, Rule: "code-smells"}
+}
+
+type site struct {
+	file   string
+	line   int
+	symbol string
+}
+
+func DropSingleUseDuplicates(findings []finding.Finding) []finding.Finding {
+	reported := make(map[site]bool)
+	for _, finding := range findings {
+		if finding.AnalyzerID == singleuse.ID {
+			reported[site{finding.File, finding.Line, finding.Symbol}] = true
+		}
+	}
+	return slices.DeleteFunc(findings, func(finding finding.Finding) bool {
+		return finding.AnalyzerID == ID &&
+			reported[site{finding.File, finding.Line, finding.Symbol}]
+	})
 }

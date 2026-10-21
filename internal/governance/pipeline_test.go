@@ -5,6 +5,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/packagevar"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/singleuse"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
@@ -239,5 +241,33 @@ func TestOrderFindings(t *testing.T) {
 				t.Fatalf("order = %v, want %v", got, testCase.want)
 			}
 		})
+	}
+}
+
+func TestSessionTransformsDropPackageLevelVarAtSingleUseSite(t *testing.T) {
+	t.Parallel()
+
+	site := func(id string) finding.Finding {
+		return finding.Finding{
+			AnalyzerID: id,
+			File:       "a.go",
+			Line:       3,
+			Symbol:     "once",
+			Severity:   finding.SeverityWarning,
+		}
+	}
+	pipe := newPipeline(nil, []registry.Built{
+		{ID: singleuse.ID, Analyzer: stubAnalyzer{
+			findings: []finding.Finding{site(singleuse.ID)},
+		}},
+		{ID: packagevar.ID, Analyzer: stubAnalyzer{
+			findings: []finding.Finding{site(packagevar.ID)},
+		}},
+	}, (&Session{}).transforms())
+
+	findings := pipe.run(&pass.Context{})
+
+	if len(findings) != 1 || findings[0].AnalyzerID != singleuse.ID {
+		t.Fatalf("findings = %+v, want the single-use finding alone", findings)
 	}
 }

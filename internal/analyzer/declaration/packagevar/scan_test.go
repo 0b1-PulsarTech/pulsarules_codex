@@ -1,12 +1,8 @@
 package packagevar
 
 import (
-	"slices"
 	"strings"
 	"testing"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/singleuse"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 )
 
 func blankReportCases() []levelVarCase {
@@ -59,77 +55,10 @@ func blankReportCases() []levelVarCase {
 	}
 }
 
-func levelVarDedupeCases() []levelVarCase {
-	const single = "single-use-declaration"
-	return []levelVarCase{
-		{
-			name:  "skipped when single-use-declaration already reported the name",
-			files: map[string]string{"a.go": "package p\n\nvar once = 1\n"},
-			prior: []finding.Finding{{
-				AnalyzerID: single, File: "a.go", Line: 3,
-				Symbol: "once",
-			}},
-		},
-		{
-			name:  "same line other name still reported",
-			files: map[string]string{"a.go": "package p\n\nvar a, b = 1, 2\n"},
-			prior: []finding.Finding{{
-				AnalyzerID: single, File: "a.go", Line: 3,
-				Symbol: "a",
-			}},
-			want: []string{"a.go:3:package-level var b"},
-		},
-		{
-			name:  "grouped name line differs from var line",
-			files: map[string]string{"a.go": "package p\n\nvar (\n\tx = 1\n\ty = 2\n)\n"},
-			prior: []finding.Finding{{
-				AnalyzerID: single, File: "a.go", Line: 5,
-				Symbol: "y",
-			}},
-			want: []string{"a.go:4:package-level var x"},
-		},
-		{
-			name:  "not skipped for another analyzer at the same line",
-			files: map[string]string{"a.go": "package p\n\nvar once = 1\n"},
-			prior: []finding.Finding{{AnalyzerID: "other", File: "a.go", Line: 3, Symbol: "once"}},
-			want:  []string{"a.go:3:package-level var once"},
-		},
-		{
-			name:  "not skipped for single-use-declaration in another file",
-			files: map[string]string{"a.go": "package p\n\nvar once = 1\n"},
-			prior: []finding.Finding{{
-				AnalyzerID: single, File: "b.go", Line: 3,
-				Symbol: "once",
-			}},
-			want: []string{"a.go:3:package-level var once"},
-		},
-	}
-}
-
 func TestScanReports(t *testing.T) {
 	t.Parallel()
 
-	runCases(t, slices.Concat(blankReportCases(), levelVarDedupeCases()))
-}
-
-func TestDedupeAgainstRealSingleUseDeclaration(t *testing.T) {
-	t.Parallel()
-
-	files := map[string]string{
-		"a.go": "package p\n\nvar once = 1\n\nfunc f() int { return once }\n",
-	}
-	ctx := buildCtx(t, files, nil, nil)
-	ctx.Findings = singleuse.NewAnalyzer().Analyze(ctx)
-	if len(ctx.Findings) != 1 {
-		t.Fatalf("single-use findings = %+v, want 1", ctx.Findings)
-	}
-	got := NewAnalyzer().Analyze(ctx)
-	if len(got) != 0 {
-		t.Fatalf("package-level-var findings = %+v, want none after dedupe", got)
-	}
-	if empty := NewAnalyzer().Analyze(buildCtx(t, files, nil, nil)); len(empty) != 1 {
-		t.Fatalf("without the prior finding = %+v, want 1", empty)
-	}
+	runCases(t, blankReportCases())
 }
 
 func TestBlankSuggestion(t *testing.T) {
@@ -155,7 +84,7 @@ func TestBlankSuggestion(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := buildCtx(t, map[string]string{"a.go": testCase.src}, nil, nil)
+			ctx := buildCtx(t, map[string]string{"a.go": testCase.src}, nil)
 			got := NewAnalyzer().Analyze(ctx)
 			if len(got) != 1 || !strings.Contains(got[0].Suggestion, testCase.want) {
 				t.Fatalf("findings = %+v, want suggestion containing %q", got, testCase.want)

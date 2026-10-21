@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/packagevar"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
@@ -76,4 +77,8 @@ func orderFindings(findings []finding.Finding) []finding.Finding {
 			left.Line == right.Line &&
 			left.Message == right.Message
 	})
+}
+
+func (sess *Session) transforms() []Transform {
+	return []Transform{packagevar.DropSingleUseDuplicates, orderFindings}
 }

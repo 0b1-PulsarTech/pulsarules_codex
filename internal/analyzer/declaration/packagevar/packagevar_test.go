@@ -6,15 +6,14 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/singleuse"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
-func buildCtx(
-	t *testing.T, files, unchanged map[string]string, prior []finding.Finding,
-) *pass.Context {
+func buildCtx(t *testing.T, files, unchanged map[string]string) *pass.Context {
 	t.Helper()
 
 	cache := astcache.New()
@@ -34,7 +33,6 @@ func buildCtx(
 		ASTCache:     cache,
 		Sources:      source.NewFSProvider(mapFS, "", source.SkipSet{}),
 		ChangedFiles: changed,
-		Findings:     prior,
 	}
 }
 
@@ -51,7 +49,6 @@ type levelVarCase struct {
 	name  string
 	files map[string]string
 	extra map[string]string
-	prior []finding.Finding
 	want  []string
 }
 
@@ -62,7 +59,7 @@ func runCases(t *testing.T, testCases []levelVarCase) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := buildCtx(t, testCase.files, testCase.extra, testCase.prior)
+			ctx := buildCtx(t, testCase.files, testCase.extra)
 			got := located(NewAnalyzer().Analyze(ctx))
 			want := slices.Clone(testCase.want)
 			slices.Sort(want)
@@ -154,7 +151,7 @@ func TestAnalyzeSkipsGenerated(t *testing.T) {
 	t.Parallel()
 
 	files := map[string]string{"a.go": "package p\n\nvar table = map[string]int{}\n"}
-	ctx := buildCtx(t, files, nil, nil)
+	ctx := buildCtx(t, files, nil)
 	ctx.ChangedFiles[0].Generated = true
 	if got := NewAnalyzer().Analyze(ctx); len(got) != 0 {
 		t.Fatalf("findings = %v, want none in a generated file", got)
@@ -166,5 +163,87 @@ func TestAnalyzeNilCache(t *testing.T) {
 
 	if got := NewAnalyzer().Analyze(&pass.Context{}); len(got) != 0 {
 		t.Fatalf("findings = %v, want none", got)
+	}
+}
+
+func TestDropSingleUseDuplicates(t *testing.T) {
+	t.Parallel()
+
+	single := func(file string, line int, symbol string) finding.Finding {
+		return finding.Finding{AnalyzerID: singleuse.ID, File: file, Line: line, Symbol: symbol}
+	}
+	levelVar := func(file string, line int, symbol string) finding.Finding {
+		return finding.Finding{AnalyzerID: ID, File: file, Line: line, Symbol: symbol}
+	}
+	testCases := []struct {
+		name  string
+		input []finding.Finding
+		want  []finding.Finding
+	}{
+		{
+			name:  "dropped at the single-use site",
+			input: []finding.Finding{single("a.go", 3, "once"), levelVar("a.go", 3, "once")},
+			want:  []finding.Finding{single("a.go", 3, "once")},
+		},
+		{
+			name:  "order of arrival does not matter",
+			input: []finding.Finding{levelVar("a.go", 3, "once"), single("a.go", 3, "once")},
+			want:  []finding.Finding{single("a.go", 3, "once")},
+		},
+		{
+			name:  "same line other name stays",
+			input: []finding.Finding{single("a.go", 3, "a"), levelVar("a.go", 3, "b")},
+			want:  []finding.Finding{single("a.go", 3, "a"), levelVar("a.go", 3, "b")},
+		},
+		{
+			name:  "same name on another line stays",
+			input: []finding.Finding{single("a.go", 5, "y"), levelVar("a.go", 4, "y")},
+			want:  []finding.Finding{single("a.go", 5, "y"), levelVar("a.go", 4, "y")},
+		},
+		{
+			name:  "single-use finding in another file does not drop it",
+			input: []finding.Finding{single("b.go", 3, "once"), levelVar("a.go", 3, "once")},
+			want:  []finding.Finding{single("b.go", 3, "once"), levelVar("a.go", 3, "once")},
+		},
+		{
+			name: "another analyzer at the same site stays",
+			input: []finding.Finding{
+				single("a.go", 3, "once"),
+				{AnalyzerID: "other", File: "a.go", Line: 3, Symbol: "once"},
+			},
+			want: []finding.Finding{
+				single("a.go", 3, "once"),
+				{AnalyzerID: "other", File: "a.go", Line: 3, Symbol: "once"},
+			},
+		},
+		{name: "no findings"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := DropSingleUseDuplicates(slices.Clone(testCase.input))
+			if !slices.Equal(got, testCase.want) {
+				t.Fatalf("findings = %+v, want %+v", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestDropSingleUseDuplicatesOnRealAnalyzers(t *testing.T) {
+	t.Parallel()
+
+	files := map[string]string{
+		"a.go": "package p\n\nvar once = 1\n\nfunc f() int { return once }\n",
+	}
+	ctx := buildCtx(t, files, nil)
+	findings := singleuse.NewAnalyzer().Analyze(ctx)
+	findings = append(findings, NewAnalyzer().Analyze(ctx)...)
+	if len(findings) != 2 {
+		t.Fatalf("both analyzers report the site, got %+v", findings)
+	}
+
+	got := DropSingleUseDuplicates(findings)
+	if len(got) != 1 || got[0].AnalyzerID != singleuse.ID {
+		t.Fatalf("after the transform = %+v, want the single-use finding alone", got)
 	}
 }
