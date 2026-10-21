@@ -5,10 +5,13 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/generated"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
@@ -72,6 +75,8 @@ type Request struct {
 func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Result {
 	discovery := sess.Discover(scope, status, files)
 	ctx := sess.Load(discovery)
+	detector := generated.NewDetector(ctx.Sources)
+	detector.Mark(ctx.ChangedFiles)
 
 	deps := registry.Deps{Index: sess.index, Repo: sess.repo, Emoji: sess.catalog}
 	pipe := newPipeline(
@@ -82,29 +87,33 @@ func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Res
 	if sess.cfgAnalysis.IncludeGenerated {
 		return Result{Findings: findings}
 	}
-	return splitGenerated(ctx, findings)
+	kept, suppressed := detector.Split(findings)
+	return Result{Findings: kept, SuppressedGenerated: suppressed}
 }
 
 func (sess *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Request {
-	discovery := &Request{GitHistory: sess.gitHistory(), Skips: sess.skips}
+	discoveryItem := &Request{GitHistory: sess.gitHistory(), Skips: sess.skips}
 	if sess.repo == nil {
-		return discovery
+		return discoveryItem
 	}
 
-	discovery.StagedRenames = sess.stagedRenames()
+	discoveryItem.StagedRenames = sess.stagedRenames()
 
 	if files == FileSetAll {
-		sess.attachSources(discovery)
-		discovery.ChangedFiles = walkAllFiles(discovery.Sources, sess.testPolicy())
-		return discovery
+		sess.attachSources(discoveryItem)
+		discoveryItem.ChangedFiles = discovery.WalkAllFiles(
+			discoveryItem.Sources,
+			sess.testPolicy(),
+		)
+		return discoveryItem
 	}
 
-	discovery.ChangedFiles = sess.changedFiles(scope, status)
+	discoveryItem.ChangedFiles = sess.changedFiles(scope, status)
 	// Commit scope only analyzes changed files; whole-tree analyzers on other scopes need Sources.
-	if len(discovery.ChangedFiles) > 0 || scope != ScopeCommit {
-		sess.attachSources(discovery)
+	if len(discoveryItem.ChangedFiles) > 0 || scope != ScopeCommit {
+		sess.attachSources(discoveryItem)
 	}
-	return discovery
+	return discoveryItem
 }
 
 func (sess *Session) changedFiles(scope Scope, status *vcs.Status) []pass.FileChange {
@@ -122,7 +131,7 @@ func (sess *Session) changedFiles(scope Scope, status *vcs.Status) []pass.FileCh
 			return !change.Staged
 		})
 	}
-	return changesToFileChanges(changes, sess.testPolicy())
+	return discovery.ChangesToFileChanges(changes, sess.testPolicy())
 }
 
 func (sess *Session) Load(discovery *Request) *pass.Context {
@@ -148,7 +157,6 @@ func (sess *Session) Load(discovery *Request) *pass.Context {
 	}
 
 	if len(analyzable) > 0 && discovery.Sources != nil {
-		markGenerated(ctx.ChangedFiles, discovery.Sources)
 		ctx.ASTCache = populateASTCache(analyzable, discovery.Sources)
 		ctx.Syntax = syntax.NewCache(
 			sess.providers(ctx.ASTCache),
@@ -173,4 +181,10 @@ func (sess *Session) testPolicy() testfile.Classifier {
 		sess.policy = policy
 	})
 	return sess.policy
+}
+
+func configFinding(err error) finding.Finding {
+	return finding.NewReporter("config", finding.SeverityError, finding.CatProject).At(
+		".pulsarules.yaml", 0, err.Error(), "fix the test globs",
+	)
 }
