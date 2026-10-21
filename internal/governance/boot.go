@@ -22,16 +22,16 @@ func (pipeline *Pipeline) registerForScope(deps registry.Deps, scope Scope) erro
 	return err
 }
 
-func maxGateFor(scope Scope) []registry.Gate {
+func maxGateFor(scope Scope) registry.Gate {
 	switch scope {
 	case ScopeCommit:
 		// The pre-commit and commit-msg hooks run it, so only the fast static gate may.
-		return []registry.Gate{registry.GateStatic}
+		return registry.GateStatic
 	case ScopeChanged:
 		// golangci-lint and delegated commands need the whole project; branch-name guards a push.
-		return []registry.Gate{registry.GateStatic, registry.GateArch}
+		return registry.GateArch
 	default:
-		return []registry.Gate{registry.GateStatic, registry.GateArch, registry.GateFullOnly}
+		return registry.GateFullOnly
 	}
 }
 

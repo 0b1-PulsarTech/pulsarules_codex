@@ -89,7 +89,7 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 	}
 }
 
-func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
+func TestMaxGateFor_ReproducesScopeMembership(t *testing.T) {
 	t.Parallel()
 
 	static := []string{

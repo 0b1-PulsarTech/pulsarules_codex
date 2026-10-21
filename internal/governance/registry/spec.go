@@ -13,6 +13,7 @@ import (
 
 type Gate int
 
+// Gates are ordered: a scope runs every analyzer whose gate is at or below its own.
 const (
 	GateStatic Gate = iota
 	GateArch
@@ -43,15 +44,15 @@ type Built struct {
 	Analyzer pass.Analyzer
 }
 
-func Analyzers(deps Deps, gates []Gate) ([]Built, error) {
-	return build(specs(), deps, gates)
+func Analyzers(deps Deps, maxGate Gate) ([]Built, error) {
+	return build(specs(), deps, maxGate)
 }
 
-func build(table []entry, deps Deps, gates []Gate) ([]Built, error) {
+func build(table []entry, deps Deps, maxGate Gate) ([]Built, error) {
 	built := make([]Built, 0, len(table))
 	var failures []error
 	for _, spec := range table {
-		if !slices.Contains(gates, spec.gate) {
+		if spec.gate > maxGate {
 			continue
 		}
 		analyzer, err := spec.build(deps)

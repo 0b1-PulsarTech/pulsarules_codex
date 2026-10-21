@@ -162,12 +162,49 @@ func TestBuild_FailureSurfaces(t *testing.T) {
 		viaDeps(pass.Descriptor{ID: "late"}, GateFullOnly, func(Deps) pass.Analyzer { return nil }),
 	}
 
-	built, err := build(table, Deps{}, []Gate{GateStatic})
+	built, err := build(table, Deps{}, GateStatic)
 
 	if !errors.Is(err, failing) || !strings.Contains(err.Error(), "build broken: ") {
 		t.Fatalf("build error = %v, want it to wrap %v naming broken", err, failing)
 	}
 	if len(built) != 1 {
 		t.Fatalf("built %d analyzers, want the one that did not fail", len(built))
+	}
+}
+
+func TestBuild_GatesAreOrdered(t *testing.T) {
+	t.Parallel()
+
+	spec := func(id string, gate Gate) entry {
+		return viaDeps(pass.Descriptor{ID: id}, gate, func(Deps) pass.Analyzer { return nil })
+	}
+	table := []entry{
+		spec("full", GateFullOnly), spec("static", GateStatic), spec("arch", GateArch),
+	}
+	testCases := []struct {
+		name    string
+		maxGate Gate
+		want    []string
+	}{
+		{name: "static", maxGate: GateStatic, want: []string{"static"}},
+		{name: "arch", maxGate: GateArch, want: []string{"static", "arch"}},
+		{name: "full", maxGate: GateFullOnly, want: []string{"full", "static", "arch"}},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			built, err := build(table, Deps{}, testCase.maxGate)
+			if err != nil {
+				t.Fatalf("build: %v", err)
+			}
+			got := make([]string, len(built))
+			for idx, analyzer := range built {
+				got[idx] = analyzer.ID
+			}
+			if !slices.Equal(got, testCase.want) {
+				t.Fatalf("built %v, want %v", got, testCase.want)
+			}
+		})
 	}
 }
