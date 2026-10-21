@@ -101,7 +101,7 @@ func newTargetContext(
 	}, nil
 }
 
-func resolveLanguages(absBase, override string) (detect.Set, error) {
+func resolveLanguages(absBase string, override []string) (detect.Set, error) {
 	languages, err := detect.Resolve(absBase, override)
 	if err != nil {
 		return detect.Set{}, fmt.Errorf("resolve project languages: %w", err)

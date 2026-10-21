@@ -37,7 +37,7 @@ func newTestCollaborators(tb testing.TB) installCollaborators {
 func TestNewTargetContext_LayoutThenSkillsShareOneReader(t *testing.T) {
 	deps := newTestCollaborators(t)
 	catalog := deps.idx.SkillsOrdered()
-	opts := &version.Options{Interactive: true, Languages: "go", NoMCP: true}
+	opts := &version.Options{Interactive: true, Languages: []string{"go"}, NoMCP: true}
 	cfg := installConfig{absBase: t.TempDir()}
 	var prompts strings.Builder
 	console := newPrompter(strings.NewReader("monorepo\n1,3\n"), &prompts)
@@ -84,8 +84,8 @@ func TestRun_MalformedMCPJSON_ErrorNotDoubled(t *testing.T) {
 	opts := &version.Options{
 		Command:   "install",
 		Project:   projectDir,
-		Skills:    "go-style",
-		Languages: forcedLanguage,
+		Skills:    []string{"go-style"},
+		Languages: []string{forcedLanguage},
 	}
 
 	err := Run(inj, opts)
@@ -197,8 +197,8 @@ func TestRun_RejectsAnUnknownTargetBeforeWriting(t *testing.T) {
 	opts := &version.Options{
 		Command:   "install",
 		Project:   projectDir,
-		Skills:    "go-style",
-		Languages: "go",
+		Skills:    []string{"go-style"},
+		Languages: []string{"go"},
 		Target:    []string{"bogus"},
 	}
 

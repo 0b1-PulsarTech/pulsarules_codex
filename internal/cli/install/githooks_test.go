@@ -3,6 +3,7 @@ package install
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -72,6 +73,19 @@ func TestResolveGitHooks_NamesTheBadFlag(t *testing.T) {
 				t.Fatalf("resolveGitHooks err = %v, want one naming %q", err, testCase.wantFlag)
 			}
 		})
+	}
+}
+
+func TestResolveGitHooks_Dedupes(t *testing.T) {
+	t.Parallel()
+
+	opts := &version.Options{GitHooks: []string{"pre-push", "commit-msg", "pre-push"}}
+	got, err := resolveGitHooks(opts)
+	if err != nil {
+		t.Fatalf("resolveGitHooks: %v", err)
+	}
+	if want := []string{"pre-push", "commit-msg"}; !slices.Equal(got, want) {
+		t.Errorf("hooks = %v, want %v", got, want)
 	}
 }
 

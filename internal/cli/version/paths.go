@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 )
@@ -44,17 +43,6 @@ func (opts *Options) Targets() []string {
 
 func (opts *Options) ExplicitTargets() []string {
 	return ordered.Dedupe(opts.Target)
-}
-
-func (opts *Options) GitHookNames() []string {
-	raw := strings.Split(opts.GitHooks, ",")
-	names := make([]string, 0, len(raw))
-	for _, name := range raw {
-		if trimmed := strings.TrimSpace(name); trimmed != "" {
-			names = append(names, trimmed)
-		}
-	}
-	return ordered.Dedupe(names)
 }
 
 func IsHelp(command string) bool {

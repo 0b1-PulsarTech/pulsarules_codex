@@ -44,41 +44,42 @@ func TestParseLanguage(t *testing.T) {
 	}
 }
 
-func TestParseCSV(t *testing.T) {
+func TestParseNames(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name    string
-		csv     string
+		names   []string
 		want    []string
 		wantErr bool
 	}{
-		{name: "single language", csv: "go", want: []string{"go"}},
+		{name: "single language", names: []string{"go"}, want: []string{"go"}},
 		{
-			name: "multiple languages, deduplicated and sorted",
-			csv:  "svelte,typescript,dart,dart",
-			want: []string{"dart", "svelte", "typescript"},
+			name:  "multiple languages, deduplicated and sorted",
+			names: []string{"svelte", "typescript", "dart", "dart"},
+			want:  []string{"dart", "svelte", "typescript"},
 		},
-		{name: "tolerates spaces", csv: " go , dart ", want: []string{"dart", "go"}},
-		{name: "empty input yields an empty set", csv: "", want: nil},
-		{name: "unknown token fails the whole parse", csv: "go,bogus", wantErr: true},
+		{name: "folds case", names: []string{"Go", "DART"}, want: []string{"dart", "go"}},
+		{name: "nil input yields an empty set", names: nil, want: nil},
+		{name: "empty input yields an empty set", names: []string{}, want: nil},
+		{name: "unknown name fails the whole parse", names: []string{"go", "bogus"}, wantErr: true},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ParseNames(testCase.csv)
+			got, err := ParseNames(testCase.names)
 			if testCase.wantErr {
 				if err == nil {
-					t.Fatalf("ParseCSV(%q) = %v, want error", testCase.csv, got)
+					t.Fatalf("ParseNames(%q) = %v, want error", testCase.names, got)
 				}
 				return
 			}
 			if err != nil {
-				t.Fatalf("ParseCSV(%q): unexpected error: %v", testCase.csv, err)
+				t.Fatalf("ParseNames(%q): unexpected error: %v", testCase.names, err)
 			}
 			if gotStrings := got.Strings(); !slices.Equal(gotStrings, testCase.want) {
-				t.Errorf("ParseCSV(%q) = %v, want %v", testCase.csv, gotStrings, testCase.want)
+				t.Errorf("ParseNames(%q) = %v, want %v", testCase.names, gotStrings, testCase.want)
 			}
 		})
 	}

@@ -25,14 +25,10 @@ func ParseLanguage(raw string) (Language, error) {
 	return lang, nil
 }
 
-func ParseNames(csv string) (Set, error) {
-	var langs []Language
-	for token := range strings.SplitSeq(csv, ",") {
-		token = strings.TrimSpace(token)
-		if token == "" {
-			continue
-		}
-		lang, err := ParseLanguage(token)
+func ParseNames(names []string) (Set, error) {
+	langs := make([]Language, 0, len(names))
+	for _, name := range names {
+		lang, err := ParseLanguage(name)
 		if err != nil {
 			return Set{}, err
 		}

@@ -143,8 +143,8 @@ func checkInstallProjectWithHooks(t *testing.T, opts *Options) {
 
 func checkInstallGitHooks(t *testing.T, opts *Options) {
 	t.Helper()
-	if opts.GitHooks != "commit-msg,pre-push" {
-		t.Errorf("GitHooks = %q, want commit-msg,pre-push", opts.GitHooks)
+	if want := []string{"commit-msg", "pre-push"}; !slices.Equal(opts.GitHooks, want) {
+		t.Errorf("GitHooks = %q, want %q", opts.GitHooks, want)
 	}
 	if opts.NoGitHooks {
 		t.Error("NoGitHooks should be false")
@@ -160,8 +160,8 @@ func checkInstallNoGitHooks(t *testing.T, opts *Options) {
 
 func checkInstallDefaultGitHooks(t *testing.T, opts *Options) {
 	t.Helper()
-	if opts.GitHooks != "commit-msg,pre-commit" {
-		t.Errorf("default GitHooks = %q, want commit-msg,pre-commit", opts.GitHooks)
+	if want := []string{"commit-msg", "pre-commit"}; !slices.Equal(opts.GitHooks, want) {
+		t.Errorf("default GitHooks = %q, want %q", opts.GitHooks, want)
 	}
 }
 
@@ -369,42 +369,74 @@ func TestExplicitTargets(t *testing.T) {
 	}
 }
 
-func TestGitHookNames(t *testing.T) {
+func TestParseArgsListFlags(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name     string
-		gitHooks string
-		want     []string
+		name string
+		args []string
+		pick func(*Options) []string
+		want []string
 	}{
 		{
-			name:     "default pair",
-			gitHooks: "commit-msg,pre-commit",
-			want:     []string{"commit-msg", "pre-commit"},
+			name: "git hooks tolerate spaces and blank entries",
+			args: []string{"install", "--git-hooks", " commit-msg , , pre-push "},
+			pick: func(opts *Options) []string { return opts.GitHooks },
+			want: []string{"commit-msg", "pre-push"},
 		},
 		{
-			name:     "custom list with pre-push",
-			gitHooks: "commit-msg,pre-push",
-			want:     []string{"commit-msg", "pre-push"},
+			name: "empty git hooks means none",
+			args: []string{"install", "--git-hooks", ""},
+			pick: func(opts *Options) []string { return opts.GitHooks },
+			want: nil,
 		},
 		{
-			name:     "tolerates spaces and blank entries",
-			gitHooks: " commit-msg , , pre-push ",
-			want:     []string{"commit-msg", "pre-push"},
+			name: "empty skills stay not given",
+			args: []string{"install", "--skills", ""},
+			pick: func(opts *Options) []string { return opts.Skills },
+			want: nil,
 		},
 		{
-			name:     "deduplicates preserving order",
-			gitHooks: "pre-push,commit-msg,pre-push",
-			want:     []string{"pre-push", "commit-msg"},
+			name: "skills split on commas and drop empties",
+			args: []string{"install", "--skills", "a,,b"},
+			pick: func(opts *Options) []string { return opts.Skills },
+			want: []string{"a", "b"},
 		},
-		{name: "empty string yields no hooks", gitHooks: "", want: nil},
+		{
+			name: "blank skills are given but empty",
+			args: []string{"install", "--skills", " "},
+			pick: func(opts *Options) []string { return opts.Skills },
+			want: []string{},
+		},
+		{
+			name: "skills omitted stay nil",
+			args: []string{"install"},
+			pick: func(opts *Options) []string { return opts.Skills },
+			want: nil,
+		},
+		{
+			name: "languages split",
+			args: []string{"install", "--languages", "go, dart"},
+			pick: func(opts *Options) []string { return opts.Languages },
+			want: []string{"go", "dart"},
+		},
+		{
+			name: "target repeats and splits",
+			args: []string{"uninstall", "--target", "claude", "--target", "cursor,agents"},
+			pick: func(opts *Options) []string { return opts.Target },
+			want: []string{"claude", "cursor", "agents"},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			opts := Options{GitHooks: testCase.gitHooks}
-			if got := opts.GitHookNames(); !slices.Equal(got, testCase.want) {
-				t.Errorf("GitHookNames() = %v, want %v", got, testCase.want)
+			opts, err := ParseArgs(testCase.args)
+			if err != nil {
+				t.Fatalf("ParseArgs(%q): %v", testCase.args, err)
+			}
+			got := testCase.pick(opts)
+			if (got == nil) != (testCase.want == nil) || !slices.Equal(got, testCase.want) {
+				t.Errorf("got %#v, want %#v", got, testCase.want)
 			}
 		})
 	}

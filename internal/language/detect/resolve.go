@@ -4,9 +4,10 @@ import (
 	"fmt"
 )
 
-func Resolve(repoDir, overrideCSV string) (Set, error) {
-	if overrideCSV != "" {
-		set, err := ParseNames(overrideCSV)
+func Resolve(repoDir string, override []string) (Set, error) {
+	// A non-nil empty override is a flag given with no names, which still wins.
+	if override != nil {
+		set, err := ParseNames(override)
 		if err != nil {
 			return Set{}, fmt.Errorf("parse language override: %w", err)
 		}

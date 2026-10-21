@@ -102,8 +102,8 @@ func TestRun_PrefixesInstallAndUninstallErrors(t *testing.T) {
 			name: "install with an unknown target",
 			opts: version.Options{
 				Command:   "install",
-				Skills:    "go-style",
-				Languages: "go",
+				Skills:    []string{"go-style"},
+				Languages: []string{"go"},
 				Target:    []string{"bogus"},
 			},
 			wantPrefix: "install: invalid --target",

@@ -10,11 +10,12 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/githook"
 )
 
 func resolveGitHooks(opts *version.Options) ([]string, error) {
-	hooks := opts.GitHookNames()
+	hooks := ordered.Dedupe(opts.GitHooks)
 	if opts.NoGitHooks {
 		// Moot with --no-git-hooks: nothing is installed, so a bad name is harmless.
 		return hooks, nil

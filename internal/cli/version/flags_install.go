@@ -1,6 +1,10 @@
 package version
 
-import "flag"
+import (
+	"flag"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
+)
 
 func bindInstallFlags(fs *flag.FlagSet, opts *Options) {
 	bindInstallSelectionFlags(fs, opts)
@@ -11,14 +15,13 @@ func bindInstallSelectionFlags(fs *flag.FlagSet, opts *Options) {
 	fs.BoolVar(&opts.Global, "global", false, "install to ~/.claude/skills")
 	fs.StringVar(&opts.Project, "project", "", "install to PATH/.claude/skills")
 	fs.BoolVar(&opts.All, "all", false, "install every skill")
-	fs.StringVar(
-		&opts.Skills,
+	fs.Var(
+		flags.NewList(&opts.Skills),
 		"skills",
-		"",
 		"comma-separated skill ids to install (plus mandatory + their deps)",
 	)
 	fs.Var(
-		(*stringSliceFlag)(&opts.Target),
+		flags.NewList(&opts.Target),
 		"target",
 		"install target (repeatable): claude | opencode | agents | cursor (default claude)",
 	)
@@ -67,10 +70,9 @@ func bindInstallWiringFlags(fs *flag.FlagSet, opts *Options) {
 		false,
 		"prompt for unset customizations (e.g. the layout) before installing",
 	)
-	fs.StringVar(
-		&opts.Languages,
+	fs.Var(
+		flags.NewList(&opts.Languages),
 		"languages",
-		"",
 		"comma-separated override of the project's language set (e.g. go,dart); "+
 			"persisted, taking precedence over both a prior config and autodetection",
 	)
@@ -79,10 +81,10 @@ func bindInstallWiringFlags(fs *flag.FlagSet, opts *Options) {
 }
 
 func bindGitHookFlags(fs *flag.FlagSet, opts *Options) {
-	fs.StringVar(
-		&opts.GitHooks,
+	opts.GitHooks = []string{"commit-msg", "pre-commit"}
+	fs.Var(
+		flags.NewList(&opts.GitHooks),
 		"git-hooks",
-		"commit-msg,pre-commit",
 		"comma-separated git hooks to install (commit-msg,pre-commit,pre-push)",
 	)
 	fs.BoolVar(
@@ -111,7 +113,7 @@ func bindUninstallFlags(fs *flag.FlagSet, opts *Options) {
 	fs.BoolVar(&opts.Global, "global", false, "uninstall from ~/.claude/skills")
 	fs.StringVar(&opts.Project, "project", "", "uninstall from PATH/.claude/skills")
 	fs.Var(
-		(*stringSliceFlag)(&opts.Target),
+		flags.NewList(&opts.Target),
 		"target",
 		"uninstall target (repeatable): claude | opencode | agents | cursor "+
 			"(default: every target detected on disk)",

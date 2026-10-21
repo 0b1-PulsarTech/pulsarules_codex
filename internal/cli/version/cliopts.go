@@ -14,7 +14,7 @@ type Options struct {
 	Global              bool
 	Project             string
 	All                 bool
-	Skills              string
+	Skills              []string
 	Target              []string
 	RouterOnly          bool
 	NoHooks             bool
@@ -23,10 +23,10 @@ type Options struct {
 	HooksScope          string
 	Layout              string
 	Interactive         bool
-	GitHooks            string
+	GitHooks            []string
 	NoGitHooks          bool
 	TypographicSeverity string
-	Languages           string
+	Languages           []string
 	BranchExtraTypes    string
 
 	KeepSkills bool

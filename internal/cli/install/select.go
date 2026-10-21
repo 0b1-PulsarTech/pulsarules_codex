@@ -23,8 +23,8 @@ func resolveSelection(
 		return selection.Choice{RouterOnly: true}, nil
 	case opts.All:
 		return selection.Choice{All: true}, nil
-	case opts.Skills != "":
-		return selection.Choice{IDs: splitCSV(opts.Skills)}, nil
+	case opts.Skills != nil:
+		return selection.Choice{IDs: opts.Skills}, nil
 	case console.isTerminal:
 		return promptSkillSelection(idx, console)
 	// A non-TTY fails: prompting would hang CI, and installing everything would
@@ -120,20 +120,6 @@ func parseToken(token string, total int) (start, end int, err error) {
 		return 0, 0, fmt.Errorf("selection %q out of range 1-%d", token, total)
 	}
 	return start, end, nil
-}
-
-func splitCSV(value string) []string {
-	if strings.TrimSpace(value) == "" {
-		return nil
-	}
-	parts := strings.Split(value, ",")
-	ids := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if id := strings.TrimSpace(part); id != "" {
-			ids = append(ids, id)
-		}
-	}
-	return ids
 }
 
 func parseSelectionRange(token string) (start, end int, err error) {

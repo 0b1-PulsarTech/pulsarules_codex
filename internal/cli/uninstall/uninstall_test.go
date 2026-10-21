@@ -32,7 +32,7 @@ func TestRun_RoundTrip(t *testing.T) {
 	installOpts := &version.Options{
 		Command: "install",
 		Project: projectDir,
-		Skills:  "go-style",
+		Skills:  []string{"go-style"},
 		NoMCP:   true,
 	}
 	if err := install.Run(inj, installOpts); err != nil {
@@ -78,7 +78,7 @@ func TestRun_KeepSkills(t *testing.T) {
 	installOpts := &version.Options{
 		Command: "install",
 		Project: projectDir,
-		Skills:  "go-style",
+		Skills:  []string{"go-style"},
 		NoMCP:   true,
 	}
 	if err := install.Run(inj, installOpts); err != nil {
@@ -119,7 +119,7 @@ func TestRun_RemovesLanguageConfig(t *testing.T) {
 	installOpts := &version.Options{
 		Command: "install",
 		Project: projectDir,
-		Skills:  "go-style",
+		Skills:  []string{"go-style"},
 		NoMCP:   true,
 	}
 	if err := install.Run(inj, installOpts); err != nil {
@@ -148,7 +148,7 @@ func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
 		t.Fatalf("DoInjections: %v", err)
 	}
 	installOpts := &version.Options{
-		Command: "install", Project: projectDir, Skills: "go-style", NoMCP: true,
+		Command: "install", Project: projectDir, Skills: []string{"go-style"}, NoMCP: true,
 	}
 	if err := install.Run(inj, installOpts); err != nil {
 		t.Fatalf("install.Run: %v", err)
@@ -194,7 +194,7 @@ func TestRun_DetectsBothTargetsWhenNoneGiven(t *testing.T) {
 	installOpts := &version.Options{
 		Command: "install",
 		Project: projectDir,
-		Skills:  "go-style",
+		Skills:  []string{"go-style"},
 		Target:  []string{"claude", "opencode"},
 		NoMCP:   true,
 	}
@@ -232,7 +232,7 @@ func TestRun_UnwiresLocalHooksScopeByDefault(t *testing.T) {
 	installOpts := &version.Options{
 		Command:    "install",
 		Project:    projectDir,
-		Skills:     "go-style",
+		Skills:     []string{"go-style"},
 		NoMCP:      true,
 		HooksScope: "local",
 	}
@@ -287,7 +287,7 @@ func TestRun_TargetErrorNotDoubled(t *testing.T) {
 		t.Fatalf("DoInjections: %v", err)
 	}
 	installOpts := &version.Options{
-		Command: "install", Project: projectDir, Skills: "go-style", NoMCP: true,
+		Command: "install", Project: projectDir, Skills: []string{"go-style"}, NoMCP: true,
 	}
 	if err := install.Run(inj, installOpts); err != nil {
 		t.Fatalf("install.Run: %v", err)
