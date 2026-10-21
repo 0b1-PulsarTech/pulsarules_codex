@@ -1,16 +1,17 @@
 package config
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+import (
+	"maps"
+	"slices"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+)
 
 type GovernanceConfig struct {
-	Preset           string
-	Analyzers        map[string]pass.AnalyzerConfig
-	IncludeGenerated bool
-	SkipDirs         []string
-	SeverityRules    []pass.Override
-	TestGlobs        []string
-	Overrides        []pass.Override
-	Delegated        []pass.DelegatedCommand
+	pass.AnalysisConfig
+	Preset        string
+	SkipDirs      []string
+	SeverityRules []pass.Override
 }
 
 func Defaults() *GovernanceConfig {
@@ -18,6 +19,23 @@ func Defaults() *GovernanceConfig {
 		Preset:    PresetRecommended,
 		Analyzers: map[string]pass.AnalyzerConfig{},
 	}
+}
+
+func (govCfg *GovernanceConfig) Analysis() *pass.AnalysisConfig {
+	built := govCfg.AnalysisConfig
+	// A fresh map, so adding or replacing an entry on either config never shows on the other.
+	built.Analyzers = maps.Clone(govCfg.Analyzers)
+	// Severity rules come first, so a per-path override beats a project or flag severity.
+	built.Overrides = slices.Concat(govCfg.SeverityRules, govCfg.Overrides)
+	// Dropped here: the analyzers under internal/analyzer/ may not read Analyzers directly.
+	built.Delegated = slices.DeleteFunc(
+		slices.Clone(govCfg.Delegated),
+		func(entry pass.DelegatedCommand) bool {
+			listed, found := govCfg.Analyzers[entry.ID]
+			return found && !listed.Enabled
+		},
+	)
+	return &built
 }
 
 func (govCfg *GovernanceConfig) SetParam(analyzerID, key string, value any) {

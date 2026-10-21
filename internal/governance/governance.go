@@ -53,7 +53,7 @@ func NewSession(
 		commitMsg:   commitMsg,
 		index:       index,
 		catalog:     catalog,
-		cfgAnalysis: toAnalysisConfig(cfg),
+		cfgAnalysis: cfg.Analysis(),
 		skips:       source.NewSkipSet(append(source.DefaultSkipDirs(), cfg.SkipDirs...)),
 		gitSkips:    source.NewSkipSet(append(source.GitSkipDirs(), cfg.SkipDirs...)),
 		logger:      slog.Default(),

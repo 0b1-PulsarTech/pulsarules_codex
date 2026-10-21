@@ -120,15 +120,16 @@ func TestPipelineRunsInRegistrationOrder(t *testing.T) {
 func TestPipelineAppliesOverrides(t *testing.T) {
 	t.Parallel()
 
-	cfg := toAnalysisConfig(&config.GovernanceConfig{
+	govCfg := &config.GovernanceConfig{
 		SeverityRules: []pass.Override{pass.NewOverride(
 			nil, map[string]pass.OverrideConfig{"golangci-lint": {Severity: "info"}},
 		)},
-		Overrides: []pass.Override{{
-			Files:     glob.CompileSet([]string{"web/test/**"}),
-			Analyzers: map[string]pass.OverrideConfig{"file-size": {Severity: "warning"}},
-		}},
-	})
+	}
+	govCfg.Overrides = []pass.Override{{
+		Files:     glob.CompileSet([]string{"web/test/**"}),
+		Analyzers: map[string]pass.OverrideConfig{"file-size": {Severity: "warning"}},
+	}}
+	cfg := govCfg.Analysis()
 	pipe := newPipeline(cfg, []registry.Built{
 		{ID: "golangci-lint", Analyzer: stubAnalyzer{
 			findings: []finding.Finding{
