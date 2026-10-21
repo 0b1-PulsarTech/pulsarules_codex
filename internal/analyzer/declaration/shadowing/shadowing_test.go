@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
@@ -344,17 +345,20 @@ func countByRule(t *testing.T, analyzer *Analyzer, source string) (shadows, reus
 		cache.FileSet(), fc, file,
 		analyzer.reporters,
 	)
-	for _, finding := range findings {
-		switch finding.AnalyzerID {
+	for _, hit := range findings {
+		if hit.Severity != finding.SeverityWarning {
+			t.Fatalf("%s severity = %v, want warning", hit.AnalyzerID, hit.Severity)
+		}
+		switch hit.AnalyzerID {
 		case ID:
 			shadows++
 		case reuseID:
 			reuses++
-			if finding.RuleID != "named-returns" {
-				t.Fatalf("reuse RuleID = %q, want named-returns", finding.RuleID)
+			if hit.RuleID != "named-returns" {
+				t.Fatalf("reuse RuleID = %q, want named-returns", hit.RuleID)
 			}
 		default:
-			t.Fatalf("unexpected analyzer id %q", finding.AnalyzerID)
+			t.Fatalf("unexpected analyzer id %q", hit.AnalyzerID)
 		}
 	}
 	return shadows, reuses

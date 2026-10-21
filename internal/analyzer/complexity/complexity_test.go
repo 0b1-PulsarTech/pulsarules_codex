@@ -111,6 +111,45 @@ func TestAnalyze_HonoursConfiguredSeverity(t *testing.T) {
 	}
 }
 
+func TestAnalyze_DefaultSeverityPerFinding(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name   string
+		source string
+		want   finding.Severity
+	}{
+		{
+			name:   "magic number is info",
+			source: "package foo\nfunc f() {\n\tx := 42\n\t_ = x\n}\n",
+			want:   finding.SeverityInfo,
+		},
+		{
+			name:   "flag argument is warning",
+			source: "package foo\nfunc f(on bool) {\n\tif on {\n\t}\n}\n",
+			want:   finding.SeverityWarning,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			path := filepath.Join(t.TempDir(), "foo.go")
+			cache := astcache.New()
+			if _, err := cache.Parse(path, []byte(testCase.source)); err != nil {
+				t.Fatalf("parse source: %v", err)
+			}
+			got := NewAnalyzer().Analyze(&pass.Context{
+				ASTCache:     cache,
+				Syntax:       summaries(cache, path),
+				ChangedFiles: []pass.FileChange{{Path: path, Extension: ".go"}},
+			})
+			if len(got) != 1 || got[0].Severity != testCase.want {
+				t.Fatalf("findings = %+v, want exactly one at %v", got, testCase.want)
+			}
+		})
+	}
+}
+
 func fourLineFixture(t *testing.T) (*astcache.Cache, string) {
 	t.Helper()
 
