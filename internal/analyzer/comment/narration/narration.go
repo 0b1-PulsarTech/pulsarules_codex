@@ -17,8 +17,6 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-
 func (analyzer *Analyzer) reporter() finding.Reporter {
 	return finding.NewReporter(ID, finding.SeverityWarning, finding.CatSyntax)
 }

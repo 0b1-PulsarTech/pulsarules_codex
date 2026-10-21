@@ -105,10 +105,10 @@ func delegatedKeys(count int) string {
 	return doc(lines...)
 }
 
-func requireFits(t *testing.T, findingItem finding.Finding, parts ...string) {
+func requireFits(t *testing.T, hit finding.Finding, parts ...string) {
 	t.Helper()
 	for _, style := range []findings.FindingStyle{findings.StyleHook, findings.StyleCLI} {
-		rendered := findings.FormatFindings([]finding.Finding{findingItem}, style, "")
+		rendered := findings.FormatFindings([]finding.Finding{hit}, style, "")
 		if len(rendered) > maxJoinedReport {
 			t.Fatalf("%s line = %d bytes, want at most %d", style, len(rendered), maxJoinedReport)
 		}
@@ -118,7 +118,7 @@ func requireFits(t *testing.T, findingItem finding.Finding, parts ...string) {
 			}
 		}
 	}
-	requireNoFragment(t, findingItem.Message)
+	requireNoFragment(t, hit.Message)
 }
 
 func requireNoFragment(t *testing.T, message string) {

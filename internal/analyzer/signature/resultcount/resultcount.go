@@ -21,8 +21,6 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
-
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	const defaultMaxResults = 3
 	limit := ctx.Params(ID).Int(paramMaxResults, defaultMaxResults)

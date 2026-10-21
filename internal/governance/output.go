@@ -3,8 +3,8 @@ package governance
 import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 
 func CountBySeverity(findings []finding.Finding) (errors, warnings, infos int) {
-	for _, findingItem := range findings {
-		switch findingItem.Severity {
+	for _, hit := range findings {
+		switch hit.Severity {
 		case finding.SeverityError:
 			errors++
 		case finding.SeverityWarning:

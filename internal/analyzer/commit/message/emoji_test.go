@@ -65,14 +65,14 @@ func TestValidateEmojiCatalog(t *testing.T) {
 				return
 			}
 
-			findingItem, found := findingByID(findings, testCase.wantID)
+			hit, found := findingByID(findings, testCase.wantID)
 			if !found {
 				t.Fatalf("expected %s, got %+v", testCase.wantID, findings)
 			}
-			if findingItem.Severity != finding.SeverityError {
-				t.Fatalf("severity = %v, want error", findingItem.Severity)
+			if hit.Severity != finding.SeverityError {
+				t.Fatalf("severity = %v, want error", hit.Severity)
 			}
-			if findingItem.Suggestion == "" {
+			if hit.Suggestion == "" {
 				t.Fatal("a blocking emoji finding must offer alternatives")
 			}
 		})
@@ -174,7 +174,7 @@ func TestValidateEmojiWindow(t *testing.T) {
 				return
 			}
 
-			findingItem, found := findingByID(findings, testCase.wantID)
+			hit, found := findingByID(findings, testCase.wantID)
 			if !found {
 				t.Fatalf("expected %s, got %+v", testCase.wantID, findings)
 			}
@@ -182,8 +182,8 @@ func TestValidateEmojiWindow(t *testing.T) {
 			if testCase.wantID == "commit-emoji-soft-repeat" {
 				wantSeverity = finding.SeverityInfo
 			}
-			if findingItem.Severity != wantSeverity {
-				t.Fatalf("severity = %v, want %v", findingItem.Severity, wantSeverity)
+			if hit.Severity != wantSeverity {
+				t.Fatalf("severity = %v, want %v", hit.Severity, wantSeverity)
 			}
 		})
 	}

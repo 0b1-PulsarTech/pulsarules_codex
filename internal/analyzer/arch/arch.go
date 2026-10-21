@@ -41,8 +41,6 @@ func NewPackageBoundaryAnalyzer() *PackageBoundaryAnalyzer {
 	}
 }
 
-func (analyzer *PackageBoundaryAnalyzer) Stage() finding.StageID { return finding.StageArch }
-
 func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
@@ -76,8 +74,6 @@ func NewImportCycleAnalyzer() *ImportCycleAnalyzer {
 		reporter: finding.NewReporter(ImportCycleID, finding.SeverityError, finding.CatArch),
 	}
 }
-
-func (analyzer *ImportCycleAnalyzer) Stage() finding.StageID { return finding.StageArch }
 
 func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if ctx.ProjectDir == "" || ctx.Sources == nil {

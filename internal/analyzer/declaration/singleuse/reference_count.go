@@ -17,12 +17,12 @@ func checkCandidate(
 	if !ok {
 		return nil
 	}
-	findingItem := reporter.At(
+	hit := reporter.At(
 		decl.File,
 		decl.Line,
 		fmt.Sprintf("%s is referenced only inside %s", decl.Name, owner),
 		fmt.Sprintf("move the declaration inside %s", owner),
 	)
-	findingItem.Symbol = decl.Name
-	return []finding.Finding{findingItem}
+	hit.Symbol = decl.Name
+	return []finding.Finding{hit}
 }

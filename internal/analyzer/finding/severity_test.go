@@ -1,11 +1,9 @@
-package pass
+package finding
 
 import (
 	"errors"
 	"slices"
 	"testing"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 )
 
 func TestSeverityParseStringRoundTrip(t *testing.T) {
@@ -14,31 +12,21 @@ func TestSeverityParseStringRoundTrip(t *testing.T) {
 	testCases := []struct {
 		name    string
 		input   string
-		want    finding.Severity
+		want    Severity
 		wantErr error
 	}{
-		{name: "error", input: "error", want: finding.SeverityError},
-		{name: "warning", input: "warning", want: finding.SeverityWarning},
-		{name: "info", input: "info", want: finding.SeverityInfo},
-		{name: "empty", input: "", want: finding.SeverityInfo, wantErr: finding.ErrUnknownSeverity},
-		{
-			name:    "unknown",
-			input:   "loud",
-			want:    finding.SeverityInfo,
-			wantErr: finding.ErrUnknownSeverity,
-		},
-		{
-			name:    "capitalised",
-			input:   "Warning",
-			want:    finding.SeverityInfo,
-			wantErr: finding.ErrUnknownSeverity,
-		},
+		{name: "error", input: "error", want: SeverityError},
+		{name: "warning", input: "warning", want: SeverityWarning},
+		{name: "info", input: "info", want: SeverityInfo},
+		{name: "empty", input: "", want: SeverityInfo, wantErr: ErrUnknownSeverity},
+		{name: "unknown", input: "loud", want: SeverityInfo, wantErr: ErrUnknownSeverity},
+		{name: "capitalised", input: "Warning", want: SeverityInfo, wantErr: ErrUnknownSeverity},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := finding.ParseSeverity(testCase.input)
+			got, err := ParseSeverity(testCase.input)
 			if !errors.Is(err, testCase.wantErr) {
 				t.Fatalf(
 					"ParseSeverity(%q) err = %v, want %v",
@@ -61,7 +49,7 @@ func TestSeverityNames(t *testing.T) {
 	t.Parallel()
 
 	want := []string{"error", "info", "warning"}
-	if got := finding.SeverityNames(); !slices.Equal(got, want) {
+	if got := SeverityNames(); !slices.Equal(got, want) {
 		t.Fatalf("SeverityNames() = %v, want %v", got, want)
 	}
 }
@@ -85,7 +73,7 @@ func TestValidateSeverityName(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := finding.ValidateSeverityName(testCase.severity)
+			err := ValidateSeverityName(testCase.severity)
 			if (err != nil) != testCase.wantErr {
 				t.Errorf("ValidateSeverityName(%q) err = %v, wantErr %v",
 					testCase.severity, err, testCase.wantErr)

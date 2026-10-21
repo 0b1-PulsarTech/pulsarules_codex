@@ -11,52 +11,46 @@ type registered struct {
 	analyzer pass.Analyzer
 }
 
-type StageRunner struct {
-	stages map[finding.StageID][]registered
-	cfg    *pass.AnalysisConfig
+type Pipeline struct {
+	analyzers []registered
+	cfg       *pass.AnalysisConfig
 }
 
-func newPipeline(cfg *pass.AnalysisConfig) *StageRunner {
-	return &StageRunner{
-		stages: make(map[finding.StageID][]registered),
-		cfg:    cfg,
-	}
+func NewPipeline(cfg *pass.AnalysisConfig) *Pipeline {
+	return &Pipeline{cfg: cfg}
 }
 
-func (runner *StageRunner) Register(id string, analyzer pass.Analyzer) {
-	stage := analyzer.Stage()
-	runner.stages[stage] = append(runner.stages[stage], registered{id: id, analyzer: analyzer})
+func (pipeline *Pipeline) Register(id string, analyzer pass.Analyzer) {
+	pipeline.analyzers = append(pipeline.analyzers, registered{id: id, analyzer: analyzer})
 }
 
-func (runner *StageRunner) RunStages(ctx *pass.Context) []finding.Finding {
-	for stage := finding.StageContext; stage <= finding.StageOutput; stage++ {
-		for _, entry := range runner.stages[stage] {
-			if !runner.enabled(entry.id) {
-				continue
-			}
-			findings := entry.analyzer.Analyze(ctx)
-			// An in-place analyzer already appended to ctx.Findings; skip its return.
-			if _, inPlace := entry.analyzer.(pass.InPlaceAnalyzer); inPlace {
-				continue
-			}
-			ctx.Findings = append(ctx.Findings, runner.overridden(entry.id, findings)...)
+func (pipeline *Pipeline) Run(ctx *pass.Context) []finding.Finding {
+	for _, entry := range pipeline.analyzers {
+		if !pipeline.enabled(entry.id) {
+			continue
 		}
+		findings := entry.analyzer.Analyze(ctx)
+		// An in-place analyzer already appended to ctx.Findings; skip its return.
+		if _, inPlace := entry.analyzer.(pass.InPlaceAnalyzer); inPlace {
+			continue
+		}
+		ctx.Findings = append(ctx.Findings, pipeline.overridden(entry.id, findings)...)
 	}
 	return ctx.Findings
 }
 
-func (runner *StageRunner) overridden(id string, findings []finding.Finding) []finding.Finding {
-	if runner.cfg == nil {
+func (pipeline *Pipeline) overridden(id string, findings []finding.Finding) []finding.Finding {
+	if pipeline.cfg == nil {
 		return findings
 	}
-	return overrides.Apply(findings, id, runner.cfg.Overrides)
+	return overrides.Apply(findings, id, pipeline.cfg.Overrides)
 }
 
-func (runner *StageRunner) enabled(id string) bool {
-	if runner.cfg == nil {
+func (pipeline *Pipeline) enabled(id string) bool {
+	if pipeline.cfg == nil {
 		return true
 	}
-	cfg, ok := runner.cfg.Analyzers[id]
+	cfg, ok := pipeline.cfg.Analyzers[id]
 	if !ok {
 		return true
 	}

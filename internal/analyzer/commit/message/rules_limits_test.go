@@ -36,12 +36,12 @@ func TestValidateToolTrailerRejected(t *testing.T) {
 				defaultRuleConfig(),
 				defaultRuleReporters(),
 			)
-			findingItem, ok := findingByID(findings, "commit-no-coauthor")
+			hit, ok := findingByID(findings, "commit-no-coauthor")
 			if !ok {
 				t.Fatalf("expected commit-no-coauthor finding, got %+v", findings)
 			}
-			if findingItem.Severity != finding.SeverityError {
-				t.Errorf("severity = %v, want error (must block)", findingItem.Severity)
+			if hit.Severity != finding.SeverityError {
+				t.Errorf("severity = %v, want error (must block)", hit.Severity)
 			}
 		})
 	}
@@ -56,12 +56,12 @@ func TestValidateBodyTotal_TooLongThoughWrapped(t *testing.T) {
 	if hasAnalyzer(findings, "commit-body-length") {
 		t.Fatalf("no single body line should exceed the per-line cap: %+v", findings)
 	}
-	findingItem, ok := findingByID(findings, "commit-body-total-length")
+	hit, ok := findingByID(findings, "commit-body-total-length")
 	if !ok {
 		t.Fatalf("expected commit-body-total-length finding for oversized body")
 	}
-	if findingItem.Severity != finding.SeverityError {
-		t.Errorf("severity = %v, want error (must block)", findingItem.Severity)
+	if hit.Severity != finding.SeverityError {
+		t.Errorf("severity = %v, want error (must block)", hit.Severity)
 	}
 }
 

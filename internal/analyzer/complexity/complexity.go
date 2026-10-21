@@ -37,8 +37,6 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
-
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	th := analyzer.resolveThresholds(ctx)
 	findings := make([]finding.Finding, 0, len(ctx.ChangedFiles))

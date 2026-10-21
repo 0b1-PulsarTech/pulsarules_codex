@@ -24,8 +24,6 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	warning := pass.ResolveReporter(analyzer.reporter, ctx)
 	// A severity override on file-size downgrades the cap too, since both share one ID.

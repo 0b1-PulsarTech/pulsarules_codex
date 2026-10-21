@@ -384,12 +384,12 @@ func runPreconditionCase(t *testing.T, testCase preconditionCase) {
 	findings := NewAnalyzer(newIndex(t)).runEntry(root, listed, entry)
 	ids := make([]string, len(findings))
 	text := ""
-	for idx, findingItem := range findings {
-		ids[idx] = findingItem.AnalyzerID
-		if findingItem.AnalyzerID == unavailableID {
-			text = findingItem.Message
-			if findingItem.Severity != finding.SeverityInfo {
-				t.Errorf("unavailable severity = %v, want info", findingItem.Severity)
+	for idx, hit := range findings {
+		ids[idx] = hit.AnalyzerID
+		if hit.AnalyzerID == unavailableID {
+			text = hit.Message
+			if hit.Severity != finding.SeverityInfo {
+				t.Errorf("unavailable severity = %v, want info", hit.Severity)
 			}
 		}
 	}

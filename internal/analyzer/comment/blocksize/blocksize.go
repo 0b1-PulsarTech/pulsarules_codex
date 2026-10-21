@@ -25,8 +25,6 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	ml := analyzer.resolveMaxLines(ctx)
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)

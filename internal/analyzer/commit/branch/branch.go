@@ -33,8 +33,6 @@ func NewAnalyzer(repo branchReader) *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if analyzer.repo == nil {
 		return nil

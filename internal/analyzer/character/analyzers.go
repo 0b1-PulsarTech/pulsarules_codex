@@ -42,8 +42,6 @@ func NewTextAnalyzer() *TextAnalyzer {
 	}}
 }
 
-func (analyzer *TextAnalyzer) Stage() finding.StageID { return finding.StageStatic }
-
 func (analyzer *TextAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporters := textReporters{
 		carrier:     pass.ResolveReporter(analyzer.reporters.carrier, ctx),
@@ -83,8 +81,6 @@ func NewTypographicAnalyzer() *TypographicAnalyzer {
 		reporter: finding.NewReporter(TypographicID, finding.SeverityError, finding.CatSyntax),
 	}
 }
-
-func (analyzer *TypographicAnalyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *TypographicAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)

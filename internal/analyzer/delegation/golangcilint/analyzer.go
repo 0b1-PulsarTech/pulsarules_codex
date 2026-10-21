@@ -32,8 +32,6 @@ func NewAnalyzer(golangciLintPath string) *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if analyzer.path == "" {
 		return nil

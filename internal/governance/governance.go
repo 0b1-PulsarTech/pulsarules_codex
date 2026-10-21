@@ -69,12 +69,12 @@ func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Res
 	discovery := sess.Discover(scope, status, files)
 	ctx := sess.Load(discovery)
 
-	sr := newPipeline(sess.cfgAnalysis)
+	pipeline := NewPipeline(sess.cfgAnalysis)
 	deps := registry.Deps{Index: sess.index, Repo: sess.repo}
-	if err := sr.registerForScope(deps, scope); err != nil {
+	if err := pipeline.registerForScope(deps, scope); err != nil {
 		ctx.Findings = append(ctx.Findings, registryFinding(err))
 	}
-	findings := sr.RunStages(ctx)
+	findings := pipeline.Run(ctx)
 
 	if sess.cfgAnalysis.IncludeGenerated {
 		return Result{Findings: findings}

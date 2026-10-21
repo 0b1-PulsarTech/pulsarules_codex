@@ -10,34 +10,30 @@ import (
 )
 
 type stubAnalyzer struct {
-	stage    finding.StageID
 	findings []finding.Finding
 }
 
-func (stub stubAnalyzer) Stage() finding.StageID { return stub.stage }
 func (stub stubAnalyzer) Analyze(_ *pass.Context) []finding.Finding {
 	return stub.findings
 }
 
-func TestStageRunnerRegisterAndRun(t *testing.T) {
+func TestPipelineRegisterAndRun(t *testing.T) {
 	t.Parallel()
 
-	runner := newPipeline(nil)
-	runner.Register("a1", stubAnalyzer{
-		stage: finding.StageStatic,
+	pipeline := NewPipeline(nil)
+	pipeline.Register("a1", stubAnalyzer{
 		findings: []finding.Finding{
 			{AnalyzerID: "a1", Message: "issue 1", Severity: finding.SeverityWarning},
 		},
 	})
-	runner.Register("a2", stubAnalyzer{
-		stage: finding.StageAST,
+	pipeline.Register("a2", stubAnalyzer{
 		findings: []finding.Finding{
 			{AnalyzerID: "a2", Message: "issue 2", Severity: finding.SeverityError},
 		},
 	})
 
 	ctx := &pass.Context{}
-	findings := runner.RunStages(ctx)
+	findings := pipeline.Run(ctx)
 	if len(findings) != 2 {
 		t.Fatalf("expected 2 findings, got %d", len(findings))
 	}
@@ -49,7 +45,7 @@ func TestStageRunnerRegisterAndRun(t *testing.T) {
 	}
 }
 
-func TestStageRunnerDisabledAnalyzer(t *testing.T) {
+func TestPipelineDisabledAnalyzer(t *testing.T) {
 	t.Parallel()
 
 	cfg := &pass.AnalysisConfig{
@@ -57,18 +53,16 @@ func TestStageRunnerDisabledAnalyzer(t *testing.T) {
 			"disabled": {Enabled: false},
 		},
 	}
-	runner := newPipeline(cfg)
-	runner.Register("disabled", stubAnalyzer{
-		stage:    finding.StageStatic,
+	pipeline := NewPipeline(cfg)
+	pipeline.Register("disabled", stubAnalyzer{
 		findings: []finding.Finding{{AnalyzerID: "disabled", Message: "should not appear"}},
 	})
-	runner.Register("enabled", stubAnalyzer{
-		stage:    finding.StageStatic,
+	pipeline.Register("enabled", stubAnalyzer{
 		findings: []finding.Finding{{AnalyzerID: "enabled", Message: "should appear"}},
 	})
 
 	ctx := &pass.Context{}
-	findings := runner.RunStages(ctx)
+	findings := pipeline.Run(ctx)
 	if len(findings) != 1 {
 		t.Fatalf("expected 1 finding (disabled analyzer skipped), got %d", len(findings))
 	}
@@ -77,12 +71,9 @@ func TestStageRunnerDisabledAnalyzer(t *testing.T) {
 	}
 }
 
-type stubInPlaceAnalyzer struct {
-	stage finding.StageID
-}
+type stubInPlaceAnalyzer struct{}
 
-func (stub stubInPlaceAnalyzer) Stage() finding.StageID { return stub.stage }
-func (stub stubInPlaceAnalyzer) TransformsInPlace()     {}
+func (stub stubInPlaceAnalyzer) TransformsInPlace() {}
 
 func (stub stubInPlaceAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if len(ctx.Findings) > 0 {
@@ -93,19 +84,18 @@ func (stub stubInPlaceAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 
 var _ pass.InPlaceAnalyzer = stubInPlaceAnalyzer{}
 
-func TestStageRunnerInPlaceAnalyzerNotAppended(t *testing.T) {
+func TestPipelineInPlaceAnalyzerNotAppended(t *testing.T) {
 	t.Parallel()
 
-	runner := newPipeline(nil)
-	runner.Register("producer", stubAnalyzer{
-		stage: finding.StageStatic,
+	pipeline := NewPipeline(nil)
+	pipeline.Register("producer", stubAnalyzer{
 		findings: []finding.Finding{
 			{AnalyzerID: "one"}, {AnalyzerID: "two"},
 		},
 	})
-	runner.Register("transformer", stubInPlaceAnalyzer{stage: finding.StageOutput})
+	pipeline.Register("transformer", stubInPlaceAnalyzer{})
 
-	findings := runner.RunStages(&pass.Context{})
+	findings := pipeline.Run(&pass.Context{})
 	if len(findings) != 1 {
 		t.Fatalf(
 			"expected 1 finding (one dropped, none appended), got %d: %+v",
@@ -118,34 +108,31 @@ func TestStageRunnerInPlaceAnalyzerNotAppended(t *testing.T) {
 	}
 }
 
-func TestStageRunnerOrdersByStage(t *testing.T) {
+func TestPipelineRunsInRegistrationOrder(t *testing.T) {
 	t.Parallel()
 
-	runner := newPipeline(nil)
-	runner.Register("ast", stubAnalyzer{
-		stage:    finding.StageAST,
+	pipeline := NewPipeline(nil)
+	pipeline.Register("ast", stubAnalyzer{
 		findings: []finding.Finding{{AnalyzerID: "ast"}},
 	})
-	runner.Register("static", stubAnalyzer{
-		stage:    finding.StageStatic,
+	pipeline.Register("static", stubAnalyzer{
 		findings: []finding.Finding{{AnalyzerID: "static"}},
 	})
-	runner.Register("arch", stubAnalyzer{
-		stage:    finding.StageArch,
+	pipeline.Register("arch", stubAnalyzer{
 		findings: []finding.Finding{{AnalyzerID: "arch"}},
 	})
 
 	ctx := &pass.Context{}
-	findings := runner.RunStages(ctx)
+	findings := pipeline.Run(ctx)
 
-	want := []string{"static", "ast", "arch"}
+	want := []string{"ast", "static", "arch"}
 	if len(findings) != len(want) {
 		t.Fatalf("expected %d findings, got %d: %+v", len(want), len(findings), findings)
 	}
 	for idx, id := range want {
 		if findings[idx].AnalyzerID != id {
 			t.Errorf(
-				"findings[%d].AnalyzerID = %q, want %q (stage order violated)",
+				"findings[%d].AnalyzerID = %q, want %q (registration order violated)",
 				idx,
 				findings[idx].AnalyzerID,
 				id,
@@ -154,7 +141,7 @@ func TestStageRunnerOrdersByStage(t *testing.T) {
 	}
 }
 
-func TestStageRunnerAppliesOverrides(t *testing.T) {
+func TestPipelineAppliesOverrides(t *testing.T) {
 	t.Parallel()
 
 	cfg := toAnalysisConfig(&config.GovernanceConfig{
@@ -164,22 +151,20 @@ func TestStageRunnerAppliesOverrides(t *testing.T) {
 			Analyzers: map[string]pass.OverrideConfig{"file-size": {Severity: "warning"}},
 		}},
 	})
-	runner := newPipeline(cfg)
-	runner.Register("golangci-lint", stubAnalyzer{
-		stage: finding.StageStatic,
+	pipeline := NewPipeline(cfg)
+	pipeline.Register("golangci-lint", stubAnalyzer{
 		findings: []finding.Finding{{
 			AnalyzerID: "golangci-lint/errcheck", File: "main.go", Severity: finding.SeverityError,
 		}},
 	})
-	runner.Register("file-size", stubAnalyzer{
-		stage: finding.StageStatic,
+	pipeline.Register("file-size", stubAnalyzer{
 		findings: []finding.Finding{
 			{AnalyzerID: "file-size", File: "web/test/a.dart", Severity: finding.SeverityError},
 			{AnalyzerID: "file-size", File: "web/lib/b.dart", Severity: finding.SeverityError},
 		},
 	})
 
-	findings := runner.RunStages(&pass.Context{})
+	findings := pipeline.Run(&pass.Context{})
 	want := []finding.Severity{finding.SeverityInfo, finding.SeverityWarning, finding.SeverityError}
 	for idx, severity := range want {
 		if findings[idx].Severity != severity {

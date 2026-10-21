@@ -28,8 +28,6 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
-
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reps := fileReporters{
 		shadow: pass.ResolveReporter(analyzer.shadowReporter, ctx),

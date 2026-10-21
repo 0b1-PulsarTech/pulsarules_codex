@@ -24,25 +24,21 @@ func applyRules(findings []finding.Finding, owner string, rules []pass.Override)
 	return kept
 }
 
-func resolve(
-	findingItem finding.Finding,
-	owner string,
-	rules []pass.Override,
-) (finding.Finding, bool) {
+func resolve(hit finding.Finding, owner string, rules []pass.Override) (finding.Finding, bool) {
 	enabled := true
 	for _, item := range rules {
-		override, found := lookup(item.Analyzers, findingItem.AnalyzerID, owner)
-		if !found || !item.Covers(findingItem.File) {
+		override, found := lookup(item.Analyzers, hit.AnalyzerID, owner)
+		if !found || !item.Covers(hit.File) {
 			continue
 		}
 		if override.Enabled != nil {
 			enabled = *override.Enabled
 		}
 		if severity, err := finding.ParseSeverity(override.Severity); err == nil {
-			findingItem.Severity = severity
+			hit.Severity = severity
 		}
 	}
-	return findingItem, enabled
+	return hit, enabled
 }
 
 func lookup(

@@ -24,8 +24,6 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
-
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if ctx.Sources == nil {
 		return nil

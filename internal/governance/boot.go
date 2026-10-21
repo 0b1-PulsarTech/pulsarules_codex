@@ -14,10 +14,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
-func (runner *StageRunner) registerForScope(deps registry.Deps, scope Scope) error {
+func (pipeline *Pipeline) registerForScope(deps registry.Deps, scope Scope) error {
 	analyzers, err := registry.Analyzers(deps, maxGateFor(scope))
 	for _, analyzer := range analyzers {
-		runner.Register(analyzer.ID, analyzer.Analyzer)
+		pipeline.Register(analyzer.ID, analyzer.Analyzer)
 	}
 	return err
 }

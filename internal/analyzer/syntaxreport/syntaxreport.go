@@ -25,8 +25,6 @@ func NewAnalyzer(language language.ID) *Analyzer {
 	return &Analyzer{language: language}
 }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
-
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	findings := analyzer.unparsed(ctx)
 	return append(findings, analyzer.unavailable(ctx)...)

@@ -137,12 +137,12 @@ func TestJoinFaults(t *testing.T) {
 			t.Parallel()
 			joined := joinFaults(testCase.base, testCase.second)
 			got := joined.Error()
-			findingItem := finding.Finding{
+			hit := finding.Finding{
 				AnalyzerID: configAnalyzerID, Severity: finding.SeverityError,
 				File: faultFile(joined, nil), Message: got,
 			}
 			rendered := findings.FormatFindings(
-				[]finding.Finding{findingItem}, findings.StyleHook, "")
+				[]finding.Finding{hit}, findings.StyleHook, "")
 			requireNoFragment(t, got)
 			if len(rendered) > maxJoinedReport || !utf8.ValidString(got) {
 				t.Fatalf("rendered = %d bytes valid=%v", len(rendered), utf8.ValidString(got))

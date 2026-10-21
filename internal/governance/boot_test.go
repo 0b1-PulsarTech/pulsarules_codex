@@ -21,9 +21,8 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 	cfg.ApplyPreset()
 	analysisCfg := toAnalysisConfig(cfg)
 
-	sr := newPipeline(analysisCfg)
-	sr.Register("seed", stubAnalyzer{
-		stage: finding.StageStatic,
+	pipeline := NewPipeline(analysisCfg)
+	pipeline.Register("seed", stubAnalyzer{
 		findings: []finding.Finding{
 			{
 				AnalyzerID: "seed",
@@ -55,12 +54,12 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 			},
 		},
 	})
-	if err := sr.registerForScope(registry.Deps{}, ScopeChanged); err != nil {
+	if err := pipeline.registerForScope(registry.Deps{}, ScopeChanged); err != nil {
 		t.Fatalf("registerForScope: %v", err)
 	}
 
 	ctx := &pass.Context{Config: analysisCfg}
-	findings := sr.RunStages(ctx)
+	findings := pipeline.Run(ctx)
 
 	if len(findings) != 3 {
 		t.Fatalf("expected 3 findings after dedup, got %d: %+v", len(findings), findings)

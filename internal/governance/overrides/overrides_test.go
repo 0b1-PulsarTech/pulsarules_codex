@@ -49,9 +49,9 @@ func applyPerOwner(
 	rules []pass.Override,
 ) []finding.Finding {
 	got := make([]finding.Finding, 0, len(findings))
-	for _, findingItem := range findings {
-		base, _, _ := strings.Cut(findingItem.AnalyzerID, "/")
-		got = append(got, Apply([]finding.Finding{findingItem}, cmp.Or(owner, base), rules)...)
+	for _, hit := range findings {
+		base, _, _ := strings.Cut(hit.AnalyzerID, "/")
+		got = append(got, Apply([]finding.Finding{hit}, cmp.Or(owner, base), rules)...)
 	}
 	return got
 }

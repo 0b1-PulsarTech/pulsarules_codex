@@ -25,17 +25,6 @@ const (
 	CatProject
 )
 
-type StageID int
-
-const (
-	StageContext StageID = iota
-	StageStatic
-	StageAST
-	StageArch
-	StageRuleInjection
-	StageOutput
-)
-
 var ErrUnknownSeverity = errors.New("unknown severity")
 
 func (severity Severity) String() string {

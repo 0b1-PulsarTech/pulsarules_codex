@@ -90,12 +90,12 @@ func ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
 			return cfg, nil
 		}
 	}
-	findingItem := finding.Finding{
+	hit := finding.Finding{
 		AnalyzerID: configAnalyzerID,
 		Severity:   finding.SeverityError,
 		Category:   finding.CatProject,
 		File:       faultFile(err, file),
 		Message:    err.Error(),
 	}
-	return withPreset(nil, ""), []finding.Finding{findingItem}
+	return withPreset(nil, ""), []finding.Finding{hit}
 }

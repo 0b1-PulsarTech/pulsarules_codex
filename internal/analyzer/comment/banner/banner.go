@@ -14,8 +14,6 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
-
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	extFilter := pass.ExtensionFilter(ctx, ID, defaultExtensions())
 	// Required header lines (lexer.ExemptHeaderSpan) are skipped so a hand comment after

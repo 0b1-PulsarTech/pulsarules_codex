@@ -121,12 +121,12 @@ func TestValidateDescriptionTooLong(t *testing.T) {
 	longDesc := descBuilder.String()
 	msg := commitmsg.Parse(":wrench: feat: " + longDesc)
 	findings := validate(msg, defaultRuleConfig(), defaultRuleReporters())
-	findingItem, ok := findingByID(findings, "commit-desc-length")
+	hit, ok := findingByID(findings, "commit-desc-length")
 	if !ok {
 		t.Fatalf("expected commit-desc-length finding for 80+ char subject")
 	}
-	if findingItem.Severity != finding.SeverityError {
-		t.Errorf("commit-desc-length severity = %v, want error (must block)", findingItem.Severity)
+	if hit.Severity != finding.SeverityError {
+		t.Errorf("commit-desc-length severity = %v, want error (must block)", hit.Severity)
 	}
 }
 

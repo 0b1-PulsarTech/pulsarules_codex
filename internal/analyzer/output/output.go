@@ -17,8 +17,6 @@ type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer { return &Analyzer{} }
 
-func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageOutput }
-
 func (analyzer *Analyzer) TransformsInPlace() {}
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
