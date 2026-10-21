@@ -159,38 +159,6 @@ func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 	}
 }
 
-func TestSuppressedClause(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name       string
-		suppressed int
-		want       string
-	}{
-		{name: "nothing suppressed says nothing", suppressed: 0, want: ""},
-		{
-			name:       "one suppressed finding is still announced",
-			suppressed: 1,
-			want:       ", 1 suppressed in generated files",
-		},
-		{
-			name:       "the count is stated in full",
-			suppressed: 353,
-			want:       ", 353 suppressed in generated files",
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := suppressedClause(testCase.suppressed); got != testCase.want {
-				t.Errorf("suppressedClause(%d) = %q, want %q",
-					testCase.suppressed, got, testCase.want)
-			}
-		})
-	}
-}
-
 func TestGovernanceConfig_StrictLowersFileSize(t *testing.T) {
 	t.Parallel()
 

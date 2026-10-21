@@ -45,27 +45,27 @@ func fileOnlyFinding() finding.Finding {
 	}
 }
 
-func TestFormatFindings(t *testing.T) {
+func TestReport_Text(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name     string
 		findings []finding.Finding
-		style    FindingStyle
+		layout   Layout
 		header   string
 		want     string
 	}{
 		{
 			name:     "empty set renders nothing even with a header",
 			findings: nil,
-			style:    StyleCLI,
+			layout:   CLI(),
 			header:   "Governance checks:",
 			want:     "",
 		},
 		{
 			name:     "cli upcases the severity and appends the rule",
 			findings: []finding.Finding{locatedFinding()},
-			style:    StyleCLI,
+			layout:   CLI(),
 			want: "[WARNING] file-size: file is too long (internal/a.go:42)\n" +
 				"  \u2192 split it\n" +
 				"  rule: Keep functions short and files under one concept.\n",
@@ -73,61 +73,55 @@ func TestFormatFindings(t *testing.T) {
 		{
 			name:     "hook indents, downcases and drops the rule",
 			findings: []finding.Finding{locatedFinding()},
-			style:    StyleHook,
+			layout:   Hook(),
 			want: "  [warning] file-size: file is too long (internal/a.go:42)\n" +
 				"    \u2192 split it\n",
 		},
 		{
 			name:     "a finding without a file omits the location",
 			findings: []finding.Finding{unlocatedFinding()},
-			style:    StyleCLI,
+			layout:   CLI(),
 			want:     "[ERROR] commit-lint: missing emoji\n",
 		},
 		{
 			name:     "a file without a line omits the colon",
 			findings: []finding.Finding{fileOnlyFinding()},
-			style:    StyleCLI,
+			layout:   CLI(),
 			want:     "[INFO] imports: regroup imports (internal/b.go)\n",
 		},
 		{
 			name:     "the header precedes the findings",
 			findings: []finding.Finding{unlocatedFinding()},
-			style:    StyleHook,
+			layout:   Hook(),
 			header:   "Governance checks:",
 			want:     "Governance checks:\n  [error] commit-lint: missing emoji\n",
 		},
 		{
 			name:     "an all-blank rule body prints no rule line",
 			findings: []finding.Finding{blankRuleFinding()},
-			style:    StyleCLI,
+			layout:   CLI(),
 			want:     "[WARNING] naming: bad name\n",
-		},
-		{
-			name:     "an unknown style falls back to the cli layout",
-			findings: []finding.Finding{unlocatedFinding()},
-			style:    FindingStyle("nonsense"),
-			want:     "[ERROR] commit-lint: missing emoji\n",
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := FormatFindings(testCase.findings, testCase.style, testCase.header)
+			got := Report{Findings: testCase.findings}.Text(testCase.layout, testCase.header)
 			if got != testCase.want {
-				t.Fatalf("FormatFindings() =\n%q\nwant\n%q", got, testCase.want)
+				t.Fatalf("Report.Text() =\n%q\nwant\n%q", got, testCase.want)
 			}
 		})
 	}
 }
 
-func TestFormatFindings_Escapes(t *testing.T) {
+func TestReport_Text_Escapes(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name     string
 		findings []finding.Finding
-		style    FindingStyle
+		layout   Layout
 		want     string
 	}{
 		{
@@ -136,8 +130,8 @@ func TestFormatFindings_Escapes(t *testing.T) {
 				AnalyzerID: "file-size", Severity: finding.SeverityWarning, Message: "m",
 				File: "a\n  [error] x: y.go", Line: 2,
 			}},
-			style: StyleHook,
-			want:  "  [warning] file-size: m (\"a\\n  [error] x: y.go\":2)\n",
+			layout: Hook(),
+			want:   "  [warning] file-size: m (\"a\\n  [error] x: y.go\":2)\n",
 		},
 		{
 			name: "a newline in a file without a line is quoted",
@@ -145,8 +139,8 @@ func TestFormatFindings_Escapes(t *testing.T) {
 				AnalyzerID: "file-size", Severity: finding.SeverityWarning, Message: "m",
 				File: "a\n  [error] x: y.go",
 			}},
-			style: StyleHook,
-			want:  "  [warning] file-size: m (\"a\\n  [error] x: y.go\")\n",
+			layout: Hook(),
+			want:   "  [warning] file-size: m (\"a\\n  [error] x: y.go\")\n",
 		},
 		{
 			name: "a newline in the analyzer id is escaped",
@@ -157,8 +151,8 @@ func TestFormatFindings_Escapes(t *testing.T) {
 					Message:    "m",
 				},
 			},
-			style: StyleHook,
-			want:  "  [warning] golangci-lint/x\\n  [error] y: m\n",
+			layout: Hook(),
+			want:   "  [warning] golangci-lint/x\\n  [error] y: m\n",
 		},
 		{
 			name: "a newline in message and suggestion is escaped",
@@ -167,7 +161,7 @@ func TestFormatFindings_Escapes(t *testing.T) {
 				Message:    "rename a\n  [error] forged: x",
 				Suggestion: "do\r\nthis",
 			}},
-			style: StyleHook,
+			layout: Hook(),
 			want: "  [error] move: rename a\\n  [error] forged: x\n" +
 				"    \u2192 do\\r\\nthis\n",
 		},
@@ -177,7 +171,7 @@ func TestFormatFindings_Escapes(t *testing.T) {
 				AnalyzerID: "move", Severity: finding.SeverityWarning, Message: "m",
 				RuleSummary: "Keep it\r[ERROR] forged\u2028[ERROR] again",
 			}},
-			style: StyleCLI,
+			layout: CLI(),
 			want: "[WARNING] move: m\n" +
 				"  rule: Keep it\\r[ERROR] forged\\u2028[ERROR] again\n",
 		},
@@ -186,15 +180,15 @@ func TestFormatFindings_Escapes(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := FormatFindings(testCase.findings, testCase.style, "")
+			got := Report{Findings: testCase.findings}.Text(testCase.layout, "")
 			if got != testCase.want {
-				t.Fatalf("FormatFindings() =\n%q\nwant\n%q", got, testCase.want)
+				t.Fatalf("Report.Text() =\n%q\nwant\n%q", got, testCase.want)
 			}
 		})
 	}
 }
 
-func TestFormatFindingsRendersEveryFinding(t *testing.T) {
+func TestReport_TextRendersEveryFinding(t *testing.T) {
 	t.Parallel()
 
 	findings := []finding.Finding{
@@ -203,7 +197,7 @@ func TestFormatFindingsRendersEveryFinding(t *testing.T) {
 		{AnalyzerID: "three", Severity: finding.SeverityInfo, Message: "third"},
 	}
 
-	got := FormatFindings(findings, StyleCLI, "")
+	got := Report{Findings: findings}.Text(CLI(), "")
 	if lines := strings.Count(got, "\n"); lines != len(findings) {
 		t.Fatalf("rendered %d lines, want %d:\n%s", lines, len(findings), got)
 	}

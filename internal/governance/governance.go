@@ -11,6 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/generated"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -72,7 +73,7 @@ type Request struct {
 	Skips         source.SkipSet
 }
 
-func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Result {
+func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) findings.Report {
 	discovery := sess.Discover(scope, status, files)
 	ctx := sess.Load(discovery)
 	detector := generated.NewDetector(ctx.Sources)
@@ -82,13 +83,13 @@ func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Res
 	pipe := newPipeline(
 		sess.cfgAnalysis, registry.Analyzers(deps, maxGateFor(scope)), sess.transforms(),
 	)
-	findings := pipe.run(ctx, sess.seedFindings())
+	reported := pipe.run(ctx, sess.seedFindings())
 
 	if sess.cfgAnalysis.IncludeGenerated {
-		return Result{Findings: findings}
+		return findings.Report{Findings: reported}
 	}
-	kept, suppressed := detector.Split(findings)
-	return Result{Findings: kept, SuppressedGenerated: suppressed}
+	kept, suppressed := detector.Split(reported)
+	return findings.Report{Findings: kept, Suppressed: suppressed}
 }
 
 func (sess *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Request {

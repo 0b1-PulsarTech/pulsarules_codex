@@ -141,8 +141,7 @@ func TestJoinFaults(t *testing.T) {
 				AnalyzerID: configAnalyzerID, Severity: finding.SeverityError,
 				File: faultFile(joined, nil), Message: got,
 			}
-			rendered := findings.FormatFindings(
-				[]finding.Finding{hit}, findings.StyleHook, "")
+			rendered := renderHook([]finding.Finding{hit})
 			requireNoFragment(t, got)
 			if len(rendered) > maxJoinedReport || !utf8.ValidString(got) {
 				t.Fatalf("rendered = %d bytes valid=%v", len(rendered), utf8.ValidString(got))
@@ -182,12 +181,12 @@ func TestLoadCapsTheJoinedReport(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, findingsItem := ForRoot(testCase.spec.build(t))
-			if len(findingsItem) != 1 {
-				t.Fatalf("findings = %+v, want exactly one", findingsItem)
+			_, findings := ForRoot(testCase.spec.build(t))
+			if len(findings) != 1 {
+				t.Fatalf("findings = %+v, want exactly one", findings)
 			}
-			got := findingsItem[0]
-			rendered := findings.FormatFindings(findingsItem, findings.StyleHook, "")
+			got := findings[0]
+			rendered := renderHook(findings)
 			if len(rendered) > maxJoinedReport {
 				t.Fatalf("rendered line = %d bytes, want at most %d",
 					len(rendered), maxJoinedReport)
@@ -216,4 +215,8 @@ func longUnknownKeys(count int) string {
 		lines[idx] = strings.Repeat(string(rune('a'+idx)), 400) + ": 1"
 	}
 	return doc(lines...)
+}
+
+func renderHook(found []finding.Finding) string {
+	return findings.Report{Findings: found}.Text(findings.Hook(), "")
 }

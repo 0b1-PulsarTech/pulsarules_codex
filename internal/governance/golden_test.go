@@ -69,10 +69,10 @@ func TestGolden(t *testing.T) {
 			).Analyze(ScopeChanged, status, files)
 
 			assertFindings(t, testCase.dir, result.Findings, want.Findings)
-			if result.SuppressedGenerated != want.SuppressedGenerated {
+			if result.Suppressed != want.SuppressedGenerated {
 				t.Errorf(
 					"case %s: SuppressedGenerated = %d, want %d",
-					testCase.dir, result.SuppressedGenerated, want.SuppressedGenerated,
+					testCase.dir, result.Suppressed, want.SuppressedGenerated,
 				)
 			}
 

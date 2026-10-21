@@ -78,7 +78,7 @@ func TestRenderOverhead(t *testing.T) {
 			bare := finding.Finding{
 				AnalyzerID: configAnalyzerID, Severity: finding.SeverityError, File: testCase.file,
 			}
-			want := len(findings.FormatFindings([]finding.Finding{bare}, findings.StyleHook, ""))
+			want := len(renderHook([]finding.Finding{bare}))
 			if got := renderOverhead(testCase.file); got != want {
 				t.Fatalf("renderOverhead() = %d, want %d", got, want)
 			}
@@ -107,8 +107,9 @@ func delegatedKeys(count int) string {
 
 func requireFits(t *testing.T, hit finding.Finding, parts ...string) {
 	t.Helper()
-	for _, style := range []findings.FindingStyle{findings.StyleHook, findings.StyleCLI} {
-		rendered := findings.FormatFindings([]finding.Finding{hit}, style, "")
+	layouts := map[string]findings.Layout{"hook": findings.Hook(), "cli": findings.CLI()}
+	for style, layout := range layouts {
+		rendered := findings.Report{Findings: []finding.Finding{hit}}.Text(layout, "")
 		if len(rendered) > maxJoinedReport {
 			t.Fatalf("%s line = %d bytes, want at most %d", style, len(rendered), maxJoinedReport)
 		}
@@ -278,8 +279,7 @@ func TestCapReportFillsTheLine(t *testing.T) {
 			}
 			fault := &fileError{File: "a.yaml", Err: errors.New(strings.Join(items, "; "))}
 			got := capReport(fault, nil)
-			rendered := findings.FormatFindings(
-				[]finding.Finding{errorFinding(got)}, findings.StyleHook, "")
+			rendered := renderHook([]finding.Finding{errorFinding(got)})
 			if len(rendered) > maxJoinedReport || len(rendered) <= maxJoinedReport-60 {
 				t.Fatalf("rendered = %d bytes, want it to fill the line", len(rendered))
 			}

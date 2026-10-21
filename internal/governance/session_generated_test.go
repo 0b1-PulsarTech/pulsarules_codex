@@ -74,10 +74,10 @@ func TestAnalyzeIncludeGeneratedKeepsEverything(t *testing.T) {
 					testCase.wantFindings,
 				)
 			}
-			if (result.SuppressedGenerated > 0) != testCase.wantSuppressed {
+			if (result.Suppressed > 0) != testCase.wantSuppressed {
 				t.Fatalf(
 					"SuppressedGenerated = %d, want suppression = %v",
-					result.SuppressedGenerated,
+					result.Suppressed,
 					testCase.wantSuppressed,
 				)
 			}

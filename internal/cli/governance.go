@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"slices"
 	"strings"
@@ -85,42 +86,22 @@ func runGovernance(inj remy.Injector, opts *version.Options) error {
 
 	sess := governance.NewSession(run.repo, "", run.idx, run.catalog, run.cfg)
 	result := sess.Analyze(scope, nil, files)
-	return reportGovernance(result)
+	return reportGovernance(os.Stderr, result)
 }
 
-func reportGovernance(result governance.Result) error {
-	if len(result.Findings) == 0 {
-		_, _ = fmt.Fprintf(
-			os.Stderr,
-			"governance: no findings%s\n",
-			suppressedClause(result.SuppressedGenerated),
-		)
+func reportGovernance(out io.Writer, report findings.Report) error {
+	if len(report.Findings) == 0 {
+		_, _ = fmt.Fprintf(out, "governance: %s\n", report.Summary())
 		return nil
 	}
 
-	errCount, warnings, infos := governance.CountBySeverity(result.Findings)
-	_, _ = fmt.Fprint(os.Stderr, findings.FormatFindings(result.Findings, findings.StyleCLI, ""))
-	_, _ = fmt.Fprintf(
-		os.Stderr,
-		"\n%d error(s), %d warning(s), %d info(s)%s\n",
-		errCount,
-		warnings,
-		infos,
-		suppressedClause(result.SuppressedGenerated),
-	)
+	_, _ = fmt.Fprint(out, report.Text(findings.CLI(), ""))
+	_, _ = fmt.Fprintf(out, "\n%s\n", report.Summary())
 
-	if errCount > 0 {
+	if report.HasErrors() {
 		return ErrFindings
 	}
 	return nil
-}
-
-func suppressedClause(suppressed int) string {
-	if suppressed == 0 {
-		// An unfiltered run carries no "0 suppressed" tail.
-		return ""
-	}
-	return fmt.Sprintf(", %d suppressed in generated files", suppressed)
 }
 
 func projectConfig(opts *version.Options, root string) (*config.GovernanceConfig, error) {

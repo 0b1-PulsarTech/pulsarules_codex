@@ -9,45 +9,38 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-type FindingStyle string
-
-const (
-	StyleCLI  FindingStyle = "cli"
-	StyleHook FindingStyle = "hook"
-)
-
-type layout struct {
+type Layout struct {
 	indent   string
 	arrow    string
 	upper    bool
 	withRule bool
 }
 
-func layoutFor(style FindingStyle) layout {
-	if style == StyleHook {
-		return layout{indent: "  ", arrow: "    ", upper: false, withRule: false}
-	}
-	return layout{indent: "", arrow: "  ", upper: true, withRule: true}
+func CLI() Layout {
+	return Layout{indent: "", arrow: "  ", upper: true, withRule: true}
 }
 
-func FormatFindings(findings []finding.Finding, style FindingStyle, header string) string {
-	if len(findings) == 0 {
+func Hook() Layout {
+	return Layout{indent: "  ", arrow: "    ", upper: false, withRule: false}
+}
+
+func (report Report) Text(form Layout, header string) string {
+	if len(report.Findings) == 0 {
 		return ""
 	}
-	form := layoutFor(style)
 
 	var out strings.Builder
 	if header != "" {
 		out.WriteString(header)
 		out.WriteByte('\n')
 	}
-	for _, finding := range findings {
+	for _, finding := range report.Findings {
 		writeFinding(&out, finding, form)
 	}
 	return out.String()
 }
 
-func writeFinding(out *strings.Builder, finding finding.Finding, form layout) {
+func writeFinding(out *strings.Builder, finding finding.Finding, form Layout) {
 	label := finding.Severity.String()
 	if form.upper {
 		label = strings.ToUpper(label)

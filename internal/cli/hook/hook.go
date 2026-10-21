@@ -85,6 +85,8 @@ func PrintHookError(out io.Writer, label string, err error) {
 	_, _ = fmt.Fprintln(out, "hook: "+label+":", printable.Line(err.Error()))
 }
 
+const governanceHeader = "Governance checks:"
+
 func GovernChanges(
 	root string,
 	status vcs.Status,
@@ -93,25 +95,27 @@ func GovernChanges(
 ) (string, int) {
 	repo, err := vcs.Open(root)
 	if err != nil {
-		return "\nGovernance checks:\n  open repository: " + printable.Line(err.Error()) + "\n", 1
+		return "\n" + governanceHeader + "\n  open repository: " + printable.Line(
+			err.Error(),
+		) + "\n", 1
 	}
 	// The empty commit message is deliberate: only the git commit-msg hook validates one.
 	cfg, configFindings := loader.ForRoot(repo.Root())
 	sess := governance.NewSession(repo, "", index, catalog, cfg)
 	result := sess.Analyze(governance.ScopeChanged, &status, governance.FileSetChanged)
-	findingsItem := slices.Concat(configFindings, result.Findings)
+	result.Findings = slices.Concat(configFindings, result.Findings)
+	return GovernanceBlock(result)
+}
 
-	block := findings.FormatFindings(findingsItem, findings.StyleHook, "Governance checks:")
-	if block == "" {
+func GovernanceBlock(report findings.Report) (block string, count int) {
+	text := report.Text(findings.Hook(), governanceHeader)
+	if text == "" {
 		return "", 0
 	}
-	if result.SuppressedGenerated > 0 {
+	if note := report.Suppression(); note != "" {
 		// The hook has no footer of its own, so the suppression is stated here
 		// rather than dropped: a filtered block must say it was filtered.
-		block += fmt.Sprintf(
-			"  %d finding(s) suppressed in generated files\n",
-			result.SuppressedGenerated,
-		)
+		text += "  " + note + "\n"
 	}
-	return "\n" + block, len(findingsItem)
+	return "\n" + text, len(report.Findings)
 }

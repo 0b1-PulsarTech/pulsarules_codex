@@ -57,16 +57,16 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 	// status would have discovery read the worktree, and content findings from
 	// unrelated dirty files would fail a commit whose message is fine.
 	result := sess.Analyze(governance.ScopeCommit, &vcs.Status{}, governance.FileSetChanged)
-	findingsItem := slices.Concat(configFindings, result.Findings)
+	result.Findings = slices.Concat(configFindings, result.Findings)
 
-	if len(findingsItem) == 0 {
+	if len(result.Findings) == 0 {
 		_, _ = fmt.Fprintln(os.Stderr, "commit message is valid")
 		return nil
 	}
 
-	_, _ = fmt.Fprint(os.Stderr, findings.FormatFindings(findingsItem, findings.StyleCLI, ""))
+	_, _ = fmt.Fprint(os.Stderr, result.Text(findings.CLI(), ""))
 
-	if errCount, _, _ := governance.CountBySeverity(findingsItem); errCount > 0 {
+	if result.HasErrors() {
 		return ErrFindings
 	}
 	return nil

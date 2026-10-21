@@ -12,10 +12,12 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
@@ -92,7 +94,7 @@ func TestGovernChanges_SuppressionBlock(t *testing.T) {
 	if count != 1 {
 		t.Fatalf("count = %d, want 1 (the generated file's finding is suppressed)", count)
 	}
-	if !strings.Contains(block, "1 finding(s) suppressed in generated files") {
+	if !strings.Contains(block, "  1 suppressed in generated files\n") {
 		t.Fatalf("block does not state the suppression:\n%s", block)
 	}
 }
@@ -299,5 +301,47 @@ func TestRunHook_OtherModesDoNotNeedTheCatalog(t *testing.T) {
 
 	if strings.Contains(stderr, "emoji catalog") {
 		t.Errorf("pre-search resolved the emoji catalog: %q", stderr)
+	}
+}
+
+func TestGovernanceBlock(t *testing.T) {
+	t.Parallel()
+
+	warning := finding.Finding{
+		AnalyzerID: "file-size", Severity: finding.SeverityWarning, Message: "too long",
+		File: "a.go", Line: 3,
+	}
+	testCases := []struct {
+		name      string
+		report    findings.Report
+		wantBlock string
+		wantCount int
+	}{
+		{name: "nothing found is no block", report: findings.Report{}},
+		{name: "suppression alone is no block", report: findings.Report{Suppressed: 4}},
+		{
+			name:      "findings under the header",
+			report:    findings.Report{Findings: []finding.Finding{warning}},
+			wantBlock: "\nGovernance checks:\n  [warning] file-size: too long (a.go:3)\n",
+			wantCount: 1,
+		},
+		{
+			name:   "the suppression follows the findings in the report's own words",
+			report: findings.Report{Findings: []finding.Finding{warning}, Suppressed: 2},
+			wantBlock: "\nGovernance checks:\n  [warning] file-size: too long (a.go:3)\n" +
+				"  2 suppressed in generated files\n",
+			wantCount: 1,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			block, count := hook.GovernanceBlock(testCase.report)
+			if block != testCase.wantBlock || count != testCase.wantCount {
+				t.Fatalf("governanceBlock() = %q, %d, want %q, %d",
+					block, count, testCase.wantBlock, testCase.wantCount)
+			}
+		})
 	}
 }
