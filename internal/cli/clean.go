@@ -14,6 +14,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible/cleaner"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/markdown"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
@@ -150,7 +151,7 @@ func printReport(out io.Writer, found cleaner.Report, how mode) {
 		verb = "left"
 	}
 	for _, left := range found.Remaining {
-		note := advice(left.Class)
+		note := advice(left.Class, filepath.Ext(found.Path), found.EscapeAdvice(left))
 		if held := found.HeldNote(left); held != "" {
 			note = held
 		}
@@ -158,17 +159,19 @@ func printReport(out io.Writer, found cleaner.Report, how mode) {
 	}
 }
 
-func advice(class invisible.Class) string {
-	const literalCaveat = "inside a string literal it is data, " +
-		"so write the language's escape instead"
-
+func advice(class invisible.Class, ext, escape string) string {
+	caveat := "; inside a string literal it is data: " + escape
+	removable := "removable outside a string literal; inside one, " + escape
+	if markdown.IsMarkdown(ext) {
+		caveat, removable = "", "removable outside possible code"
+	}
 	switch class {
 	case invisible.ClassTypographic:
-		return "replace with its ASCII form by hand; " + literalCaveat
+		return "replace with its ASCII form by hand" + caveat
 	case invisible.ClassContextual:
 		return "may be load-bearing; judge it before removing"
 	case invisible.ClassStrip, invisible.ClassSpace:
-		return "removable outside a string literal; inside one, write it as an escape"
+		return removable
 	}
 	return "unclassified"
 }

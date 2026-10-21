@@ -3,6 +3,7 @@ package character
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
@@ -392,6 +393,9 @@ func runHintCases(t *testing.T, testCases []hintCase) {
 			}
 			if got[0].Suggestion != testCase.hint {
 				t.Errorf("hint = %q, want %q", got[0].Suggestion, testCase.hint)
+			}
+			if strings.Contains(got[0].Suggestion, "%!") {
+				t.Errorf("hint carries a fmt error: %q", got[0].Suggestion)
 			}
 			if got[0].Severity != testCase.sev {
 				t.Errorf("severity = %v, want %v", got[0].Severity, testCase.sev)

@@ -76,6 +76,41 @@ func TestLiterals_Escape(t *testing.T) {
 	}
 }
 
+func TestLiterals_Lexed(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		ext  string
+		want bool
+	}{
+		{".go", true},
+		{".dart", true},
+		{".ts", true},
+		{".mjs", true},
+		{".svelte", true},
+		{".rs", false},
+		{".py", false},
+		{".sh", false},
+		{".css", false},
+		{".md", false},
+		{".txt", false},
+		{"", false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.ext, func(t *testing.T) {
+			t.Parallel()
+
+			found := ScanLiterals(testCase.ext, "")
+			if got := found.Lexed(); got != testCase.want {
+				t.Errorf("Lexed(%q) = %v, want %v", testCase.ext, got, testCase.want)
+			}
+			if got := found.Escape('\U0001D173'); testCase.want && strings.Contains(got, "%!") {
+				t.Errorf("Escape = %q, want a clean escape", got)
+			}
+		})
+	}
+}
+
 func TestLiterals_Raw(t *testing.T) {
 	t.Parallel()
 

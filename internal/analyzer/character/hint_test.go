@@ -83,10 +83,14 @@ func TestHint_UnscannedLanguages(t *testing.T) {
 	t.Parallel()
 
 	const (
-		carrier = "remove it by hand; inside a string literal it is data, " +
-			"so write the language's escape instead"
-		prose = "replace it with the ASCII form by hand; inside a string literal it is data, " +
-			"so write the language's escape instead"
+		carrier = "remove it by hand; inside a string literal it is data: " +
+			"write it as the escape \\u00A0"
+		prose = "replace it with the ASCII form by hand; inside a string literal it is data: " +
+			"write it as the escape \\u2026"
+		neutral = "remove it by hand; inside a string literal it is data: " +
+			"write the language's escape for U+00A0 instead"
+		neutralProse = "replace it with the ASCII form by hand; inside a string literal it is " +
+			"data: write the language's escape for U+2026 instead"
 	)
 	testCases := []hintCase{
 		outside("svelte markup text", "a.svelte", "<p>it's\u00A0here</p>\n", carrier),
@@ -101,12 +105,12 @@ func TestHint_UnscannedLanguages(t *testing.T) {
 			"vue template", "a.vue", "<template><p>R$\u00A0</p></template>\n", carrier,
 		),
 		typographic("svelte markup typographic", "a.svelte", "<p>wait\u2026</p>\n", prose),
-		outside("rust string", "a.rs", "let a = \"x\u00A0y\";\n", carrier),
-		outside("php string", "a.php", "$a = 'x\u00A0y';\n", carrier),
-		outside("java string", "a.java", "String a = \"x\u00A0y\";\n", carrier),
-		outside("python string", "a.py", "a = 'x\u00A0y'\n", carrier),
-		typographic("rust typographic", "a.rs", "let a = \"x\u2026\";\n", prose),
-		typographic("java typographic", "a.java", "String a = \"x\u2026\";\n", prose),
+		outside("rust string", "a.rs", "let a = \"x\u00A0y\";\n", neutral),
+		outside("php string", "a.php", "$a = 'x\u00A0y';\n", neutral),
+		outside("java string", "a.java", "String a = \"x\u00A0y\";\n", neutral),
+		outside("python string", "a.py", "a = 'x\u00A0y'\n", neutral),
+		typographic("rust typographic", "a.rs", "let a = \"x\u2026\";\n", neutralProse),
+		typographic("java typographic", "a.java", "String a = \"x\u2026\";\n", neutralProse),
 	}
 	runHintCases(t, testCases)
 }
@@ -116,10 +120,9 @@ func TestHint_UnlexableFileIsUnscanned(t *testing.T) {
 
 	const (
 		carrier = "remove it by hand; could not read this file's strings; " +
-			"inside a string literal it is data, so write the language's escape instead"
+			"inside a string literal it is data: write it as the escape \\u00A0"
 		prose = "replace it with the ASCII form by hand; could not read this file's " +
-			"strings; inside a string literal it is data, " +
-			"so write the language's escape instead"
+			"strings; inside a string literal it is data: write it as the escape \\u2026"
 	)
 	testCases := []hintCase{
 		outside("go cut-off comment", "a.go", "/* x\nvar a = \"R$\u00A010\"\n", carrier),
@@ -146,26 +149,26 @@ func TestHint_LineCutKeepsTheStringsBeforeIt(t *testing.T) {
 	t.Parallel()
 
 	const past = "; could not read this file's strings from line 4 on; " +
-		"inside a string literal it is data, so write the language's escape instead"
+		"inside a string literal it is data: write it as the escape "
 	const before = "; could not read this file's strings reliably: a literal on line 4 never " +
-		"closes; inside a string literal it is data, so write the language's escape instead"
+		"closes; inside a string literal it is data: write it as the escape \\u00A0"
 	testCases := []hintCase{
 		inLiteral("string before the cut", "a.tsx", jsx("\u00A0", " ", ""), "\\u00A0"),
 		outside(
 			"marker on the cut line",
 			"a.tsx",
 			jsx(" ", "\u00A0", ""),
-			"remove it by hand"+past,
+			"remove it by hand"+past+"\\u00A0",
 		),
 		outside(
 			"marker after the cut line",
 			"a.tsx",
 			jsx(" ", " ", "\u00A0"),
-			"remove it by hand"+past,
+			"remove it by hand"+past+"\\u00A0",
 		),
 		typographic(
 			"typographic after the cut", "a.tsx", jsx(" ", "\u2026", ""),
-			"replace it with the ASCII form by hand"+past,
+			"replace it with the ASCII form by hand"+past+"\\u2026",
 		),
 		outside(
 			"marker in a comment before the cut",
@@ -183,7 +186,7 @@ func TestHint_CutVouchesOnlyForWhatItRead(t *testing.T) {
 	const (
 		from  = "; could not read this file's strings from line "
 		on    = " on"
-		tail  = "; inside a string literal it is data, so write the language's escape instead"
+		tail  = "; inside a string literal it is data: write it as the escape "
 		other = "remove it by hand"
 	)
 	testCases := []hintCase{
@@ -192,21 +195,45 @@ func TestHint_CutVouchesOnlyForWhatItRead(t *testing.T) {
 			"a.jsx",
 			"export const Key = () => <kbd>`</kbd>;\nconst price = `R$\u00A010 it's`;\n"+
 				"export const Total = () => <p>{price}</p>;\n",
-			other+from+"2"+on+tail,
+			other+from+"2"+on+tail+"\\u00A0",
 		),
 		outside(
 			"go marker between a misread raw string and the cut",
 			"a.go",
 			"package d\n\nvar a = `\n\nvar t = `say \"hi\u00A0`\nvar u = 1\n",
-			other+from+"5"+on+tail,
+			other+from+"5"+on+tail+"\\u00A0",
 		),
 		typographic(
 			"jsx typographic between a misread template and the cut",
 			"a.jsx",
 			"export const Key = () => <kbd>`</kbd>;\nconst price = `wait\u2026 it's`;\n"+
 				"export const Total = () => <p>{price}</p>;\n",
-			"replace it with the ASCII form by hand"+from+"2"+on+tail,
+			"replace it with the ASCII form by hand"+from+"2"+on+tail+"\\u2026",
 		),
+	}
+	runHintCases(t, testCases)
+}
+
+func TestHint_UnlexedFilesNameNoLanguageSyntax(t *testing.T) {
+	t.Parallel()
+
+	const (
+		tail  = "; inside a string literal it is data: write the language's escape for "
+		strip = "remove it by hand" + tail
+		ascii = "replace it with the ASCII form by hand"
+		taken = ascii + tail
+		clean = "run `pulsarules_cli clean --write`, which removes this class"
+	)
+	testCases := []hintCase{
+		outside("rust nbsp", "a.rs", "let a = \"x\u00A0y\";\n", strip+"U+00A0 instead"),
+		outside("rust astral", "a.rs", "let a = \"x\U0001D173y\";\n", strip+"U+1D173 instead"),
+		outside("rust raw nbsp", "a.rs", "let a = r\"x\u00A0y\";\n", strip+"U+00A0 instead"),
+		outside("python astral", "a.py", "a = 'x\U0001D173y'\n", strip+"U+1D173 instead"),
+		outside("shell nbsp", "a.sh", "echo \"x\u00A0y\"\n", strip+"U+00A0 instead"),
+		outside("shell astral", "a.sh", "echo \"x\U0001D173y\"\n", strip+"U+1D173 instead"),
+		typographic("rust ellipsis", "a.rs", "let a = \"x\u2026\";\n", taken+"U+2026 instead"),
+		outside("markdown astral", "a.md", "a\U0001D173b\n", clean),
+		typographic("markdown ellipsis", "a.md", "wait\u2026\n", ascii),
 	}
 	runHintCases(t, testCases)
 }

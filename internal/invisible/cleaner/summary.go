@@ -40,10 +40,13 @@ func (report Report) HeldNote(found invisible.Mark) string {
 	case markdown.IsMarkdown(filepath.Ext(report.Path)):
 		return "in possible code: judge it by hand; clean leaves it"
 	case report.literals.Raw(found.Offset):
-		return "in a raw string literal: move it into an interpreted string " +
-			"as an escape (\\uXXXX); clean leaves it"
+		return report.EscapeAdvice(found) + "; clean leaves it"
 	}
-	return "in a string literal: write it as an escape (\\uXXXX); clean leaves it"
+	return "in a string literal, " + report.EscapeAdvice(found) + "; clean leaves it"
+}
+
+func (report Report) EscapeAdvice(found invisible.Mark) string {
+	return EscapeAdvice(report.literals, found)
 }
 
 func (tally Tally) WriteLine() string {

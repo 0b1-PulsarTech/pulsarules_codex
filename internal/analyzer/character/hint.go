@@ -23,9 +23,7 @@ const (
 )
 
 func unreadNote(literals language.Literals, found invisible.Mark) string {
-	const escapeNote = "; inside a string literal it is data, " +
-		"so write the language's escape instead"
-
+	escapeNote := "; inside a string literal it is data: " + cleaner.EscapeAdvice(literals, found)
 	line := literals.UnreadFrom()
 	switch {
 	case line > 0 && found.Line >= line:
@@ -48,7 +46,7 @@ func carrierAdvice(
 ) hint {
 	switch {
 	case literals.Contains(found.Offset):
-		return hint{escapeAdvice(literals, found), literal}
+		return hint{cleaner.EscapeAdvice(literals, found), literal}
 	case found.Class == invisible.ClassContextual:
 		return hint{"it may be load-bearing here; judge it, then remove it by hand", plain}
 	case code.Possible(found.Offset):
@@ -67,26 +65,13 @@ func typographicAdvice(
 	const byHand = "replace it with the ASCII form by hand"
 	switch {
 	case literals.Contains(found.Offset):
-		return hint{escapeAdvice(literals, found), literal}
+		return hint{cleaner.EscapeAdvice(literals, found), literal}
 	case code.Possible(found.Offset):
 		return hint{"it may be shown code here; judge it, then " + byHand, unscanned}
 	case unread(found, ext, literals):
 		return hint{byHand + unreadNote(literals, found), unscanned}
 	}
 	return hint{byHand, plain}
-}
-
-func escapeAdvice(literals language.Literals, found invisible.Mark) string {
-	const lastBMP = 0xFFFF
-	escape := literals.Escape(found.Rune)
-	switch {
-	case literals.Raw(found.Offset):
-		return "a raw string cannot hold an escape: move it into an interpreted string as " +
-			escape
-	case literals.Regex(found.Offset) && found.Rune > lastBMP:
-		return "write it as the escape " + escape + " and add the u flag"
-	}
-	return "write it as the escape " + escape
 }
 
 func unread(found invisible.Mark, ext string, literals language.Literals) bool {

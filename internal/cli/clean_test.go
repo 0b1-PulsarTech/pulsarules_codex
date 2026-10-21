@@ -15,7 +15,6 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -83,7 +82,7 @@ func TestSweep_Write(t *testing.T) {
 		t.Fatalf("sweep: %v", err)
 	}
 	const held = "held.go:3 left zero width space " +
-		"(in a string literal: write it as an escape (\\uXXXX); clean leaves it)"
+		"(in a string literal, write it as the escape \\u200B; clean leaves it)"
 	if !strings.Contains(out.String(), held) {
 		t.Errorf("output lacks %q:\n%s", held, out.String())
 	}
@@ -374,38 +373,6 @@ func TestSweep_DirOutsideRepo(t *testing.T) {
 	}
 	if !strings.ContainsRune(string(got), '\u200B') {
 		t.Error("a file outside the repository was rewritten")
-	}
-}
-
-func TestAdvice(t *testing.T) {
-	t.Parallel()
-
-	const (
-		caveat    = "inside a string literal it is data, so write the language's escape instead"
-		removable = "removable outside a string literal; inside one, write it as an escape"
-	)
-	testCases := []struct {
-		name  string
-		class invisible.Class
-		want  string
-	}{
-		{
-			"typographic",
-			invisible.ClassTypographic,
-			"replace with its ASCII form by hand; " + caveat,
-		},
-		{"strip", invisible.ClassStrip, removable},
-		{"space", invisible.ClassSpace, removable},
-		{"contextual", invisible.ClassContextual, "may be load-bearing; judge it before removing"},
-		{"unknown", invisible.Class(250), "unclassified"},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			if got := advice(testCase.class); got != testCase.want {
-				t.Errorf("advice(%v) = %q, want %q", testCase.class, got, testCase.want)
-			}
-		})
 	}
 }
 

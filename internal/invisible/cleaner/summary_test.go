@@ -162,20 +162,20 @@ func TestMarkerLines(t *testing.T) {
 func TestReport_HeldNote(t *testing.T) {
 	t.Parallel()
 
-	const escape = "write it as an escape (\\uXXXX); clean leaves it"
+	const escape = "write it as the escape \\u200B; clean leaves it"
 	testCases := []struct {
 		name string
 		file string
 		body string
 		want string
 	}{
-		{"a string literal", "a.go", "var a = \"x\u200By\"\n", "in a string literal: " + escape},
+		{"a string literal", "a.go", "var a = \"x\u200By\"\n", "in a string literal, " + escape},
 		{
 			"a raw string literal",
 			"a.go",
 			"var a = `x\u200By`\n",
-			"in a raw string literal: move it into an interpreted string as an escape " +
-				"(\\uXXXX); clean leaves it",
+			"a raw string cannot hold an escape: move it into an " +
+				"interpreted string as \\u200B; clean leaves it",
 		},
 		{
 			"possible code",

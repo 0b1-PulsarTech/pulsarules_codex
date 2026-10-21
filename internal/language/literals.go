@@ -39,6 +39,8 @@ func ScanLiterals(ext, src string, options ...ScanOption) Literals {
 
 func (found Literals) Covers(offset int) bool { return lexer.InSpans(found.regions, offset) }
 
+func (found Literals) Lexed() bool { return found.astral != "" }
+
 func (found Literals) Incomplete() bool { return found.incomplete }
 
 func (found Literals) UnreadFrom() int { return found.unreadFrom }
