@@ -206,43 +206,6 @@ func TestGovernanceConfig_StrictLowersFileSize(t *testing.T) {
 	}
 }
 
-func TestGovernanceConfig_TypographicSeverity(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name     string
-		severity string
-		wantErr  bool
-		want     any
-	}{
-		{name: "unset leaves the params alone", want: nil},
-		{name: "warning reaches the analyzer", severity: "warning", want: "warning"},
-		{name: "info reaches the analyzer", severity: "info", want: "info"},
-		{name: "a typo is rejected", severity: "fatal", wantErr: true},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			opts := &version.Options{TypographicSeverity: testCase.severity}
-			cfg, err := governanceConfig(opts, "")
-			if testCase.wantErr {
-				if err == nil {
-					t.Fatalf("governanceConfig(%q) err = nil, want an error", testCase.severity)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("governanceConfig: %v", err)
-			}
-			params := cfg.Analyzers["typographic-markers"].Params
-			if got := params["severity"]; got != testCase.want {
-				t.Errorf("severity param = %v, want %v", got, testCase.want)
-			}
-		})
-	}
-}
-
 func TestGovernanceConfig_BranchExtraTypes(t *testing.T) {
 	t.Parallel()
 
@@ -314,8 +277,8 @@ func (testCase precedenceCase) assert(t *testing.T, cfg *config.GovernanceConfig
 	if got != testCase.wantGolangci {
 		t.Errorf("config_path = %v, want %v", got, testCase.wantGolangci)
 	}
-	if got = cfg.Severities["typographic-markers"]; got != testCase.wantSeverity {
-		t.Errorf("file severity = %q, want %q", got, testCase.wantSeverity)
+	if got = effectiveSeverity(cfg, "typographic-markers"); got != testCase.wantSeverity {
+		t.Errorf("effective severity = %q, want %q", got, testCase.wantSeverity)
 	}
 	if !cfg.IncludeGenerated {
 		t.Error("IncludeGenerated = false, want the file's true")
@@ -346,7 +309,7 @@ func TestGovernanceConfig_ProjectFilePrecedence(t *testing.T) {
 		{
 			"severity flag beats the file",
 			&version.Options{TypographicSeverity: "warning"},
-			config.PresetMinimal, "file.yml", "",
+			config.PresetMinimal, "file.yml", "warning",
 		},
 	}
 	for _, testCase := range testCases {

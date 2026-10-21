@@ -5,7 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
 )
 
 type delegatedCase struct {
@@ -27,15 +30,21 @@ func delegatedCases() []delegatedCase {
 			private:      doc("analyzers: {dart-an: {severity: info}}"),
 			wantSeverity: "info",
 		},
-		{name: "enabled in analyzers", private: doc("analyzers: {dart-an: {enabled: false}}")},
+		{
+			name:         "enabled in analyzers",
+			private:      doc("analyzers: {dart-an: {enabled: false}}"),
+			wantSeverity: "error",
+		},
 		{
 			name:         "override keyed by the id",
 			private:      tune("dart-an: {severity: error}"),
+			wantSeverity: "error",
 			wantOverride: 1,
 		},
 		{
 			name:         "override keyed by a sub id",
 			private:      tune("dart-an/rule: {enabled: false}"),
+			wantSeverity: "error",
 			wantOverride: 1,
 		},
 		{
@@ -71,7 +80,7 @@ func TestPrivateTunesBaseDelegated(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Build() error = %v", err)
 			}
-			if got := cfg.Severities["dart-an"]; got != testCase.wantSeverity {
+			if got := dartSeverity(cfg); got != testCase.wantSeverity {
 				t.Fatalf("severity = %q, want %q", got, testCase.wantSeverity)
 			}
 			if len(cfg.Overrides) != testCase.wantOverride {
@@ -141,4 +150,10 @@ func TestFailedBaseDoesNotBlameDelegatedIDs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func dartSeverity(cfg *config.GovernanceConfig) string {
+	probe := []finding.Finding{{AnalyzerID: "dart-an", Severity: finding.SeverityError}}
+	rules := slices.Concat(cfg.SeverityRules, cfg.Overrides)
+	return overrides.Apply(probe, "dart-an", rules)[0].Severity.String()
 }

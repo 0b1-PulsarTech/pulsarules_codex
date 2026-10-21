@@ -7,7 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
 )
 
 func TestApplyProject(t *testing.T) {
@@ -79,8 +81,8 @@ func checkAnalyzers(t *testing.T, cfg *config.GovernanceConfig) {
 	if got := cfg.Analyzers["doc-comment"]; got.Enabled {
 		t.Errorf("doc-comment = %+v, want disabled", got)
 	}
-	if got := cfg.Severities["doc-comment"]; got != "error" {
-		t.Errorf("Severities[doc-comment] = %q", got)
+	if got := effectiveSeverity(cfg, "doc-comment", finding.SeverityInfo); got != "error" {
+		t.Errorf("severity rule for doc-comment = %q", got)
 	}
 }
 
@@ -453,4 +455,13 @@ func TestValidateRejectedInvalidGlobIsOneProblem(t *testing.T) {
 			}
 		})
 	}
+}
+
+func effectiveSeverity(
+	cfg *config.GovernanceConfig,
+	analyzerID string,
+	from finding.Severity,
+) string {
+	probe := []finding.Finding{{AnalyzerID: analyzerID, Severity: from}}
+	return overrides.Apply(probe, analyzerID, cfg.SeverityRules)[0].Severity.String()
 }

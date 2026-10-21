@@ -9,7 +9,7 @@ type GovernanceConfig struct {
 	MovePurity       MovePurityConfig
 	IncludeGenerated bool
 	SkipDirs         []string
-	Severities       map[string]string
+	SeverityRules    []pass.Override
 	TestGlobs        []string
 	Overrides        []pass.Override
 	Delegated        []pass.DelegatedCommand
@@ -28,7 +28,6 @@ type EmojiConfig struct {
 
 type MovePurityConfig struct {
 	MinSimilarity int
-	Severity      string
 }
 
 func Defaults() *GovernanceConfig {
@@ -49,12 +48,17 @@ func Defaults() *GovernanceConfig {
 		},
 		MovePurity: MovePurityConfig{
 			MinSimilarity: defaultMoveMinSimilarity,
-			Severity:      "warning",
 		},
 	}
 }
 
+const ParamSeverity = "severity"
+
 func (govCfg *GovernanceConfig) SetParam(analyzerID, key string, value any) {
+	if severity, isName := value.(string); isName && key == ParamSeverity {
+		govCfg.SetSeverity(analyzerID, severity)
+		return
+	}
 	if govCfg.Analyzers == nil {
 		govCfg.Analyzers = map[string]AnalyzerConfig{}
 	}
@@ -66,9 +70,12 @@ func (govCfg *GovernanceConfig) SetParam(analyzerID, key string, value any) {
 		cfg.Params = map[string]any{}
 	}
 	cfg.Params[key] = value
-	if key == pass.ParamSeverity {
-		// An explicit severity param (a CLI flag) wins over the project file's.
-		delete(govCfg.Severities, analyzerID)
-	}
 	govCfg.Analyzers[analyzerID] = cfg
+}
+
+func (govCfg *GovernanceConfig) SetSeverity(analyzerID, severity string) {
+	// Rules are applied in order and the last match wins, so a later source beats an earlier one.
+	govCfg.SeverityRules = append(govCfg.SeverityRules, pass.NewOverride(
+		nil, map[string]pass.OverrideConfig{analyzerID: {Severity: severity}},
+	))
 }

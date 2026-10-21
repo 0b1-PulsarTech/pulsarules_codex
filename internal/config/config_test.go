@@ -1,6 +1,11 @@
 package config
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
+)
 
 func TestDefaults(t *testing.T) {
 	t.Parallel()
@@ -64,18 +69,39 @@ func TestSetParam(t *testing.T) {
 	}
 }
 
-func TestSetParamSeverityDropsFileSeverity(t *testing.T) {
+func effectiveSeverity(cfg *GovernanceConfig, analyzerID string, from finding.Severity) string {
+	probe := []finding.Finding{{AnalyzerID: analyzerID, Severity: from}}
+	return overrides.Apply(probe, analyzerID, cfg.SeverityRules)[0].Severity.String()
+}
+
+func TestSetSeverity(t *testing.T) {
 	t.Parallel()
 
 	cfg := Defaults()
-	cfg.Severities = map[string]string{"typographic-markers": "error", "doc-comment": "info"}
-	cfg.SetParam("typographic-markers", "severity", "warning")
-	cfg.SetParam("doc-comment", "other", "x")
+	cfg.SetSeverity("typographic-markers", "error")
+	cfg.SetSeverity("doc-comment", "info")
+	cfg.SetSeverity("typographic-markers", "warning")
 
-	if _, kept := cfg.Severities["typographic-markers"]; kept {
-		t.Error("file severity kept after the flag set the param")
+	testCases := []struct {
+		analyzerID string
+		want       string
+	}{
+		{"typographic-markers", "warning"},
+		{"doc-comment", "info"},
+		{"naming", "error"},
 	}
-	if cfg.Severities["doc-comment"] != "info" {
-		t.Error("unrelated severity dropped")
+	for _, testCase := range testCases {
+		if got := effectiveSeverity(
+			cfg,
+			testCase.analyzerID,
+			finding.SeverityError,
+		); got != testCase.want {
+			t.Errorf("severity(%s) = %q, want %q", testCase.analyzerID, got, testCase.want)
+		}
+	}
+	for _, rule := range cfg.SeverityRules {
+		if !rule.Files.IsOpen() {
+			t.Errorf("severity rule is scoped to files: %+v", rule)
+		}
 	}
 }

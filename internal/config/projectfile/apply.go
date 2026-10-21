@@ -16,8 +16,8 @@ func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 	}
 	govCfg.SkipDirs = append(govCfg.SkipDirs, file.SkipDirs...)
 	govCfg.TestGlobs = slices.Clone(file.Tests)
-	for id, entry := range file.Analyzers {
-		applyAnalyzer(govCfg, id, entry)
+	for _, id := range slices.Sorted(maps.Keys(file.Analyzers)) {
+		applyAnalyzer(govCfg, id, file.Analyzers[id])
 	}
 	for _, override := range file.Overrides {
 		govCfg.Overrides = append(govCfg.Overrides, toCoreOverride(override))
@@ -73,10 +73,7 @@ func applyAnalyzer(govCfg *config.GovernanceConfig, id string, entry AnalyzerEnt
 	}
 	govCfg.Analyzers[id] = current
 	if entry.Severity != "" {
-		if govCfg.Severities == nil {
-			govCfg.Severities = map[string]string{}
-		}
-		govCfg.Severities[id] = entry.Severity
+		govCfg.SetSeverity(id, entry.Severity)
 	}
 }
 

@@ -24,7 +24,7 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *pass.AnalysisConfig {
 		Analyzers:        analyzers,
 		IncludeGenerated: cfg.IncludeGenerated,
 		TestGlobs:        cfg.TestGlobs,
-		Overrides:        slices.Concat(severityOverrides(cfg.Severities), cfg.Overrides),
+		Overrides:        slices.Concat(cfg.SeverityRules, cfg.Overrides),
 		Delegated:        enabledDelegated(cfg.Delegated, cfg.Analyzers),
 	}
 }
@@ -37,17 +37,6 @@ func enabledDelegated(
 		listed, found := analyzers[entry.ID]
 		return found && !listed.Enabled
 	})
-}
-
-func severityOverrides(severities map[string]string) []pass.Override {
-	// One rule with no file scope reaches analyzers that never read a severity param.
-	overrides := make([]pass.Override, 0, len(severities))
-	for _, id := range slices.Sorted(maps.Keys(severities)) {
-		overrides = append(overrides, pass.NewOverride(
-			nil, map[string]pass.OverrideConfig{id: {Severity: severities[id]}},
-		))
-	}
-	return overrides
 }
 
 func withEmojiParams(analyzers map[string]pass.AnalyzerConfig, emojiCfg config.EmojiConfig) {
@@ -70,7 +59,6 @@ func withMovePurityParams(analyzers map[string]pass.AnalyzerConfig, cfg config.M
 		movepurity.ParamMinSimilarity,
 		cfg.MinSimilarity,
 	)
-	setDefaultParam(analyzers, movepurity.ID, pass.ParamSeverity, cfg.Severity)
 }
 
 func setDefaultParam(analyzers map[string]pass.AnalyzerConfig, id, key string, value any) {

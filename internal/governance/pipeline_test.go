@@ -121,7 +121,9 @@ func TestPipelineAppliesOverrides(t *testing.T) {
 	t.Parallel()
 
 	cfg := toAnalysisConfig(&config.GovernanceConfig{
-		Severities: map[string]string{"golangci-lint": "info"},
+		SeverityRules: []pass.Override{pass.NewOverride(
+			nil, map[string]pass.OverrideConfig{"golangci-lint": {Severity: "info"}},
+		)},
 		Overrides: []pass.Override{{
 			Files:     glob.CompileSet([]string{"web/test/**"}),
 			Analyzers: map[string]pass.OverrideConfig{"file-size": {Severity: "warning"}},
