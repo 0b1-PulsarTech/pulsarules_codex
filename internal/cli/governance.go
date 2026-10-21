@@ -14,6 +14,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -34,9 +35,10 @@ func validateScope(scope string) error {
 }
 
 type governanceRun struct {
-	repo *vcs.Repository
-	cfg  *config.GovernanceConfig
-	idx  *knowledge.Index
+	repo    *vcs.Repository
+	cfg     *config.GovernanceConfig
+	idx     *knowledge.Index
+	catalog *emoji.Catalog
 }
 
 func loadGovernance(inj remy.Injector, opts *version.Options) (governanceRun, error) {
@@ -53,7 +55,11 @@ func loadGovernance(inj remy.Injector, opts *version.Options) (governanceRun, er
 	if err != nil {
 		return governanceRun{}, fmt.Errorf("get knowledge index: %w", err)
 	}
-	return governanceRun{repo: repo, cfg: cfg, idx: idx}, nil
+	catalog, err := remy.Get[*emoji.Catalog](inj)
+	if err != nil {
+		return governanceRun{}, fmt.Errorf("get emoji catalog: %w", err)
+	}
+	return governanceRun{repo: repo, cfg: cfg, idx: idx, catalog: catalog}, nil
 }
 
 func runGovernance(inj remy.Injector, opts *version.Options) error {
@@ -75,7 +81,8 @@ func runGovernance(inj remy.Injector, opts *version.Options) error {
 		files = governance.FileSetAll
 	}
 
-	result := governance.NewSession(run.repo, "", run.idx, run.cfg).Analyze(scope, nil, files)
+	sess := governance.NewSession(run.repo, "", run.idx, run.catalog, run.cfg)
+	result := sess.Analyze(scope, nil, files)
 	return reportGovernance(result)
 }
 

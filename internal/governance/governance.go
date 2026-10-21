@@ -8,6 +8,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
@@ -26,6 +27,7 @@ type Session struct {
 	repo        Repository
 	commitMsg   string
 	index       *knowledge.Index
+	catalog     *emoji.Catalog
 	cfgAnalysis *pass.AnalysisConfig
 	skips       source.SkipSet
 	gitSkips    source.SkipSet
@@ -40,6 +42,7 @@ func NewSession(
 	repo Repository,
 	commitMsg string,
 	index *knowledge.Index,
+	catalog *emoji.Catalog,
 	cfg *config.GovernanceConfig,
 ) *Session {
 	if cfg == nil {
@@ -49,6 +52,7 @@ func NewSession(
 		repo:        repo,
 		commitMsg:   commitMsg,
 		index:       index,
+		catalog:     catalog,
 		cfgAnalysis: toAnalysisConfig(cfg),
 		skips:       source.NewSkipSet(append(source.DefaultSkipDirs(), cfg.SkipDirs...)),
 		gitSkips:    source.NewSkipSet(append(source.GitSkipDirs(), cfg.SkipDirs...)),
@@ -70,7 +74,7 @@ func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Res
 	ctx := sess.Load(discovery)
 
 	pipeline := NewPipeline(sess.cfgAnalysis)
-	deps := registry.Deps{Index: sess.index, Repo: sess.repo}
+	deps := registry.Deps{Index: sess.index, Repo: sess.repo, Emoji: sess.catalog}
 	if err := pipeline.registerForScope(deps, scope); err != nil {
 		ctx.Findings = append(ctx.Findings, registryFinding(err))
 	}

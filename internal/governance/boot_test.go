@@ -54,7 +54,10 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 			},
 		},
 	})
-	if err := pipeline.registerForScope(registry.Deps{}, ScopeChanged); err != nil {
+	if err := pipeline.registerForScope(
+		registry.Deps{Emoji: testCatalog(t)},
+		ScopeChanged,
+	); err != nil {
 		t.Fatalf("registerForScope: %v", err)
 	}
 
@@ -133,7 +136,10 @@ func TestMaxGateFor_ReproducesScopeMembership(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			built, err := registry.Analyzers(registry.Deps{}, maxGateFor(testCase.scope))
+			built, err := registry.Analyzers(
+				registry.Deps{Emoji: testCatalog(t)},
+				maxGateFor(testCase.scope),
+			)
 			if err != nil {
 				t.Fatalf("Analyzers: %v", err)
 			}

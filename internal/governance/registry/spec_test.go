@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 )
 
 func TestIDs_PackageLevelVarOrder(t *testing.T) {
@@ -206,5 +207,27 @@ func TestBuild_GatesAreOrdered(t *testing.T) {
 				t.Fatalf("built %v, want %v", got, testCase.want)
 			}
 		})
+	}
+}
+
+func TestCommitLintBuild_RequiresTheCatalog(t *testing.T) {
+	t.Parallel()
+
+	var lint entry
+	for _, spec := range specs() {
+		if spec.ID == "commit-lint" {
+			lint = spec
+		}
+	}
+
+	if _, err := lint.build(Deps{}); !errors.Is(err, errNoEmojiCatalog) {
+		t.Fatalf("build without a catalog = %v, want %v", err, errNoEmojiCatalog)
+	}
+	catalog, err := emoji.NewCatalog()
+	if err != nil {
+		t.Fatalf("NewCatalog: %v", err)
+	}
+	if _, err = lint.build(Deps{Emoji: catalog}); err != nil {
+		t.Fatalf("build with a catalog: %v", err)
 	}
 }

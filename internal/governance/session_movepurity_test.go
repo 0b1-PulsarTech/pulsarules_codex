@@ -158,7 +158,7 @@ func TestSession_MovePurity_StagedRename(t *testing.T) {
 				t.Fatalf("vcs.Open: %v", err)
 			}
 
-			sess := NewSession(repo, "", nil, cfg)
+			sess := NewSession(repo, "", nil, testCatalog(t), cfg)
 			findings := sess.Analyze(ScopeCommit, nil, FileSetChanged).Findings
 
 			found := false

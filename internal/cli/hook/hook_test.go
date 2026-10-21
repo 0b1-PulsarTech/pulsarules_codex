@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
@@ -43,7 +44,7 @@ func TestGovernChanges_EmptyRepo(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	got, count := governChanges(dir, status, nil)
+	got, count := governChanges(dir, status, nil, testEmojiCatalog(t))
 	if got != "" {
 		t.Errorf("block = %q, want empty for an empty repo", got)
 	}
@@ -55,7 +56,7 @@ func TestGovernChanges_EmptyRepo(t *testing.T) {
 func TestGovernChanges_NotARepository(t *testing.T) {
 	t.Parallel()
 
-	block, count := governChanges(t.TempDir(), vcs.Status{}, nil)
+	block, count := governChanges(t.TempDir(), vcs.Status{}, nil, testEmojiCatalog(t))
 	if count != 1 || !strings.Contains(block, "open repository:") {
 		t.Fatalf("governChanges() = %q, %d, want the open-repository error", block, count)
 	}
@@ -82,7 +83,7 @@ func TestGovernChanges_SuppressionBlock(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	block, count := governChanges(dir, status, nil)
+	block, count := governChanges(dir, status, nil, testEmojiCatalog(t))
 	if count != 1 {
 		t.Fatalf("count = %d, want 1 (the generated file's finding is suppressed)", count)
 	}
@@ -125,7 +126,7 @@ func runDirtyCheck(t *testing.T, configYAML string) (string, int) {
 	if err != nil {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
-	return governChanges(dir, status, nil)
+	return governChanges(dir, status, nil, testEmojiCatalog(t))
 }
 
 type projectConfigCase struct {
@@ -203,7 +204,7 @@ func TestHookStop_RealGovernance(t *testing.T) {
 	var out bytes.Buffer
 	t.Setenv("PULSARULES_PROJECT_DIR", dir)
 	t.Setenv("PULSARULES_SKILLS_DIR", "")
-	disp := newHookDispatcher(index, templates.New(assets), nil, &out)
+	disp := newHookDispatcher(index, testEmojiCatalog(t), templates.New(assets), nil, &out)
 
 	_ = disp.Dispatch("stop", []byte(`{"session_id":"real-governance"}`))
 	for _, want := range []string{
@@ -213,4 +214,14 @@ func TestHookStop_RealGovernance(t *testing.T) {
 			t.Errorf("stop output missing %q:\n%s", want, out.String())
 		}
 	}
+}
+
+func testEmojiCatalog(t *testing.T) *emoji.Catalog {
+	t.Helper()
+
+	catalog, err := emoji.NewCatalog()
+	if err != nil {
+		t.Fatalf("emoji.NewCatalog: %v", err)
+	}
+	return catalog
 }

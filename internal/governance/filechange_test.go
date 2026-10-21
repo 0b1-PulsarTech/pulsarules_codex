@@ -238,7 +238,13 @@ func TestSession_StagedRenamesLogsProbeFailure(t *testing.T) {
 	t.Parallel()
 
 	var logs bytes.Buffer
-	sess := NewSession(renamesFailingRepo{&goldenRepo{root: t.TempDir()}}, "", nil, nil)
+	sess := NewSession(
+		renamesFailingRepo{&goldenRepo{root: t.TempDir()}},
+		"",
+		nil,
+		testCatalog(t),
+		nil,
+	)
 	sess.logger = slog.New(slog.NewTextHandler(&logs, nil))
 
 	if renames := sess.stagedRenames(); len(renames) != 0 {

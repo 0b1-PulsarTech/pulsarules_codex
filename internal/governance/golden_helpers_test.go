@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 )
 
 type expectedFinding struct {
@@ -92,4 +93,14 @@ func assertFindings(t *testing.T, caseName string, got []finding.Finding, want [
 			)
 		}
 	}
+}
+
+func testCatalog(t *testing.T) *emoji.Catalog {
+	t.Helper()
+
+	catalog, err := emoji.NewCatalog()
+	if err != nil {
+		t.Fatalf("emoji.NewCatalog: %v", err)
+	}
+	return catalog
 }

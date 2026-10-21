@@ -184,7 +184,13 @@ func TestAnalyzeIncludeGeneratedKeepsEverything(t *testing.T) {
 			cfg.ApplyPreset()
 			cfg.IncludeGenerated = testCase.includeGenerated
 
-			result := NewSession(repo, "", nil, cfg).Analyze(ScopeChanged, nil, FileSetChanged)
+			result := NewSession(
+				repo,
+				"",
+				nil,
+				testCatalog(t),
+				cfg,
+			).Analyze(ScopeChanged, nil, FileSetChanged)
 
 			hasEmDash := false
 			for _, finding := range result.Findings {

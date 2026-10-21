@@ -11,6 +11,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
@@ -29,6 +30,11 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 		printHookError(os.Stderr, "get knowledge index", err)
 		return nil
 	}
+	catalog, err := remy.Get[*emoji.Catalog](inj)
+	if err != nil {
+		printHookError(os.Stderr, "get emoji catalog", err)
+		return nil
+	}
 	assets, err := remy.Get[templates.Set](inj)
 	if err != nil {
 		printHookError(os.Stderr, "get templates", err)
@@ -45,7 +51,7 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 
 	payload, _ := io.ReadAll(os.Stdin)
 
-	disp := newHookDispatcher(idx, assets, logger, os.Stdout)
+	disp := newHookDispatcher(idx, catalog, assets, logger, os.Stdout)
 
 	if dispatchErr := disp.Dispatch(opts.Mode, payload); dispatchErr != nil {
 		return fmt.Errorf("dispatch hook %q: %w", opts.Mode, dispatchErr)
@@ -55,6 +61,7 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 
 func newHookDispatcher(
 	idx *knowledge.Index,
+	catalog *emoji.Catalog,
 	assets templates.Set,
 	logger *slog.Logger,
 	out io.Writer,
@@ -67,7 +74,7 @@ func newHookDispatcher(
 		ProjectDir: os.Getenv("PULSARULES_PROJECT_DIR"),
 		SkillsDir:  os.Getenv("PULSARULES_SKILLS_DIR"),
 		Governance: func(root string, status vcs.Status) (string, int) {
-			return governChanges(root, status, idx)
+			return governChanges(root, status, idx, catalog)
 		},
 	})
 }
@@ -80,6 +87,7 @@ func governChanges(
 	root string,
 	status vcs.Status,
 	index *knowledge.Index,
+	catalog *emoji.Catalog,
 ) (string, int) {
 	repo, err := vcs.Open(root)
 	if err != nil {
@@ -87,7 +95,7 @@ func governChanges(
 	}
 	// The empty commit message is deliberate: only the git commit-msg hook validates one.
 	cfg, configFindings := loader.ForRoot(repo.Root())
-	sess := governance.NewSession(repo, "", index, cfg)
+	sess := governance.NewSession(repo, "", index, catalog, cfg)
 	result := sess.Analyze(governance.ScopeChanged, &status, governance.FileSetChanged)
 	findingsItem := slices.Concat(configFindings, result.Findings)
 

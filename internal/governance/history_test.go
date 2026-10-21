@@ -41,7 +41,7 @@ func TestSessionGitHistoryDropsHeadOnReword(t *testing.T) {
 				t.Fatalf("vcs.Open: %v", err)
 			}
 
-			sess := NewSession(repo, testCase.commitMsg, nil, nil)
+			sess := NewSession(repo, testCase.commitMsg, nil, testCatalog(t), nil)
 			entries := sess.gitHistory()
 			if testCase.wantNewest == "" {
 				if len(entries) != 0 {
@@ -62,7 +62,7 @@ func TestSessionGitHistoryDropsHeadOnReword(t *testing.T) {
 func TestSessionGitHistory_NilRepo(t *testing.T) {
 	t.Parallel()
 
-	sess := NewSession(nil, "anything", nil, nil)
+	sess := NewSession(nil, "anything", nil, testCatalog(t), nil)
 	if entries := sess.gitHistory(); entries != nil {
 		t.Fatalf("gitHistory() = %+v, want nil for a nil repo", entries)
 	}
@@ -110,7 +110,7 @@ func TestSessionReplacesHead_AuthorDate(t *testing.T) {
 				t.Fatalf("vcs.Open: %v", err)
 			}
 
-			sess := NewSession(repo, testCase.commitMsg, nil, nil)
+			sess := NewSession(repo, testCase.commitMsg, nil, testCatalog(t), nil)
 			entries := sess.gitHistory()
 			gotReplaces := len(entries) == 0
 			if gotReplaces != testCase.wantReplaces {
@@ -133,7 +133,7 @@ func TestSessionGitHistory_LogsRecentSubjectsFailure(t *testing.T) {
 	t.Parallel()
 
 	var logs bytes.Buffer
-	sess := NewSession(failingHistoryRepo{}, "", nil, nil)
+	sess := NewSession(failingHistoryRepo{}, "", nil, testCatalog(t), nil)
 	sess.logger = slog.New(slog.NewTextHandler(&logs, nil))
 
 	if entries := sess.gitHistory(); entries != nil {
@@ -156,7 +156,7 @@ func TestSessionReplacesHead_LogsAuthorEpochFailure(t *testing.T) {
 	t.Setenv("GIT_AUTHOR_DATE", "@1704067200 +0000")
 
 	var logs bytes.Buffer
-	sess := NewSession(failingEpochRepo{}, "reworded", nil, nil)
+	sess := NewSession(failingEpochRepo{}, "reworded", nil, testCatalog(t), nil)
 	sess.logger = slog.New(slog.NewTextHandler(&logs, nil))
 
 	if sess.replacesHead("another subject") {
@@ -205,7 +205,7 @@ func TestSessionGitHistory_FetchesTheWidestEmojiWindow(t *testing.T) {
 				cfg.SetParam(message.ID, message.ParamEmojiSoftWindow, testCase.softWindow)
 			}
 			repo := &limitRecordingRepo{}
-			NewSession(repo, testCase.commitMsg, nil, cfg).gitHistory()
+			NewSession(repo, testCase.commitMsg, nil, testCatalog(t), cfg).gitHistory()
 			if repo.limit != testCase.want {
 				t.Errorf("RecentSubjects limit = %d, want %d", repo.limit, testCase.want)
 			}

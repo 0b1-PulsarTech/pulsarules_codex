@@ -25,7 +25,7 @@ func TestSession_NilRepo_ScopeChanged(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.ApplyPreset()
 
-	sess := NewSession(nil, "", idx, cfg)
+	sess := NewSession(nil, "", idx, testCatalog(t), cfg)
 	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
 	if len(findings) != 0 {
 		t.Fatalf(
@@ -55,7 +55,7 @@ func TestSession_WithCommitMsg(t *testing.T) {
 		t.Fatalf("vcs.Open: %v", err)
 	}
 
-	sess := NewSession(repo, "bad commit message", idx, cfg)
+	sess := NewSession(repo, "bad commit message", idx, testCatalog(t), cfg)
 	findings := sess.Analyze(ScopeFull, nil, FileSetChanged).Findings
 
 	found := false
@@ -76,7 +76,7 @@ func TestSession_WithCommitMsg(t *testing.T) {
 func TestSession_NilConfigAndKnowledge_ScopeChanged(t *testing.T) {
 	t.Parallel()
 
-	sess := NewSession(nil, "", nil, nil)
+	sess := NewSession(nil, "", nil, testCatalog(t), nil)
 	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
 	if len(findings) != 0 {
 		t.Fatalf(
@@ -95,7 +95,7 @@ func TestSession_ScopeCommit(t *testing.T) {
 		t.Fatalf("load knowledge: %v", err)
 	}
 
-	sess := NewSession(nil, "bad commit message", idx, nil)
+	sess := NewSession(nil, "bad commit message", idx, testCatalog(t), nil)
 	findings := sess.Analyze(ScopeCommit, nil, FileSetChanged).Findings
 	if len(findings) == 0 {
 		t.Fatal("expected findings for invalid commit message")
@@ -124,7 +124,7 @@ func TestSession_ScopeChanged(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.ApplyPreset()
 
-	sess := NewSession(repo, "", nil, cfg)
+	sess := NewSession(repo, "", nil, testCatalog(t), cfg)
 	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
 
 	foundStatic := false
@@ -164,7 +164,7 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.ApplyPreset()
 
-	changedFindings := NewSession(repo, "", nil, cfg).
+	changedFindings := NewSession(repo, "", nil, testCatalog(t), cfg).
 		Analyze(ScopeChanged, nil, FileSetChanged).Findings
 	for _, finding := range changedFindings {
 		if finding.AnalyzerID == "typographic-markers" {
@@ -175,7 +175,7 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 		}
 	}
 
-	allFindings := NewSession(repo, "", nil, cfg).
+	allFindings := NewSession(repo, "", nil, testCatalog(t), cfg).
 		Analyze(ScopeChanged, nil, FileSetAll).Findings
 	foundAll := false
 	for _, finding := range allFindings {
@@ -207,7 +207,7 @@ func TestSession_ScopeCommit_StaticSources(t *testing.T) {
 		t.Fatalf("vcs.Open: %v", err)
 	}
 
-	sess := NewSession(repo, "", nil, nil)
+	sess := NewSession(repo, "", nil, testCatalog(t), nil)
 	findings := sess.Analyze(ScopeCommit, nil, FileSetChanged).Findings
 
 	for _, finding := range findings {
@@ -236,7 +236,7 @@ func TestSession_ScopeCommit_EmptyStatus(t *testing.T) {
 		t.Fatalf("vcs.Open: %v", err)
 	}
 
-	sess := NewSession(repo, "", nil, nil)
+	sess := NewSession(repo, "", nil, testCatalog(t), nil)
 	findings := sess.Analyze(ScopeCommit, &vcs.Status{}, FileSetChanged).Findings
 	if len(findings) != 0 {
 		t.Fatalf("expected 0 findings with an explicit empty status, got %+v", findings)
@@ -288,7 +288,7 @@ func TestSession_PackageLevelVarState(t *testing.T) {
 			if testCase.disableSingleUse {
 				cfg.Analyzers["single-use-declaration"] = config.AnalyzerConfig{Enabled: false}
 			}
-			result := NewSession(&goldenRepo{root: repoDir}, "", nil, cfg).
+			result := NewSession(&goldenRepo{root: repoDir}, "", nil, testCatalog(t), cfg).
 				Analyze(ScopeChanged, nil, FileSetAll)
 
 			linesByAnalyzer := make(map[string][]int)
@@ -340,7 +340,7 @@ func analyzeTestPolicyRepo(
 	cfg.Analyzers["package-file-count"] = config.AnalyzerConfig{
 		Enabled: true, Params: map[string]any{"extensions": []string{".ts"}},
 	}
-	sess := NewSession(&goldenRepo{root: dir}, "", nil, cfg)
+	sess := NewSession(&goldenRepo{root: dir}, "", nil, testCatalog(t), cfg)
 	sess.cfgAnalysis.TestGlobs = run.globs
 	changed := sess.Discover(ScopeChanged, run.status, run.fileSet).ChangedFiles
 	return sess.Analyze(ScopeChanged, run.status, run.fileSet).Findings, changed
@@ -443,5 +443,26 @@ func TestSession_InvalidTestGlob(t *testing.T) {
 	}
 	if len(changed) != 1 || !changed[0].IsTest {
 		t.Fatalf("defaults must still classify web/test/a.mjs as a test, got %+v", changed)
+	}
+}
+
+func TestSession_AnalyzerBuildFailureSurfaces(t *testing.T) {
+	t.Parallel()
+
+	sess := NewSession(nil, "feat: x", nil, nil, nil)
+	findings := sess.Analyze(ScopeCommit, nil, FileSetChanged).Findings
+
+	var failure *finding.Finding
+	for idx := range findings {
+		if findings[idx].AnalyzerID == "registry" {
+			failure = &findings[idx]
+		}
+	}
+	if failure == nil {
+		t.Fatalf("no registry finding for a missing emoji catalog: %+v", findings)
+	}
+	if failure.Severity != finding.SeverityError ||
+		!strings.Contains(failure.Message, "build commit-lint: emoji catalog is not loaded") {
+		t.Fatalf("registry finding = %+v", *failure)
 	}
 }

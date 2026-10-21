@@ -10,6 +10,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -46,8 +47,12 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 	if err != nil {
 		return fmt.Errorf("get knowledge index: %w", err)
 	}
+	catalog, err := remy.Get[*emoji.Catalog](inj)
+	if err != nil {
+		return fmt.Errorf("get emoji catalog: %w", err)
+	}
 	cfg, configFindings := loader.ForRoot(root)
-	sess := governance.NewSession(repo, msg, idx, cfg)
+	sess := governance.NewSession(repo, msg, idx, catalog, cfg)
 	// An explicit empty status keeps this a pure message linter. A nil
 	// status would have discovery read the worktree, and content findings from
 	// unrelated dirty files would fail a commit whose message is fine.

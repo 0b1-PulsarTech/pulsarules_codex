@@ -43,7 +43,14 @@ func TestSession_SkipDirs_ConfiguredUnion(t *testing.T) {
 	cfg.ApplyPreset()
 	cfg.SkipDirs = []string{"thirdparty"}
 
-	findings := NewSession(repo, "", nil, cfg).Analyze(ScopeChanged, nil, FileSetAll).Findings
+	findings := NewSession(
+		repo,
+		"",
+		nil,
+		testCatalog(t),
+		cfg,
+	).Analyze(ScopeChanged, nil, FileSetAll).
+		Findings
 
 	seen := map[string]bool{}
 	for _, finding := range findings {
@@ -82,7 +89,14 @@ func TestSession_SkipDirs_SharedByLoad(t *testing.T) {
 	cfg.ApplyPreset()
 	cfg.SkipDirs = []string{"thirdparty"}
 
-	findings := NewSession(repo, "", nil, cfg).Analyze(ScopeChanged, nil, FileSetChanged).Findings
+	findings := NewSession(
+		repo,
+		"",
+		nil,
+		testCatalog(t),
+		cfg,
+	).Analyze(ScopeChanged, nil, FileSetChanged).
+		Findings
 	for _, finding := range findings {
 		if finding.AnalyzerID == "typographic-markers" {
 			t.Fatalf("expected the staged thirdparty file to stay skipped, got %+v", finding)
