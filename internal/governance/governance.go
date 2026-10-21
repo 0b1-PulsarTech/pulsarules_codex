@@ -3,7 +3,6 @@ package governance
 import (
 	"log/slog"
 	"slices"
-	"sync"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -27,9 +26,15 @@ const (
 	FileSetAll
 )
 
+type Request struct {
+	Scope     Scope
+	Status    *vcs.Status
+	Files     FileSet
+	CommitMsg string
+}
+
 type Session struct {
 	repo        Repository
-	commitMsg   string
 	index       *knowledge.Index
 	catalog     *emoji.Catalog
 	cfgAnalysis *pass.AnalysisConfig
@@ -37,14 +42,12 @@ type Session struct {
 	gitSkips    source.SkipSet
 	logger      *slog.Logger
 	providers   providerFactory
-	policyOnce  sync.Once
 	policy      testfile.Classifier
-	policyErr   error
+	seed        []finding.Finding
 }
 
 func NewSession(
 	repo Repository,
-	commitMsg string,
 	index *knowledge.Index,
 	catalog *emoji.Catalog,
 	cfg *config.GovernanceConfig,
@@ -52,9 +55,8 @@ func NewSession(
 	if cfg == nil {
 		cfg = config.Defaults()
 	}
-	return &Session{
+	sess := &Session{
 		repo:        repo,
-		commitMsg:   commitMsg,
 		index:       index,
 		catalog:     catalog,
 		cfgAnalysis: cfg.Analysis(),
@@ -63,27 +65,25 @@ func NewSession(
 		logger:      slog.Default(),
 		providers:   defaultProviders,
 	}
+	policy, err := testfile.New(sess.cfgAnalysis.TestGlobs)
+	if err != nil {
+		sess.seed = []finding.Finding{configFinding(err)}
+		policy = testfile.Defaults()
+	}
+	sess.policy = policy
+	return sess
 }
 
-type Request struct {
-	Sources       source.Provider
-	ChangedFiles  []pass.FileChange
-	GitHistory    []pass.GitCommitEntry
-	StagedRenames []pass.Rename
-	Skips         source.SkipSet
-}
-
-func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) findings.Report {
-	discovery := sess.Discover(scope, status, files)
-	ctx := sess.Load(discovery)
+func (sess *Session) Analyze(req Request) findings.Report {
+	ctx := sess.load(req)
 	detector := generated.NewDetector(ctx.Sources)
 	detector.Mark(ctx.ChangedFiles)
 
 	deps := registry.Deps{Index: sess.index, Repo: sess.repo, Emoji: sess.catalog}
 	pipe := newPipeline(
-		sess.cfgAnalysis, registry.Analyzers(deps, maxGateFor(scope)), sess.transforms(),
+		sess.cfgAnalysis, registry.Analyzers(deps, maxGateFor(req.Scope)), sess.transforms(),
 	)
-	reported := pipe.run(ctx, sess.seedFindings())
+	reported := pipe.run(ctx, slices.Clone(sess.seed))
 
 	if sess.cfgAnalysis.IncludeGenerated {
 		return findings.Report{Findings: reported}
@@ -92,32 +92,56 @@ func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) fin
 	return findings.Report{Findings: kept, Suppressed: suppressed}
 }
 
-func (sess *Session) Discover(scope Scope, status *vcs.Status, files FileSet) *Request {
-	discoveryItem := &Request{GitHistory: sess.gitHistory(), Skips: sess.skips}
+func (sess *Session) load(req Request) *pass.Context {
+	ctx := &pass.Context{
+		CommitMsg:  req.CommitMsg,
+		Config:     sess.cfgAnalysis,
+		GitHistory: sess.gitHistory(req.CommitMsg),
+		Skips:      sess.skips,
+		TestPolicy: sess.policy,
+	}
 	if sess.repo == nil {
-		return discoveryItem
+		return ctx
 	}
+	ctx.ProjectDir = sess.repo.Root()
+	ctx.StagedRenames = sess.stagedRenames()
+	sess.discover(ctx, req)
 
-	discoveryItem.StagedRenames = sess.stagedRenames()
-
-	if files == FileSetAll {
-		sess.attachSources(discoveryItem)
-		discoveryItem.ChangedFiles = discovery.WalkAllFiles(
-			discoveryItem.Sources,
-			sess.testPolicy(),
+	analyzable := slices.DeleteFunc(
+		slices.Clone(ctx.ChangedFiles),
+		func(file pass.FileChange) bool { return ctx.Skips.SkipsPath(file.Path) },
+	)
+	if len(analyzable) > 0 && ctx.Sources != nil {
+		ctx.ASTCache = populateASTCache(analyzable, ctx.Sources)
+		ctx.Syntax = syntax.NewCache(
+			sess.providers(ctx.ASTCache),
+			syntax.Corpus{
+				Root:    ctx.ProjectDir,
+				Sources: changedSources(analyzable),
+				Read:    ctx.Sources.Read,
+				Module:  func() string { return ctx.GoModule().Path },
+			},
 		)
-		return discoveryItem
 	}
-
-	discoveryItem.ChangedFiles = sess.changedFiles(scope, status)
-	// Commit scope only analyzes changed files; whole-tree analyzers on other scopes need Sources.
-	if len(discoveryItem.ChangedFiles) > 0 || scope != ScopeCommit {
-		sess.attachSources(discoveryItem)
-	}
-	return discoveryItem
+	return ctx
 }
 
-func (sess *Session) changedFiles(scope Scope, status *vcs.Status) []pass.FileChange {
+func (sess *Session) discover(ctx *pass.Context, req Request) {
+	if req.Files == FileSetAll {
+		sess.attachSources(ctx)
+		ctx.ChangedFiles = discovery.WalkAllFiles(ctx.Sources, sess.policy)
+		return
+	}
+
+	ctx.ChangedFiles = sess.changedFiles(req)
+	// Commit scope only analyzes changed files; whole-tree analyzers on other scopes need Sources.
+	if len(ctx.ChangedFiles) > 0 || req.Scope != ScopeCommit {
+		sess.attachSources(ctx)
+	}
+}
+
+func (sess *Session) changedFiles(req Request) []pass.FileChange {
+	status := req.Status
 	if status == nil {
 		fetched, err := sess.repo.WorktreeStatus()
 		if err != nil {
@@ -127,61 +151,12 @@ func (sess *Session) changedFiles(scope Scope, status *vcs.Status) []pass.FileCh
 		status = &fetched
 	}
 	changes := status.Changes
-	if scope == ScopeCommit {
+	if req.Scope == ScopeCommit {
 		changes = slices.DeleteFunc(slices.Clone(changes), func(change vcs.Change) bool {
 			return !change.Staged
 		})
 	}
-	return discovery.ChangesToFileChanges(changes, sess.testPolicy())
-}
-
-func (sess *Session) Load(discovery *Request) *pass.Context {
-	var root string
-	if sess.repo != nil {
-		root = sess.repo.Root()
-	}
-
-	analyzable := slices.DeleteFunc(
-		slices.Clone(discovery.ChangedFiles),
-		func(file pass.FileChange) bool { return discovery.Skips.SkipsPath(file.Path) },
-	)
-	ctx := &pass.Context{
-		ProjectDir:    root,
-		CommitMsg:     sess.commitMsg,
-		Config:        sess.cfgAnalysis,
-		Sources:       discovery.Sources,
-		ChangedFiles:  discovery.ChangedFiles,
-		GitHistory:    discovery.GitHistory,
-		StagedRenames: discovery.StagedRenames,
-		Skips:         discovery.Skips,
-		TestPolicy:    sess.testPolicy(),
-	}
-
-	if len(analyzable) > 0 && discovery.Sources != nil {
-		ctx.ASTCache = populateASTCache(analyzable, discovery.Sources)
-		ctx.Syntax = syntax.NewCache(
-			sess.providers(ctx.ASTCache),
-			syntax.Corpus{
-				Root:    root,
-				Sources: changedSources(analyzable),
-				Read:    discovery.Sources.Read,
-				Module:  func() string { return ctx.GoModule().Path },
-			},
-		)
-	}
-	return ctx
-}
-
-func (sess *Session) testPolicy() testfile.Classifier {
-	sess.policyOnce.Do(func() {
-		policy, err := testfile.New(sess.cfgAnalysis.TestGlobs)
-		if err != nil {
-			sess.policyErr = err
-			policy = testfile.Defaults()
-		}
-		sess.policy = policy
-	})
-	return sess.policy
+	return discovery.ChangesToFileChanges(changes, sess.policy)
 }
 
 func configFinding(err error) finding.Finding {

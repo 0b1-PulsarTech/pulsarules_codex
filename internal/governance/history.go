@@ -10,14 +10,14 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-func (sess *Session) gitHistory() []pass.GitCommitEntry {
+func (sess *Session) gitHistory(commitMsg string) []pass.GitCommitEntry {
 	if sess.repo == nil {
 		return nil
 	}
 	window := message.HistoryWindow(
 		pass.ParamSet(sess.cfgAnalysis.Analyzers[message.ID].Params),
 	)
-	if sess.commitMsg != "" {
+	if commitMsg != "" {
 		// Dropping HEAD below would otherwise leave the widest window one subject short.
 		window++
 	}
@@ -30,7 +30,7 @@ func (sess *Session) gitHistory() []pass.GitCommitEntry {
 		return nil
 	}
 	// On an amend or a rebase reword HEAD is the old commit; keeping it self-collides.
-	if sess.replacesHead(subjects[0]) {
+	if sess.replacesHead(commitMsg, subjects[0]) {
 		subjects = subjects[1:]
 	}
 
@@ -43,11 +43,11 @@ func (sess *Session) gitHistory() []pass.GitCommitEntry {
 	return entries
 }
 
-func (sess *Session) replacesHead(headSubject string) bool {
-	if sess.commitMsg == "" {
+func (sess *Session) replacesHead(commitMsg, headSubject string) bool {
+	if commitMsg == "" {
 		return false
 	}
-	subject, _, _ := strings.Cut(sess.commitMsg, "\n")
+	subject, _, _ := strings.Cut(commitMsg, "\n")
 	if subject == headSubject {
 		return true
 	}

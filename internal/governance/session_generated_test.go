@@ -55,11 +55,10 @@ func TestAnalyzeIncludeGeneratedKeepsEverything(t *testing.T) {
 
 			result := NewSession(
 				repo,
-				"",
 				nil,
 				testCatalog(t),
 				cfg,
-			).Analyze(ScopeChanged, nil, FileSetChanged)
+			).Analyze(Request{Scope: ScopeChanged})
 
 			hasEmDash := false
 			for _, finding := range result.Findings {

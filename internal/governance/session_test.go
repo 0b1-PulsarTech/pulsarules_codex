@@ -25,8 +25,8 @@ func TestSession_NilRepo_ScopeChanged(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.ApplyPreset()
 
-	sess := NewSession(nil, "", idx, testCatalog(t), cfg)
-	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
+	sess := NewSession(nil, idx, testCatalog(t), cfg)
+	findings := sess.Analyze(Request{Scope: ScopeChanged}).Findings
 	if len(findings) != 0 {
 		t.Fatalf(
 			"expected 0 findings with no repo and no changes, got %d: %+v",
@@ -55,8 +55,8 @@ func TestSession_WithCommitMsg(t *testing.T) {
 		t.Fatalf("vcs.Open: %v", err)
 	}
 
-	sess := NewSession(repo, "bad commit message", idx, testCatalog(t), cfg)
-	findings := sess.Analyze(ScopeFull, nil, FileSetChanged).Findings
+	sess := NewSession(repo, idx, testCatalog(t), cfg)
+	findings := sess.Analyze(Request{Scope: ScopeFull, CommitMsg: "bad commit message"}).Findings
 
 	found := false
 	for _, finding := range findings {
@@ -76,8 +76,8 @@ func TestSession_WithCommitMsg(t *testing.T) {
 func TestSession_NilConfigAndKnowledge_ScopeChanged(t *testing.T) {
 	t.Parallel()
 
-	sess := NewSession(nil, "", nil, testCatalog(t), nil)
-	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
+	sess := NewSession(nil, nil, testCatalog(t), nil)
+	findings := sess.Analyze(Request{Scope: ScopeChanged}).Findings
 	if len(findings) != 0 {
 		t.Fatalf(
 			"expected 0 findings with nil config, knowledge and repo, got %d: %+v",
@@ -95,8 +95,8 @@ func TestSession_ScopeCommit(t *testing.T) {
 		t.Fatalf("load knowledge: %v", err)
 	}
 
-	sess := NewSession(nil, "bad commit message", idx, testCatalog(t), nil)
-	findings := sess.Analyze(ScopeCommit, nil, FileSetChanged).Findings
+	sess := NewSession(nil, idx, testCatalog(t), nil)
+	findings := sess.Analyze(Request{Scope: ScopeCommit, CommitMsg: "bad commit message"}).Findings
 	if len(findings) == 0 {
 		t.Fatal("expected findings for invalid commit message")
 	}
@@ -124,8 +124,8 @@ func TestSession_ScopeChanged(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.ApplyPreset()
 
-	sess := NewSession(repo, "", nil, testCatalog(t), cfg)
-	findings := sess.Analyze(ScopeChanged, nil, FileSetChanged).Findings
+	sess := NewSession(repo, nil, testCatalog(t), cfg)
+	findings := sess.Analyze(Request{Scope: ScopeChanged}).Findings
 
 	foundStatic := false
 	for _, finding := range findings {
@@ -164,8 +164,8 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.ApplyPreset()
 
-	changedFindings := NewSession(repo, "", nil, testCatalog(t), cfg).
-		Analyze(ScopeChanged, nil, FileSetChanged).Findings
+	changedFindings := NewSession(repo, nil, testCatalog(t), cfg).
+		Analyze(Request{Scope: ScopeChanged}).Findings
 	for _, finding := range changedFindings {
 		if finding.AnalyzerID == "typographic-markers" {
 			t.Fatalf(
@@ -175,8 +175,8 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 		}
 	}
 
-	allFindings := NewSession(repo, "", nil, testCatalog(t), cfg).
-		Analyze(ScopeChanged, nil, FileSetAll).Findings
+	allFindings := NewSession(repo, nil, testCatalog(t), cfg).
+		Analyze(Request{Scope: ScopeChanged, Files: FileSetAll}).Findings
 	foundAll := false
 	for _, finding := range allFindings {
 		if finding.AnalyzerID == "typographic-markers" && finding.File == "violation.go" {
@@ -207,8 +207,8 @@ func TestSession_ScopeCommit_StaticSources(t *testing.T) {
 		t.Fatalf("vcs.Open: %v", err)
 	}
 
-	sess := NewSession(repo, "", nil, testCatalog(t), nil)
-	findings := sess.Analyze(ScopeCommit, nil, FileSetChanged).Findings
+	sess := NewSession(repo, nil, testCatalog(t), nil)
+	findings := sess.Analyze(Request{Scope: ScopeCommit}).Findings
 
 	for _, finding := range findings {
 		if finding.AnalyzerID == "typographic-markers" {
@@ -236,8 +236,8 @@ func TestSession_ScopeCommit_EmptyStatus(t *testing.T) {
 		t.Fatalf("vcs.Open: %v", err)
 	}
 
-	sess := NewSession(repo, "", nil, testCatalog(t), nil)
-	findings := sess.Analyze(ScopeCommit, &vcs.Status{}, FileSetChanged).Findings
+	sess := NewSession(repo, nil, testCatalog(t), nil)
+	findings := sess.Analyze(Request{Scope: ScopeCommit, Status: &vcs.Status{}}).Findings
 	if len(findings) != 0 {
 		t.Fatalf("expected 0 findings with an explicit empty status, got %+v", findings)
 	}
@@ -288,8 +288,8 @@ func TestSession_PackageLevelVarState(t *testing.T) {
 			if testCase.disableSingleUse {
 				cfg.Analyzers["single-use-declaration"] = pass.AnalyzerConfig{Enabled: false}
 			}
-			result := NewSession(&goldenRepo{root: repoDir}, "", nil, testCatalog(t), cfg).
-				Analyze(ScopeChanged, nil, FileSetAll)
+			result := NewSession(&goldenRepo{root: repoDir}, nil, testCatalog(t), cfg).
+				Analyze(Request{Scope: ScopeChanged, Files: FileSetAll})
 
 			linesByAnalyzer := make(map[string][]int)
 			for _, finding := range result.Findings {
@@ -340,10 +340,10 @@ func analyzeTestPolicyRepo(
 	cfg.Analyzers["package-file-count"] = pass.AnalyzerConfig{
 		Enabled: true, Params: map[string]any{"extensions": []string{".ts"}},
 	}
-	sess := NewSession(&goldenRepo{root: dir}, "", nil, testCatalog(t), cfg)
-	sess.cfgAnalysis.TestGlobs = run.globs
-	changed := sess.Discover(ScopeChanged, run.status, run.fileSet).ChangedFiles
-	return sess.Analyze(ScopeChanged, run.status, run.fileSet).Findings, changed
+	cfg.TestGlobs = run.globs
+	sess := NewSession(&goldenRepo{root: dir}, nil, testCatalog(t), cfg)
+	req := Request{Scope: ScopeChanged, Status: run.status, Files: run.fileSet}
+	return sess.Analyze(req).Findings, sess.load(req).ChangedFiles
 }
 
 type testGlobCase struct {

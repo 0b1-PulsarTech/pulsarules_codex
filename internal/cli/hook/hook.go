@@ -101,8 +101,12 @@ func GovernChanges(
 	}
 	// The empty commit message is deliberate: only the git commit-msg hook validates one.
 	cfg, configFindings := loader.ForRoot(repo.Root())
-	sess := governance.NewSession(repo, "", index, catalog, cfg)
-	result := sess.Analyze(governance.ScopeChanged, &status, governance.FileSetChanged)
+	sess := governance.NewSession(repo, index, catalog, cfg)
+	result := sess.Analyze(governance.Request{
+		Scope:  governance.ScopeChanged,
+		Status: &status,
+		Files:  governance.FileSetChanged,
+	})
 	result.Findings = slices.Concat(configFindings, result.Findings)
 	return GovernanceBlock(result)
 }

@@ -41,8 +41,8 @@ func TestSessionGitHistoryDropsHeadOnReword(t *testing.T) {
 				t.Fatalf("vcs.Open: %v", err)
 			}
 
-			sess := NewSession(repo, testCase.commitMsg, nil, testCatalog(t), nil)
-			entries := sess.gitHistory()
+			sess := NewSession(repo, nil, testCatalog(t), nil)
+			entries := sess.gitHistory(testCase.commitMsg)
 			if testCase.wantNewest == "" {
 				if len(entries) != 0 {
 					t.Fatalf("expected no history, got %+v", entries)
@@ -62,8 +62,8 @@ func TestSessionGitHistoryDropsHeadOnReword(t *testing.T) {
 func TestSessionGitHistory_NilRepo(t *testing.T) {
 	t.Parallel()
 
-	sess := NewSession(nil, "anything", nil, testCatalog(t), nil)
-	if entries := sess.gitHistory(); entries != nil {
+	sess := NewSession(nil, nil, testCatalog(t), nil)
+	if entries := sess.gitHistory("anything"); entries != nil {
 		t.Fatalf("gitHistory() = %+v, want nil for a nil repo", entries)
 	}
 }
@@ -110,8 +110,8 @@ func TestSessionReplacesHead_AuthorDate(t *testing.T) {
 				t.Fatalf("vcs.Open: %v", err)
 			}
 
-			sess := NewSession(repo, testCase.commitMsg, nil, testCatalog(t), nil)
-			entries := sess.gitHistory()
+			sess := NewSession(repo, nil, testCatalog(t), nil)
+			entries := sess.gitHistory(testCase.commitMsg)
 			gotReplaces := len(entries) == 0
 			if gotReplaces != testCase.wantReplaces {
 				t.Fatalf("replacesHead = %v, want %v (entries = %+v)",
@@ -133,10 +133,10 @@ func TestSessionGitHistory_LogsRecentSubjectsFailure(t *testing.T) {
 	t.Parallel()
 
 	var logs bytes.Buffer
-	sess := NewSession(failingHistoryRepo{}, "", nil, testCatalog(t), nil)
+	sess := NewSession(failingHistoryRepo{}, nil, testCatalog(t), nil)
 	sess.logger = slog.New(slog.NewTextHandler(&logs, nil))
 
-	if entries := sess.gitHistory(); entries != nil {
+	if entries := sess.gitHistory(""); entries != nil {
 		t.Fatalf("gitHistory() = %+v, want nil when the log fails", entries)
 	}
 	if !strings.Contains(logs.String(), "log exploded") {
@@ -156,10 +156,10 @@ func TestSessionReplacesHead_LogsAuthorEpochFailure(t *testing.T) {
 	t.Setenv("GIT_AUTHOR_DATE", "@1704067200 +0000")
 
 	var logs bytes.Buffer
-	sess := NewSession(failingEpochRepo{}, "reworded", nil, testCatalog(t), nil)
+	sess := NewSession(failingEpochRepo{}, nil, testCatalog(t), nil)
 	sess.logger = slog.New(slog.NewTextHandler(&logs, nil))
 
-	if sess.replacesHead("another subject") {
+	if sess.replacesHead("reworded", "another subject") {
 		t.Fatal("replacesHead = true, want false when the author epoch is unavailable")
 	}
 	if !strings.Contains(logs.String(), "epoch exploded") {
@@ -205,7 +205,7 @@ func TestSessionGitHistory_FetchesTheWidestEmojiWindow(t *testing.T) {
 				cfg.SetParam(message.ID, message.ParamEmojiSoftWindow, testCase.softWindow)
 			}
 			repo := &limitRecordingRepo{}
-			NewSession(repo, testCase.commitMsg, nil, testCatalog(t), cfg).gitHistory()
+			NewSession(repo, nil, testCatalog(t), cfg).gitHistory(testCase.commitMsg)
 			if repo.limit != testCase.want {
 				t.Errorf("RecentSubjects limit = %d, want %d", repo.limit, testCase.want)
 			}

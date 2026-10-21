@@ -59,9 +59,9 @@ func loadSession(t *testing.T, name, body string, install func(*Session)) (
 	if err != nil {
 		t.Fatalf("vcs.Open: %v", err)
 	}
-	sess := NewSession(repo, "", nil, testCatalog(t), nil)
+	sess := NewSession(repo, nil, testCatalog(t), nil)
 	install(sess)
-	return repo.Root(), sess.Load(sess.Discover(ScopeChanged, nil, FileSetChanged))
+	return repo.Root(), sess.load(Request{Scope: ScopeChanged})
 }
 
 func TestSession_Load_BuildsSyntaxCache(t *testing.T) {

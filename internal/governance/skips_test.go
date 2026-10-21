@@ -45,11 +45,10 @@ func TestSession_SkipDirs_ConfiguredUnion(t *testing.T) {
 
 	findings := NewSession(
 		repo,
-		"",
 		nil,
 		testCatalog(t),
 		cfg,
-	).Analyze(ScopeChanged, nil, FileSetAll).
+	).Analyze(Request{Scope: ScopeChanged, Files: FileSetAll}).
 		Findings
 
 	seen := map[string]bool{}
@@ -91,11 +90,10 @@ func TestSession_SkipDirs_SharedByLoad(t *testing.T) {
 
 	findings := NewSession(
 		repo,
-		"",
 		nil,
 		testCatalog(t),
 		cfg,
-	).Analyze(ScopeChanged, nil, FileSetChanged).
+	).Analyze(Request{Scope: ScopeChanged}).
 		Findings
 	for _, finding := range findings {
 		if finding.AnalyzerID == "typographic-markers" {

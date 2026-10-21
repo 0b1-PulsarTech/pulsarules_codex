@@ -1,6 +1,7 @@
 package governance
 
 import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/dartsyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax"
@@ -30,8 +31,8 @@ func defaultProviders(cache *astcache.Cache) []syntax.Provider {
 	return []syntax.Provider{gosyntax.New(cache), dartsyntax.New(), tssyntax.New()}
 }
 
-func (sess *Session) attachSources(found *Request) {
-	found.Sources, found.Skips = discovery.Listed(
+func (sess *Session) attachSources(ctx *pass.Context) {
+	ctx.Sources, ctx.Skips = discovery.Listed(
 		sess.repo, sess.skips, sess.gitSkips, sess.logger)
 }
 

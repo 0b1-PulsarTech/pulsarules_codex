@@ -52,11 +52,16 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 		return fmt.Errorf("get emoji catalog: %w", err)
 	}
 	cfg, configFindings := loader.ForRoot(root)
-	sess := governance.NewSession(repo, msg, idx, catalog, cfg)
+	sess := governance.NewSession(repo, idx, catalog, cfg)
 	// An explicit empty status keeps this a pure message linter. A nil
 	// status would have discovery read the worktree, and content findings from
 	// unrelated dirty files would fail a commit whose message is fine.
-	result := sess.Analyze(governance.ScopeCommit, &vcs.Status{}, governance.FileSetChanged)
+	result := sess.Analyze(governance.Request{
+		Scope:     governance.ScopeCommit,
+		Status:    &vcs.Status{},
+		Files:     governance.FileSetChanged,
+		CommitMsg: msg,
+	})
 	result.Findings = slices.Concat(configFindings, result.Findings)
 
 	if len(result.Findings) == 0 {

@@ -3,17 +3,9 @@ package governance
 import (
 	"log/slog"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
 )
-
-func (sess *Session) seedFindings() []finding.Finding {
-	if sess.policyErr == nil {
-		return nil
-	}
-	return []finding.Finding{configFinding(sess.policyErr)}
-}
 
 func (sess *Session) stagedRenames() []pass.Rename {
 	const renameProbeScore = 1

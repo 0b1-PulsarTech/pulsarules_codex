@@ -132,7 +132,6 @@ func TestSession_StagedRenamesLogsProbeFailure(t *testing.T) {
 	var logs bytes.Buffer
 	sess := NewSession(
 		renamesFailingRepo{&goldenRepo{root: t.TempDir()}},
-		"",
 		nil,
 		testCatalog(t),
 		nil,

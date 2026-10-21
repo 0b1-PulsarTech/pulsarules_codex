@@ -24,9 +24,9 @@ func severityRepo(t *testing.T) string {
 func severitiesByFile(t *testing.T, dir string, cfg *config.GovernanceConfig) map[string]string {
 	t.Helper()
 
-	sess := NewSession(&goldenRepo{root: dir}, "", nil, testCatalog(t), cfg)
+	sess := NewSession(&goldenRepo{root: dir}, nil, testCatalog(t), cfg)
 	got := map[string]string{}
-	for _, finding := range sess.Analyze(ScopeChanged, nil, FileSetAll).Findings {
+	for _, finding := range sess.Analyze(Request{Scope: ScopeChanged, Files: FileSetAll}).Findings {
 		got[finding.AnalyzerID+" "+finding.File] = finding.Severity.String()
 	}
 	return got

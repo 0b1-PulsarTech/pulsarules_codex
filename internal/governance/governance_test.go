@@ -95,7 +95,8 @@ func skipFixture(t *testing.T) string {
 
 func reportedFiles(session *Session) map[string]bool {
 	seen := map[string]bool{}
-	for _, finding := range session.Analyze(ScopeChanged, nil, FileSetAll).Findings {
+	report := session.Analyze(Request{Scope: ScopeChanged, Files: FileSetAll})
+	for _, finding := range report.Findings {
 		if finding.AnalyzerID == "typographic-markers" {
 			seen[finding.File] = true
 		}
@@ -152,7 +153,7 @@ func TestSession_SkipDirs_GitModeKeepsGenericNames(t *testing.T) {
 			cfg.SkipDirs = []string{"thirdparty"}
 
 			seen := reportedFiles(
-				NewSession(testCase.repo(skipFixture(t)), "", nil, testCatalog(t), cfg),
+				NewSession(testCase.repo(skipFixture(t)), nil, testCatalog(t), cfg),
 			)
 			for file, want := range testCase.want {
 				if seen[file] != want {
@@ -163,7 +164,7 @@ func TestSession_SkipDirs_GitModeKeepsGenericNames(t *testing.T) {
 	}
 }
 
-func TestSession_Discover_ListingWarning(t *testing.T) {
+func TestSession_Load_ListingWarning(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -182,9 +183,9 @@ func TestSession_Discover_ListingWarning(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			var logs bytes.Buffer
-			session := NewSession(testCase.repo(skipFixture(t)), "", nil, testCatalog(t), nil)
+			session := NewSession(testCase.repo(skipFixture(t)), nil, testCatalog(t), nil)
 			session.logger = slog.New(slog.NewTextHandler(&logs, nil))
-			session.Discover(ScopeChanged, nil, FileSetAll)
+			session.load(Request{Scope: ScopeChanged, Files: FileSetAll})
 
 			if got := bytes.Count(logs.Bytes(), []byte("level=WARN")); got != testCase.wantWarn {
 				t.Errorf("warn lines = %d, want %d: %s", got, testCase.wantWarn, logs.String())
@@ -212,11 +213,10 @@ func TestSession_SkipDirs_GitMode(t *testing.T) {
 
 	findings := NewSession(
 		repo,
-		"",
 		nil,
 		testCatalog(t),
 		cfg,
-	).Analyze(ScopeChanged, nil, FileSetChanged).
+	).Analyze(Request{Scope: ScopeChanged}).
 		Findings
 	seen := map[string]bool{}
 	for _, finding := range findings {
@@ -266,11 +266,10 @@ func TestSession_ScopeCommit_FileList(t *testing.T) {
 
 	findings := NewSession(
 		repo,
-		"",
 		nil,
 		testCatalog(t),
 		nil,
-	).Analyze(ScopeCommit, nil, FileSetChanged).
+	).Analyze(Request{Scope: ScopeCommit}).
 		Findings
 	if !typographicFiles(findings)["target/x.go"] {
 		t.Fatalf("expected the staged target/x.go to be analyzed, got %+v", findings)
@@ -299,8 +298,8 @@ func TestSession_ScopeCommit_OnlyStagedChangesGate(t *testing.T) {
 			writeFileAtDir(t, dir, "a.go", "package demo\n")
 			writeFileAtDir(t, dir, "scratch/x.go", emDashBody)
 
-			session := NewSession(&goldenRepo{root: dir}, "", nil, testCatalog(t), nil)
-			findings := session.Analyze(testCase.scope, status, FileSetChanged).Findings
+			session := NewSession(&goldenRepo{root: dir}, nil, testCatalog(t), nil)
+			findings := session.Analyze(Request{Scope: testCase.scope, Status: status}).Findings
 			if got := typographicFiles(findings)["scratch/x.go"]; got != testCase.wantScratch {
 				t.Fatalf("scratch/x.go reported = %v, want %v", got, testCase.wantScratch)
 			}
@@ -308,7 +307,7 @@ func TestSession_ScopeCommit_OnlyStagedChangesGate(t *testing.T) {
 	}
 }
 
-func TestSession_Discover_ListsOnDemand(t *testing.T) {
+func TestSession_Load_ListsOnDemand(t *testing.T) {
 	t.Parallel()
 
 	staged := &vcs.Status{Changes: []vcs.Change{{Path: "a.go", Extension: ".go", Staged: true}}}
@@ -335,8 +334,8 @@ func TestSession_Discover_ListsOnDemand(t *testing.T) {
 			writeFileAtDir(t, dir, "a.go", "package demo\n")
 			repo := countingRepo{goldenRepo: &goldenRepo{root: dir}, listCalls: &calls}
 
-			session := NewSession(repo, "", nil, testCatalog(t), nil)
-			session.Discover(testCase.scope, testCase.status, FileSetChanged)
+			session := NewSession(repo, nil, testCatalog(t), nil)
+			session.load(Request{Scope: testCase.scope, Status: testCase.status})
 			if calls != testCase.wantCalls {
 				t.Fatalf("ListFiles calls = %d, want %d", calls, testCase.wantCalls)
 			}
@@ -375,9 +374,9 @@ func TestSession_FileSetChanged_Siblings(t *testing.T) {
 				writeFileAtDir(t, dir, fmt.Sprintf("pkg/f%d.go", fileNum), "package pkg\n")
 			}
 
-			session := NewSession(testCase.repo(dir), "", nil, testCatalog(t), nil)
+			session := NewSession(testCase.repo(dir), nil, testCatalog(t), nil)
 			found := false
-			report := session.Analyze(ScopeChanged, status, FileSetChanged)
+			report := session.Analyze(Request{Scope: ScopeChanged, Status: status})
 			for _, finding := range report.Findings {
 				found = found || finding.AnalyzerID == "package-file-count"
 			}
@@ -394,22 +393,21 @@ func (statusFailingRepo) WorktreeStatus() (vcs.Status, error) {
 	return vcs.Status{}, errors.New("status exploded")
 }
 
-func TestDiscover_LogsWorktreeStatusFailure(t *testing.T) {
+func TestSession_Load_LogsWorktreeStatusFailure(t *testing.T) {
 	t.Parallel()
 
 	var logs bytes.Buffer
 	sess := NewSession(
 		statusFailingRepo{&goldenRepo{root: t.TempDir()}},
-		"",
 		nil,
 		testCatalog(t),
 		nil,
 	)
 	sess.logger = slog.New(slog.NewTextHandler(&logs, nil))
 
-	discovery := sess.Discover(ScopeFull, nil, FileSetChanged)
-	if len(discovery.ChangedFiles) != 0 {
-		t.Fatalf("ChangedFiles = %v, want none", discovery.ChangedFiles)
+	ctx := sess.load(Request{Scope: ScopeFull})
+	if len(ctx.ChangedFiles) != 0 {
+		t.Fatalf("ChangedFiles = %v, want none", ctx.ChangedFiles)
 	}
 	if !strings.Contains(logs.String(), "status exploded") {
 		t.Fatalf("log output %q does not report the status failure", logs.String())

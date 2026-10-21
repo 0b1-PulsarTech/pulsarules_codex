@@ -84,8 +84,8 @@ func runGovernance(inj remy.Injector, opts *version.Options) error {
 		files = governance.FileSetAll
 	}
 
-	sess := governance.NewSession(run.repo, "", run.idx, run.catalog, run.cfg)
-	result := sess.Analyze(scope, nil, files)
+	sess := governance.NewSession(run.repo, run.idx, run.catalog, run.cfg)
+	result := sess.Analyze(governance.Request{Scope: scope, Files: files})
 	return reportGovernance(os.Stderr, result)
 }
 

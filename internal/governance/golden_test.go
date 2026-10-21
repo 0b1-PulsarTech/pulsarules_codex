@@ -62,11 +62,10 @@ func TestGolden(t *testing.T) {
 			status, files := goldenScope(testCase.changedPaths)
 			result := NewSession(
 				repo,
-				"",
 				nil,
 				testCatalog(t),
 				cfg,
-			).Analyze(ScopeChanged, status, files)
+			).Analyze(Request{Scope: ScopeChanged, Status: status, Files: files})
 
 			assertFindings(t, testCase.dir, result.Findings, want.Findings)
 			if result.Suppressed != want.SuppressedGenerated {
@@ -82,8 +81,8 @@ func TestGolden(t *testing.T) {
 			includeCfg := config.Defaults()
 			includeCfg.ApplyPreset()
 			includeCfg.IncludeGenerated = true
-			withGenerated := NewSession(repo, "", nil, testCatalog(t), includeCfg).
-				Analyze(ScopeChanged, status, files)
+			withGenerated := NewSession(repo, nil, testCatalog(t), includeCfg).
+				Analyze(Request{Scope: ScopeChanged, Status: status, Files: files})
 			assertFindings(t, testCase.dir+"/include-generated",
 				withGenerated.Findings, want.IncludeGeneratedFindings)
 		})
