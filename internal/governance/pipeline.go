@@ -30,7 +30,7 @@ func newPipeline(
 func (pipe *pipeline) run(ctx *pass.Context, seed []finding.Finding) []finding.Finding {
 	findings := slices.Clone(seed)
 	for _, entry := range pipe.analyzers {
-		if !pipe.enabled(entry.ID) {
+		if !pipe.cfg.Enabled(entry.ID) {
 			continue
 		}
 		reported := entry.Analyzer.Analyze(ctx)
@@ -47,17 +47,6 @@ func (pipe *pipeline) overridden(id string, findings []finding.Finding) []findin
 		return findings
 	}
 	return overrides.Apply(findings, id, pipe.cfg.Overrides)
-}
-
-func (pipe *pipeline) enabled(id string) bool {
-	if pipe.cfg == nil {
-		return true
-	}
-	cfg, ok := pipe.cfg.Analyzers[id]
-	if !ok {
-		return true
-	}
-	return cfg.Enabled
 }
 
 func (sess *Session) transforms() []transform {

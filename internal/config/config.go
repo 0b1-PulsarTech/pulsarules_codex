@@ -30,10 +30,7 @@ func (govCfg *GovernanceConfig) Analysis() *pass.AnalysisConfig {
 	// Dropped here: the analyzers under internal/analyzer/ may not read Analyzers directly.
 	built.Delegated = slices.DeleteFunc(
 		slices.Clone(govCfg.Delegated),
-		func(entry pass.DelegatedCommand) bool {
-			listed, found := govCfg.Analyzers[entry.ID]
-			return found && !listed.Enabled
-		},
+		func(entry pass.DelegatedCommand) bool { return !govCfg.Enabled(entry.ID) },
 	)
 	return &built
 }

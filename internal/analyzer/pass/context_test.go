@@ -230,3 +230,33 @@ func TestAnalysisContext_GoModule_ReadsOnce(t *testing.T) {
 		t.Errorf("GoModule() = %+v after a rewrite, want the memoised %+v", got, first)
 	}
 }
+
+func TestAnalysisConfig_Enabled(t *testing.T) {
+	t.Parallel()
+
+	cfg := &AnalysisConfig{Analyzers: map[string]AnalyzerConfig{
+		"on":  {Enabled: true},
+		"off": {Enabled: false},
+	}}
+	testCases := []struct {
+		name string
+		cfg  *AnalysisConfig
+		id   string
+		want bool
+	}{
+		{"listed and enabled", cfg, "on", true},
+		{"listed and disabled", cfg, "off", false},
+		{"unlisted runs", cfg, "other", true},
+		{"no config runs everything", nil, "off", true},
+		{"nil analyzers map runs everything", &AnalysisConfig{}, "off", true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := testCase.cfg.Enabled(testCase.id); got != testCase.want {
+				t.Errorf("Enabled(%q) = %v, want %v", testCase.id, got, testCase.want)
+			}
+		})
+	}
+}

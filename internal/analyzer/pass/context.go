@@ -101,6 +101,15 @@ type AnalysisConfig struct {
 	Delegated        []DelegatedCommand
 }
 
+func (cfg *AnalysisConfig) Enabled(analyzerID string) bool {
+	// An analyzer nobody listed runs; listing it is how it gets turned off.
+	if cfg == nil {
+		return true
+	}
+	listed, ok := cfg.Analyzers[analyzerID]
+	return !ok || listed.Enabled
+}
+
 type Override struct {
 	Files     glob.Set
 	Analyzers map[string]OverrideConfig
