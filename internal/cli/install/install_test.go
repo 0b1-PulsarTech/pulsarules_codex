@@ -3,6 +3,7 @@ package install
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -190,27 +191,49 @@ func TestRun_PrintHooks(t *testing.T) {
 	}
 }
 
-func TestRun_RejectsAnUnknownTargetBeforeWriting(t *testing.T) {
+func TestRun_RejectsAMalformedTargetBeforeWriting(t *testing.T) {
 	t.Parallel()
 
-	projectDir := t.TempDir()
-	opts := &version.Options{
-		Command:   "install",
-		Project:   projectDir,
-		Skills:    []string{"go-style"},
-		Languages: []string{"go"},
-		Target:    []string{"bogus"},
+	testCases := []struct {
+		name  string
+		flags []string
+		bad   string
+	}{
+		{"unknown name", []string{"bogus"}, "bogus"},
+		{"two names in one value", []string{"claude,opencode"}, "claude,opencode"},
+		{"padded name", []string{" opencode "}, " opencode "},
+		{"empty value", []string{""}, ""},
+		{"blank value", []string{" "}, " "},
+		{"lone comma", []string{","}, ","},
+		{"trailing comma", []string{"claude,"}, "claude,"},
+		{"empty repeat", []string{"claude", ""}, ""},
 	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			projectDir := t.TempDir()
+			args := []string{"install", "--project", projectDir, "--skills", "go-style"}
+			args = append(args, "--languages", "go")
+			for _, value := range testCase.flags {
+				args = append(args, "--target", value)
+			}
+			opts, err := version.ParseArgs(args)
+			if err != nil {
+				t.Fatalf("ParseArgs: %v", err)
+			}
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	injectRun(t, inj)
-	err := Run(inj, opts)
-	if err == nil || !strings.Contains(err.Error(), `invalid --target "bogus" (want `) {
-		t.Fatalf("err = %v, want an invalid --target error", err)
-	}
-	_, statErr := os.Stat(filepath.Join(projectDir, ".claude"))
-	if !errors.Is(statErr, fs.ErrNotExist) {
-		t.Errorf("rejected install created .claude, stat err = %v", statErr)
+			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+			injectRun(t, inj)
+			err = Run(inj, opts)
+			want := fmt.Sprintf("invalid --target %q (want ", testCase.bad)
+			if err == nil || !strings.Contains(err.Error(), want) {
+				t.Fatalf("err = %v, want an error containing %q", err, want)
+			}
+			_, statErr := os.Stat(filepath.Join(projectDir, ".claude"))
+			if !errors.Is(statErr, fs.ErrNotExist) {
+				t.Errorf("rejected install created .claude, stat err = %v", statErr)
+			}
+		})
 	}
 }
 

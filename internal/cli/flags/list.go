@@ -2,33 +2,28 @@ package flags
 
 import "strings"
 
-type List struct {
+type CommaList struct {
 	target *[]string
-	isSet  bool
 }
 
-func NewList(target *[]string) *List { return &List{target: target} }
+func NewCommaList(target *[]string) *CommaList { return &CommaList{target: target} }
 
-func (list *List) String() string {
+func (list *CommaList) String() string {
 	if list == nil || list.target == nil {
 		return ""
 	}
 	return strings.Join(*list.target, ",")
 }
 
-func (list *List) Set(raw string) error {
-	if !list.isSet {
-		// The first value replaces any default the target held.
-		*list.target = nil
-		list.isSet = true
-	}
+func (list *CommaList) Set(raw string) error {
+	// Last-wins: a repeated flag replaces the whole list, never extends it.
+	*list.target = nil
 	for part := range strings.SplitSeq(raw, ",") {
 		if name := strings.TrimSpace(part); name != "" {
 			*list.target = append(*list.target, name)
 		}
 	}
-	// "--skills ' '" and "--skills ''" were different inputs before lists were shared:
-	// only the blank one counts as given, so a non-empty raw value never leaves nil.
+	// "" means not given, but a blank value such as " " is given and empty.
 	if raw != "" && *list.target == nil {
 		*list.target = []string{}
 	}

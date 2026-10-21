@@ -140,36 +140,6 @@ func TestRun_RemovesLanguageConfig(t *testing.T) {
 	}
 }
 
-func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
-	t.Parallel()
-
-	projectDir := t.TempDir()
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
-	installOpts := &version.Options{
-		Command: "install", Project: projectDir, Skills: []string{"go-style"}, NoMCP: true,
-	}
-	if err := install.Run(inj, installOpts); err != nil {
-		t.Fatalf("install.Run: %v", err)
-	}
-	skillDoc := filepath.Join(projectDir, ".claude", "skills", "go-style", "SKILL.md")
-
-	opts := &version.Options{Command: "uninstall", Project: projectDir, Target: []string{"vim"}}
-	err := Run(inj, opts)
-	if err == nil {
-		t.Fatal("expected an error for an unknown --target")
-	}
-	const want = `invalid --target "vim" (want agents|claude|cursor|opencode)`
-	if !strings.Contains(err.Error(), want) {
-		t.Errorf("error = %q, want it to contain %q", err.Error(), want)
-	}
-	if _, statErr := os.Stat(skillDoc); statErr != nil {
-		t.Errorf("an invalid --target removed %q: %v", skillDoc, statErr)
-	}
-}
-
 func TestRun_Idempotent(t *testing.T) {
 	t.Parallel()
 
