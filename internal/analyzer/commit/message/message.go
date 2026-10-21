@@ -7,7 +7,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 )
 
-const ID = "commit-lint"
+const (
+	ID         = "commit-lint"
+	commitRule = "commits"
+)
 
 const (
 	ParamEmojiHardWindow  = "emoji_hard_window"
@@ -75,7 +78,8 @@ func (cfg emojiWindowConfig) merge(params pass.ParamSet) emojiWindowConfig {
 func Describe() pass.Descriptor {
 	return pass.Descriptor{
 		ID:     ID,
-		Rule:   "commits",
+		Rule:   commitRule,
 		Params: []string{ParamEmojiHardWindow, ParamEmojiSoftWindow, ParamEmojiSuggestions},
+		Subs:   ruleDescriptors(),
 	}
 }

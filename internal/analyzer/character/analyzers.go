@@ -135,6 +135,7 @@ func DescribeText() pass.Descriptor {
 		ID:     TextID,
 		Rule:   "source-files",
 		Params: []string{pass.ParamExtensions},
+		Subs:   []pass.Descriptor{{ID: FrontmatterID, Rule: "source-files"}},
 	}
 }
 

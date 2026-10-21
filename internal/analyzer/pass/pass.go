@@ -7,6 +7,7 @@ type (
 		ID     string
 		Rule   string
 		Params []string
+		Subs   []Descriptor
 	}
 
 	Analyzer interface {

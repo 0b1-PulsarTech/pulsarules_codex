@@ -132,5 +132,11 @@ func declareFields(scopes *scopeStack, lists ...*ast.FieldList) {
 }
 
 func Describe() pass.Descriptor {
-	return pass.Descriptor{ID: ID, Rule: "effective-go"}
+	return pass.Descriptor{
+		ID:   ID,
+		Rule: "effective-go",
+		// The fix a reuse finding asks for, a var declaration above the call, is the
+		// named-returns rule's territory.
+		Subs: []pass.Descriptor{{ID: ReuseID, Rule: "named-returns"}},
+	}
 }
