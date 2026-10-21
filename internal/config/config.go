@@ -4,6 +4,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
@@ -55,4 +56,12 @@ func (govCfg *GovernanceConfig) SetSeverity(analyzerID, severity string) {
 	govCfg.SeverityRules = append(govCfg.SeverityRules, pass.NewOverride(
 		nil, map[string]pass.OverrideConfig{analyzerID: {Severity: severity}},
 	))
+}
+
+const AnalyzerID = "config"
+
+func Finding(file, message, suggestion string) finding.Finding {
+	return finding.NewReporter(AnalyzerID, finding.SeverityError, finding.CatProject).At(
+		file, 0, message, suggestion,
+	)
 }

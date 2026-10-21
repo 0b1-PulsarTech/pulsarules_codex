@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
@@ -76,7 +77,7 @@ func TestRenderOverhead(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			bare := finding.Finding{
-				AnalyzerID: configAnalyzerID, Severity: finding.SeverityError, File: testCase.file,
+				AnalyzerID: config.AnalyzerID, Severity: finding.SeverityError, File: testCase.file,
 			}
 			want := len(renderHook([]finding.Finding{bare}))
 			if got := renderOverhead(testCase.file); got != want {
@@ -95,8 +96,7 @@ func unknownKeys() string {
 }
 
 func delegatedKeys(count int) string {
-	lines := make([]string, 0, count+1)
-	lines = append(lines, "delegated:")
+	lines := append(make([]string, 0, count+1), "delegated:")
 	for idx := range count {
 		lines = append(lines, fmt.Sprintf(
 			`  - {id: "%s/%d", run: [x], format: dart-analyze-json}`,
@@ -169,7 +169,7 @@ func capReportCases() []capCase {
 
 func errorFinding(err error) finding.Finding {
 	return finding.Finding{
-		AnalyzerID: configAnalyzerID, Severity: finding.SeverityError,
+		AnalyzerID: config.AnalyzerID, Severity: finding.SeverityError,
 		File: faultFile(err, nil), Message: err.Error(),
 	}
 }

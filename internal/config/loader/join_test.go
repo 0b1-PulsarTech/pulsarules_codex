@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 )
@@ -138,7 +139,7 @@ func TestJoinFaults(t *testing.T) {
 			joined := joinFaults(testCase.base, testCase.second)
 			got := joined.Error()
 			hit := finding.Finding{
-				AnalyzerID: configAnalyzerID, Severity: finding.SeverityError,
+				AnalyzerID: config.AnalyzerID, Severity: finding.SeverityError,
 				File: faultFile(joined, nil), Message: got,
 			}
 			rendered := renderHook([]finding.Finding{hit})

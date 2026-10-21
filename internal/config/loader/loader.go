@@ -13,12 +13,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-const configAnalyzerID = "config"
-
 func configRules() projectfile.Rules {
 	return projectfile.Rules{
 		AnalyzerIDs:      registry.ConfigurableIDs(),
-		ReservedIDs:      append(registry.IDs(), configAnalyzerID),
+		ReservedIDs:      append(registry.IDs(), config.AnalyzerID),
 		Params:           registry.Params(),
 		DelegatedFormats: registry.DelegatedFormats(),
 	}
@@ -90,12 +88,6 @@ func ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
 			return cfg, nil
 		}
 	}
-	hit := finding.Finding{
-		AnalyzerID: configAnalyzerID,
-		Severity:   finding.SeverityError,
-		Category:   finding.CatProject,
-		File:       faultFile(err, file),
-		Message:    err.Error(),
-	}
+	hit := config.Finding(faultFile(err, file), err.Error(), "")
 	return withPreset(nil, ""), []finding.Finding{hit}
 }

@@ -1,4 +1,4 @@
-package config
+package projectfile
 
 import (
 	"reflect"
@@ -9,11 +9,12 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
-func isEnabled(cfg *GovernanceConfig, analyzerID string) bool {
+func isEnabled(cfg *config.GovernanceConfig, analyzerID string) bool {
 	ac, ok := cfg.Analyzers[analyzerID]
 	if !ok {
 		return true
@@ -39,7 +40,7 @@ func TestSetParam(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg := Defaults()
+			cfg := config.Defaults()
 			if testCase.seeded != nil {
 				cfg.Analyzers[analyzerID] = pass.AnalyzerConfig{Params: testCase.seeded}
 			}
@@ -57,7 +58,11 @@ func TestSetParam(t *testing.T) {
 	}
 }
 
-func effectiveSeverity(cfg *GovernanceConfig, analyzerID string, from finding.Severity) string {
+func effectiveSeverity(
+	cfg *config.GovernanceConfig,
+	analyzerID string,
+	from finding.Severity,
+) string {
 	probe := []finding.Finding{{AnalyzerID: analyzerID, Severity: from}}
 	return overrides.Apply(probe, analyzerID, cfg.SeverityRules)[0].Severity.String()
 }
@@ -65,7 +70,7 @@ func effectiveSeverity(cfg *GovernanceConfig, analyzerID string, from finding.Se
 func TestSetSeverity(t *testing.T) {
 	t.Parallel()
 
-	cfg := Defaults()
+	cfg := config.Defaults()
 	cfg.SetSeverity("typographic-markers", "error")
 	cfg.SetSeverity("doc-comment", "info")
 	cfg.SetSeverity("typographic-markers", "warning")
@@ -94,8 +99,8 @@ func TestSetSeverity(t *testing.T) {
 func TestAnalysis(t *testing.T) {
 	t.Parallel()
 
-	cfg := Defaults()
-	cfg.Preset = PresetMinimal
+	cfg := config.Defaults()
+	cfg.Preset = config.PresetMinimal
 	cfg.ApplyPreset()
 
 	cfg.Analyzers["kept-on"] = pass.AnalyzerConfig{Enabled: true}
@@ -123,7 +128,7 @@ func TestAnalysis(t *testing.T) {
 func TestAnalysis_ParamsPassThrough(t *testing.T) {
 	t.Parallel()
 
-	cfg := Defaults()
+	cfg := config.Defaults()
 	cfg.SetParam(movepurity.ID, movepurity.ParamMinSimilarity, 99)
 	cfg.SetParam(message.ID, message.ParamEmojiHardWindow, 3)
 
@@ -139,7 +144,7 @@ func TestAnalysis_ParamsPassThrough(t *testing.T) {
 func TestAnalysis_DefaultsCarryNoAnalyzerParams(t *testing.T) {
 	t.Parallel()
 
-	pc := Defaults().Analysis()
+	pc := config.Defaults().Analysis()
 	for _, id := range []string{message.ID, movepurity.ID} {
 		if entry, found := pc.Analyzers[id]; found {
 			t.Errorf("%s = %+v, want no entry: the analyzer owns its defaults", id, entry)
@@ -150,7 +155,7 @@ func TestAnalysis_DefaultsCarryNoAnalyzerParams(t *testing.T) {
 func TestAnalysis_AnalyzersAreNotShared(t *testing.T) {
 	t.Parallel()
 
-	cfg := Defaults()
+	cfg := config.Defaults()
 	cfg.SetParam("alpha", "key", 1)
 	got := cfg.Analysis()
 
@@ -174,31 +179,31 @@ func TestAnalysisProjectFields(t *testing.T) {
 
 	testCases := []struct {
 		name  string
-		setup func(cfg *GovernanceConfig)
-		check func(t *testing.T, cfg *GovernanceConfig, got *pass.AnalysisConfig)
+		setup func(cfg *config.GovernanceConfig)
+		check func(t *testing.T, cfg *config.GovernanceConfig, got *pass.AnalysisConfig)
 	}{
 		{"tests and delegated", setTestsAndDelegated, checkTestsAndDelegated},
 		{"severity rules precede file rules", setSeverityRules, checkSeverityRules},
 		{"disabled delegated is dropped", setDisabledDelegated, checkDisabledDelegated},
-		{"no project file", func(*GovernanceConfig) {}, checkNoProjectFields},
+		{"no project file", func(*config.GovernanceConfig) {}, checkNoProjectFields},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			cfg := Defaults()
+			cfg := config.Defaults()
 			testCase.setup(cfg)
 			testCase.check(t, cfg, cfg.Analysis())
 		})
 	}
 }
 
-func setTestsAndDelegated(cfg *GovernanceConfig) {
+func setTestsAndDelegated(cfg *config.GovernanceConfig) {
 	cfg.IncludeGenerated = true
 	cfg.TestGlobs = []string{"web/test/**"}
 	cfg.Delegated = []pass.DelegatedCommand{{ID: "dart-analyze", Run: []string{"dart"}}}
 }
 
-func checkTestsAndDelegated(t *testing.T, cfg *GovernanceConfig, got *pass.AnalysisConfig) {
+func checkTestsAndDelegated(t *testing.T, cfg *config.GovernanceConfig, got *pass.AnalysisConfig) {
 	t.Helper()
 	if !got.IncludeGenerated {
 		t.Error("IncludeGenerated = false, want true")
@@ -211,13 +216,13 @@ func checkTestsAndDelegated(t *testing.T, cfg *GovernanceConfig, got *pass.Analy
 	}
 }
 
-func setSeverityRules(cfg *GovernanceConfig) {
+func setSeverityRules(cfg *config.GovernanceConfig) {
 	cfg.SetSeverity("naming", "info")
 	cfg.SetSeverity("big-comment", "error")
 	cfg.Overrides = []pass.Override{{Files: glob.CompileSet([]string{"a/**"})}}
 }
 
-func checkSeverityRules(t *testing.T, _ *GovernanceConfig, got *pass.AnalysisConfig) {
+func checkSeverityRules(t *testing.T, _ *config.GovernanceConfig, got *pass.AnalysisConfig) {
 	t.Helper()
 	if len(got.Overrides) != 3 {
 		t.Fatalf("Overrides = %+v, want 2 severity rules then the file rule", got.Overrides)
@@ -230,14 +235,14 @@ func checkSeverityRules(t *testing.T, _ *GovernanceConfig, got *pass.AnalysisCon
 	}
 }
 
-func checkNoProjectFields(t *testing.T, _ *GovernanceConfig, got *pass.AnalysisConfig) {
+func checkNoProjectFields(t *testing.T, _ *config.GovernanceConfig, got *pass.AnalysisConfig) {
 	t.Helper()
 	if len(got.Overrides) != 0 || len(got.TestGlobs) != 0 || len(got.Delegated) != 0 {
 		t.Fatalf("project fields set without a project file: %+v", got)
 	}
 }
 
-func setDisabledDelegated(cfg *GovernanceConfig) {
+func setDisabledDelegated(cfg *config.GovernanceConfig) {
 	cfg.Delegated = []pass.DelegatedCommand{
 		{ID: "off", Run: []string{"a"}},
 		{ID: "on"},
@@ -258,7 +263,7 @@ func commandIDs(entries []pass.DelegatedCommand) []string {
 }
 
 func checkDisabledDelegated(
-	t *testing.T, cfg *GovernanceConfig, got *pass.AnalysisConfig,
+	t *testing.T, cfg *config.GovernanceConfig, got *pass.AnalysisConfig,
 ) {
 	t.Helper()
 	if ids := commandIDs(got.Delegated); !slices.Equal(ids, []string{"on", "unlisted"}) {
@@ -267,5 +272,21 @@ func checkDisabledDelegated(
 	wantSource := []string{"off", "on", "unlisted"}
 	if ids := commandIDs(cfg.Delegated); !slices.Equal(ids, wantSource) {
 		t.Errorf("source Delegated ids = %v, want %v", ids, wantSource)
+	}
+}
+
+func TestFinding(t *testing.T) {
+	t.Parallel()
+
+	want := finding.Finding{
+		AnalyzerID: "config",
+		Severity:   finding.SeverityError,
+		Category:   finding.CatProject,
+		File:       Name,
+		Message:    "bad",
+		Suggestion: "fix it",
+	}
+	if got := config.Finding(Name, "bad", "fix it"); got != want {
+		t.Fatalf("Finding() = %+v, want %+v", got, want)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
@@ -17,7 +18,8 @@ const (
 func renderOverhead(file string) int {
 	const indent, label, location = 2, len("[error] "), len(" ()\n")
 	// The widest finding layout: indent, "[error] config: ", message, " (file)" and newline.
-	return indent + label + len(configAnalyzerID) + len(": ") + location + len(printable.Path(file))
+	return indent + label + len(config.AnalyzerID) + len(": ") + location +
+		len(printable.Path(file))
 }
 
 func capReport(err error, file *projectfile.File) error {

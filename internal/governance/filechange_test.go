@@ -9,6 +9,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
@@ -143,5 +144,21 @@ func TestSession_StagedRenamesLogsProbeFailure(t *testing.T) {
 	}
 	if !strings.Contains(logs.String(), "rename probe exploded") {
 		t.Fatalf("log output %q does not report the probe failure", logs.String())
+	}
+}
+
+func TestConfigFinding(t *testing.T) {
+	t.Parallel()
+
+	want := finding.Finding{
+		AnalyzerID: "config",
+		Severity:   finding.SeverityError,
+		Category:   finding.CatProject,
+		File:       ".pulsarules.yaml",
+		Message:    "compile glob",
+		Suggestion: "fix the test globs",
+	}
+	if got := configFinding(errors.New("compile glob")); got != want {
+		t.Fatalf("configFinding() = %+v, want %+v", got, want)
 	}
 }

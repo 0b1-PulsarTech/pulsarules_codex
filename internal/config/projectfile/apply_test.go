@@ -9,7 +9,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
 )
 
 func TestApplyProject(t *testing.T) {
@@ -455,13 +454,4 @@ func TestValidateRejectedInvalidGlobIsOneProblem(t *testing.T) {
 			}
 		})
 	}
-}
-
-func effectiveSeverity(
-	cfg *config.GovernanceConfig,
-	analyzerID string,
-	from finding.Severity,
-) string {
-	probe := []finding.Finding{{AnalyzerID: analyzerID, Severity: from}}
-	return overrides.Apply(probe, analyzerID, cfg.SeverityRules)[0].Severity.String()
 }

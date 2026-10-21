@@ -397,7 +397,7 @@ func assertConfigFinding(t *testing.T, findings []finding.Finding, file, message
 		t.Fatalf("findings = %+v, want exactly one", findings)
 	}
 	got := findings[0]
-	if got.AnalyzerID != configAnalyzerID || got.Severity != finding.SeverityError {
+	if got.AnalyzerID != config.AnalyzerID || got.Severity != finding.SeverityError {
 		t.Errorf("finding = %+v, want an error from the config analyzer", got)
 	}
 	if got.File != file || !strings.Contains(got.Message, message) {
@@ -418,7 +418,7 @@ func TestRulesReserveEveryBuiltInID(t *testing.T) {
 	t.Parallel()
 
 	reserved := configRules().ReservedIDs
-	for _, id := range append(registry.IDs(), configAnalyzerID) {
+	for _, id := range append(registry.IDs(), config.AnalyzerID) {
 		if !slices.Contains(reserved, id) {
 			t.Errorf("ReservedIDs lacks %q", id)
 		}

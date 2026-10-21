@@ -8,6 +8,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
@@ -160,7 +161,5 @@ func (sess *Session) changedFiles(req Request) []pass.FileChange {
 }
 
 func configFinding(err error) finding.Finding {
-	return finding.NewReporter("config", finding.SeverityError, finding.CatProject).At(
-		".pulsarules.yaml", 0, err.Error(), "fix the test globs",
-	)
+	return config.Finding(projectfile.Name, err.Error(), "fix the test globs")
 }

@@ -15,11 +15,8 @@ import (
 const wantFloor = 4000
 
 func renderedLine(finding finding.Finding) string {
-	line := "  [warning] " + printable.Line(
-		finding.AnalyzerID,
-	) + ": " + printable.Line(
-		finding.Message,
-	)
+	line := "  [warning] " + printable.Line(finding.AnalyzerID) + ": " +
+		printable.Line(finding.Message)
 	if finding.File != "" {
 		place := printable.Path(finding.File)
 		if finding.Line > 0 {
