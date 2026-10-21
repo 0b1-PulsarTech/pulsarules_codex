@@ -15,25 +15,20 @@ const (
 )
 
 type Analyzer struct {
-	shadowReporter finding.Reporter
-	reuseReporter  finding.Reporter
+	reporters fileReporters
 }
 
 func NewAnalyzer() *Analyzer {
-	return &Analyzer{
-		shadowReporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
+	return &Analyzer{reporters: fileReporters{
+		shadow: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 		// The two findings share scope machinery but say opposite things.
-		reuseReporter: finding.NewReporter(reuseID, finding.SeverityWarning, finding.CatAST),
-	}
+		reuse: finding.NewReporter(reuseID, finding.SeverityWarning, finding.CatAST),
+	}}
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reps := fileReporters{
-		shadow: analyzer.shadowReporter,
-		reuse:  analyzer.reuseReporter,
-	}
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
-		return analyzer.checkFile(ctx.ASTCache.FileSet(), fc, file, reps)
+		return analyzer.checkFile(ctx.ASTCache.FileSet(), fc, file, analyzer.reporters)
 	})
 }
 

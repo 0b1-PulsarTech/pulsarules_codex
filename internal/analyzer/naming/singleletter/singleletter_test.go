@@ -18,7 +18,7 @@ type testCase struct {
 }
 
 func defaultSettings() settings {
-	return settings{reporter: NewAnalyzer().reporter()}
+	return settings{reporter: NewAnalyzer().reporter}
 }
 
 func summaries(cache *astcache.Cache) *syntax.Cache {

@@ -24,7 +24,7 @@ func TestCheckFile(t *testing.T) {
 			file := summarize(
 				t, syntax.Source{Path: testCase.path, IsTest: isTest}, testCase.source,
 			)
-			got := checkFile(fc, file, NewAnalyzer().reporter())
+			got := checkFile(fc, file, NewAnalyzer().reporter)
 			if len(got) != testCase.expect {
 				t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
 			}
@@ -60,7 +60,7 @@ func TestCheckFileHints(t *testing.T) {
 
 			fc := pass.FileChange{Path: "p.go", Extension: ".go"}
 			file := summarize(t, syntax.Source{Path: "p.go"}, testCase.source)
-			got := checkFile(fc, file, NewAnalyzer().reporter())
+			got := checkFile(fc, file, NewAnalyzer().reporter)
 			if len(got) == 0 {
 				t.Fatal("no finding")
 			}
@@ -175,7 +175,7 @@ func TestCheckFileMessages(t *testing.T) {
 
 			fc := pass.FileChange{Path: "p.go", Extension: ".go"}
 			file := summarize(t, syntax.Source{Path: "p.go"}, testCase.source)
-			got := checkFile(fc, file, NewAnalyzer().reporter())
+			got := checkFile(fc, file, NewAnalyzer().reporter)
 			if len(got) == 0 {
 				t.Fatal("no finding")
 			}

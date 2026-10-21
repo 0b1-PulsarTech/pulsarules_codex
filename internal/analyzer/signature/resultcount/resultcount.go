@@ -15,21 +15,29 @@ const (
 	paramMaxResults = "max_results"
 )
 
-type Analyzer struct{}
+type Analyzer struct {
+	reporter finding.Reporter
+}
 
 func NewAnalyzer() *Analyzer {
-	return &Analyzer{}
+	return &Analyzer{reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)}
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	const defaultMaxResults = 3
 	limit := ctx.Params(ID).Int(paramMaxResults, defaultMaxResults)
-	reporter := finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if fc.Generated {
 			return nil
 		}
-		return rule{reporter: reporter, limit: limit}.check(ctx.ASTCache.FileSet(), fc, file)
+		return rule{
+			reporter: analyzer.reporter,
+			limit:    limit,
+		}.check(
+			ctx.ASTCache.FileSet(),
+			fc,
+			file,
+		)
 	})
 }
 

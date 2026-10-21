@@ -32,7 +32,6 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	}
 	params := ctx.Params(ID)
 	minSimilarity := params.Int(ParamMinSimilarity, analyzer.minSimilarity)
-	reporter := analyzer.reporter
 
 	var moves *moveContext
 	if analyzer.reader != nil {
@@ -40,18 +39,21 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	}
 	var findings []finding.Finding
 	for _, rename := range ctx.StagedRenames {
-		if finding, ok := renameFinding(moves, reporter, rename, minSimilarity); ok {
+		if finding, ok := renameFinding(moves, analyzer.reporter, rename, minSimilarity); ok {
 			findings = append(findings, finding)
 		}
 	}
 	edits, unlinks := unrelatedStagedEdits(moves, ctx.ChangedFiles, ctx.StagedRenames)
 	for _, unlink := range unlinks {
-		findings = append(findings, unlinksLoadFinding(reporter, unlink, moves.unlinked[unlink]))
+		findings = append(
+			findings,
+			unlinksLoadFinding(analyzer.reporter, unlink, moves.unlinked[unlink]),
+		)
 	}
 	if len(edits) > 0 {
 		findings = append(
 			findings,
-			mixedChangesetFinding(reporter, len(ctx.StagedRenames), len(edits)),
+			mixedChangesetFinding(analyzer.reporter, len(ctx.StagedRenames), len(edits)),
 		)
 	}
 	return findings

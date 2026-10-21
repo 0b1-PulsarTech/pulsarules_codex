@@ -27,7 +27,6 @@ func NewAnalyzer() *Analyzer {
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := analyzer.reporter
 	dirScans := scanDirs(ctx)
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		dir := dirOf(fc.Path)
@@ -40,7 +39,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 			fset:     ctx.ASTCache.FileSet(),
 			path:     fc.Path,
 			file:     file,
-			reporter: reporter,
+			reporter: analyzer.reporter,
 			imports:  imports,
 			types:    siblings.types,
 			errFuncs: siblings.errFuncs,

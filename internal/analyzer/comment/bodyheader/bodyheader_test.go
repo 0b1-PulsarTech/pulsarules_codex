@@ -30,7 +30,7 @@ func TestCheckFile(t *testing.T) {
 			fc := pass.FileChange{Path: "p.go", Extension: ".go"}
 			settings := check{
 				fset:     cache.FileSet(),
-				reporter: NewAnalyzer().reporter(),
+				reporter: NewAnalyzer().reporter,
 				minLines: testCase.minLines,
 			}
 			got := settings.file(fc, file)
@@ -137,7 +137,7 @@ func TestCheckFileInTestFile(t *testing.T) {
 			}
 			fc := pass.FileChange{Path: "p_test.go", Extension: ".go", IsTest: true}
 			settings := check{
-				fset: cache.FileSet(), reporter: NewAnalyzer().reporter(), minLines: 2,
+				fset: cache.FileSet(), reporter: NewAnalyzer().reporter, minLines: 2,
 			}
 			got := settings.file(fc, file)
 			if len(got) != testCase.expect {

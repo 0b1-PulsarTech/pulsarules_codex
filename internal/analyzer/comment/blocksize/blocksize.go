@@ -27,7 +27,6 @@ func NewAnalyzer() *Analyzer {
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	ml := analyzer.resolveMaxLines(ctx)
-	reporter := analyzer.reporter
 	extFilter := pass.ExtensionFilter(ctx, ID, language.SourceExtensions())
 	eligible := func(fc pass.FileChange) bool {
 		return extFilter(fc) && language.ForExtension(fc.Extension).ID != ""
@@ -36,7 +35,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		eligible,
 		func(fc pass.FileChange, src []byte) []finding.Finding {
 			syntax := language.ForExtension(fc.Extension).Comments
-			return scanFile(src, fc, syntax, limit{maxLines: ml, reporter: reporter})
+			return scanFile(src, fc, syntax, limit{maxLines: ml, reporter: analyzer.reporter})
 		},
 	)
 }

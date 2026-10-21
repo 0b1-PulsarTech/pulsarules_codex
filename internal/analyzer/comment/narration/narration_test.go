@@ -25,7 +25,7 @@ func runScan(t *testing.T, testCase scanCase) {
 		source = "package p\n\nfunc f() {\n" + source + "}\n"
 	}
 	fc := pass.FileChange{Path: "f", Extension: "." + testCase.ext}
-	got := scanFile([]byte(source), fc, NewAnalyzer().reporter(), parsedGo{})
+	got := scanFile([]byte(source), fc, NewAnalyzer().reporter, parsedGo{})
 	if len(got) != testCase.expect {
 		t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
 	}
@@ -38,7 +38,7 @@ func TestScanFileUnparsableGo(t *testing.T) {
 	got := scanFile(
 		[]byte("// used to be a loop\nfunc ("),
 		fc,
-		NewAnalyzer().reporter(),
+		NewAnalyzer().reporter,
 		parsedGo{},
 	)
 	if len(got) != 1 || got[0].Line != 1 {
@@ -63,7 +63,7 @@ func TestScanFileUnparsableGoFallback(t *testing.T) {
 
 			fc := pass.FileChange{Path: "f.go", Extension: ".go"}
 			got := scanFile(
-				[]byte(testCase.source), fc, NewAnalyzer().reporter(),
+				[]byte(testCase.source), fc, NewAnalyzer().reporter,
 				parsedGo{},
 			)
 			if len(got) != testCase.expect {
@@ -81,7 +81,7 @@ func TestScanFileSplitPhraseLine(t *testing.T) {
 	got := scanFile(
 		[]byte(source),
 		fc,
-		NewAnalyzer().reporter(),
+		NewAnalyzer().reporter,
 		parsedGo{},
 	)
 	if len(got) != 1 || got[0].Line != 3 {
@@ -97,7 +97,7 @@ func TestScanFileMessageNamesPhrase(t *testing.T) {
 	got := scanFile(
 		[]byte(source),
 		fc,
-		NewAnalyzer().reporter(),
+		NewAnalyzer().reporter,
 		parsedGo{},
 	)
 	want := "comment narrates history: \"never ever used to retry\""

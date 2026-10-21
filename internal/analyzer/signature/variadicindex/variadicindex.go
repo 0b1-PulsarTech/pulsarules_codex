@@ -11,19 +11,20 @@ import (
 
 const ID = "variadic-index"
 
-type Analyzer struct{}
+type Analyzer struct {
+	reporter finding.Reporter
+}
 
 func NewAnalyzer() *Analyzer {
-	return &Analyzer{}
+	return &Analyzer{reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)}
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if fc.Generated {
 			return nil
 		}
-		return checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
+		return checkFile(ctx.ASTCache.FileSet(), fc, file, analyzer.reporter)
 	})
 }
 

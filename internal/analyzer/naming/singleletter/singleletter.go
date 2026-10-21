@@ -18,20 +18,18 @@ const (
 	paramAllowedNames = "allowed_names"
 )
 
-type Analyzer struct{}
-
-func NewAnalyzer() *Analyzer {
-	return &Analyzer{}
+type Analyzer struct {
+	reporter finding.Reporter
 }
 
-func (analyzer *Analyzer) reporter() finding.Reporter {
-	return finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)
+func NewAnalyzer() *Analyzer {
+	return &Analyzer{reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)}
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	params := ctx.Params(ID)
 	cfg := settings{
-		reporter:     analyzer.reporter(),
+		reporter:     analyzer.reporter,
 		exportedOnly: params.Bool(paramExportedOnly, false),
 		allowed:      params.Strings(paramAllowedNames, nil),
 	}

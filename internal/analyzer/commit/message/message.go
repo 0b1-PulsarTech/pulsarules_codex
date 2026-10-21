@@ -46,15 +46,14 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	msg := commitmsg.Parse(ctx.CommitMsg)
 	windowCfg := analyzer.windowCfg.merge(ctx.Params(ID))
 
-	reporters := analyzer.reporters
 	findings := make([]finding.Finding, 0, typicalFindingCapacity)
-	findings = append(findings, validate(msg, analyzer.ruleCfg, reporters)...)
+	findings = append(findings, validate(msg, analyzer.ruleCfg, analyzer.reporters)...)
 	findings = append(findings, emojiCheck{
 		message:   msg,
 		catalog:   analyzer.catalog,
 		history:   historySubjects(ctx.GitHistory),
 		config:    windowCfg,
-		reporters: reporters,
+		reporters: analyzer.reporters,
 	}.validate()...)
 	for index := range findings {
 		findings[index].RuleID = commitRule

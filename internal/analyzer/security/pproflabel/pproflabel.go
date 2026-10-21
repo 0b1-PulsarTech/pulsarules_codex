@@ -27,9 +27,8 @@ func NewAnalyzer() *Analyzer {
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := analyzer.reporter
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
-		return checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
+		return checkFile(ctx.ASTCache.FileSet(), fc, file, analyzer.reporter)
 	})
 }
 

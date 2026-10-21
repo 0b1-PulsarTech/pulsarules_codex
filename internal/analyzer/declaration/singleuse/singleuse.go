@@ -23,13 +23,14 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if ctx.ASTCache == nil || ctx.Sources == nil {
 		return nil
 	}
-	reporter := analyzer.reporter
 	var findings []finding.Finding
 	for _, decl := range analyzer.provider.Declarations(ctx) {
 		if !eligible(decl) {
 			continue
 		}
-		findings = append(findings, checkCandidate(ctx, analyzer.provider, decl, reporter)...)
+		findings = append(
+			findings,
+			checkCandidate(ctx, analyzer.provider, decl, analyzer.reporter)...)
 	}
 	return findings
 }

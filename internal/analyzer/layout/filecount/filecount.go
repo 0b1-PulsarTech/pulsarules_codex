@@ -32,7 +32,6 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	maxFiles := params.Int(paramMaxFiles, 10)
 	exempt := exemptions{patterns: params.Strings(paramExempt, nil)}
 	eligible := pass.ExtensionFilter(ctx, ID, []string{".go"})
-	reporter := analyzer.reporter
 	anchors := changedAnchors(ctx, eligible)
 
 	var findings []finding.Finding
@@ -43,7 +42,10 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 			line = 0
 		}
 		for _, problem := range exempt.invalid() {
-			findings = append(findings, reporter.At(pinned, line, problem, "fix the exempt param"))
+			findings = append(
+				findings,
+				analyzer.reporter.At(pinned, line, problem, "fix the exempt param"),
+			)
 		}
 	}
 	wanted := make(map[string]bool, len(anchors))
@@ -56,7 +58,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		if entry.files <= maxFiles || entry.isEntSchema || exempt.matches(changed.dir) {
 			continue
 		}
-		findings = append(findings, reporter.At(
+		findings = append(findings, analyzer.reporter.At(
 			changed.file,
 			1,
 			fmt.Sprintf(

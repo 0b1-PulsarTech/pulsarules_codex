@@ -11,18 +11,15 @@ import (
 
 const ID = "history-narration"
 
-type Analyzer struct{}
-
-func NewAnalyzer() *Analyzer {
-	return &Analyzer{}
+type Analyzer struct {
+	reporter finding.Reporter
 }
 
-func (analyzer *Analyzer) reporter() finding.Reporter {
-	return finding.NewReporter(ID, finding.SeverityWarning, finding.CatSyntax)
+func NewAnalyzer() *Analyzer {
+	return &Analyzer{reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatSyntax)}
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := analyzer.reporter()
 	extFilter := pass.ExtensionFilter(ctx, ID, language.SourceExtensions())
 	eligible := func(fc pass.FileChange) bool {
 		return extFilter(fc) && language.ForExtension(fc.Extension).ID != ""
@@ -30,7 +27,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	return ctx.EachSource(
 		eligible,
 		func(fc pass.FileChange, src []byte) []finding.Finding {
-			return scanFile(src, fc, reporter, analyzer.cachedGo(ctx, fc))
+			return scanFile(src, fc, analyzer.reporter, analyzer.cachedGo(ctx, fc))
 		},
 	)
 }

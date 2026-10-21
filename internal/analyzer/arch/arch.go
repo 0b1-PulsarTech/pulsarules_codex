@@ -45,9 +45,8 @@ func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Fi
 	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}
-	reporter := analyzer.reporter
 
-	modulePath, findings := resolveModuleOrFindings(reporter, ctx.GoModule())
+	modulePath, findings := resolveModuleOrFindings(analyzer.reporter, ctx.GoModule())
 	if modulePath == "" {
 		return findings
 	}
@@ -55,7 +54,7 @@ func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Fi
 	graph := loadImportGraph(ctx.GoPackages(), modulePath)
 
 	for _, found := range checkBoundaries(graph, modulePath) {
-		findings = append(findings, reporter.At(
+		findings = append(findings, analyzer.reporter.At(
 			found.site.file,
 			found.site.line,
 			found.message,
@@ -79,9 +78,8 @@ func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []finding.Findin
 	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}
-	reporter := analyzer.reporter
 
-	modulePath, findings := resolveModuleOrFindings(reporter, ctx.GoModule())
+	modulePath, findings := resolveModuleOrFindings(analyzer.reporter, ctx.GoModule())
 	if modulePath == "" {
 		return findings
 	}
@@ -98,7 +96,7 @@ func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []finding.Findin
 			builder.WriteString(stripModule(pkg, modulePath))
 		}
 		path := builder.String()
-		findings = append(findings, reporter.At(
+		findings = append(findings, analyzer.reporter.At(
 			".",
 			0,
 			fmt.Sprintf("import cycle: %s", path),

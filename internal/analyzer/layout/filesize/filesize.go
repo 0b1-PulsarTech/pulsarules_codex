@@ -14,6 +14,7 @@ const ID = "file-size"
 type Analyzer struct {
 	maxLines int
 	reporter finding.Reporter
+	hardCap  finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
@@ -21,13 +22,12 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{
 		maxLines: defaultMaxLines,
 		reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatProject),
+		// A severity override on file-size downgrades the cap too, since both share one ID.
+		hardCap: finding.NewReporter(ID, finding.SeverityError, finding.CatProject),
 	}
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	warning := analyzer.reporter
-	// A severity override on file-size downgrades the cap too, since both share one ID.
-	hardCap := finding.NewReporter(ID, finding.SeverityError, finding.CatProject)
 	eligible := pass.ExtensionFilter(ctx, ID, language.SourceExtensions())
 	return ctx.EachSource(
 		eligible,
@@ -41,7 +41,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 			switch {
 			case hardLimit > 0 && lines > hardLimit:
 				return []finding.Finding{
-					hardCap.At(
+					analyzer.hardCap.At(
 						fc.Path,
 						0,
 						fmt.Sprintf("file is %d lines, hard cap %d", lines, hardLimit),
@@ -53,7 +53,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 			case lines <= limit:
 				return nil
 			}
-			return []finding.Finding{warning.At(
+			return []finding.Finding{analyzer.reporter.At(
 				fc.Path,
 				0,
 				fmt.Sprintf("file is %d lines, max %d", lines, limit),

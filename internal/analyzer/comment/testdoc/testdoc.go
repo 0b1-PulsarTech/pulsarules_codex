@@ -14,23 +14,20 @@ import (
 
 const ID = "test-comment"
 
-type Analyzer struct{}
-
-func NewAnalyzer() *Analyzer {
-	return &Analyzer{}
+type Analyzer struct {
+	reporter finding.Reporter
 }
 
-func (analyzer *Analyzer) reporter() finding.Reporter {
-	return finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)
+func NewAnalyzer() *Analyzer {
+	return &Analyzer{reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)}
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := analyzer.reporter()
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if !fc.IsTest || fc.Generated {
 			return nil
 		}
-		return checkFile(ctx.ASTCache.FileSet(), fc, file, reporter)
+		return checkFile(ctx.ASTCache.FileSet(), fc, file, analyzer.reporter)
 	})
 }
 

@@ -16,25 +16,26 @@ const (
 	paramMinLines = "min_lines"
 )
 
-type Analyzer struct{}
-
-func NewAnalyzer() *Analyzer {
-	return &Analyzer{}
+type Analyzer struct {
+	reporter finding.Reporter
 }
 
-func (analyzer *Analyzer) reporter() finding.Reporter {
-	return finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)
+func NewAnalyzer() *Analyzer {
+	return &Analyzer{reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)}
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	const defaultMinLines = 2
-	reporter := analyzer.reporter()
 	minLines := ctx.Params(ID).Int(paramMinLines, defaultMinLines)
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if fc.Generated {
 			return nil
 		}
-		settings := check{fset: ctx.ASTCache.FileSet(), reporter: reporter, minLines: minLines}
+		settings := check{
+			fset:     ctx.ASTCache.FileSet(),
+			reporter: analyzer.reporter,
+			minLines: minLines,
+		}
 		return settings.file(fc, file)
 	})
 }

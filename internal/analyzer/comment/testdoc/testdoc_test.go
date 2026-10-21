@@ -28,7 +28,7 @@ func TestCheckFile(t *testing.T) {
 				t.Fatalf("parse: %v", err)
 			}
 			fc := pass.FileChange{Path: "p_test.go", Extension: ".go", IsTest: true}
-			got := checkFile(cache.FileSet(), fc, file, NewAnalyzer().reporter())
+			got := checkFile(cache.FileSet(), fc, file, NewAnalyzer().reporter)
 			if len(got) != testCase.expect {
 				t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
 			}
@@ -67,7 +67,7 @@ func TestCheckFile_ReportsTheCommentLine(t *testing.T) {
 				t.Fatalf("parse: %v", err)
 			}
 			fc := pass.FileChange{Path: "p_test.go", Extension: ".go", IsTest: true}
-			got := checkFile(cache.FileSet(), fc, file, NewAnalyzer().reporter())
+			got := checkFile(cache.FileSet(), fc, file, NewAnalyzer().reporter)
 			var lines []int
 			for _, finding := range got {
 				lines = append(lines, finding.Line)
@@ -400,7 +400,7 @@ func TestCheckFileMessages(t *testing.T) {
 				t.Fatalf("parse: %v", err)
 			}
 			fc := pass.FileChange{Path: "p_test.go", Extension: ".go", IsTest: true}
-			got := checkFile(cache.FileSet(), fc, file, NewAnalyzer().reporter())
+			got := checkFile(cache.FileSet(), fc, file, NewAnalyzer().reporter)
 			if len(got) != 1 || !strings.Contains(got[0].Suggestion, testCase.wantHint) ||
 				!strings.Contains(got[0].Message, "test functions and helpers carry no comments") {
 				t.Fatalf("finding = %+v", got)

@@ -154,7 +154,7 @@ func TestScanFileDartBlockCommentsNest(t *testing.T) {
 
 	source := "/* outer one /* inner two */ outer three\n   the old code used to be nested */\n"
 	fc := pass.FileChange{Path: "f.dart", Extension: ".dart"}
-	got := scanFile([]byte(source), fc, NewAnalyzer().reporter(), parsedGo{})
+	got := scanFile([]byte(source), fc, NewAnalyzer().reporter, parsedGo{})
 	if len(got) == 0 || got[0].Line != 2 {
 		t.Fatalf("findings = %+v, want the first on line 2", got)
 	}
