@@ -19,12 +19,22 @@ import (
 )
 
 func TestRunGovernance_RequiresProjectDir(t *testing.T) {
-	t.Setenv("PULSARULES_PROJECT_DIR", "")
+	t.Parallel()
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
 	err := runGovernance(inj, &version.Options{})
 	if !errors.Is(err, errProjectDirRequired) {
 		t.Errorf("err = %v, want %v", err, errProjectDirRequired)
+	}
+}
+
+func TestRunGovernance_EnvProjectDirSatisfiesTheRequirement(t *testing.T) {
+	t.Parallel()
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	opts := &version.Options{Env: flags.Environment{ProjectDir: t.TempDir()}}
+	if err := runGovernance(inj, opts); errors.Is(err, errProjectDirRequired) {
+		t.Errorf("err = %v, want the env project dir to count", err)
 	}
 }
 

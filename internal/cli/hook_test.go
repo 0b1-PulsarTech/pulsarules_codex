@@ -13,11 +13,13 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
+	clihook "github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
@@ -27,7 +29,7 @@ func TestPrintHookError_StaysOnOneLine(t *testing.T) {
 	t.Parallel()
 
 	var out strings.Builder
-	hook.PrintHookError(&out, "get templates", errors.New("open a\n[ERROR] forged"))
+	clihook.PrintHookError(&out, "get templates", errors.New("open a\n[ERROR] forged"))
 	want := `hook: get templates: open a\n[ERROR] forged` + "\n"
 	if out.String() != want {
 		t.Errorf("output = %q, want %q", out.String(), want)
@@ -51,7 +53,7 @@ func TestGovernChanges_EmptyRepo(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	got, count := hook.GovernChanges(dir, status, nil, testEmojiCatalog(t))
+	got, count := clihook.GovernChanges(dir, status, nil, testEmojiCatalog(t))
 	if got != "" {
 		t.Errorf("block = %q, want empty for an empty repo", got)
 	}
@@ -63,7 +65,7 @@ func TestGovernChanges_EmptyRepo(t *testing.T) {
 func TestGovernChanges_NotARepository(t *testing.T) {
 	t.Parallel()
 
-	block, count := hook.GovernChanges(t.TempDir(), vcs.Status{}, nil, testEmojiCatalog(t))
+	block, count := clihook.GovernChanges(t.TempDir(), vcs.Status{}, nil, testEmojiCatalog(t))
 	if count != 1 || !strings.Contains(block, "open repository:") {
 		t.Fatalf("governChanges() = %q, %d, want the open-repository error", block, count)
 	}
@@ -90,7 +92,7 @@ func TestGovernChanges_SuppressionBlock(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	block, count := hook.GovernChanges(dir, status, nil, testEmojiCatalog(t))
+	block, count := clihook.GovernChanges(dir, status, nil, testEmojiCatalog(t))
 	if count != 1 {
 		t.Fatalf("count = %d, want 1 (the generated file's finding is suppressed)", count)
 	}
@@ -133,7 +135,7 @@ func runDirtyCheck(t *testing.T, configYAML string) (string, int) {
 	if err != nil {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
-	return hook.GovernChanges(dir, status, nil, testEmojiCatalog(t))
+	return clihook.GovernChanges(dir, status, nil, testEmojiCatalog(t))
 }
 
 type projectConfigCase struct {
@@ -209,11 +211,9 @@ func TestHookStop_RealGovernance(t *testing.T) {
 	initGitRepo(t, dir)
 	writeHookFile(t, dir, "violation.go", "package x\n\n// bad note \u2014 here\n")
 	var out bytes.Buffer
-	t.Setenv("PULSARULES_PROJECT_DIR", dir)
-	t.Setenv("PULSARULES_SKILLS_DIR", "")
-	disp := hook.NewHookDispatcher(
-		index, func() (*emoji.Catalog, error) { return testEmojiCatalog(t), nil },
-		templates.New(assets), nil, &out,
+	disp := clihook.NewHookDispatcher(
+		hook.Deps{Templates: templates.New(assets), Index: index, Out: &out, ProjectDir: dir},
+		func() (*emoji.Catalog, error) { return testEmojiCatalog(t), nil },
 	)
 
 	_ = disp.Dispatch("stop", []byte(`{"session_id":"real-governance"}`))
@@ -239,20 +239,26 @@ func testEmojiCatalog(t *testing.T) *emoji.Catalog {
 func captureStderr(t *testing.T, body func()) string {
 	t.Helper()
 
-	file, err := os.CreateTemp(t.TempDir(), "stderr")
+	return captureStream(t, &os.Stderr, body)
+}
+
+func captureStream(t *testing.T, stream **os.File, body func()) string {
+	t.Helper()
+
+	file, err := os.CreateTemp(t.TempDir(), "capture")
 	if err != nil {
-		t.Fatalf("create stderr capture: %v", err)
+		t.Fatalf("create capture: %v", err)
 	}
-	saved := os.Stderr
-	os.Stderr = file
-	defer func() { os.Stderr = saved }()
+	saved := *stream
+	*stream = file
+	defer func() { *stream = saved }()
 	body()
 	if _, err = file.Seek(0, 0); err != nil {
-		t.Fatalf("rewind stderr capture: %v", err)
+		t.Fatalf("rewind capture: %v", err)
 	}
 	captured, err := io.ReadAll(file)
 	if err != nil {
-		t.Fatalf("read stderr capture: %v", err)
+		t.Fatalf("read capture: %v", err)
 	}
 	return string(captured)
 }
@@ -267,12 +273,10 @@ func TestHookStop_CatalogFailureSkipsGovernance(t *testing.T) {
 	dir := t.TempDir()
 	initGitRepo(t, dir)
 	writeHookFile(t, dir, "violation.go", "package x\n\n// bad note \u2014 here\n")
-	t.Setenv("PULSARULES_PROJECT_DIR", dir)
-	t.Setenv("PULSARULES_SKILLS_DIR", "")
 	var out bytes.Buffer
-	disp := hook.NewHookDispatcher(
-		index, func() (*emoji.Catalog, error) { return nil, errors.New("catalog unavailable") },
-		templates.New(assets), nil, &out,
+	disp := clihook.NewHookDispatcher(
+		hook.Deps{Templates: templates.New(assets), Index: index, Out: &out, ProjectDir: dir},
+		func() (*emoji.Catalog, error) { return nil, errors.New("catalog unavailable") },
 	)
 
 	stderr := captureStderr(t, func() {
@@ -287,20 +291,79 @@ func TestHookStop_CatalogFailureSkipsGovernance(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // captureStderr swaps os.Stderr.
 func TestRunHook_OtherModesDoNotNeedTheCatalog(t *testing.T) {
-	t.Setenv("PULSARULES_PROJECT_DIR", t.TempDir())
-	t.Setenv("PULSARULES_SKILLS_DIR", "")
-
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
 	bindWithoutCatalog(t, inj, t.TempDir())
 	stderr := captureStderr(t, func() {
-		if err := hook.RunHook(inj, &version.Options{Mode: "pre-search"}); err != nil {
+		if err := clihook.RunHook(inj, &version.Options{
+			Mode: "pre-search",
+			Env:  flags.Environment{ProjectDir: t.TempDir()},
+		}); err != nil {
 			t.Errorf("runHook(pre-search) = %v, want nil", err)
 		}
 	})
 
 	if strings.Contains(stderr, "emoji catalog") {
 		t.Errorf("pre-search resolved the emoji catalog: %q", stderr)
+	}
+}
+
+//nolint:paralleltest // t.Setenv and the os.Stdin/os.Stdout swaps bar t.Parallel.
+func TestRunHook_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+
+	project, skills := t.TempDir(), t.TempDir()
+	writeHookFile(t, project, "go.mod", "module x\n")
+	if err := os.MkdirAll(
+		filepath.Join(skills, "gopls-navigation"),
+		disk.DirPrivate,
+	); err != nil {
+		t.Fatalf("mkdir skill: %v", err)
+	}
+	writeHookFile(t, skills, "gopls-navigation/SKILL.md", "x")
+	payload := `{"session_id":"SID","tool_name":"Grep","tool_input":{"pattern":"a.go"}}`
+
+	testCases := []struct {
+		name string
+		env  flags.Environment
+		want bool
+	}{
+		{"both given", flags.Environment{ProjectDir: project, SkillsDir: skills}, true},
+		{"no skills dir", flags.Environment{ProjectDir: project}, false},
+		{"no project dir", flags.Environment{SkillsDir: skills}, false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+			bindWithoutCatalog(t, inj, t.TempDir())
+			stdin, err := os.CreateTemp(t.TempDir(), "stdin")
+			if err != nil {
+				t.Fatalf("create stdin: %v", err)
+			}
+			session := strings.Replace(payload, "SID", testCase.name, 1)
+			if _, err = stdin.WriteString(session); err != nil {
+				t.Fatalf("write stdin: %v", err)
+			}
+			if _, err = stdin.Seek(0, 0); err != nil {
+				t.Fatalf("rewind stdin: %v", err)
+			}
+			savedStdin := os.Stdin
+			os.Stdin = stdin
+			defer func() { os.Stdin = savedStdin }()
+
+			out := captureStream(t, &os.Stdout, func() {
+				if err = clihook.RunHook(
+					inj,
+					&version.Options{Mode: "pre-search", Env: testCase.env},
+				); err != nil {
+					t.Errorf("runHook(pre-search) = %v, want nil", err)
+				}
+			})
+			if got := out != ""; got != testCase.want {
+				t.Errorf("pre-search emitted = %v, want %v:\n%s", got, testCase.want, out)
+			}
+		})
 	}
 }
 
@@ -337,7 +400,7 @@ func TestGovernanceBlock(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			block, count := hook.GovernanceBlock(testCase.report)
+			block, count := clihook.GovernanceBlock(testCase.report)
 			if block != testCase.wantBlock || count != testCase.wantCount {
 				t.Fatalf("governanceBlock() = %q, %d, want %q, %d",
 					block, count, testCase.wantBlock, testCase.wantCount)

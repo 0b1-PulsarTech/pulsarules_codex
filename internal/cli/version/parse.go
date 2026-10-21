@@ -4,14 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"maps"
-	"os"
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
 func ParseArgs(args []string) (*Options, error) {
-	opts := &Options{}
+	opts := &Options{Env: flags.ReadEnvironment()}
 	if len(args) == 0 {
 		return opts, nil
 	}
@@ -26,7 +25,7 @@ func ParseArgs(args []string) (*Options, error) {
 	fs.StringVar(
 		&opts.LogLevel,
 		"log-level",
-		os.Getenv("PULSARULES_LOG_LEVEL"),
+		opts.Env.LogLevel,
 		"hook execution log level: debug|info|warn|error (empty disables logging)",
 	)
 	if err := bindCommandFlags(opts.Command, fs, opts); err != nil {

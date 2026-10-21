@@ -54,7 +54,7 @@ func loadGovernance(inj remy.Injector, opts *version.Options) (governanceRun, er
 }
 
 func runGovernance(inj remy.Injector, opts *version.Options) error {
-	if opts.ProjectDir == "" && os.Getenv("PULSARULES_PROJECT_DIR") == "" {
+	if opts.ProjectDir == "" && opts.Env.ProjectDir == "" {
 		return errProjectDirRequired
 	}
 	scope, err := governance.ParseScope(opts.Scope)

@@ -49,7 +49,14 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 
 	// Only the stop checklist lints with it, so no other hook mode needs the catalog.
 	catalog := func() (*emoji.Catalog, error) { return remy.Get[*emoji.Catalog](inj) }
-	disp := NewHookDispatcher(idx, catalog, assets, logger, os.Stdout)
+	disp := NewHookDispatcher(hook.Deps{
+		Templates:  assets,
+		Logger:     logger,
+		Index:      idx,
+		Out:        os.Stdout,
+		ProjectDir: opts.Env.ProjectDir,
+		SkillsDir:  opts.Env.SkillsDir,
+	}, catalog)
 
 	if dispatchErr := disp.Dispatch(opts.Mode, payload); dispatchErr != nil {
 		return fmt.Errorf("dispatch hook %q: %w", opts.Mode, dispatchErr)
@@ -58,28 +65,18 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 }
 
 func NewHookDispatcher(
-	idx *knowledge.Index,
+	deps hook.Deps,
 	catalog func() (*emoji.Catalog, error),
-	assets templates.Set,
-	logger *slog.Logger,
-	out io.Writer,
 ) *hook.Dispatcher {
-	return hook.NewDispatcher(hook.Deps{
-		Templates:  assets,
-		Logger:     logger,
-		Index:      idx,
-		Out:        out,
-		ProjectDir: os.Getenv("PULSARULES_PROJECT_DIR"),
-		SkillsDir:  os.Getenv("PULSARULES_SKILLS_DIR"),
-		Governance: func(root string, status vcs.Status) (string, int) {
-			resolved, err := catalog()
-			if err != nil {
-				PrintHookError(os.Stderr, "get emoji catalog", err)
-				return "", 0
-			}
-			return GovernChanges(root, status, idx, resolved)
-		},
-	})
+	deps.Governance = func(root string, status vcs.Status) (string, int) {
+		resolved, err := catalog()
+		if err != nil {
+			PrintHookError(os.Stderr, "get emoji catalog", err)
+			return "", 0
+		}
+		return GovernChanges(root, status, deps.Index, resolved)
+	}
+	return hook.NewDispatcher(deps)
 }
 
 func PrintHookError(out io.Writer, label string, err error) {

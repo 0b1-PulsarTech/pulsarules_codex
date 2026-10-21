@@ -82,7 +82,7 @@ func BootstrapOptions(opts *version.Options) bootstrap.Options {
 		Root:       opts.Root,
 		ProjectDir: resolveProjectDir(opts),
 		LogLevel:   opts.LogLevel,
-		LogPath:    resolveLogPath(),
+		LogPath:    opts.Env.LogPath,
 	}
 }
 
@@ -96,11 +96,7 @@ func resolveProjectDir(opts *version.Options) string {
 		return opts.Project
 	}
 	if opts.Command == "governance" {
-		return os.Getenv("PULSARULES_PROJECT_DIR")
+		return opts.Env.ProjectDir
 	}
 	return "."
-}
-
-func resolveLogPath() string {
-	return os.Getenv("PULSARULES_LOG_PATH")
 }

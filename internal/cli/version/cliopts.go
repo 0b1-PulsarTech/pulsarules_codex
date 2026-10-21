@@ -6,6 +6,7 @@ type Options struct {
 	Command  string
 	Root     string
 	LogLevel string
+	Env      flags.Environment
 
 	Out string
 

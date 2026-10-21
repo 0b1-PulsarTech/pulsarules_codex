@@ -407,3 +407,34 @@ func workDir(t *testing.T) string {
 	}
 	return dir
 }
+
+//nolint:paralleltest // t.Setenv bars t.Parallel.
+func TestParseArgs_LogLevelDefaultsFromTheEnvironment(t *testing.T) {
+	testCases := []struct {
+		name string
+		env  string
+		args []string
+		want string
+	}{
+		{name: "unset env and no flag", args: []string{"list"}, want: ""},
+		{name: "env sets the default", env: "debug", args: []string{"list"}, want: "debug"},
+		{
+			name: "flag beats env",
+			env:  "debug",
+			args: []string{"list", "--log-level", "error"},
+			want: "error",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Setenv("PULSARULES_LOG_LEVEL", testCase.env)
+			opts, err := ParseArgs(testCase.args)
+			if err != nil {
+				t.Fatalf("ParseArgs: %v", err)
+			}
+			if opts.LogLevel != testCase.want {
+				t.Errorf("LogLevel = %q, want %q", opts.LogLevel, testCase.want)
+			}
+		})
+	}
+}

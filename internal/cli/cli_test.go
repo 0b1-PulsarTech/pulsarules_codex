@@ -16,6 +16,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -197,22 +198,29 @@ func TestErrorPrinters_StaySingleLine(t *testing.T) {
 }
 
 func TestResolveProjectDir(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
-		name   string
-		opts   *version.Options
-		envDir string
-		want   string
+		name string
+		opts *version.Options
+		want string
 	}{
 		{
 			name: "explicit flag wins everywhere",
-			opts: &version.Options{Command: "governance", ProjectDir: "/explicit"},
+			opts: &version.Options{
+				Command:    "governance",
+				ProjectDir: "/explicit",
+				Env:        flags.Environment{ProjectDir: "/from-env"},
+			},
 			want: "/explicit",
 		},
 		{
-			name:   "governance falls back to the env var",
-			opts:   &version.Options{Command: "governance"},
-			envDir: "/from-env",
-			want:   "/from-env",
+			name: "governance falls back to the env var",
+			opts: &version.Options{
+				Command: "governance",
+				Env:     flags.Environment{ProjectDir: "/from-env"},
+			},
+			want: "/from-env",
 		},
 		{
 			name: "governance with no env reports nothing rather than guessing",
@@ -220,15 +228,17 @@ func TestResolveProjectDir(t *testing.T) {
 			want: "",
 		},
 		{
-			name:   "every other command defaults to the working directory",
-			opts:   &version.Options{Command: "list"},
-			envDir: "/from-env",
-			want:   ".",
+			name: "every other command defaults to the working directory",
+			opts: &version.Options{
+				Command: "list",
+				Env:     flags.Environment{ProjectDir: "/from-env"},
+			},
+			want: ".",
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Setenv("PULSARULES_PROJECT_DIR", testCase.envDir)
+			t.Parallel()
 			if got := resolveProjectDir(testCase.opts); got != testCase.want {
 				t.Errorf("resolveProjectDir() = %q, want %q", got, testCase.want)
 			}
@@ -248,26 +258,21 @@ func TestResolveProjectDir_InstallFlag(t *testing.T) {
 	}
 }
 
-func TestResolveLogPath(t *testing.T) {
-	testCases := []struct {
-		name    string
-		envPath string
-		want    string
-	}{
-		{name: "unset env leaves the decision to obs", envPath: "", want: ""},
-		{
-			name:    "set env is returned verbatim",
-			envPath: filepath.Join("/proj", ".claude", "hook-execution.log"),
-			want:    filepath.Join("/proj", ".claude", "hook-execution.log"),
-		},
+func TestBootstrapOptions_ReadsTheEnvironmentOnce(t *testing.T) {
+	t.Parallel()
+
+	logPath := filepath.Join("/proj", ".claude", "hook-execution.log")
+	opts := &version.Options{
+		Command: "hook",
+		Root:    "/root",
+		Env:     flags.Environment{LogPath: logPath},
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Setenv("PULSARULES_LOG_PATH", testCase.envPath)
-			if got := resolveLogPath(); got != testCase.want {
-				t.Errorf("resolveLogPath() = %q, want %q", got, testCase.want)
-			}
-		})
+	got := BootstrapOptions(opts)
+	if got.LogPath != logPath || got.Root != "/root" {
+		t.Errorf("BootstrapOptions() = %+v, want LogPath %q and Root /root", got, logPath)
+	}
+	if got = BootstrapOptions(&version.Options{Command: "hook"}); got.LogPath != "" {
+		t.Errorf("unset env LogPath = %q, want empty so logfile decides", got.LogPath)
 	}
 }
 
