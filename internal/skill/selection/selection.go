@@ -26,7 +26,7 @@ func (sel Choice) Resolve(idx *knowledge.Index) (ids []string, pulled []Dependen
 	want := make(map[string]bool, len(idx.Skills))
 	for _, skill := range idx.Skills {
 		byID[skill.ID] = skill
-		if skill.AlwaysLoad && sel.languageEligible(skill) {
+		if skill.AlwaysLoad && sel.languageEligible(idx, skill) {
 			want[skill.ID] = true
 		}
 	}
@@ -40,18 +40,9 @@ func (sel Choice) Resolve(idx *knowledge.Index) (ids []string, pulled []Dependen
 	return wantedInOrder(idx, want), pulled
 }
 
-func (sel Choice) languageEligible(skill knowledge.Skill) bool {
-	if len(skill.Languages) == 0 || sel.Languages.Empty() {
-		// An empty Languages set means unknown, so every skill stays eligible
-		// and a repo without markers yet never drops its language-tagged baseline.
-		return true
-	}
-	for _, lang := range skill.Languages {
-		if sel.Languages.Has(detect.Language(lang)) {
-			return true
-		}
-	}
-	return false
+func (sel Choice) languageEligible(idx *knowledge.Index, skill knowledge.Skill) bool {
+	// Empty means unknown: a repo without markers never drops its tagged baseline.
+	return sel.Languages.Empty() || idx.Fits(skill.ID, sel.Languages.Strings()...)
 }
 
 func markAll(idx *knowledge.Index, want map[string]bool) {

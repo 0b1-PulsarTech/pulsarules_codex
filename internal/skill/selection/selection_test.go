@@ -98,49 +98,71 @@ func TestSelectionResolve(t *testing.T) {
 	}
 }
 
-func languageFixtureIndex() *knowledge.Index {
-	return &knowledge.Index{Skills: []knowledge.Skill{
+func languageFixtureIndex(t *testing.T) *knowledge.Index {
+	t.Helper()
+
+	idx, err := knowledge.NewIndex([]knowledge.Skill{
 		{ID: "project-router", Order: 0, AlwaysLoad: true},
 		{ID: "go-style", Order: 10, AlwaysLoad: true, Languages: []string{"go"}},
 		{ID: "dart-style", Order: 11, AlwaysLoad: true, Languages: []string{"dart"}},
+		{ID: "ts-style", Order: 12, AlwaysLoad: true, Languages: []string{"typescript"}},
+		{ID: "web-style", Order: 13, AlwaysLoad: true, Languages: []string{"go", "typescript"}},
 		{ID: "code-minimalism", Order: 40, AlwaysLoad: true},
-	}}
+	})
+	if err != nil {
+		t.Fatalf("NewIndex: %v", err)
+	}
+	return idx
 }
 
 func TestSelectionResolve_LanguageAware(t *testing.T) {
 	t.Parallel()
 
-	idx := languageFixtureIndex()
+	idx := languageFixtureIndex(t)
+	every := []string{
+		"project-router", "go-style", "dart-style", "ts-style", "web-style", "code-minimalism",
+	}
 	testCases := []struct {
 		name      string
 		languages detect.Set
 		wantIDs   []string
 	}{
 		{
-			name:      "go-only project selects go-style, not dart-style",
+			name:      "go-only project drops the dart and typescript skills",
 			languages: detect.NewSet(language.Go),
-			wantIDs:   []string{"project-router", "go-style", "code-minimalism"},
+			wantIDs:   []string{"project-router", "go-style", "web-style", "code-minimalism"},
 		},
 		{
-			name:      "dart-only project selects dart-style, not go-style",
+			name:      "dart-only project keeps dart-style and the ungated skills",
 			languages: detect.NewSet(language.Dart),
 			wantIDs:   []string{"project-router", "dart-style", "code-minimalism"},
 		},
 		{
-			name:      "a go+dart monorepo selects both baselines",
-			languages: detect.NewSet(language.Go, language.Dart),
-			wantIDs:   []string{"project-router", "go-style", "dart-style", "code-minimalism"},
+			name:      "typescript-only project keeps both typescript-tagged skills",
+			languages: detect.NewSet(language.TypeScript),
+			wantIDs:   []string{"project-router", "ts-style", "web-style", "code-minimalism"},
 		},
 		{
-			name: "no detected language keeps every " +
-				"baseline skill instead of silently dropping them",
+			name:      "a go+dart monorepo selects both baselines",
+			languages: detect.NewSet(language.Go, language.Dart),
+			wantIDs: []string{
+				"project-router", "go-style", "dart-style", "web-style", "code-minimalism",
+			},
+		},
+		{
+			name:      "a language with no tagged skill leaves only the ungated ones",
+			languages: detect.NewSet(language.Rust),
+			wantIDs:   []string{"project-router", "code-minimalism"},
+		},
+		{
+			name:      "no detected language keeps every baseline skill",
 			languages: detect.NewSet(),
-			wantIDs:   []string{"project-router", "go-style", "dart-style", "code-minimalism"},
+			wantIDs:   every,
 		},
 		{
 			name:      "a zero-value set is unknown too, not no-languages",
 			languages: detect.Set{},
-			wantIDs:   []string{"project-router", "go-style", "dart-style", "code-minimalism"},
+			wantIDs:   every,
 		},
 	}
 	for _, testCase := range testCases {
