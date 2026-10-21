@@ -24,7 +24,7 @@ func NewDetector(provider source.Provider) *Detector {
 	}
 }
 
-func (detector *Detector) IsGenerated(path string) bool {
+func (detector *Detector) isGenerated(path string) bool {
 	if generated, ok := detector.known[path]; ok {
 		return generated
 	}
@@ -40,7 +40,7 @@ func (detector *Detector) IsGenerated(path string) bool {
 
 func (detector *Detector) Mark(files []pass.FileChange) {
 	for idx := range files {
-		files[idx].Generated = detector.IsGenerated(files[idx].Path)
+		files[idx].Generated = detector.isGenerated(files[idx].Path)
 	}
 }
 
@@ -50,7 +50,7 @@ func (detector *Detector) Split(findings []finding.Finding) ([]finding.Finding, 
 	for _, finding := range findings {
 		// A finding with no file (a commit-message rule) belongs to no file and is never
 		// suppressed; a generated file's are, because the next codegen run undoes any edit.
-		if finding.File != "" && detector.IsGenerated(finding.File) {
+		if finding.File != "" && detector.isGenerated(finding.File) {
 			suppressed++
 			continue
 		}

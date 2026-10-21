@@ -62,7 +62,7 @@ func TestDetector_IsGenerated(t *testing.T) {
 			t.Parallel()
 
 			provider := source.NewFSProvider(fixtureFS(), "", source.SkipSet{})
-			if got := NewDetector(provider).IsGenerated(testCase.path); got != testCase.want {
+			if got := NewDetector(provider).isGenerated(testCase.path); got != testCase.want {
 				t.Fatalf("IsGenerated(%q) = %v, want %v", testCase.path, got, testCase.want)
 			}
 		})
@@ -96,7 +96,7 @@ func TestDetector_IsGeneratedAtlasDirDepth(t *testing.T) {
 			t.Parallel()
 
 			provider := source.NewFSProvider(atlasFS, "", source.SkipSet{})
-			if got := NewDetector(provider).IsGenerated(testCase.path); got != testCase.want {
+			if got := NewDetector(provider).isGenerated(testCase.path); got != testCase.want {
 				t.Fatalf("IsGenerated(%q) = %v, want %v", testCase.path, got, testCase.want)
 			}
 		})
@@ -108,7 +108,7 @@ func TestDetector_IsGeneratedNilProvider(t *testing.T) {
 
 	detector := NewDetector(nil)
 	for _, path := range []string{"gen.go", "db/migrations/a.sql"} {
-		if detector.IsGenerated(path) {
+		if detector.isGenerated(path) {
 			t.Fatalf("IsGenerated(%q) with no provider = true, want false", path)
 		}
 	}
@@ -119,10 +119,10 @@ func TestDetector_DirectoryEntryDoesNotPoisonItsFiles(t *testing.T) {
 
 	provider := source.NewFSProvider(fixtureFS(), "", source.SkipSet{})
 	detector := NewDetector(provider)
-	if detector.IsGenerated("db/migrations/") {
+	if detector.isGenerated("db/migrations/") {
 		t.Fatal("a directory entry has no content and is not generated")
 	}
-	if !detector.IsGenerated("db/migrations/20260101_init.sql") {
+	if !detector.isGenerated("db/migrations/20260101_init.sql") {
 		t.Fatal("sql beside atlas.sum must stay generated after a directory entry was judged")
 	}
 }
@@ -136,11 +136,11 @@ func TestDetector_MemoisesPathsAndAtlasDirs(t *testing.T) {
 	}
 	detector := NewDetector(counter)
 	for range 3 {
-		detector.IsGenerated("db/migrations/UP.SQL")
-		detector.IsGenerated("db/queries/lead.sql")
-		detector.IsGenerated("hand.go")
+		detector.isGenerated("db/migrations/UP.SQL")
+		detector.isGenerated("db/queries/lead.sql")
+		detector.isGenerated("hand.go")
 	}
-	detector.IsGenerated("db/migrations/20260101_init.sql")
+	detector.isGenerated("db/migrations/20260101_init.sql")
 
 	want := map[string]int{
 		"db/migrations/atlas.sum": 1,
