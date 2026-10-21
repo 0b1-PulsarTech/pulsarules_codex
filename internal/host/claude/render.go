@@ -28,7 +28,7 @@ func buildHooksBlock() hooksBlock {
 	for _, row := range hook.Events() {
 		command := hookCommand{
 			Type:    "command",
-			Command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/` + hookScript + `" ` + row.Mode,
+			Command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/` + reminderScriptAsset + `" ` + row.Mode,
 		}
 		if row.Timeout > 0 {
 			command.Timeout = json.RawMessage(strconv.Itoa(row.Timeout))

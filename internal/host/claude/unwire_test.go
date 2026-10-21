@@ -54,7 +54,7 @@ func TestUnwireSettings_PerCommandFilter(t *testing.T) {
 	if !strings.Contains(groups[0].Hooks[0].Command, "third-party-tool.sh") {
 		t.Errorf("third-party command lost: got %+v", groups[0].Hooks)
 	}
-	if strings.Contains(groups[0].Hooks[0].Command, hookScript) {
+	if strings.Contains(groups[0].Hooks[0].Command, reminderScriptAsset) {
 		t.Errorf("our command should have been removed, got %+v", groups[0].Hooks)
 	}
 }
@@ -333,7 +333,7 @@ func TestUnwireSettings_UserHookTimeout(t *testing.T) {
 			}
 			for _, group := range readHooks(t, claudeDir, "settings.json")["Stop"] {
 				for _, command := range group.Hooks {
-					if strings.Contains(command.Command, hookScript) {
+					if strings.Contains(command.Command, reminderScriptAsset) {
 						t.Errorf("our command survived: %q", command.Command)
 					}
 				}

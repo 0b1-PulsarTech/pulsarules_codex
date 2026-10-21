@@ -133,7 +133,7 @@ func TestWireSettings_ThirdPartyCommand(t *testing.T) {
 			switch {
 			case strings.Contains(cmd.Command, "third-party-tool.sh"):
 				thirdParty++
-			case strings.Contains(cmd.Command, hookScript):
+			case strings.Contains(cmd.Command, reminderScriptAsset):
 				ours++
 			}
 		}
@@ -166,7 +166,7 @@ func readHooks(tb testing.TB, claudeDir, settingsFile string) map[string][]hookG
 func userStopSeed(timeout string) string {
 	return `{"hooks":{"Stop":[{"hooks":[` +
 		`{"type":"command","command":"bash third-party.sh","timeout":` + timeout + `},` +
-		`{"type":"command","command":"bash ` + hookScript + ` stop"}]}]}}`
+		`{"type":"command","command":"bash ` + reminderScriptAsset + ` stop"}]}]}}`
 }
 
 type timeoutCase struct {

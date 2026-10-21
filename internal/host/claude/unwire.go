@@ -72,7 +72,7 @@ func withoutHookCommand(cmds []hookCommand) ([]hookCommand, bool) {
 	kept := make([]hookCommand, 0, len(cmds))
 	removed := false
 	for _, cmd := range cmds {
-		if strings.Contains(cmd.Command, hookScript) {
+		if strings.Contains(cmd.Command, reminderScriptAsset) {
 			removed = true
 			continue
 		}

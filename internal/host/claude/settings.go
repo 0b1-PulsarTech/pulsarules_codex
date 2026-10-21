@@ -9,8 +9,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
-const hookScript = "skill-router-reminder.sh"
-
 func WireSettings(claudeDir, settingsFile string) error {
 	if err := os.MkdirAll(claudeDir, disk.DirPrivate); err != nil {
 		return fmt.Errorf("mkdir %q: %w", claudeDir, err)
