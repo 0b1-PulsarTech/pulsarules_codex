@@ -70,3 +70,21 @@ func UninstallFiles(
 	ledger.Orphaned, err = OrphanNotes(paths...)
 	return removed, ledger, err
 }
+
+func RestoreVacated(paths ...string) (ledger Ledger, err error) {
+	for _, path := range paths {
+		if _, statErr := os.Lstat(path); statErr == nil {
+			continue
+		}
+		restoredOK, restoreErr := Restore(path)
+		if restoreErr != nil {
+			return ledger, fmt.Errorf("restore backup: %w", restoreErr)
+		}
+		if restoredOK {
+			ledger.addRestore(RestoreMessage(path))
+		}
+	}
+	// Queried before the caller removes the dir: a numbered slot survives Restore.
+	ledger.Orphaned, err = OrphanNotes(paths...)
+	return ledger, err
+}

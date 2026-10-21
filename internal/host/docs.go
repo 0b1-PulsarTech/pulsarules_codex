@@ -86,6 +86,6 @@ func removeKind(kind docKind, dest string, report *Report) error {
 	for _, id := range result.Removed {
 		report.Note(kind.removed, filepath.Join(dest, id))
 	}
-	report.Merge(ownedfile.Ledger{Restored: result.Restored, Orphaned: result.Orphaned}.Report())
+	report.Merge(result.Report())
 	return nil
 }

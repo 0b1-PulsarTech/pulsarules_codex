@@ -13,9 +13,8 @@ import (
 )
 
 type RemoveResult struct {
-	Removed  []string
-	Restored []string
-	Orphaned []string
+	Removed []string
+	ownedfile.Ledger
 }
 
 func Remove(dest, docName string) (RemoveResult, error) {
@@ -36,13 +35,13 @@ func Remove(dest, docName string) (RemoveResult, error) {
 		if !isOwnedDoc(dir, docName) {
 			continue
 		}
-		dirRestored, dirOrphaned, rmErr := removeOwnedDoc(dir, docName)
+		dirLedger, rmErr := removeOwnedDoc(dir, docName)
 		if rmErr != nil {
 			return result, rmErr
 		}
 		result.Removed = append(result.Removed, id)
-		result.Restored = append(result.Restored, dirRestored...)
-		result.Orphaned = append(result.Orphaned, dirOrphaned...)
+		result.Restored = append(result.Restored, dirLedger.Restored...)
+		result.Orphaned = append(result.Orphaned, dirLedger.Orphaned...)
 	}
 
 	if err = disk.RemoveEmptyDir(dest); err != nil {
@@ -51,37 +50,24 @@ func Remove(dest, docName string) (RemoveResult, error) {
 	return result, nil
 }
 
-func removeOwnedDoc(dir, docName string) (restored, orphaned []string, err error) {
+func removeOwnedDoc(dir, docName string) (ownedfile.Ledger, error) {
 	docPath := filepath.Join(dir, docName)
-	if err = os.Remove(docPath); err != nil {
-		return nil, nil, fmt.Errorf("remove %q: %w", docPath, err)
+	if _, err := ownedfile.RemoveOwned(docPath); err != nil {
+		return ownedfile.Ledger{}, err
 	}
-	if _, err = gitignore.Remove(dir, docName, gitignoreName); err != nil {
-		return nil, nil, fmt.Errorf("remove gitignore entries in %q: %w", dir, err)
+	if _, err := gitignore.Remove(dir, docName, gitignoreName); err != nil {
+		return ownedfile.Ledger{}, fmt.Errorf("remove gitignore entries in %q: %w", dir, err)
 	}
-	gitignorePath := filepath.Join(dir, gitignoreName)
 	// Restore skips a path gitignore.Remove left standing, so a surviving
 	// user gitignore is never clobbered by a backup.
-	for _, path := range []string{docPath, gitignorePath} {
-		if _, statErr := os.Lstat(path); statErr == nil {
-			continue
-		}
-		restoredOK, restoreErr := ownedfile.Restore(path)
-		if restoreErr != nil {
-			return restored, orphaned, fmt.Errorf("restore backup: %w", restoreErr)
-		}
-		if restoredOK {
-			restored = append(restored, ownedfile.RestoreMessage(path))
-		}
-	}
-	// Queried before the dir goes: a numbered slot survives Restore.
-	if orphaned, err = ownedfile.OrphanNotes(docPath, gitignorePath); err != nil {
-		return restored, orphaned, err
+	ledger, err := ownedfile.RestoreVacated(docPath, filepath.Join(dir, gitignoreName))
+	if err != nil {
+		return ledger, err
 	}
 	if err = disk.RemoveEmptyDir(dir); err != nil {
-		return restored, orphaned, fmt.Errorf("remove empty dir: %w", err)
+		return ledger, fmt.Errorf("remove empty dir: %w", err)
 	}
-	return restored, orphaned, nil
+	return ledger, nil
 }
 
 func isOwnedDoc(dir, docName string) bool {

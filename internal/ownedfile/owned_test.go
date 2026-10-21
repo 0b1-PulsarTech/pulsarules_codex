@@ -229,3 +229,62 @@ func TestUninstallFiles_OrphanScanFailsBare(t *testing.T) {
 		t.Fatalf("UninstallFiles err = %v, want the scan failure without the caller's wording", err)
 	}
 }
+
+func TestRestoreVacated(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	vacated := filepath.Join(dir, "vacated")
+	standing := filepath.Join(dir, "standing")
+	bare := filepath.Join(dir, "bare")
+	for path, body := range map[string]string{
+		vacated + BackupSuffix:        "user original\n",
+		vacated + BackupSuffix + ".1": "numbered slot\n",
+		standing:                      "user file now\n",
+		standing + BackupSuffix:       "must stay a backup\n",
+	} {
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+	}
+
+	ledger, err := RestoreVacated(vacated, standing, bare)
+	if err != nil {
+		t.Fatalf("RestoreVacated: %v", err)
+	}
+	if !slices.Equal(ledger.Restored, []string{RestoreMessage(vacated)}) {
+		t.Errorf("Restored = %q, want only the vacated path", ledger.Restored)
+	}
+	wantOrphans := []string{OrphanMessage(vacated, []string{vacated + BackupSuffix + ".1"})}
+	if !slices.Equal(ledger.Orphaned, wantOrphans) {
+		t.Errorf("Orphaned = %q, want %q", ledger.Orphaned, wantOrphans)
+	}
+	if got, readErr := os.ReadFile(standing); readErr != nil || string(got) != "user file now\n" {
+		t.Errorf("standing file = %q (%v), want it untouched", got, readErr)
+	}
+	if _, statErr := os.Stat(standing + BackupSuffix); statErr != nil {
+		t.Errorf("the standing path's backup must stay in place: %v", statErr)
+	}
+}
+
+func TestRestoreVacated_RestoreFails(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "vacated")
+	if err := os.WriteFile(path+BackupSuffix, []byte("user original\n"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+	_, err := RestoreVacated(path)
+	if err == nil || !strings.HasPrefix(err.Error(), "restore backup: restore ") {
+		t.Fatalf("RestoreVacated err = %v, want the restore failure worded as base did", err)
+	}
+}
