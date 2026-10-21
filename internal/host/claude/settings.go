@@ -16,7 +16,7 @@ func WireSettings(claudeDir, settingsFile string) error {
 	path := filepath.Join(claudeDir, settingsFile)
 	doc, err := jsondoc.Load(path)
 	if err != nil {
-		return err
+		return jsondoc.PrefixParse(err, "merge settings: parse existing settings")
 	}
 	if err = mergeSettings(doc, buildHooksBlock()); err != nil {
 		return fmt.Errorf("merge settings: %w", err)
@@ -30,7 +30,7 @@ func WireSettings(claudeDir, settingsFile string) error {
 func mergeSettings(doc *jsondoc.Document, block hooksBlock) error {
 	hooks, err := jsondoc.Section[map[string][]hookGroup](doc, "hooks")
 	if err != nil {
-		return err
+		return jsondoc.PrefixParse(err, "parse existing hooks")
 	}
 	if hooks == nil {
 		hooks = map[string][]hookGroup{}

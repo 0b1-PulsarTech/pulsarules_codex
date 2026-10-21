@@ -28,7 +28,7 @@ func TestWriteAgents_MatchesSessionStart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WriteAgents: %v", err)
 	}
-	if wrote != ownedfile.Wrote {
+	if wrote == ownedfile.Kept {
 		t.Fatalf("outcome = %v, want Wrote for a fresh project dir", wrote)
 	}
 

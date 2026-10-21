@@ -51,7 +51,7 @@ func Write(
 	var doc *jsondoc.Document
 	doc, err = jsondoc.Load(path)
 	if err != nil {
-		return nil, skipped, err
+		return nil, skipped, jsondoc.PrefixParse(err, "merge servers: parse existing .mcp.json")
 	}
 	if err = mergeServers(doc, rendered); err != nil {
 		return nil, skipped, fmt.Errorf("merge servers: %w", err)
@@ -115,7 +115,7 @@ func renderServers(repoDir string, servers []Server) (map[string]json.RawMessage
 func mergeServers(doc *jsondoc.Document, servers map[string]json.RawMessage) error {
 	merged, err := jsondoc.Section[map[string]json.RawMessage](doc, "mcpServers")
 	if err != nil {
-		return err
+		return jsondoc.PrefixParse(err, "parse existing mcpServers")
 	}
 	if merged == nil {
 		merged = map[string]json.RawMessage{}

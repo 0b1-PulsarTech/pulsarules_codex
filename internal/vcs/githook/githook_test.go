@@ -234,6 +234,23 @@ func TestUninstall_FingerprintedHooks(
 	}
 }
 
+func TestUninstall_FailureNamesTheHook(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	hookPath := filepath.Join(dir, ".git", "hooks", "commit-msg")
+	if err := os.MkdirAll(hookPath, 0o755); err != nil {
+		t.Fatalf("seed a directory in place of the hook: %v", err)
+	}
+
+	_, err := Uninstall(dir)
+	want := `uninstall hook "commit-msg": check "` + hookPath + `": read "` + hookPath +
+		`": read ` + hookPath + `: is a directory`
+	if err == nil || err.Error() != want {
+		t.Fatalf("Uninstall err = %v, want %q", err, want)
+	}
+}
+
 func TestUninstall_DirectoryInstall(t *testing.T) {
 	t.Parallel()
 

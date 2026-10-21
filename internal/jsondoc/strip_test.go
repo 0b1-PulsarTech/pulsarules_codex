@@ -14,7 +14,7 @@ func docWith(t *testing.T, key, raw string) *Document {
 	if raw != "" {
 		content = `{"` + key + `":` + raw + `}`
 	}
-	doc, err := Load(seed(t, content))
+	doc, err := LoadForRemoval(seed(t, content))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}

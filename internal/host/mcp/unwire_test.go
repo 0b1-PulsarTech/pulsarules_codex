@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -213,5 +214,63 @@ func TestRemoveMCP_Idempotent(t *testing.T) {
 	}
 	if _, err := Remove(repoDir); err != nil {
 		t.Fatalf("RemoveMCP #2: %v", err)
+	}
+}
+
+func TestRemoveMCP_Warnings(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		seed string
+		want string
+	}{
+		{name: "empty file", seed: "", want: `: unexpected end of JSON input`},
+		{name: "whitespace-only file", seed: " \n", want: `: unexpected end of JSON input`},
+		{
+			name: "not an object", seed: `[1]`,
+			want: `: json: cannot unmarshal array into Go value of type map[string]jsontext.Value`,
+		},
+		{
+			name: "mcpServers of the wrong type", seed: `{"mcpServers":[]}`,
+			want: ` mcpServers: json: cannot unmarshal array into Go value of type ` +
+				`map[string]jsontext.Value`,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			repoDir := t.TempDir()
+			path := filepath.Join(repoDir, ".mcp.json")
+			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			changed, err := Remove(repoDir)
+			want := "existing config file is not valid JSON: " + strconv.Quote(path) + testCase.want
+			if strings.Contains(testCase.want, "mcpServers") {
+				want = "strip mcpServers: " + want
+			}
+			if !errors.Is(err, jsondoc.ErrUnparseable) || err.Error() != want || changed {
+				t.Fatalf("RemoveMCP = %v, %v, want false and %q", changed, err, want)
+			}
+		})
+	}
+}
+
+func TestRemoveMCP_NullFileIsLeftAlone(t *testing.T) {
+	t.Parallel()
+
+	repoDir := t.TempDir()
+	path := filepath.Join(repoDir, ".mcp.json")
+	if err := os.WriteFile(path, []byte("null"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	changed, err := Remove(repoDir)
+	if err != nil || changed {
+		t.Fatalf("RemoveMCP(null) = %v, %v, want false, nil", changed, err)
+	}
+	if got, readErr := os.ReadFile(path); readErr != nil || string(got) != "null" {
+		t.Errorf("file = %q (%v), want it untouched", got, readErr)
 	}
 }

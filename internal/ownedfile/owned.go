@@ -51,17 +51,20 @@ func uninstallFile(path string) (removed bool, note string, err error) {
 	return true, note, nil
 }
 
-func UninstallFiles(paths ...string) (removed []string, ledger Ledger, err error) {
+func UninstallFiles(
+	wrapErr func(path string, err error) error, paths ...string,
+) (removed []string, ledger Ledger, err error) {
+	// wrapErr words one file's failure as each host always did; an orphan failure stays bare.
 	for _, path := range paths {
 		removedOK, note, uninstallErr := uninstallFile(path)
 		if uninstallErr != nil {
-			return removed, ledger, uninstallErr
+			return removed, ledger, wrapErr(path, uninstallErr)
 		}
 		if !removedOK {
 			continue
 		}
 		removed = append(removed, path)
-		ledger.AddRestore(note)
+		ledger.addRestore(note)
 	}
 	// Queried before the caller removes the dirs: a numbered slot survives Restore.
 	ledger.Orphaned, err = OrphanNotes(paths...)

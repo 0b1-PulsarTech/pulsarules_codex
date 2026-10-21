@@ -2,12 +2,14 @@ package opencode
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 func TestWireConfig_FreshFile(t *testing.T) {
@@ -141,16 +143,115 @@ func TestWireConfig_LegacySkillsGlob(t *testing.T) {
 	}
 }
 
-func TestWireConfig_NoServers(t *testing.T) {
+func TestWireConfig_NoServersLeavesMCPAlone(t *testing.T) {
 	t.Parallel()
 
-	projectDir := t.TempDir()
-	if err := WireConfig(projectDir, nil); err != nil {
-		t.Fatalf("WireConfig: %v", err)
+	testCases := []struct {
+		name    string
+		seed    string
+		wantMCP string
+	}{
+		{name: "no mcp key is added", seed: `{"theme":"dark"}`},
+		{name: "a corrupt mcp section is not read", seed: `{"mcp":[]}`, wantMCP: `[]`},
 	}
-	config := readConfig(t, projectDir)
-	if _, ok := config.MCP["gopls"]; ok {
-		t.Errorf("gopls server present with gopls=nil")
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			projectDir := t.TempDir()
+			path := filepath.Join(projectDir, configFile)
+			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			if err := WireConfig(projectDir, nil); err != nil {
+				t.Fatalf("WireConfig: %v", err)
+			}
+			raw, err := os.ReadFile(path) //nolint:gosec // temp dir.
+			if err != nil {
+				t.Fatalf("read: %v", err)
+			}
+			var fields map[string]json.RawMessage
+			if err = json.Unmarshal(raw, &fields); err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			mcp, present := fields["mcp"]
+			if present != (testCase.wantMCP != "") || string(mcp) != testCase.wantMCP {
+				t.Errorf("mcp = %q (present %v), want %q", mcp, present, testCase.wantMCP)
+			}
+		})
+	}
+}
+
+func TestWireConfig_ParseFailureWording(t *testing.T) {
+	t.Parallel()
+
+	const objectCause = "json: cannot unmarshal array into Go value of type " +
+		"map[string]jsontext.Value"
+	const listCause = "json: cannot unmarshal object into Go value of type []string"
+	testCases := []struct {
+		name string
+		seed string
+		want string
+	}{
+		{
+			name: "file not an object",
+			seed: `[1]`,
+			want: "parse existing opencode.json: " + objectCause,
+		},
+		{
+			name: "instructions of the wrong type", seed: `{"instructions":{}}`,
+			want: "merge instructions: parse existing instructions: " + listCause,
+		},
+		{
+			name: "skills of the wrong type", seed: `{"skills":[]}`,
+			want: "merge skills: parse existing skills: " + objectCause,
+		},
+		{
+			name: "skills paths of the wrong type", seed: `{"skills":{"paths":{}}}`,
+			want: "merge skills: parse existing skills paths: " + listCause,
+		},
+		{
+			name: "mcp of the wrong type", seed: `{"mcp":[]}`,
+			want: "merge gopls mcp: parse existing mcp: " + objectCause,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			projectDir := t.TempDir()
+			path := filepath.Join(projectDir, configFile)
+			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			err := WireConfig(projectDir, testServers())
+			if !errors.Is(err, jsondoc.ErrUnparseable) || err.Error() != testCase.want {
+				t.Fatalf("err = %v, want ErrUnparseable with text %q", err, testCase.want)
+			}
+		})
+	}
+}
+
+func TestWireConfig_NullInputIsWired(t *testing.T) {
+	t.Parallel()
+
+	for _, seed := range []string{`null`, `{"skills":null}`, `{"mcp":null}`} {
+		t.Run(seed, func(t *testing.T) {
+			t.Parallel()
+
+			projectDir := t.TempDir()
+			path := filepath.Join(projectDir, configFile)
+			if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			if err := WireConfig(projectDir, testServers()); err != nil {
+				t.Fatalf("WireConfig(%s): %v", seed, err)
+			}
+			config := readConfig(t, projectDir)
+			if !slices.Contains(config.Skills.Paths, SkillsSubdir) || len(config.MCP) != 2 {
+				t.Errorf("config = %+v, want skills.paths and both mcp servers", config)
+			}
+		})
 	}
 }
 

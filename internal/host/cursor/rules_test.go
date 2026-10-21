@@ -48,7 +48,7 @@ func TestWriteRule(t *testing.T) {
 			if err != nil {
 				t.Fatalf("WriteRule: %v", err)
 			}
-			if (wrote == ownedfile.Wrote) != testCase.wantWrote {
+			if (wrote != ownedfile.Kept) != testCase.wantWrote {
 				t.Errorf("wrote = %v, want %v", wrote, testCase.wantWrote)
 			}
 
@@ -67,7 +67,7 @@ func TestWriteRule(t *testing.T) {
 	}
 }
 
-func TestWriteRule_MkdirError(t *testing.T) {
+func TestWriteRule_CheckErrorUnderAFile(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
@@ -77,6 +77,27 @@ func TestWriteRule_MkdirError(t *testing.T) {
 
 	if _, err := WriteRule(projectDir, "go-style", "body"); err == nil {
 		t.Error("expected an error, got nil")
+	}
+}
+
+func TestWriteRule_MkdirErrorWording(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	projectDir := t.TempDir()
+	cursorDir := filepath.Join(projectDir, ".cursor")
+	if err := os.Mkdir(cursorDir, 0o500); err != nil {
+		t.Fatalf("seed read-only .cursor: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(cursorDir, 0o700) })
+
+	_, err := WriteRule(projectDir, "go-style", "body")
+	rulesDir := filepath.Join(cursorDir, "rules")
+	want := "mkdir: mkdir " + rulesDir + ": permission denied"
+	if err == nil || err.Error() != want {
+		t.Fatalf("WriteRule err = %v, want %q", err, want)
 	}
 }
 

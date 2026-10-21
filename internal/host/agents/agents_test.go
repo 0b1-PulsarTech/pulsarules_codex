@@ -23,7 +23,7 @@ func TestWriteAgents_RendersOnlySelectedSkills(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WriteAgents: %v", err)
 	}
-	if wrote != ownedfile.Wrote {
+	if wrote == ownedfile.Kept {
 		t.Fatalf("outcome = %v, want Wrote for a fresh project dir", wrote)
 	}
 
@@ -94,7 +94,7 @@ func TestWriteAgents_OwnershipDiscipline(t *testing.T) {
 			if writeErr != nil {
 				t.Fatalf("WriteAgents: %v", writeErr)
 			}
-			if (wrote == ownedfile.Wrote) != testCase.wantWrote {
+			if (wrote != ownedfile.Kept) != testCase.wantWrote {
 				t.Errorf("wrote = %v, want %v", wrote, testCase.wantWrote)
 			}
 
@@ -179,5 +179,29 @@ func TestWriteAgents_Errors(t *testing.T) {
 				t.Error("expected an error, got nil")
 			}
 		})
+	}
+}
+
+func TestWriteAgents_MkdirErrorWording(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load embedded knowledge: %v", err)
+	}
+	parent := t.TempDir()
+	if err = os.Chmod(parent, 0o500); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o700) })
+
+	projectDir := filepath.Join(parent, "project")
+	_, err = Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
+	want := "mkdir " + `"` + projectDir + `": mkdir ` + projectDir + ": permission denied"
+	if err == nil || err.Error() != want {
+		t.Fatalf("WriteAgents err = %v, want %q", err, want)
 	}
 }

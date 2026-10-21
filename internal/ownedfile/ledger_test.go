@@ -66,9 +66,9 @@ func TestLedger_AddIgnoresEmptyNotes(t *testing.T) {
 
 	var ledger Ledger
 	ledger.AddBackup("")
-	ledger.AddRestore("")
+	ledger.addRestore("")
 	ledger.AddBackup("kept")
-	ledger.AddRestore("restored")
+	ledger.addRestore("restored")
 	if !slices.Equal(ledger.BackedUp, []string{"kept"}) ||
 		!slices.Equal(ledger.Restored, []string{"restored"}) {
 		t.Errorf("ledger = %+v, want only the non-empty notes", ledger)

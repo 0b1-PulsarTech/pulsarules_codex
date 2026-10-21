@@ -9,6 +9,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
+func bareFailure(_ string, err error) error { return err }
+
 func UninstallHook(claudeDir string) (ledger ownedfile.Ledger, err error) {
 	hooksDir := filepath.Join(claudeDir, "hooks")
 	assets := hookAssets()
@@ -16,7 +18,7 @@ func UninstallHook(claudeDir string) (ledger ownedfile.Ledger, err error) {
 	for idx, asset := range assets {
 		paths[idx] = filepath.Join(hooksDir, asset.destName)
 	}
-	if _, ledger, err = ownedfile.UninstallFiles(paths...); err != nil {
+	if _, ledger, err = ownedfile.UninstallFiles(bareFailure, paths...); err != nil {
 		return ledger, err
 	}
 	if err = disk.RemoveEmptyDir(hooksDir); err != nil {

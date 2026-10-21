@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -345,20 +346,80 @@ func TestUnwireSettings_UserHookTimeout(t *testing.T) {
 	}
 }
 
-func TestUnwireSettings_BlankFileIsNothingToUnwire(t *testing.T) {
+func TestUnwireSettings_Warnings(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		settingsFile string
+		seed         string
+		want         string
+	}{
+		{
+			name: "empty file", settingsFile: "settings.json", seed: "",
+			want: "unexpected end of JSON input",
+		},
+		{
+			name: "whitespace-only file", settingsFile: "settings.json", seed: " \n",
+			want: "unexpected end of JSON input",
+		},
+		{
+			name: "empty local file", settingsFile: "settings.local.json", seed: "",
+			want: "unexpected end of JSON input",
+		},
+		{
+			name: "whitespace-only local file", settingsFile: "settings.local.json", seed: "\t\n",
+			want: "unexpected end of JSON input",
+		},
+		{
+			name: "not an object", settingsFile: "settings.json", seed: `[1]`,
+			want: "json: cannot unmarshal array into Go value of type map[string]jsontext.Value",
+		},
+		{
+			name: "hooks of the wrong type", settingsFile: "settings.json", seed: `{"hooks":[]}`,
+			want: "hooks: json: cannot unmarshal array into Go value of type " +
+				"map[string][]claude.hookGroup",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			claudeDir := t.TempDir()
+			path := filepath.Join(claudeDir, testCase.settingsFile)
+			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			changed, err := UnwireSettings(claudeDir, testCase.settingsFile)
+			quoted := strconv.Quote(path)
+			want := "existing config file is not valid JSON: " + quoted + ": " + testCase.want
+			if strings.HasPrefix(testCase.want, "hooks: ") {
+				want = "strip hooks: existing config file is not valid JSON: " + quoted +
+					" " + testCase.want
+			}
+			if !errors.Is(err, jsondoc.ErrUnparseable) || err.Error() != want || changed {
+				t.Fatalf("UnwireSettings = %v, %v, want false and %q", changed, err, want)
+			}
+			if _, statErr := os.Stat(path); statErr != nil {
+				t.Errorf("the file must survive a warning: %v", statErr)
+			}
+		})
+	}
+}
+
+func TestUnwireSettings_NullFileIsLeftAlone(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := t.TempDir()
 	path := filepath.Join(claudeDir, "settings.json")
-	if err := os.WriteFile(path, []byte(" \n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("null"), 0o600); err != nil {
 		t.Fatalf("seed: %v", err)
 	}
-
 	changed, err := UnwireSettings(claudeDir, "settings.json")
 	if err != nil || changed {
-		t.Fatalf("UnwireSettings(blank) = %v, %v, want false, nil", changed, err)
+		t.Fatalf("UnwireSettings(null) = %v, %v, want false, nil", changed, err)
 	}
-	if _, statErr := os.Stat(path); statErr != nil {
-		t.Errorf("blank settings file must survive: %v", statErr)
+	if got, readErr := os.ReadFile(path); readErr != nil || string(got) != "null" {
+		t.Errorf("file = %q (%v), want it untouched", got, readErr)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -49,8 +50,9 @@ func TestLoad(t *testing.T) {
 				if !errors.Is(err, ErrUnparseable) {
 					t.Fatalf("Load err = %v, want ErrUnparseable", err)
 				}
-				if !strings.Contains(err.Error(), path) {
-					t.Errorf("err = %q, want it to name %q", err, path)
+				if strings.Contains(err.Error(), path) ||
+					strings.Contains(err.Error(), "existing config") {
+					t.Errorf("err = %q, want only the cause so the caller can word it", err)
 				}
 				return
 			}
@@ -96,8 +98,109 @@ func TestSection(t *testing.T) {
 		t.Fatalf("Section(absent) = %v, %v, want nil, nil", absent, err)
 	}
 	_, err = Section[[]string](doc, "bad")
-	if !errors.Is(err, ErrUnparseable) || !strings.Contains(err.Error(), "bad") {
-		t.Fatalf("Section(bad) err = %v, want ErrUnparseable naming the key", err)
+	wantCause := "json: cannot unmarshal string into Go value of type []string"
+	if !errors.Is(err, ErrUnparseable) || err.Error() != wantCause {
+		t.Fatalf(
+			"Section(bad) err = %v, want ErrUnparseable with only the cause %q",
+			err,
+			wantCause,
+		)
+	}
+}
+
+func TestLoadForRemoval(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		content    string
+		absent     bool
+		wantExists bool
+		wantErr    string
+	}{
+		{name: "absent file is nothing to strip", absent: true},
+		{name: "object loads", content: `{"a":1}`, wantExists: true},
+		{name: "null loads as empty", content: "null", wantExists: true},
+		{name: "empty file does not parse", content: "", wantErr: "unexpected end of JSON input"},
+		{
+			name:    "blank file does not parse",
+			content: " \n",
+			wantErr: "unexpected end of JSON input",
+		},
+		{
+			name: "array does not parse", content: `[1]`,
+			wantErr: "json: cannot unmarshal array into Go value of type map[string]jsontext.Value",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			path := filepath.Join(t.TempDir(), "missing.json")
+			if !testCase.absent {
+				path = seed(t, testCase.content)
+			}
+			doc, err := LoadForRemoval(path)
+			if testCase.wantErr != "" {
+				want := "existing config file is not valid JSON: " + strconv.Quote(path) +
+					": " + testCase.wantErr
+				if !errors.Is(err, ErrUnparseable) || err == nil || err.Error() != want {
+					t.Fatalf("LoadForRemoval err = %v, want %q", err, want)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("LoadForRemoval: %v", err)
+			}
+			if doc.Exists() != testCase.wantExists {
+				t.Errorf("Exists = %v, want %v", doc.Exists(), testCase.wantExists)
+			}
+		})
+	}
+}
+
+func TestSection_RemovalWording(t *testing.T) {
+	t.Parallel()
+
+	path := seed(t, `{"bad":"text","skills":{"paths":1}}`)
+	doc, err := LoadForRemoval(path)
+	if err != nil {
+		t.Fatalf("LoadForRemoval: %v", err)
+	}
+	_, err = Section[[]string](doc, "bad")
+	want := "existing config file is not valid JSON: " + strconv.Quote(path) +
+		" bad: json: cannot unmarshal string into Go value of type []string"
+	if !errors.Is(err, ErrUnparseable) || err == nil || err.Error() != want {
+		t.Fatalf("Section(bad) err = %v, want %q", err, want)
+	}
+	child, err := doc.Child("skills")
+	if err != nil {
+		t.Fatalf("Child: %v", err)
+	}
+	_, err = Section[[]string](child, "paths")
+	want = "existing config file is not valid JSON: " + strconv.Quote(path) +
+		" skills.paths: json: cannot unmarshal number into Go value of type []string"
+	if !errors.Is(err, ErrUnparseable) || err == nil || err.Error() != want {
+		t.Fatalf("scoped err = %v, want %q", err, want)
+	}
+}
+
+func TestPrefixParse(t *testing.T) {
+	t.Parallel()
+
+	readErr := errors.New("read failure")
+	if got := PrefixParse(readErr, "wording"); got != readErr {
+		t.Errorf("PrefixParse(read failure) = %v, want it untouched", got)
+	}
+	doc, err := Load(seed(t, `{"a":"x"}`))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	_, err = Section[[]string](doc, "a")
+	got := PrefixParse(err, "parse existing a")
+	want := "parse existing a: json: cannot unmarshal string into Go value of type []string"
+	if !errors.Is(got, ErrUnparseable) || got.Error() != want {
+		t.Errorf("PrefixParse = %v, want %q and ErrUnparseable", got, want)
 	}
 }
 
@@ -124,9 +227,8 @@ func TestDocument_ChildAndPutChild(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Child: %v", err)
 	}
-	if _, err = Section[[]string](badChild, "paths"); err == nil ||
-		!strings.Contains(err.Error(), "skills.paths") {
-		t.Fatalf("scoped err = %v, want it to name skills.paths", err)
+	if _, err = Section[[]string](badChild, "paths"); !errors.Is(err, ErrUnparseable) {
+		t.Fatalf("scoped err = %v, want ErrUnparseable", err)
 	}
 
 	child.Delete("extra")
@@ -168,7 +270,8 @@ func TestDocument_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	want := "{\n  \"mine\": \"new\",\n  \"user\": {\n    \"keep\": [\n      1,\n      2\n    ]\n  }\n}\n"
+	want := "{\n  \"mine\": \"new\",\n  \"user\": {\n    \"keep\": [\n" +
+		"      1,\n      2\n    ]\n  }\n}\n"
 	if string(got) != want {
 		t.Errorf("saved = %q, want %q", got, want)
 	}

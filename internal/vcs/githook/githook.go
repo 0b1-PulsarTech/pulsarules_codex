@@ -48,6 +48,10 @@ func HookNames() []string {
 	return slices.Sorted(maps.Keys(hookSpecs()))
 }
 
+func hookFailure(path string, err error) error {
+	return fmt.Errorf("uninstall hook %q: %w", filepath.Base(path), err)
+}
+
 type UninstallResult struct {
 	Removed []string
 	ownedfile.Ledger
@@ -65,7 +69,7 @@ func Uninstall(dir string) (UninstallResult, error) {
 	// The ledger is read before the binary goes: a numbered slot survives Restore and
 	// would otherwise sit in the shared hooks dir unmentioned forever.
 	var removed []string
-	removed, res.Ledger, err = ownedfile.UninstallFiles(paths...)
+	removed, res.Ledger, err = ownedfile.UninstallFiles(hookFailure, paths...)
 	for _, path := range removed {
 		res.Removed = append(res.Removed, filepath.Base(path))
 	}

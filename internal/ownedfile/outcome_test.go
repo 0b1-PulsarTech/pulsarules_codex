@@ -1,11 +1,28 @@
 package ownedfile
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
 )
+
+func makeTestDir(dir string) error { return os.MkdirAll(dir, 0o700) }
+
+func TestWriteOwned_ReturnsTheCallersDirError(t *testing.T) {
+	t.Parallel()
+
+	errDir := errors.New("caller-worded mkdir failure")
+	path := filepath.Join(t.TempDir(), "sub", "rule.mdc")
+	outcome, err := WriteOwned(path, []byte("x"), 0o600, func(string) error { return errDir })
+	if !errors.Is(err, errDir) || err.Error() != errDir.Error() || outcome != Kept {
+		t.Errorf("WriteOwned = %v, %v, want Kept and exactly the caller's error", outcome, err)
+	}
+	if _, statErr := os.Stat(path); statErr == nil {
+		t.Error("nothing is written when the directory cannot be made")
+	}
+}
 
 func TestWriteOwned(t *testing.T) {
 	t.Parallel()
@@ -16,9 +33,9 @@ func TestWriteOwned(t *testing.T) {
 		wantOutcome Outcome
 		wantBody    string
 	}{
-		{name: "absent path is written", wantOutcome: Wrote, wantBody: ownedBody},
+		{name: "absent path is written", wantOutcome: written, wantBody: ownedBody},
 		{
-			name: "owned occupant is replaced", seed: ownedBody + "old", wantOutcome: Wrote,
+			name: "owned occupant is replaced", seed: ownedBody + "old", wantOutcome: written,
 			wantBody: ownedBody,
 		},
 		{
@@ -39,7 +56,7 @@ func TestWriteOwned(t *testing.T) {
 					t.Fatalf("seed: %v", err)
 				}
 			}
-			outcome, err := WriteOwned(path, []byte(ownedBody), 0o600)
+			outcome, err := WriteOwned(path, []byte(ownedBody), 0o600, makeTestDir)
 			if err != nil {
 				t.Fatalf("WriteOwned: %v", err)
 			}
@@ -85,7 +102,12 @@ func TestWriteOwned_Failures(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if outcome, err := WriteOwned(testCase.path, []byte("x"), 0o600); err == nil ||
+			if outcome, err := WriteOwned(
+				testCase.path,
+				[]byte("x"),
+				0o600,
+				makeTestDir,
+			); err == nil ||
 				outcome != Kept {
 				t.Errorf("WriteOwned = %v, %v, want Kept and an error", outcome, err)
 			}
@@ -178,7 +200,7 @@ func TestOutcome_ReportWrite(t *testing.T) {
 		wantWarnings []string
 	}{
 		{
-			name: "wrote is a note in the caller's words", outcome: Wrote,
+			name: "wrote is a note in the caller's words", outcome: written,
 			wantNotes: []string{"wrote /x/AGENTS.md"},
 		},
 		{

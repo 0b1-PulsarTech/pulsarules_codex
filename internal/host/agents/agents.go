@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"text/template"
 
@@ -52,7 +53,15 @@ func Write(
 	if err = tmpl.Execute(&buf, doc); err != nil {
 		return ownedfile.Kept, fmt.Errorf("render AGENTS.md: %w", err)
 	}
-	return ownedfile.WriteOwned(filepath.Join(projectDir, FileName), buf.Bytes(), disk.FilePrivate)
+	path := filepath.Join(projectDir, FileName)
+	return ownedfile.WriteOwned(path, buf.Bytes(), disk.FilePrivate, makeProjectDir)
+}
+
+func makeProjectDir(dir string) error {
+	if err := os.MkdirAll(dir, disk.DirPrivate); err != nil {
+		return fmt.Errorf("mkdir %q: %w", dir, err)
+	}
+	return nil
 }
 
 func skillRefs(idx *knowledge.Index, ids []string) []skillRef {

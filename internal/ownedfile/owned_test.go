@@ -1,6 +1,7 @@
 package ownedfile
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -138,7 +139,7 @@ func TestUninstallFile(t *testing.T) {
 			seedAsset(t, path, testCase.seed, testCase.seedBackup)
 			removed, note, err := uninstallFile(path)
 			if err != nil {
-				t.Fatalf("UninstallFile: %v", err)
+				t.Fatalf("uninstallFile: %v", err)
 			}
 			if removed != testCase.wantRemoved {
 				t.Errorf("removed = %v, want %v", removed, testCase.wantRemoved)
@@ -171,7 +172,7 @@ func TestUninstallFiles(t *testing.T) {
 		}
 	}
 
-	removed, ledger, err := UninstallFiles(ours, restored, foreign, absent)
+	removed, ledger, err := UninstallFiles(wrapTestFailure, ours, restored, foreign, absent)
 	if err != nil {
 		t.Fatalf("UninstallFiles: %v", err)
 	}
@@ -190,6 +191,10 @@ func TestUninstallFiles(t *testing.T) {
 	}
 }
 
+func wrapTestFailure(path string, err error) error {
+	return fmt.Errorf("uninstall %q: %w", filepath.Base(path), err)
+}
+
 func TestUninstallFiles_CheckFails(t *testing.T) {
 	t.Parallel()
 
@@ -197,7 +202,30 @@ func TestUninstallFiles_CheckFails(t *testing.T) {
 	if err := os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
 		t.Fatalf("seed: %v", err)
 	}
-	if _, _, err := UninstallFiles(filepath.Join(blocker, "hook")); err == nil {
-		t.Fatal("UninstallFiles under a file err = nil, want a check error")
+	_, _, err := UninstallFiles(wrapTestFailure, filepath.Join(blocker, "hook"))
+	if err == nil || !strings.HasPrefix(err.Error(), `uninstall "hook": check `) {
+		t.Fatalf("UninstallFiles err = %v, want the caller's wording over a check error", err)
+	}
+}
+
+func TestUninstallFiles_OrphanScanFailsBare(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "hook")
+	if err := os.WriteFile(path, []byte(ownedBody), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if err := os.Chmod(dir, 0o300); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+	_, _, err := UninstallFiles(wrapTestFailure, path)
+	if err == nil || !strings.HasPrefix(err.Error(), "list backups of ") {
+		t.Fatalf("UninstallFiles err = %v, want the scan failure without the caller's wording", err)
 	}
 }

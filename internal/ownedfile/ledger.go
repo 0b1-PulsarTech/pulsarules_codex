@@ -14,7 +14,7 @@ func (ledger *Ledger) AddBackup(note string) {
 	}
 }
 
-func (ledger *Ledger) AddRestore(note string) {
+func (ledger *Ledger) addRestore(note string) {
 	if note != "" {
 		ledger.Restored = append(ledger.Restored, note)
 	}

@@ -37,12 +37,8 @@ func TestDocument_SaveOrRemove(t *testing.T) {
 				t.Fatalf("Load: %v", err)
 			}
 			testCase.mutate(doc)
-			removed, err := doc.SaveOrRemove()
-			if err != nil {
+			if err = doc.SaveOrRemove(); err != nil {
 				t.Fatalf("SaveOrRemove: %v", err)
-			}
-			if removed != testCase.wantRemoved {
-				t.Errorf("removed = %v, want %v", removed, testCase.wantRemoved)
 			}
 			_, statErr := os.Stat(path)
 			if (statErr == nil) == testCase.wantRemoved {
@@ -59,9 +55,8 @@ func TestDocument_SaveOrRemove_Failures(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	removed, err := missing.SaveOrRemove()
-	if err == nil || removed {
-		t.Fatalf("SaveOrRemove(empty, no file) = %v, %v, want a remove error", removed, err)
+	if err = missing.SaveOrRemove(); err == nil {
+		t.Fatal("SaveOrRemove(empty, no file) = nil, want a remove error")
 	}
 
 	orphan, err := Load(filepath.Join(t.TempDir(), "no-parent", "config.json"))
@@ -71,8 +66,7 @@ func TestDocument_SaveOrRemove_Failures(t *testing.T) {
 	if err = SetSection(orphan, "a", 1); err != nil {
 		t.Fatalf("SetSection: %v", err)
 	}
-	removed, err = orphan.SaveOrRemove()
-	if err == nil || removed {
-		t.Fatalf("SaveOrRemove(no parent dir) = %v, %v, want a save error", removed, err)
+	if err = orphan.SaveOrRemove(); err == nil {
+		t.Fatal("SaveOrRemove(no parent dir) = nil, want a save error")
 	}
 }

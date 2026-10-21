@@ -10,7 +10,7 @@ import (
 
 func UnwireSettings(claudeDir, settingsFile string) (bool, error) {
 	path := filepath.Join(claudeDir, settingsFile)
-	doc, err := jsondoc.Load(path)
+	doc, err := jsondoc.LoadForRemoval(path)
 	if err != nil {
 		return false, err
 	}
@@ -25,7 +25,7 @@ func UnwireSettings(claudeDir, settingsFile string) (bool, error) {
 	if !changed {
 		return false, nil
 	}
-	if _, err = doc.SaveOrRemove(); err != nil {
+	if err = doc.SaveOrRemove(); err != nil {
 		return false, fmt.Errorf("write settings: %w", err)
 	}
 	return true, nil

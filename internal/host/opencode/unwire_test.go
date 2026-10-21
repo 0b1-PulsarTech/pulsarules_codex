@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
+	"strconv"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
@@ -57,26 +57,55 @@ func TestUnwireConfig_KeepsSchema(t *testing.T) {
 	}
 }
 
-func TestUnwireConfig_KeepsForeignSchema(t *testing.T) {
+func TestUnwireConfig_SchemaIsOursOnlyAsWritten(t *testing.T) {
 	t.Parallel()
 
-	projectDir := t.TempDir()
-	seed := `{
-  "$schema": "https://example.com/other.json",
-  "instructions": ["AGENTS.md", ".opencode/skills/*/SKILL.md"]
-}`
-	path := filepath.Join(projectDir, configFile)
-	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
-		t.Fatalf("seed: %v", err)
+	testCases := []struct {
+		name       string
+		schema     string
+		wantKept   bool
+		wantSchema string
+	}{
+		{name: "written by WireConfig", schema: `"` + schemaURL + `"`},
+		{name: "padded with whitespace", schema: ` "` + schemaURL + `" `},
+		{
+			name: "another URL", schema: `"https://example.com/other.json"`, wantKept: true,
+			wantSchema: `"https://example.com/other.json"`,
+		},
+		{
+			name: "same URL with escaped slashes", schema: `"https:\/\/opencode.ai\/config.json"`,
+			wantKept: true, wantSchema: `"https:\/\/opencode.ai\/config.json"`,
+		},
+		{name: "not a string", schema: `5`, wantKept: true, wantSchema: `5`},
 	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 
-	if _, err := UnwireConfig(projectDir); err != nil {
-		t.Fatalf("UnwireConfig: %v", err)
-	}
-
-	config := readConfig(t, projectDir)
-	if config.Schema != "https://example.com/other.json" {
-		t.Errorf("foreign $schema should survive, got %q", config.Schema)
+			projectDir := t.TempDir()
+			seed := `{"$schema":` + testCase.schema + `,"instructions":["AGENTS.md"]}`
+			path := filepath.Join(projectDir, configFile)
+			if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			if _, err := UnwireConfig(projectDir); err != nil {
+				t.Fatalf("UnwireConfig: %v", err)
+			}
+			raw, err := os.ReadFile(path) //nolint:gosec // temp dir.
+			if testCase.wantKept != (err == nil) {
+				t.Fatalf("file kept = %v (%v), want %v", err == nil, err, testCase.wantKept)
+			}
+			if !testCase.wantKept {
+				return
+			}
+			var fields map[string]json.RawMessage
+			if err = json.Unmarshal(raw, &fields); err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			if len(fields) != 1 || string(fields["$schema"]) != testCase.wantSchema {
+				t.Errorf("kept %s, want only $schema = %s", raw, testCase.wantSchema)
+			}
+		})
 	}
 }
 
@@ -313,26 +342,41 @@ func TestUnwireConfig_Idempotent(t *testing.T) {
 	}
 }
 
-func TestUnwireConfig_UnreadableSections(t *testing.T) {
+func TestUnwireConfig_Warnings(t *testing.T) {
 	t.Parallel()
 
+	const arrayCause = "json: cannot unmarshal array into Go value of type map[string]jsontext.Value"
 	testCases := []struct {
-		name    string
-		seed    string
-		wantErr string
+		name string
+		seed string
+		want string
 	}{
+		{name: "empty file", seed: "", want: `: unexpected end of JSON input`},
+		{name: "whitespace-only file", seed: " \n", want: `: unexpected end of JSON input`},
+		{name: "not an object", seed: `[1]`, want: `: ` + arrayCause},
 		{
-			name:    "instructions",
-			seed:    `{"instructions": "AGENTS.md"}`,
-			wantErr: "strip instructions: ",
+			name: "instructions", seed: `{"instructions": "AGENTS.md"}`,
+			want: ` instructions: json: cannot unmarshal string into Go value of type []string`,
 		},
-		{name: "mcp", seed: `{"mcp": ["gopls"]}`, wantErr: "strip mcp: "},
-		{name: "skills", seed: `{"skills": "all"}`, wantErr: "strip skills: "},
 		{
-			name:    "skills paths",
-			seed:    `{"skills": {"paths": "all"}}`,
-			wantErr: "strip skills: strip skills paths: ",
+			name: "mcp", seed: `{"mcp": ["gopls"]}`,
+			want: ` mcp: json: cannot unmarshal array into Go value of type ` +
+				`map[string]jsontext.Value`,
 		},
+		{
+			name: "skills",
+			seed: `{"skills": "all"}`,
+			want: ` skills: json: cannot unmarshal string ` +
+				`into Go value of type map[string]jsontext.Value`,
+		},
+		{
+			name: "skills paths", seed: `{"skills": {"paths": "all"}}`,
+			want: ` skills.paths: json: cannot unmarshal string into Go value of type []string`,
+		},
+	}
+	wrappers := map[string]string{
+		"instructions": "strip instructions: ", "mcp": "strip mcp: ",
+		"skills": "strip skills: ", "skills paths": "strip skills: strip skills paths: ",
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -345,11 +389,10 @@ func TestUnwireConfig_UnreadableSections(t *testing.T) {
 			}
 
 			changed, err := UnwireConfig(projectDir)
-			if !errors.Is(err, jsondoc.ErrUnparseable) {
-				t.Fatalf("err = %v, want jsondoc.ErrUnparseable", err)
-			}
-			if !strings.Contains(err.Error(), testCase.wantErr) {
-				t.Errorf("err = %q, want it to contain %q", err.Error(), testCase.wantErr)
+			want := wrappers[testCase.name] + "existing config file is not valid JSON: " +
+				strconv.Quote(path) + testCase.want
+			if !errors.Is(err, jsondoc.ErrUnparseable) || err.Error() != want {
+				t.Fatalf("err = %v, want ErrUnparseable with text %q", err, want)
 			}
 			if changed {
 				t.Error("changed = true, want false on a failed strip")
@@ -359,6 +402,23 @@ func TestUnwireConfig_UnreadableSections(t *testing.T) {
 				t.Errorf("file = %q (%v), want it untouched", got, readErr)
 			}
 		})
+	}
+}
+
+func TestUnwireConfig_NullFileIsLeftAlone(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	path := filepath.Join(projectDir, configFile)
+	if err := os.WriteFile(path, []byte("null"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	changed, err := UnwireConfig(projectDir)
+	if err != nil || changed {
+		t.Fatalf("UnwireConfig(null) = %v, %v, want false, nil", changed, err)
+	}
+	if got, readErr := os.ReadFile(path); readErr != nil || string(got) != "null" {
+		t.Errorf("file = %q (%v), want it untouched", got, readErr)
 	}
 }
 

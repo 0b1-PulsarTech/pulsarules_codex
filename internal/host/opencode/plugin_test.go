@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -126,6 +124,47 @@ func TestUninstall_UntouchedDir(t *testing.T) {
 	}
 	if res.Removed {
 		t.Error("expected Uninstall on an untouched dir to report nothing removed")
+	}
+}
+
+func TestUninstall_PluginFailureWording(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	pluginPath := filepath.Join(dir, ".opencode", "plugins", pluginName)
+	if err := os.MkdirAll(pluginPath, disk.DirPrivate); err != nil {
+		t.Fatalf("seed a directory in place of the plugin: %v", err)
+	}
+
+	_, err := Uninstall(dir)
+	want := `uninstall plugin: check "` + pluginPath + `": read "` + pluginPath +
+		`": read ` + pluginPath + `: is a directory`
+	if err == nil || err.Error() != want {
+		t.Fatalf("Uninstall err = %v, want %q", err, want)
+	}
+}
+
+func TestUninstall_OrphanScanFailureIsBare(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	dir := t.TempDir()
+	if _, err := Install(dir, testTemplates(t)); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
+	if err := os.Chmod(pluginsDir, 0o300); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(pluginsDir, disk.DirPrivate) })
+
+	_, err := Uninstall(dir)
+	want := `list backups of "` + filepath.Join(pluginsDir, pluginName) + `": scan "` +
+		pluginsDir + `": open ` + pluginsDir + `: permission denied`
+	if err == nil || err.Error() != want {
+		t.Fatalf("Uninstall err = %v, want %q", err, want)
 	}
 }
 
@@ -283,22 +322,20 @@ func TestPluginScript_CallsOnlyModesTheBinaryHandles(t *testing.T) {
 	for _, event := range hook.Events() {
 		handled[event.Mode] = true
 	}
-	calls := regexp.MustCompile(`runHook\("([^"]+)"`).
-		FindAllStringSubmatch(pluginScriptSource(t), -1)
+	source := pluginScriptSource(t)
+	calls := regexp.MustCompile("runHook\\(\\s*[\"'`]([^\"'`]+)[\"'`]").
+		FindAllStringSubmatch(source, -1)
 	if len(calls) < 3 {
 		t.Fatalf("found %d runHook calls in the plugin, want at least 3", len(calls))
+	}
+	total := len(regexp.MustCompile(`\brunHook\(`).FindAllString(source, -1)) -
+		strings.Count(source, "function runHook(")
+	if total != len(calls) {
+		t.Errorf("plugin has %d runHook calls but %d use a literal mode", total, len(calls))
 	}
 	for _, call := range calls {
 		if !handled[call[1]] {
 			t.Errorf("plugin runs mode %q, which hook.Events() does not handle", call[1])
 		}
-	}
-}
-
-func TestBinaryRel_EndsWithSelfbinName(t *testing.T) {
-	t.Parallel()
-
-	if got := path.Base(binaryRel); got != selfbin.Name {
-		t.Errorf("binaryRel base = %q, want selfbin.Name %q", got, selfbin.Name)
 	}
 }

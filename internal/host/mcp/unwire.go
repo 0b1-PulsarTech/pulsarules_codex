@@ -12,7 +12,7 @@ import (
 func Remove(repoDir string) (changed bool, err error) {
 	path := filepath.Join(repoDir, ".mcp.json")
 	var doc *jsondoc.Document
-	doc, err = jsondoc.Load(path)
+	doc, err = jsondoc.LoadForRemoval(path)
 	if err != nil {
 		return false, err
 	}
@@ -29,7 +29,7 @@ func Remove(repoDir string) (changed bool, err error) {
 	}
 	// The gitignore entry goes whenever mcpServers changed, or a surviving .mcp.json
 	// would leave it orphaned.
-	if _, err = doc.SaveOrRemove(); err != nil {
+	if err = doc.SaveOrRemove(); err != nil {
 		return false, fmt.Errorf("write mcp config: %w", err)
 	}
 	if _, err = gitignore.Remove(repoDir, ".mcp.json"); err != nil {

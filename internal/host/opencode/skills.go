@@ -11,13 +11,13 @@ const SkillsSubdir = ".opencode/skills"
 func mergeSkills(doc *jsondoc.Document) error {
 	skills, err := doc.Child("skills")
 	if err != nil {
-		return err
+		return jsondoc.PrefixParse(err, "parse existing skills")
 	}
 	// Wire skills.paths, the lazy index opencode expands only on a tool call; never
 	// instructions, which opencode reads in full every session.
 	paths, err := jsondoc.Section[[]string](skills, "paths")
 	if err != nil {
-		return err
+		return jsondoc.PrefixParse(err, "parse existing skills paths")
 	}
 	if !slices.Contains(paths, SkillsSubdir) {
 		paths = append(paths, SkillsSubdir)

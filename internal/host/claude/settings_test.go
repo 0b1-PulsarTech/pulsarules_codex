@@ -244,3 +244,89 @@ func TestWireSettings_Unparseable(t *testing.T) {
 		t.Errorf("file was rewritten: got %q, want unchanged %q", got, original)
 	}
 }
+
+func TestWireSettings_ParseFailureWording(t *testing.T) {
+	t.Parallel()
+
+	const objectCause = "json: cannot unmarshal array into Go value of type " +
+		"map[string]jsontext.Value"
+	const hooksCause = "json: cannot unmarshal array into Go value of type " +
+		"map[string][]claude.hookGroup"
+	testCases := []struct {
+		name         string
+		settingsFile string
+		seed         string
+		want         string
+	}{
+		{
+			name: "project file not an object", settingsFile: "settings.json", seed: `[1]`,
+			want: "merge settings: parse existing settings: " + objectCause,
+		},
+		{
+			name: "local file not an object", settingsFile: "settings.local.json", seed: `[1]`,
+			want: "merge settings: parse existing settings: " + objectCause,
+		},
+		{
+			name: "hooks of the wrong type", settingsFile: "settings.json",
+			seed: `{"hooks":[]}`, want: "merge settings: parse existing hooks: " + hooksCause,
+		},
+		{
+			name: "local hooks of the wrong type", settingsFile: "settings.local.json",
+			seed: `{"hooks":[]}`, want: "merge settings: parse existing hooks: " + hooksCause,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			claudeDir := t.TempDir()
+			path := filepath.Join(claudeDir, testCase.settingsFile)
+			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			err := WireSettings(claudeDir, testCase.settingsFile)
+			if !errors.Is(err, jsondoc.ErrUnparseable) {
+				t.Fatalf("err = %v, want jsondoc.ErrUnparseable", err)
+			}
+			if err.Error() != testCase.want {
+				t.Errorf("err = %q, want %q", err.Error(), testCase.want)
+			}
+		})
+	}
+}
+
+func TestWireSettings_NullInputIsWired(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		settingsFile string
+		seed         string
+	}{
+		{name: "null project file", settingsFile: "settings.json", seed: `null`},
+		{name: "null local file", settingsFile: "settings.local.json", seed: `null`},
+		{name: "null hooks section", settingsFile: "settings.json", seed: `{"hooks":null}`},
+		{
+			name: "null hooks section in the local file", settingsFile: "settings.local.json",
+			seed: `{"hooks":null}`,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			claudeDir := t.TempDir()
+			path := filepath.Join(claudeDir, testCase.settingsFile)
+			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			if err := WireSettings(claudeDir, testCase.settingsFile); err != nil {
+				t.Fatalf("WireSettings(%s): %v", testCase.seed, err)
+			}
+			hooks := readHooks(t, claudeDir, testCase.settingsFile)
+			if len(hooks["SessionStart"]) != 1 || len(hooks["PreToolUse"]) != 2 {
+				t.Errorf("want one SessionStart and two PreToolUse groups, got %+v", hooks)
+			}
+		})
+	}
+}

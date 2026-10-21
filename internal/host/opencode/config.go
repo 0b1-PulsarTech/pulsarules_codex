@@ -27,7 +27,7 @@ func WireConfig(projectDir string, servers []mcp.Server) error {
 	path := filepath.Join(projectDir, configFile)
 	doc, err := jsondoc.Load(path)
 	if err != nil {
-		return err
+		return jsondoc.PrefixParse(err, "parse existing opencode.json")
 	}
 	if !doc.Has("$schema") {
 		if err = jsondoc.SetSection(doc, "$schema", schemaURL); err != nil {
@@ -41,7 +41,7 @@ func WireConfig(projectDir string, servers []mcp.Server) error {
 		return fmt.Errorf("merge skills: %w", err)
 	}
 	if err = mergeMCP(doc, servers); err != nil {
-		return fmt.Errorf("merge mcp: %w", err)
+		return fmt.Errorf("merge gopls mcp: %w", err)
 	}
 
 	if err = doc.Save(); err != nil {
@@ -53,7 +53,7 @@ func WireConfig(projectDir string, servers []mcp.Server) error {
 func mergeInstructions(doc *jsondoc.Document) error {
 	instructions, err := jsondoc.Section[[]string](doc, "instructions")
 	if err != nil {
-		return err
+		return jsondoc.PrefixParse(err, "parse existing instructions")
 	}
 	// Retire the legacy globs a prior install left so a reinstall converges.
 	instructions = slices.DeleteFunc(instructions, func(entry string) bool {
@@ -79,7 +79,7 @@ func mergeMCP(doc *jsondoc.Document, servers []mcp.Server) error {
 	}
 	merged, err := jsondoc.Section[map[string]json.RawMessage](doc, "mcp")
 	if err != nil {
-		return err
+		return jsondoc.PrefixParse(err, "parse existing mcp")
 	}
 	if merged == nil {
 		merged = map[string]json.RawMessage{}

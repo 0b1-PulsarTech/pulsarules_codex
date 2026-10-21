@@ -2,12 +2,14 @@ package mcp
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
@@ -225,6 +227,63 @@ func readServer(tb testing.TB, repoDir, name string) mcpServer {
 		tb.Fatalf("missing server %q in %+v", name, config.MCPServers)
 	}
 	return server
+}
+
+//nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
+func TestWriteMCP_ParseFailureWording(t *testing.T) {
+	fakeOnPath(t, "gopls")
+
+	testCases := []struct {
+		name string
+		seed string
+		want string
+	}{
+		{
+			name: "file not an object", seed: `[1]`,
+			want: "merge servers: parse existing .mcp.json: " +
+				"json: cannot unmarshal array into Go value of type map[string]jsontext.Value",
+		},
+		{
+			name: "mcpServers of the wrong type", seed: `{"mcpServers":"x"}`,
+			want: "merge servers: parse existing mcpServers: " +
+				"json: cannot unmarshal string into Go value of type map[string]jsontext.Value",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			repoDir := t.TempDir()
+			path := filepath.Join(repoDir, ".mcp.json")
+			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			_, _, err := Write(repoDir, detect.NewSet(language.Go))
+			if !errors.Is(err, jsondoc.ErrUnparseable) || err.Error() != testCase.want {
+				t.Fatalf("err = %v, want ErrUnparseable with text %q", err, testCase.want)
+			}
+		})
+	}
+}
+
+//nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
+func TestWriteMCP_NullInputIsWired(t *testing.T) {
+	fakeOnPath(t, "gopls")
+
+	for _, seed := range []string{`null`, `{"mcpServers":null}`} {
+		t.Run(seed, func(t *testing.T) {
+			repoDir := t.TempDir()
+			if err := os.WriteFile(
+				filepath.Join(repoDir, ".mcp.json"), []byte(seed), 0o600,
+			); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			if _, _, err := Write(repoDir, detect.NewSet(language.Go)); err != nil {
+				t.Fatalf("WriteMCP(%s): %v", seed, err)
+			}
+			if got := readServer(t, repoDir, "gopls"); got.Command != "gopls" {
+				t.Errorf("gopls command = %q, want gopls", got.Command)
+			}
+		})
+	}
 }
 
 func TestManagedNames(t *testing.T) {

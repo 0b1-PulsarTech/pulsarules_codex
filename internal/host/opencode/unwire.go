@@ -1,6 +1,7 @@
 package opencode
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 func UnwireConfig(projectDir string) (changed bool, err error) {
 	path := filepath.Join(projectDir, configFile)
 	var doc *jsondoc.Document
-	doc, err = jsondoc.Load(path)
+	doc, err = jsondoc.LoadForRemoval(path)
 	if err != nil {
 		return false, err
 	}
@@ -30,7 +31,7 @@ func UnwireConfig(projectDir string) (changed bool, err error) {
 		return false, nil
 	}
 	removeOwnedSchema(doc)
-	if _, err = doc.SaveOrRemove(); err != nil {
+	if err = doc.SaveOrRemove(); err != nil {
 		return false, fmt.Errorf("write opencode config: %w", err)
 	}
 	return true, nil
@@ -58,9 +59,16 @@ func removeOwnedSchema(doc *jsondoc.Document) {
 	if doc.Len() != 1 {
 		return
 	}
-	// Only the exact URL WireConfig sets is ours to remove.
-	schema, err := jsondoc.Section[string](doc, "$schema")
-	if err == nil && schema == schemaURL {
+	raw, ok := doc.Raw("$schema")
+	if !ok {
+		return
+	}
+	// Only the exact bytes WireConfig writes are ours to remove.
+	want, err := json.Marshal(schemaURL)
+	if err != nil {
+		return
+	}
+	if bytes.Equal(bytes.TrimSpace(raw), want) {
 		doc.Delete("$schema")
 	}
 }

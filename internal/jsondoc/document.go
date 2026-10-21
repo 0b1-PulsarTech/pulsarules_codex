@@ -12,29 +12,74 @@ import (
 var ErrUnparseable = errors.New("existing config file is not valid JSON")
 
 type Document struct {
-	path   string
-	scope  string
-	exists bool
-	fields map[string]json.RawMessage
+	path    string
+	scope   string
+	exists  bool
+	removal bool
+	fields  map[string]json.RawMessage
 }
 
 func Load(path string) (*Document, error) {
-	raw, err := disk.ReadOptional(path)
+	doc, raw, err := read(path)
 	if err != nil {
 		return nil, err
 	}
-	doc := &Document{path: path, exists: raw != nil, fields: map[string]json.RawMessage{}}
+	// A file about to be written treats a blank one as an empty document, and a parse
+	// failure carries only its cause so the caller can phrase it.
 	if len(bytes.TrimSpace(raw)) == 0 {
 		return doc, nil
 	}
-	if err = json.Unmarshal(raw, &doc.fields); err != nil {
-		return nil, fmt.Errorf("%w: %q: %w", ErrUnparseable, path, err)
+	return doc.decode(raw)
+}
+
+func LoadForRemoval(path string) (*Document, error) {
+	doc, raw, err := read(path)
+	if err != nil {
+		return nil, err
+	}
+	// A file about to be stripped has no blank case: a blank one does not parse, and
+	// every parse failure reads as the warning uninstall prints.
+	doc.removal = true
+	if raw == nil {
+		return doc, nil
+	}
+	return doc.decode(raw)
+}
+
+func read(path string) (*Document, []byte, error) {
+	raw, err := disk.ReadOptional(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	doc := &Document{path: path, exists: raw != nil, fields: map[string]json.RawMessage{}}
+	return doc, raw, nil
+}
+
+func (doc *Document) decode(raw []byte) (*Document, error) {
+	if err := json.Unmarshal(raw, &doc.fields); err != nil {
+		return nil, doc.parseFailure("", err)
 	}
 	if doc.fields == nil {
 		// A bare `null` decodes to a nil map, which cannot take a section.
 		doc.fields = map[string]json.RawMessage{}
 	}
 	return doc, nil
+}
+
+func (doc *Document) parseFailure(label string, cause error) error {
+	if !doc.removal {
+		return &parseError{cause: cause}
+	}
+	where := fmt.Sprintf("%q", doc.path)
+	if label != "" {
+		where += " " + label
+	}
+	return fmt.Errorf("%w: %s: %w", ErrUnparseable, where, cause)
+}
+
+func (doc *Document) Raw(key string) (json.RawMessage, bool) {
+	raw, ok := doc.fields[key]
+	return raw, ok
 }
 
 func (doc *Document) Exists() bool { return doc.exists }
@@ -63,7 +108,7 @@ func Section[Value any](doc *Document, key string) (Value, error) {
 	}
 	if err := json.Unmarshal(raw, &value); err != nil {
 		var zero Value
-		return zero, fmt.Errorf("%w: %q %s: %w", ErrUnparseable, doc.path, doc.label(key), err)
+		return zero, doc.parseFailure(doc.label(key), err)
 	}
 	return value, nil
 }
@@ -85,7 +130,8 @@ func (doc *Document) Child(key string) (*Document, error) {
 	if fields == nil {
 		fields = map[string]json.RawMessage{}
 	}
-	return &Document{path: doc.path, scope: doc.label(key), fields: fields}, nil
+	child := &Document{path: doc.path, scope: doc.label(key), removal: doc.removal, fields: fields}
+	return child, nil
 }
 
 func (doc *Document) PutChild(key string, child *Document) error {

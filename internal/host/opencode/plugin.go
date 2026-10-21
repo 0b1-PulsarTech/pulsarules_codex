@@ -12,7 +12,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/gitignore"
 )
 
-const binaryRel = ".opencode/bin/pulsarules_cli"
+const binaryRel = ".opencode/bin/" + selfbin.Name
 
 const pluginName = "pulsarules-governance.js"
 
@@ -47,6 +47,10 @@ func binDir(dir string) string {
 	return filepath.Join(dir, filepath.Dir(filepath.FromSlash(binaryRel)))
 }
 
+func pluginFailure(_ string, err error) error {
+	return fmt.Errorf("uninstall plugin: %w", err)
+}
+
 type PluginRemoval struct {
 	Removed bool
 	ownedfile.Ledger
@@ -55,10 +59,12 @@ type PluginRemoval struct {
 func Uninstall(dir string) (PluginRemoval, error) {
 	var res PluginRemoval
 	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
-	removed, ledger, err := ownedfile.UninstallFiles(filepath.Join(pluginsDir, pluginName))
+	removed, ledger, err := ownedfile.UninstallFiles(
+		pluginFailure, filepath.Join(pluginsDir, pluginName),
+	)
 	res.Removed, res.Ledger = len(removed) > 0, ledger
 	if err != nil {
-		return res, fmt.Errorf("uninstall plugin: %w", err)
+		return res, err
 	}
 	if err = disk.RemoveEmptyDir(pluginsDir); err != nil {
 		return res, fmt.Errorf("remove empty plugins dir: %w", err)
