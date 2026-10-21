@@ -1,13 +1,11 @@
 package opencode
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"slices"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
@@ -33,44 +31,37 @@ const (
 
 func WireConfig(projectDir string, gopls GoplsWiring) error {
 	path := filepath.Join(projectDir, configFile)
-	existing, err := disk.ReadOptional(path)
+	doc, err := jsondoc.Load(path)
 	if err != nil {
 		return err
 	}
-
-	config := map[string]json.RawMessage{}
-	if len(bytes.TrimSpace(existing)) > 0 {
-		if err = json.Unmarshal(existing, &config); err != nil {
-			return fmt.Errorf("parse existing opencode.json: %w", err)
+	if !doc.Has("$schema") {
+		if err = jsondoc.SetSection(doc, "$schema", schemaURL); err != nil {
+			return fmt.Errorf("set schema: %w", err)
 		}
 	}
-	if _, ok := config["$schema"]; !ok {
-		config["$schema"], _ = json.Marshal(schemaURL)
-	}
-	if err = mergeInstructions(config); err != nil {
+	if err = mergeInstructions(doc); err != nil {
 		return fmt.Errorf("merge instructions: %w", err)
 	}
-	if err = mergeSkills(config); err != nil {
+	if err = mergeSkills(doc); err != nil {
 		return fmt.Errorf("merge skills: %w", err)
 	}
 	if gopls == WithGopls {
-		if err = mergeMCP(config); err != nil {
+		if err = mergeMCP(doc); err != nil {
 			return fmt.Errorf("merge gopls mcp: %w", err)
 		}
 	}
 
-	if err = jsondoc.Save(path, config); err != nil {
+	if err = doc.Save(); err != nil {
 		return fmt.Errorf("save %q: %w", path, err)
 	}
 	return nil
 }
 
-func mergeInstructions(config map[string]json.RawMessage) error {
-	var instructions []string
-	if raw, ok := config["instructions"]; ok {
-		if err := json.Unmarshal(raw, &instructions); err != nil {
-			return fmt.Errorf("parse existing instructions: %w", err)
-		}
+func mergeInstructions(doc *jsondoc.Document) error {
+	instructions, err := jsondoc.Section[[]string](doc, "instructions")
+	if err != nil {
+		return err
 	}
 	// Retire the legacy globs a prior install left so a reinstall converges.
 	instructions = slices.DeleteFunc(instructions, func(entry string) bool {
@@ -81,20 +72,16 @@ func mergeInstructions(config map[string]json.RawMessage) error {
 			instructions = append(instructions, glob)
 		}
 	}
-	raw, err := json.Marshal(instructions)
-	if err != nil {
-		return fmt.Errorf("marshal instructions: %w", err)
-	}
-	config["instructions"] = raw
-	return nil
+	return jsondoc.SetSection(doc, "instructions", instructions)
 }
 
-func mergeMCP(config map[string]json.RawMessage) error {
-	servers := map[string]json.RawMessage{}
-	if raw, ok := config["mcp"]; ok {
-		if err := json.Unmarshal(raw, &servers); err != nil {
-			return fmt.Errorf("parse existing mcp: %w", err)
-		}
+func mergeMCP(doc *jsondoc.Document) error {
+	servers, err := jsondoc.Section[map[string]json.RawMessage](doc, "mcp")
+	if err != nil {
+		return err
+	}
+	if servers == nil {
+		servers = map[string]json.RawMessage{}
 	}
 	gopls, err := json.Marshal(map[string]any{
 		"type":    "local",
@@ -105,11 +92,5 @@ func mergeMCP(config map[string]json.RawMessage) error {
 		return fmt.Errorf("marshal gopls mcp: %w", err)
 	}
 	servers["gopls"] = gopls
-
-	raw, err := json.Marshal(servers)
-	if err != nil {
-		return fmt.Errorf("marshal mcp: %w", err)
-	}
-	config["mcp"] = raw
-	return nil
+	return jsondoc.SetSection(doc, "mcp", servers)
 }

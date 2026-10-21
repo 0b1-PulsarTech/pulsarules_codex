@@ -2,10 +2,13 @@ package claude
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 func TestWireSettings_FreshFile(t *testing.T) {
@@ -216,5 +219,28 @@ func TestWireSettings_KeepsAnyUserHookTimeoutValue(t *testing.T) {
 				t.Errorf("user timeout = %q, want %q", got, testCase.timeout)
 			}
 		})
+	}
+}
+
+func TestWireSettings_Unparseable(t *testing.T) {
+	t.Parallel()
+
+	claudeDir := t.TempDir()
+	path := filepath.Join(claudeDir, "settings.json")
+	original := "{not valid json"
+	if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	err := WireSettings(claudeDir, "settings.json")
+	if !errors.Is(err, jsondoc.ErrUnparseable) {
+		t.Fatalf("err = %v, want jsondoc.ErrUnparseable", err)
+	}
+	got, readErr := os.ReadFile(path) //nolint:gosec // temp dir.
+	if readErr != nil {
+		t.Fatalf("read: %v", readErr)
+	}
+	if string(got) != original {
+		t.Errorf("file was rewritten: got %q, want unchanged %q", got, original)
 	}
 }

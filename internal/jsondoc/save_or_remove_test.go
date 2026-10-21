@@ -1,82 +1,78 @@
 package jsondoc
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
-func TestSaveOrRemove(t *testing.T) {
+func TestDocument_SaveOrRemove(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name        string
-		config      map[string]json.RawMessage
+		content     string
+		mutate      func(doc *Document)
 		wantRemoved bool
 	}{
 		{
-			name:        "empty config removes the file",
-			config:      map[string]json.RawMessage{},
+			name:        "empty document removes the file",
+			content:     `{"only":1}`,
+			mutate:      func(doc *Document) { doc.Delete("only") },
 			wantRemoved: true,
 		},
 		{
-			name:        "non-empty config is saved",
-			config:      map[string]json.RawMessage{"a": json.RawMessage(`"1"`)},
-			wantRemoved: false,
+			name:    "non-empty document is saved",
+			content: `{"only":1,"other":2}`,
+			mutate:  func(doc *Document) { doc.Delete("only") },
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			dir := t.TempDir()
-			path := filepath.Join(dir, "config.json")
-			if err := os.WriteFile(path, []byte("{}\n"), 0o600); err != nil {
-				t.Fatalf("seed: %v", err)
+			path := seed(t, testCase.content)
+			doc, err := Load(path)
+			if err != nil {
+				t.Fatalf("Load: %v", err)
 			}
-
-			removed, err := SaveOrRemove(path, testCase.config)
+			testCase.mutate(doc)
+			removed, err := doc.SaveOrRemove()
 			if err != nil {
 				t.Fatalf("SaveOrRemove: %v", err)
 			}
 			if removed != testCase.wantRemoved {
 				t.Errorf("removed = %v, want %v", removed, testCase.wantRemoved)
 			}
-
 			_, statErr := os.Stat(path)
-			gotExists := statErr == nil
-			if gotExists == testCase.wantRemoved {
-				t.Errorf("file exists = %v, want %v", gotExists, !testCase.wantRemoved)
+			if (statErr == nil) == testCase.wantRemoved {
+				t.Errorf("file exists = %v, want %v", statErr == nil, !testCase.wantRemoved)
 			}
 		})
 	}
 }
 
-func TestSaveOrRemove_MissingPath(t *testing.T) {
+func TestDocument_SaveOrRemove_Failures(t *testing.T) {
 	t.Parallel()
 
-	path := filepath.Join(t.TempDir(), "missing.json")
-
-	removed, err := SaveOrRemove(path, map[string]json.RawMessage{})
-	if err == nil {
-		t.Fatal("SaveOrRemove(missing path) err = nil, want a remove error")
+	missing, err := Load(filepath.Join(t.TempDir(), "missing.json"))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
 	}
-	if removed {
-		t.Error("removed = true, want false on remove failure")
+	removed, err := missing.SaveOrRemove()
+	if err == nil || removed {
+		t.Fatalf("SaveOrRemove(empty, no file) = %v, %v, want a remove error", removed, err)
 	}
-}
 
-func TestSaveOrRemove_MissingParent(t *testing.T) {
-	t.Parallel()
-
-	path := filepath.Join(t.TempDir(), "missing-parent", "config.json")
-
-	removed, err := SaveOrRemove(path, map[string]json.RawMessage{"a": json.RawMessage(`"1"`)})
-	if err == nil {
-		t.Fatal("SaveOrRemove into a missing parent dir err = nil, want a save error")
+	orphan, err := Load(filepath.Join(t.TempDir(), "no-parent", "config.json"))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
 	}
-	if removed {
-		t.Error("removed = true, want false on save failure")
+	if err = SetSection(orphan, "a", 1); err != nil {
+		t.Fatalf("SetSection: %v", err)
+	}
+	removed, err = orphan.SaveOrRemove()
+	if err == nil || removed {
+		t.Fatalf("SaveOrRemove(no parent dir) = %v, %v, want a save error", removed, err)
 	}
 }

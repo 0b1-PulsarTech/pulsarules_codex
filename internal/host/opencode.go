@@ -113,7 +113,7 @@ func retireLegacyAgents(base string, report *Report) error {
 func unwireOpencodeConfig(projectDir string, report *Report) error {
 	changed, err := opencode.UnwireConfig(projectDir)
 	if err != nil {
-		if errors.Is(err, jsondoc.ErrUnparseableJSON) {
+		if errors.Is(err, jsondoc.ErrUnparseable) {
 			report.Warn("%v", err)
 			return nil
 		}

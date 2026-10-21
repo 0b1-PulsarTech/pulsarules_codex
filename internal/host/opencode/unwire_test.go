@@ -227,8 +227,8 @@ func TestUnwireConfig_Unparseable(t *testing.T) {
 	}
 
 	_, err := UnwireConfig(projectDir)
-	if !errors.Is(err, jsondoc.ErrUnparseableJSON) {
-		t.Fatalf("err = %v, want jsondoc.ErrUnparseableJSON", err)
+	if !errors.Is(err, jsondoc.ErrUnparseable) {
+		t.Fatalf("err = %v, want jsondoc.ErrUnparseable", err)
 	}
 	got, readErr := os.ReadFile(path) //nolint:gosec // temp dir.
 	if readErr != nil {
@@ -345,8 +345,8 @@ func TestUnwireConfig_UnreadableSections(t *testing.T) {
 			}
 
 			changed, err := UnwireConfig(projectDir)
-			if !errors.Is(err, jsondoc.ErrUnparseableJSON) {
-				t.Fatalf("err = %v, want jsondoc.ErrUnparseableJSON", err)
+			if !errors.Is(err, jsondoc.ErrUnparseable) {
+				t.Fatalf("err = %v, want jsondoc.ErrUnparseable", err)
 			}
 			if !strings.Contains(err.Error(), testCase.wantErr) {
 				t.Errorf("err = %q, want it to contain %q", err.Error(), testCase.wantErr)

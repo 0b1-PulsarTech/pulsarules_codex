@@ -1,8 +1,6 @@
 package claude
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,48 +16,33 @@ func WireSettings(claudeDir, settingsFile string) error {
 		return fmt.Errorf("mkdir %q: %w", claudeDir, err)
 	}
 	path := filepath.Join(claudeDir, settingsFile)
-	existing, err := disk.ReadOptional(path)
+	doc, err := jsondoc.Load(path)
 	if err != nil {
 		return err
 	}
-
-	merged, err := mergeSettings(existing, buildHooksBlock())
-	if err != nil {
+	if err = mergeSettings(doc, buildHooksBlock()); err != nil {
 		return fmt.Errorf("merge settings: %w", err)
 	}
-	if err = jsondoc.Save(path, merged); err != nil {
+	if err = doc.Save(); err != nil {
 		return fmt.Errorf("save %q: %w", path, err)
 	}
 	return nil
 }
 
-func mergeSettings(existing []byte, block hooksBlock) (map[string]json.RawMessage, error) {
-	settings := map[string]json.RawMessage{}
-	if len(bytes.TrimSpace(existing)) > 0 {
-		if err := json.Unmarshal(existing, &settings); err != nil {
-			return nil, fmt.Errorf("parse existing settings: %w", err)
-		}
+func mergeSettings(doc *jsondoc.Document, block hooksBlock) error {
+	hooks, err := jsondoc.Section[map[string][]hookGroup](doc, "hooks")
+	if err != nil {
+		return err
 	}
-
-	hooks := map[string][]hookGroup{}
-	if raw, ok := settings["hooks"]; ok {
-		if err := json.Unmarshal(raw, &hooks); err != nil {
-			return nil, fmt.Errorf("parse existing hooks: %w", err)
-		}
+	if hooks == nil {
+		hooks = map[string][]hookGroup{}
 	}
-
 	// For each event the block touches, drop any prior groups that reference the
 	// hook script, then append the freshly-rendered groups.
 	for event, groups := range block.Hooks {
 		hooks[event] = append(withoutHookScript(hooks[event]), groups...)
 	}
-
-	rawHooks, err := json.Marshal(hooks)
-	if err != nil {
-		return nil, fmt.Errorf("marshal hooks: %w", err)
-	}
-	settings["hooks"] = rawHooks
-	return settings, nil
+	return jsondoc.SetSection(doc, "hooks", hooks)
 }
 
 func withoutHookScript(groups []hookGroup) []hookGroup {

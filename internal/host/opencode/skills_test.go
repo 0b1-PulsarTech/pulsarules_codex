@@ -2,7 +2,11 @@ package opencode
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 func TestMergeSkills(t *testing.T) {
@@ -49,18 +53,30 @@ func TestMergeSkills(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			config := map[string]json.RawMessage{}
+			content := "{}"
 			for key, value := range testCase.seed {
-				config[key] = json.RawMessage(value)
+				content = `{"` + key + `":` + value + `}`
 			}
-			err := mergeSkills(config)
+			path := filepath.Join(t.TempDir(), configFile)
+			if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+				t.Fatalf("seed: %v", err)
+			}
+			doc, err := jsondoc.Load(path)
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			err = mergeSkills(doc)
 			if (err != nil) != testCase.wantErr {
 				t.Fatalf("mergeSkills error = %v, want error %v", err, testCase.wantErr)
 			}
 			if testCase.wantErr {
 				return
 			}
-			if got := string(config["skills"]); got != testCase.want {
+			got, err := jsondoc.Section[json.RawMessage](doc, "skills")
+			if err != nil {
+				t.Fatalf("Section: %v", err)
+			}
+			if string(got) != testCase.want {
 				t.Errorf("skills = %s, want %s", got, testCase.want)
 			}
 		})

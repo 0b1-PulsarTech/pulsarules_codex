@@ -93,7 +93,7 @@ func unwireClaudeHooks(
 		uctx := install.UninstallContext{Dir: claudeDir, SettingsFile: settingsFile}
 		sub, err := hooks.Uninstall("claude", uctx)
 		if err != nil {
-			if errors.Is(err, jsondoc.ErrUnparseableJSON) {
+			if errors.Is(err, jsondoc.ErrUnparseable) {
 				report.Warn("%v", err)
 				continue
 			}

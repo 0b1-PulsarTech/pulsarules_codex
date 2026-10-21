@@ -1,43 +1,31 @@
 package claude
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 func UnwireSettings(claudeDir, settingsFile string) (bool, error) {
 	path := filepath.Join(claudeDir, settingsFile)
-	existing, err := disk.ReadOptional(path)
+	doc, err := jsondoc.Load(path)
 	if err != nil {
 		return false, err
 	}
-	if existing == nil {
+	if !doc.Exists() {
 		return false, nil
 	}
 
-	settings := map[string]json.RawMessage{}
-	if err = json.Unmarshal(existing, &settings); err != nil {
-		return false, fmt.Errorf("%w: %q: %w", jsondoc.ErrUnparseableJSON, path, err)
-	}
-
-	changed, err := jsondoc.StripMapSection(
-		settings,
-		"hooks",
-		fmt.Sprintf("%q hooks", path),
-		unwireHooks,
-	)
+	changed, err := jsondoc.StripMap(doc, "hooks", unwireHooks)
 	if err != nil {
 		return false, fmt.Errorf("strip hooks: %w", err)
 	}
 	if !changed {
 		return false, nil
 	}
-	if _, err = jsondoc.SaveOrRemove(path, settings); err != nil {
+	if _, err = doc.SaveOrRemove(); err != nil {
 		return false, fmt.Errorf("write settings: %w", err)
 	}
 	return true, nil

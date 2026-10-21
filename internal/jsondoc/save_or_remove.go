@@ -1,20 +1,23 @@
 package jsondoc
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 )
 
-func SaveOrRemove(path string, config map[string]json.RawMessage) (bool, error) {
-	if len(config) == 0 {
-		if err := os.Remove(path); err != nil {
-			return false, fmt.Errorf("remove %q: %w", path, err)
+func (doc *Document) Save() error {
+	return Save(doc.path, doc.fields)
+}
+
+func (doc *Document) SaveOrRemove() (removed bool, err error) {
+	if doc.Len() == 0 {
+		if err = os.Remove(doc.path); err != nil {
+			return false, fmt.Errorf("remove %q: %w", doc.path, err)
 		}
 		return true, nil
 	}
-	if err := Save(path, config); err != nil {
-		return false, fmt.Errorf("save %q: %w", path, err)
+	if err = doc.Save(); err != nil {
+		return false, fmt.Errorf("save %q: %w", doc.path, err)
 	}
 	return false, nil
 }

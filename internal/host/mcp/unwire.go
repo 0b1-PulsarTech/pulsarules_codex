@@ -5,30 +5,22 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/gitignore"
 )
 
 func Remove(repoDir string) (changed bool, err error) {
 	path := filepath.Join(repoDir, ".mcp.json")
-	var existing []byte
-	existing, err = disk.ReadOptional(path)
+	var doc *jsondoc.Document
+	doc, err = jsondoc.Load(path)
 	if err != nil {
 		return false, err
 	}
-	if existing == nil {
+	if !doc.Exists() {
 		return false, nil
 	}
 
-	config := map[string]json.RawMessage{}
-	if err = json.Unmarshal(existing, &config); err != nil {
-		return false, fmt.Errorf("%w: %q: %w", jsondoc.ErrUnparseableJSON, path, err)
-	}
-
-	changed, err = jsondoc.StripMapSection(config, "mcpServers", fmt.Sprintf("%q mcpServers", path),
-		removeManagedServers,
-	)
+	changed, err = jsondoc.StripMap(doc, "mcpServers", removeManagedServers)
 	if err != nil {
 		return false, fmt.Errorf("strip mcpServers: %w", err)
 	}
@@ -37,7 +29,7 @@ func Remove(repoDir string) (changed bool, err error) {
 	}
 	// The gitignore entry goes whenever mcpServers changed, or a surviving .mcp.json
 	// would leave it orphaned.
-	if _, err = jsondoc.SaveOrRemove(path, config); err != nil {
+	if _, err = doc.SaveOrRemove(); err != nil {
 		return false, fmt.Errorf("write mcp config: %w", err)
 	}
 	if _, err = gitignore.Remove(repoDir, ".mcp.json"); err != nil {

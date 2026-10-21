@@ -41,7 +41,7 @@ func wireClaudeMCP(ctx Context, skillsDir string, report *Report) error {
 func unwireClaudeMCP(repoDir string, report *Report) error {
 	changed, err := mcp.Remove(repoDir)
 	if err != nil {
-		if errors.Is(err, jsondoc.ErrUnparseableJSON) {
+		if errors.Is(err, jsondoc.ErrUnparseable) {
 			report.Warn("%v", err)
 			return nil
 		}

@@ -242,8 +242,8 @@ func TestUnwireSettings_Unparseable(t *testing.T) {
 	}
 
 	changed, err := UnwireSettings(claudeDir, "settings.json")
-	if !errors.Is(err, jsondoc.ErrUnparseableJSON) {
-		t.Fatalf("err = %v, want jsondoc.ErrUnparseableJSON", err)
+	if !errors.Is(err, jsondoc.ErrUnparseable) {
+		t.Fatalf("err = %v, want jsondoc.ErrUnparseable", err)
 	}
 	if changed {
 		t.Error("expected changed = false on an unparseable file")
@@ -342,5 +342,23 @@ func TestUnwireSettings_UserHookTimeout(t *testing.T) {
 				t.Errorf("user timeout = %q, want %q", got, testCase.timeout)
 			}
 		})
+	}
+}
+
+func TestUnwireSettings_BlankFileIsNothingToUnwire(t *testing.T) {
+	t.Parallel()
+
+	claudeDir := t.TempDir()
+	path := filepath.Join(claudeDir, "settings.json")
+	if err := os.WriteFile(path, []byte(" \n"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	changed, err := UnwireSettings(claudeDir, "settings.json")
+	if err != nil || changed {
+		t.Fatalf("UnwireSettings(blank) = %v, %v, want false, nil", changed, err)
+	}
+	if _, statErr := os.Stat(path); statErr != nil {
+		t.Errorf("blank settings file must survive: %v", statErr)
 	}
 }

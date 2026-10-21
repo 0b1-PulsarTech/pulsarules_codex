@@ -1,87 +1,66 @@
 package opencode
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"slices"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 func UnwireConfig(projectDir string) (changed bool, err error) {
 	path := filepath.Join(projectDir, configFile)
-	var existing []byte
-	existing, err = disk.ReadOptional(path)
+	var doc *jsondoc.Document
+	doc, err = jsondoc.Load(path)
 	if err != nil {
 		return false, err
 	}
-	if existing == nil {
+	if !doc.Exists() {
 		return false, nil
 	}
 
-	config := map[string]json.RawMessage{}
-	if err = json.Unmarshal(existing, &config); err != nil {
-		return false, fmt.Errorf("%w: %q: %w", jsondoc.ErrUnparseableJSON, path, err)
-	}
-
 	var anyChanged bool
-	anyChanged, err = stripOwned(config, path)
+	anyChanged, err = stripOwned(doc)
 	if err != nil {
 		return false, err
 	}
 	if !anyChanged {
 		return false, nil
 	}
-	removeOwnedSchema(config)
-	if _, err = jsondoc.SaveOrRemove(path, config); err != nil {
+	removeOwnedSchema(doc)
+	if _, err = doc.SaveOrRemove(); err != nil {
 		return false, fmt.Errorf("write opencode config: %w", err)
 	}
 	return true, nil
 }
 
-func stripOwned(config map[string]json.RawMessage, path string) (bool, error) {
-	instructionsChanged, err := jsondoc.StripSliceSection(
-		config, "instructions", fmt.Sprintf("%q instructions", path), stripInstructions,
-	)
+func stripOwned(doc *jsondoc.Document) (bool, error) {
+	instructionsChanged, err := jsondoc.StripSlice(doc, "instructions", stripInstructions)
 	if err != nil {
 		return false, fmt.Errorf("strip instructions: %w", err)
 	}
 	var mcpChanged bool
-	mcpChanged, err = jsondoc.StripMapSection(
-		config,
-		"mcp",
-		fmt.Sprintf("%q mcp", path),
-		stripManagedMCP,
-	)
+	mcpChanged, err = jsondoc.StripMap(doc, "mcp", stripManagedMCP)
 	if err != nil {
 		return false, fmt.Errorf("strip mcp: %w", err)
 	}
 	var skillsChanged bool
-	skillsChanged, err = stripSkills(config, path)
+	skillsChanged, err = stripSkills(doc)
 	if err != nil {
 		return false, fmt.Errorf("strip skills: %w", err)
 	}
 	return instructionsChanged || mcpChanged || skillsChanged, nil
 }
 
-func removeOwnedSchema(config map[string]json.RawMessage) {
-	if len(config) != 1 {
-		return
-	}
-	raw, ok := config["$schema"]
-	if !ok {
+func removeOwnedSchema(doc *jsondoc.Document) {
+	if doc.Len() != 1 {
 		return
 	}
 	// Only the exact URL WireConfig sets is ours to remove.
-	want, err := json.Marshal(schemaURL)
-	if err != nil {
-		return
-	}
-	if bytes.Equal(bytes.TrimSpace(raw), want) {
-		delete(config, "$schema")
+	schema, err := jsondoc.Section[string](doc, "$schema")
+	if err == nil && schema == schemaURL {
+		doc.Delete("$schema")
 	}
 }
 
@@ -103,34 +82,24 @@ func stripManagedMCP(servers map[string]json.RawMessage) bool {
 	return true
 }
 
-func stripSkills(config map[string]json.RawMessage, path string) (bool, error) {
-	raw, ok := config["skills"]
-	if !ok {
+func stripSkills(doc *jsondoc.Document) (bool, error) {
+	if !doc.Has("skills") {
 		return false, nil
 	}
-	skills := map[string]json.RawMessage{}
-	if err := json.Unmarshal(raw, &skills); err != nil {
-		return false, fmt.Errorf("%w: %q skills: %w", jsondoc.ErrUnparseableJSON, path, err)
+	skills, err := doc.Child("skills")
+	if err != nil {
+		return false, err
 	}
-
-	changed, err := jsondoc.StripSliceSection(
-		skills, "paths", fmt.Sprintf("%q skills.paths", path), stripSkillsPaths,
-	)
+	changed, err := jsondoc.StripSlice(skills, "paths", stripSkillsPaths)
 	if err != nil {
 		return false, fmt.Errorf("strip skills paths: %w", err)
 	}
 	if !changed {
 		return false, nil
 	}
-	if len(skills) == 0 {
-		delete(config, "skills")
-		return true, nil
+	if err = doc.PutChild("skills", skills); err != nil {
+		return false, err
 	}
-	marshaled, err := json.Marshal(skills)
-	if err != nil {
-		return false, fmt.Errorf("marshal skills: %w", err)
-	}
-	config["skills"] = marshaled
 	return true, nil
 }
 

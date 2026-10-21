@@ -1,14 +1,12 @@
 package mcp
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"maps"
 	"os/exec"
 	"path/filepath"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
@@ -49,17 +47,15 @@ func Write(
 		return nil, skipped, fmt.Errorf("render servers: %w", err)
 	}
 	path := filepath.Join(repoDir, ".mcp.json")
-	var existing []byte
-	existing, err = disk.ReadOptional(path)
+	var doc *jsondoc.Document
+	doc, err = jsondoc.Load(path)
 	if err != nil {
 		return nil, skipped, err
 	}
-	var merged map[string]json.RawMessage
-	merged, err = mergeServers(existing, rendered)
-	if err != nil {
+	if err = mergeServers(doc, rendered); err != nil {
 		return nil, skipped, fmt.Errorf("merge servers: %w", err)
 	}
-	if err = jsondoc.Save(path, merged); err != nil {
+	if err = doc.Save(); err != nil {
 		return nil, skipped, fmt.Errorf("save %q: %w", path, err)
 	}
 	if err = gitignore.Ensure(repoDir, ".mcp.json"); err != nil {
@@ -104,29 +100,14 @@ func renderServers(repoDir string, servers []server) (map[string]json.RawMessage
 	return rendered, nil
 }
 
-func mergeServers(
-	existing []byte,
-	servers map[string]json.RawMessage,
-) (map[string]json.RawMessage, error) {
-	config := map[string]json.RawMessage{}
-	if len(bytes.TrimSpace(existing)) > 0 {
-		if err := json.Unmarshal(existing, &config); err != nil {
-			return nil, fmt.Errorf("parse existing .mcp.json: %w", err)
-		}
+func mergeServers(doc *jsondoc.Document, servers map[string]json.RawMessage) error {
+	merged, err := jsondoc.Section[map[string]json.RawMessage](doc, "mcpServers")
+	if err != nil {
+		return err
 	}
-
-	merged := map[string]json.RawMessage{}
-	if raw, ok := config["mcpServers"]; ok {
-		if err := json.Unmarshal(raw, &merged); err != nil {
-			return nil, fmt.Errorf("parse existing mcpServers: %w", err)
-		}
+	if merged == nil {
+		merged = map[string]json.RawMessage{}
 	}
 	maps.Copy(merged, servers)
-
-	rawServers, err := json.Marshal(merged)
-	if err != nil {
-		return nil, fmt.Errorf("marshal mcpServers: %w", err)
-	}
-	config["mcpServers"] = rawServers
-	return config, nil
+	return jsondoc.SetSection(doc, "mcpServers", merged)
 }
