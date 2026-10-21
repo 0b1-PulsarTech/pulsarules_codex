@@ -133,7 +133,7 @@ func TestRemoveMCP_Unparseable(t *testing.T) {
 
 	_, err := Remove(repoDir)
 	if !errors.Is(err, jsondoc.ErrUnparseableJSON) {
-		t.Fatalf("err = %v, want fsx.ErrUnparseableJSON", err)
+		t.Fatalf("err = %v, want jsondoc.ErrUnparseableJSON", err)
 	}
 	got, readErr := os.ReadFile(path) //nolint:gosec // temp dir.
 	if readErr != nil {

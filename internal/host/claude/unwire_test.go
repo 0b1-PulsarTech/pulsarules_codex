@@ -243,7 +243,7 @@ func TestUnwireSettings_Unparseable(t *testing.T) {
 
 	changed, err := UnwireSettings(claudeDir, "settings.json")
 	if !errors.Is(err, jsondoc.ErrUnparseableJSON) {
-		t.Fatalf("err = %v, want fsx.ErrUnparseableJSON", err)
+		t.Fatalf("err = %v, want jsondoc.ErrUnparseableJSON", err)
 	}
 	if changed {
 		t.Error("expected changed = false on an unparseable file")
