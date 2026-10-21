@@ -2,6 +2,7 @@ package pass
 
 import (
 	"maps"
+	"math"
 	"slices"
 	"testing"
 
@@ -27,6 +28,19 @@ func TestParamSetInt(t *testing.T) {
 		{
 			"non-numeric string keeps fallback",
 			ParamSet{"max_lines": "eight"},
+			"max_lines",
+			300,
+			300,
+		},
+		{"fractional float truncates", ParamSet{"max_lines": 1.5}, "max_lines", 300, 1},
+		{"whole float wins", ParamSet{"max_lines": 3.0}, "max_lines", 300, 3},
+		{"huge float keeps fallback", ParamSet{"max_lines": 1e30}, "max_lines", 300, 300},
+		{"huge negative float keeps fallback", ParamSet{"max_lines": -1e30}, "max_lines", 300, 300},
+		{"NaN keeps fallback", ParamSet{"max_lines": math.NaN()}, "max_lines", 300, 300},
+		{"infinity keeps fallback", ParamSet{"max_lines": math.Inf(1)}, "max_lines", 300, 300},
+		{
+			"MaxInt64 as float keeps fallback",
+			ParamSet{"max_lines": float64(math.MaxInt64)},
 			"max_lines",
 			300,
 			300,
@@ -345,5 +359,32 @@ func TestOverrideCoversReusesTheCompiledSet(t *testing.T) {
 	if covers >= recompiled {
 		t.Fatalf("Covers allocs %v >= recompiling per path %v: globs not compiled once",
 			covers, recompiled)
+	}
+}
+
+func TestParamSetNonNegativeIntOutOfRange(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		value float64
+		want  int
+	}{
+		{"huge float keeps fallback", 1e30, 7},
+		{"huge negative float keeps fallback", -1e30, 7},
+		{"NaN keeps fallback", math.NaN(), 7},
+		{"MaxInt64 as float keeps fallback", float64(math.MaxInt64), 7},
+		{"zero stays zero", 0, 0},
+		{"fractional float truncates", 1.5, 1},
+		{"whole float wins", 3, 3},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := ParamSet{"limit": testCase.value}.NonNegativeInt("limit", 7)
+			if got != testCase.want {
+				t.Errorf("NonNegativeInt(%v) = %d, want %d", testCase.value, got, testCase.want)
+			}
+		})
 	}
 }

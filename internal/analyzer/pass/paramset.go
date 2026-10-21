@@ -2,6 +2,7 @@ package pass
 
 import (
 	"maps"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -15,6 +16,11 @@ func (params ParamSet) number(key string) (int, bool) {
 	case int64:
 		return int(val), true
 	case float64:
+		// An unchecked int(val) is platform-defined out of range; amd64 yields MinInt,
+		// which every caller reads as "use the fallback", so every platform must too.
+		if math.IsNaN(val) || val < float64(math.MinInt) || val >= float64(math.MaxInt) {
+			return 0, false
+		}
 		return int(val), true
 	case string:
 		parsed, err := strconv.Atoi(val)
