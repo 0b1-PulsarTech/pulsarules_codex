@@ -1,5 +1,7 @@
 package governance
 
+import "fmt"
+
 type Scope int
 
 const (
@@ -8,13 +10,14 @@ const (
 	ScopeChanged
 )
 
-func ParseScope(raw string) Scope {
+func ParseScope(raw string) (Scope, error) {
 	switch raw {
+	case "", "full":
+		return ScopeFull, nil
 	case "commit":
-		return ScopeCommit
+		return ScopeCommit, nil
 	case "changed":
-		return ScopeChanged
-	default:
-		return ScopeFull
+		return ScopeChanged, nil
 	}
+	return ScopeFull, fmt.Errorf("invalid --scope %q (want full|commit|changed)", raw)
 }

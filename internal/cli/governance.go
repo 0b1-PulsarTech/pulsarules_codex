@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -27,15 +26,6 @@ import (
 var errProjectDirRequired = errors.New(
 	"governance requires --project DIR or PULSARULES_PROJECT_DIR",
 )
-
-func validateScope(scope string) error {
-	validScopes := []string{"full", "commit", "changed"}
-	// ParseScope falls back to ScopeFull on an unknown spelling, so reject it here.
-	if scope == "" || slices.Contains(validScopes, scope) {
-		return nil
-	}
-	return fmt.Errorf("invalid --scope %q (want %s)", scope, strings.Join(validScopes, "|"))
-}
 
 type governanceRun struct {
 	repo    *vcs.Repository
@@ -69,7 +59,8 @@ func runGovernance(inj remy.Injector, opts *version.Options) error {
 	if opts.ProjectDir == "" && os.Getenv("PULSARULES_PROJECT_DIR") == "" {
 		return errProjectDirRequired
 	}
-	if err := validateScope(opts.Scope); err != nil {
+	scope, err := governance.ParseScope(opts.Scope)
+	if err != nil {
 		return err
 	}
 
@@ -78,7 +69,6 @@ func runGovernance(inj remy.Injector, opts *version.Options) error {
 		return err
 	}
 
-	scope := governance.ParseScope(opts.Scope)
 	files := governance.FileSetChanged
 	if opts.AllFiles {
 		files = governance.FileSetAll

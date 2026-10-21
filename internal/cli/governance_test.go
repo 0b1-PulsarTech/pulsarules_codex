@@ -93,42 +93,6 @@ func TestGovernanceConfig_InvalidPreset(t *testing.T) {
 	}
 }
 
-func TestValidateScope(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name    string
-		scope   string
-		wantErr bool
-	}{
-		{name: "empty defers to the flag default", scope: ""},
-		{name: "full is accepted", scope: "full"},
-		{name: "commit is accepted", scope: "commit"},
-		{name: "changed is accepted", scope: "changed"},
-		{name: "typo is rejected", scope: "fulll", wantErr: true},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			err := validateScope(testCase.scope)
-			if testCase.wantErr {
-				if err == nil {
-					t.Fatalf("validateScope(%q): expected an error", testCase.scope)
-				}
-				if !strings.Contains(err.Error(), "full") ||
-					!strings.Contains(err.Error(), "commit") {
-					t.Errorf("error %q does not name the valid scopes", err)
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("validateScope(%q): unexpected error: %v", testCase.scope, err)
-			}
-		})
-	}
-}
-
 func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 	t.Parallel()
 
