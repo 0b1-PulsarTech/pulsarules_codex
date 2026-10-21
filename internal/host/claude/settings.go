@@ -40,25 +40,8 @@ func mergeSettings(doc *jsondoc.Document, block hooksBlock) error {
 	// For each event the block touches, drop any prior groups that reference the
 	// hook script, then append the freshly-rendered groups.
 	for event, groups := range block.Hooks {
-		hooks[event] = append(withoutHookScript(hooks[event]), groups...)
+		kept, _ := dropHookScript(hooks[event])
+		hooks[event] = append(kept, groups...)
 	}
 	return jsondoc.SetSection(doc, "hooks", hooks)
-}
-
-func withoutHookScript(groups []hookGroup) []hookGroup {
-	kept := make([]hookGroup, 0, len(groups))
-	for _, group := range groups {
-		// Filter per command so a command a user appended next to ours survives.
-		cmds, removed := withoutHookCommand(group.Hooks)
-		if !removed {
-			kept = append(kept, group)
-			continue
-		}
-		if len(cmds) == 0 {
-			continue
-		}
-		group.Hooks = cmds
-		kept = append(kept, group)
-	}
-	return kept
 }

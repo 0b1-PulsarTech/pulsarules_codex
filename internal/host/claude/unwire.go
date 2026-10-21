@@ -34,7 +34,7 @@ func UnwireSettings(claudeDir, settingsFile string) (bool, error) {
 func unwireHooks(hooks map[string][]hookGroup) bool {
 	changed := false
 	for event, groups := range hooks {
-		kept, eventChanged := unwireGroups(groups)
+		kept, eventChanged := dropHookScript(groups)
 		if !eventChanged {
 			continue
 		}
@@ -48,7 +48,7 @@ func unwireHooks(hooks map[string][]hookGroup) bool {
 	return changed
 }
 
-func unwireGroups(groups []hookGroup) ([]hookGroup, bool) {
+func dropHookScript(groups []hookGroup) ([]hookGroup, bool) {
 	kept := make([]hookGroup, 0, len(groups))
 	changed := false
 	for _, group := range groups {
