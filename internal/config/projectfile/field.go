@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 type segment struct {
@@ -162,5 +164,5 @@ func clipValue(value string) string {
 	for cut > 0 && !utf8.RuneStart(value[cut]) {
 		cut--
 	}
-	return value[:cut] + "..."
+	return value[:cut] + printable.Ellipsis
 }

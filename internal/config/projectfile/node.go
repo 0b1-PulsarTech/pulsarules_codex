@@ -8,6 +8,8 @@ import (
 	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
 func mergeTargets(node *yaml.Node) ([]*yaml.Node, bool) {
@@ -134,7 +136,7 @@ func rejectNonUTF8(path string, content []byte) error {
 }
 
 func rejectDirectives(path string, content []byte) error {
-	body := bytes.TrimPrefix(content, []byte("\xef\xbb\xbf"))
+	body := lexer.TrimBOM(content)
 	line, isStart := 1, true
 	for idx := 0; idx < len(body); idx++ {
 		if isStart && body[idx] == '%' {
