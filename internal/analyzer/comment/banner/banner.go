@@ -34,7 +34,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 			"remove the leading comment; no file or package docstrings",
 		)}
 	}
-	return pass.EachChangedFile(ctx, eligible, scan)
+	return ctx.EachSource(eligible, scan)
 }
 
 func defaultExtensions() []string {

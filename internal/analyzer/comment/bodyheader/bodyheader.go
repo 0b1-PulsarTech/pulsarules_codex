@@ -30,7 +30,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	const defaultMinLines = 2
 	reporter := pass.ResolveReporter(analyzer.reporter(), ctx)
 	minLines := ctx.Params(ID).Int(paramMinLines, defaultMinLines)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
+	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if fc.Generated {
 			return nil
 		}

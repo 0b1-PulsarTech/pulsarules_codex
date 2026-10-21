@@ -11,9 +11,9 @@ func eachMarkedFile(
 	eligible func(pass.FileChange) bool,
 	check func(pass.FileChange, string) []finding.Finding,
 ) []finding.Finding {
-	// EachChangedFile skips testdata paths, so a dirty fixture cannot block its own fix.
-	return pass.EachChangedFile(
-		ctx, eligible, func(fc pass.FileChange, src []byte) []finding.Finding {
+	// EachSource skips testdata paths, so a dirty fixture cannot block its own fix.
+	return ctx.EachSource(
+		eligible, func(fc pass.FileChange, src []byte) []finding.Finding {
 			return check(fc, string(src))
 		},
 	)

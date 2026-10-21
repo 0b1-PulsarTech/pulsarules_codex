@@ -29,7 +29,7 @@ func NewAnalyzer() *Analyzer {
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
 	dirScans := scanDirs(ctx)
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
+	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		dir := dirOf(fc.Path)
 		if fc.Generated || !gomod.IsPackageDir(dir) {
 			return nil

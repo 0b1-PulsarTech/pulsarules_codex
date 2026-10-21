@@ -29,8 +29,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	eligible := func(fc pass.FileChange) bool {
 		return extFilter(fc) && language.ForExtension(fc.Extension).ID != ""
 	}
-	return pass.EachChangedFile(
-		ctx,
+	return ctx.EachSource(
 		eligible,
 		func(fc pass.FileChange, src []byte) []finding.Finding {
 			return scanFile(src, fc.Path, language.ForExtension(fc.Extension), reporter)

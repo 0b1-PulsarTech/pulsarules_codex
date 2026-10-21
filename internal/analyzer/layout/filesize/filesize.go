@@ -29,8 +29,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	// A severity override on file-size downgrades the cap too, since both share one ID.
 	hardCap := finding.NewReporter(ID, finding.SeverityError, finding.CatProject)
 	eligible := pass.ExtensionFilter(ctx, ID, language.SourceExtensions())
-	return pass.EachChangedFile(
-		ctx,
+	return ctx.EachSource(
 		eligible,
 		func(fc pass.FileChange, src []byte) []finding.Finding {
 			params := ctx.ParamsAt(ID, fc.Path)

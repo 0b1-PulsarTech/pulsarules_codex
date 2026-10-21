@@ -5,7 +5,6 @@ import (
 	"iter"
 	"sync"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
@@ -92,20 +91,6 @@ func (ctx *Context) ChangedGoASTs() iter.Seq2[FileChange, *ast.File] {
 			}
 		}
 	}
-}
-
-func RunPerGoFile(
-	ctx *Context,
-	check func(fc FileChange, file *ast.File) []finding.Finding,
-) []finding.Finding {
-	if ctx.ASTCache == nil {
-		return nil
-	}
-	var findings []finding.Finding
-	for fc, file := range ctx.ChangedGoASTs() {
-		findings = append(findings, check(fc, file)...)
-	}
-	return findings
 }
 
 type AnalysisConfig struct {

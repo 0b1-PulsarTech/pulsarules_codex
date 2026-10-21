@@ -2,14 +2,12 @@ package pass
 
 import (
 	"errors"
-	"go/ast"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
 	"testing/fstest"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
@@ -140,48 +138,6 @@ func TestChangedGoASTs_CallerBreak(t *testing.T) {
 	}
 	if count != 1 {
 		t.Fatalf("count = %d, want 1", count)
-	}
-}
-
-func TestRunPerGoFile_NoCache(t *testing.T) {
-	t.Parallel()
-
-	ctx := &Context{
-		ChangedFiles: []FileChange{{Path: "main.go", Extension: ".go"}},
-	}
-	called := false
-	got := RunPerGoFile(ctx, func(FileChange, *ast.File) []finding.Finding {
-		called = true
-		return nil
-	})
-	if called {
-		t.Fatal("expected check not to be called when ASTCache is nil")
-	}
-	if got != nil {
-		t.Fatalf("got %v, want nil", got)
-	}
-}
-
-func TestRunPerGoFile_ProductionAndTests(t *testing.T) {
-	t.Parallel()
-
-	cache := newChangedGoASTsCache(t)
-	ctx := &Context{
-		ASTCache: cache,
-		ChangedFiles: []FileChange{
-			{Path: "main.go", Extension: ".go"},
-			{Path: "helper_test.go", Extension: ".go", IsTest: true},
-		},
-	}
-
-	got := RunPerGoFile(ctx, func(fc FileChange, file *ast.File) []finding.Finding {
-		if file == nil {
-			t.Fatalf("expected a non-nil *ast.File for %s", fc.Path)
-		}
-		return []finding.Finding{{AnalyzerID: "fake", File: fc.Path}}
-	})
-	if len(got) != 2 || got[0].File != "main.go" || got[1].File != "helper_test.go" {
-		t.Fatalf("got %v, want findings for main.go and helper_test.go", got)
 	}
 }
 

@@ -32,7 +32,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		shadow: pass.ResolveReporter(analyzer.shadowReporter, ctx),
 		reuse:  pass.ResolveReporter(analyzer.reuseReporter, ctx),
 	}
-	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
+	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		return analyzer.checkFile(ctx.ASTCache.FileSet(), fc, file, reps)
 	})
 }
