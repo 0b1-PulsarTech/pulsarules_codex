@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -37,7 +36,7 @@ func TestInjectRuleSummaries(t *testing.T) {
 		},
 	}
 
-	injectRuleSummaries(findings, idx)
+	injectRuleSummaries(findings, idx, testRules())
 
 	check := func(t *testing.T, findingIdx int, wantRuleID string, wantSummary bool) {
 		t.Helper()
@@ -72,7 +71,7 @@ func TestInjectRuleSummaries_NilIndex(t *testing.T) {
 		{AnalyzerID: "file-size", Severity: finding.SeverityWarning, Message: "file too long"},
 	}
 
-	injectRuleSummaries(findings, nil)
+	injectRuleSummaries(findings, nil, testRules())
 
 	if findings[0].RuleSummary != "" {
 		t.Fatalf("expected empty RuleSummary with nil index, got %q", findings[0].RuleSummary)
@@ -96,7 +95,7 @@ func TestInjectRuleSummaries_PreexistingRuleID(t *testing.T) {
 		},
 	}
 
-	injectRuleSummaries(findings, idx)
+	injectRuleSummaries(findings, idx, testRules())
 
 	if findings[0].RuleID != "imports" {
 		t.Fatalf("RuleID should remain pre-set: got %q", findings[0].RuleID)
@@ -123,14 +122,14 @@ func TestInjectRuleSummaries_AlreadyHasSummary(t *testing.T) {
 		},
 	}
 
-	injectRuleSummaries(findings, idx)
+	injectRuleSummaries(findings, idx, testRules())
 
 	if findings[0].RuleSummary != "custom summary" {
 		t.Fatalf("existing RuleSummary should not be overwritten: got %q", findings[0].RuleSummary)
 	}
 }
 
-func TestAnalyzer_Summaries(t *testing.T) {
+func TestAttach(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
@@ -138,22 +137,35 @@ func TestAnalyzer_Summaries(t *testing.T) {
 		t.Fatalf("load knowledge: %v", err)
 	}
 
-	analyzer := NewAnalyzer(idx)
-	ctx := &pass.Context{
-		Findings: []finding.Finding{
-			{AnalyzerID: "naming", Severity: finding.SeverityWarning, Message: "bad name"},
+	testCases := []struct {
+		name     string
+		index    *knowledge.Index
+		defaults map[string]string
+		wantRule string
+	}{
+		{
+			"rule comes from the handed map",
+			idx,
+			map[string]string{"naming": "comments"},
+			"comments",
 		},
+		{"analyzer missing from the map gets none", idx, map[string]string{}, ""},
+		{"nil index attaches nothing", nil, map[string]string{"naming": "naming"}, ""},
 	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			findings := []finding.Finding{{AnalyzerID: "naming", Message: "bad name"}}
 
-	findings := analyzer.Analyze(ctx)
-	if len(findings) != 0 {
-		t.Fatalf("expected empty return (mutates context), got %d findings", len(findings))
-	}
-	if ctx.Findings[0].RuleSummary == "" {
-		t.Fatal("expected RuleSummary to be populated via pipeline context mutation")
-	}
-	if ctx.Findings[0].RuleID != "naming" {
-		t.Fatalf("expected RuleID=naming, got %q", ctx.Findings[0].RuleID)
+			got := Attach(testCase.index, testCase.defaults)(findings)
+
+			if len(got) != 1 || got[0].RuleID != testCase.wantRule {
+				t.Fatalf("findings = %+v, want RuleID %q", got, testCase.wantRule)
+			}
+			if hasSummary := got[0].RuleSummary != ""; hasSummary != (testCase.wantRule != "") {
+				t.Fatalf("summary present = %v for rule %q", hasSummary, testCase.wantRule)
+			}
+		})
 	}
 }
 
@@ -165,7 +177,7 @@ func TestLookupRule(t *testing.T) {
 		t.Fatalf("load knowledge: %v", err)
 	}
 
-	rules := defaultRuleMap()
+	rules := testRules()
 	testCases := []struct {
 		analyzerID string
 		wantRuleID string

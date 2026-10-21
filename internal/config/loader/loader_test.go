@@ -130,9 +130,9 @@ func reservedIDCases() []loadCase {
 	return []loadCase{
 		{
 			name: "delegated id of a registry analyzer",
-			content: "version: 1\ndelegated: [{id: rule-injection, run: [x], " +
+			content: "version: 1\ndelegated: [{id: naming, run: [x], " +
 				"format: dart-analyze-json}]\n",
-			wantErr: "delegated[0].id: \"rule-injection\" is a built-in analyzer id",
+			wantErr: "delegated[0].id: \"naming\" is a built-in analyzer id",
 		},
 		{
 			name: "delegated id of the config analyzer",

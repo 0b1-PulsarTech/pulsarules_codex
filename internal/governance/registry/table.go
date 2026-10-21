@@ -36,7 +36,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/signature/resultcount"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/signature/variadicindex"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntaxreport"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/rulesummary"
 )
 
 func specs() []entry {
@@ -44,9 +43,6 @@ func specs() []entry {
 	return slices.Concat(contentSpecs(), syntaxSpecs(), styleSpecs(), []entry{
 		plain(arch.DescribeBoundary(), GateArch, arch.NewPackageBoundaryAnalyzer),
 		plain(arch.DescribeCycle(), GateArch, arch.NewImportCycleAnalyzer),
-		hide(viaDeps(rulesummary.Describe(), GateStatic, func(deps Deps) pass.Analyzer {
-			return rulesummary.NewAnalyzer(deps.Index)
-		})),
 	})
 }
 

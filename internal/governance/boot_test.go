@@ -59,7 +59,7 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 	), []Transform{orderFindings})
 
 	ctx := &pass.Context{Config: analysisCfg}
-	findings := pipe.run(ctx)
+	findings := pipe.run(ctx, nil)
 
 	if len(findings) != 3 {
 		t.Fatalf("expected 3 findings after dedup, got %d: %+v", len(findings), findings)
@@ -105,7 +105,6 @@ func TestMaxGateFor_ReproducesScopeMembership(t *testing.T) {
 		"variadic-index", "too-many-results", "ungrouped-interfaces", "package-level-var",
 		"package-file-count", "time-discipline", "context-discipline", "pprof-labels",
 	}
-	tail := []string{"rule-injection"}
 	arch := []string{"arch-boundary", "import-cycle"}
 
 	testCases := []struct {
@@ -116,17 +115,17 @@ func TestMaxGateFor_ReproducesScopeMembership(t *testing.T) {
 		{
 			name:  "full",
 			scope: ScopeFull,
-			want:  slices.Concat(static, late, style, arch, tail),
+			want:  slices.Concat(static, late, style, arch),
 		},
 		{
 			name:  "commit",
 			scope: ScopeCommit,
-			want:  slices.Concat(static, style, tail),
+			want:  slices.Concat(static, style),
 		},
 		{
 			name:  "changed",
 			scope: ScopeChanged,
-			want:  slices.Concat(static, style, arch, tail),
+			want:  slices.Concat(static, style, arch),
 		},
 	}
 	for _, testCase := range testCases {

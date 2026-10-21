@@ -54,14 +54,6 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	})
 }
 
-func isTestFile(file string) bool { return strings.HasSuffix(file, "_test.go") }
-
-func dirOf(file string) string { return path.Dir(filepath.ToSlash(file)) }
-
-func Describe() pass.Descriptor {
-	return pass.Descriptor{ID: ID, Rule: "code-smells"}
-}
-
 type site struct {
 	file   string
 	line   int
@@ -79,4 +71,12 @@ func DropSingleUseDuplicates(findings []finding.Finding) []finding.Finding {
 		return finding.AnalyzerID == ID &&
 			reported[site{finding.File, finding.Line, finding.Symbol}]
 	})
+}
+
+func isTestFile(file string) bool { return strings.HasSuffix(file, "_test.go") }
+
+func dirOf(file string) string { return path.Dir(filepath.ToSlash(file)) }
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "code-smells"}
 }

@@ -13,9 +13,4 @@ type (
 	Analyzer interface {
 		Analyze(ctx *Context) []finding.Finding
 	}
-
-	InPlaceAnalyzer interface {
-		Analyzer
-		TransformsInPlace()
-	}
 )

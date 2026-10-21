@@ -77,7 +77,7 @@ func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Res
 	pipe := newPipeline(
 		sess.cfgAnalysis, registry.Analyzers(deps, maxGateFor(scope)), sess.transforms(),
 	)
-	findings := pipe.run(ctx)
+	findings := pipe.run(ctx, sess.seedFindings())
 
 	if sess.cfgAnalysis.IncludeGenerated {
 		return Result{Findings: findings}
@@ -145,9 +145,6 @@ func (sess *Session) Load(discovery *Request) *pass.Context {
 		StagedRenames: discovery.StagedRenames,
 		Skips:         discovery.Skips,
 		TestPolicy:    sess.testPolicy(),
-	}
-	if sess.policyErr != nil {
-		ctx.Findings = append(ctx.Findings, configFinding(sess.policyErr))
 	}
 
 	if len(analyzable) > 0 && discovery.Sources != nil {

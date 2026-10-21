@@ -73,6 +73,19 @@ func oldGoRuleCases(rules string) []oldRuleCase {
 	return cases
 }
 
+func testRules() map[string]string {
+	rules := make(map[string]string)
+	for _, testCase := range oldGoRuleCases(oldGoRules) {
+		rules[testCase.analyzerID] = testCase.want
+	}
+	for _, analyzerID := range []string{
+		"file-size", "text-markers", "typographic-markers", "ai-frontmatter",
+	} {
+		rules[analyzerID] = "source-files"
+	}
+	return rules
+}
+
 func loadIndex(t *testing.T) *knowledge.Index {
 	t.Helper()
 	idx, _, err := knowledge.Load("")
@@ -91,8 +104,8 @@ func TestMapTargetsExist(t *testing.T) {
 
 	type targetCase struct{ name, ruleID string }
 	testCases := []targetCase{{"golangci-lint prefix", "code-smells"}}
-	for _, analyzerID := range sortedKeys(defaultRuleMap()) {
-		ruleID := defaultRuleMap()[analyzerID]
+	for _, analyzerID := range sortedKeys(testRules()) {
+		ruleID := testRules()[analyzerID]
 		testCases = append(testCases, targetCase{"default " + analyzerID, ruleID})
 	}
 	for _, analyzerID := range sortedKeys(languageRules()) {
@@ -172,7 +185,7 @@ func compatCases() []compatCase {
 		{"a.xyz", ""},
 	}
 	var cases []compatCase
-	analyzerIDs := append(sortedKeys(defaultRuleMap()), "golangci-lint/gocyclo")
+	analyzerIDs := append(sortedKeys(testRules()), "golangci-lint/gocyclo")
 	for _, analyzerID := range analyzerIDs {
 		if goPinned(analyzerID) {
 			continue
@@ -188,7 +201,7 @@ func TestGoPinnedSet(t *testing.T) {
 	t.Parallel()
 
 	pinned := map[string]bool{"import-cycle": true, "golangci-lint": true}
-	analyzerIDs := append(sortedKeys(defaultRuleMap()), "golangci-lint/gocyclo")
+	analyzerIDs := append(sortedKeys(testRules()), "golangci-lint/gocyclo")
 	type pinCase struct {
 		analyzerID string
 		want       bool
@@ -215,7 +228,7 @@ func TestResolveIsTagCompatible(t *testing.T) {
 
 	idx := loadIndex(t)
 	known := languageTags()
-	resolver := newResolver(idx)
+	resolver := newResolver(idx, testRules())
 	for _, testCase := range testCases {
 		t.Run(testCase.analyzerID+" "+testCase.file, func(t *testing.T) {
 			t.Parallel()
@@ -237,7 +250,7 @@ func TestResolveIsTagCompatible(t *testing.T) {
 func TestResolveGoUnchanged(t *testing.T) {
 	t.Parallel()
 
-	resolver := newResolver(loadIndex(t))
+	resolver := newResolver(loadIndex(t), testRules())
 	testCases := oldGoRuleCases(oldGoRules)
 	retargeted := []string{"file-size", "text-markers", "typographic-markers", "ai-frontmatter"}
 	for _, analyzerID := range retargeted {
@@ -250,20 +263,6 @@ func TestResolveGoUnchanged(t *testing.T) {
 				t.Fatalf("got %q, want %q", got, testCase.want)
 			}
 		})
-	}
-}
-
-func TestOldGoRulesCoverTheMap(t *testing.T) {
-	t.Parallel()
-
-	covered := map[string]bool{}
-	for _, testCase := range oldGoRuleCases(oldGoRules) {
-		covered[testCase.analyzerID] = true
-	}
-	for _, analyzerID := range sortedKeys(defaultRuleMap()) {
-		if !covered[analyzerID] && defaultRuleMap()[analyzerID] != "source-files" {
-			t.Errorf("analyzer %q has no literal Go oracle row", analyzerID)
-		}
 	}
 }
 
@@ -318,7 +317,7 @@ func resolveCases() []resolveCase {
 func TestResolve(t *testing.T) {
 	t.Parallel()
 
-	resolver := newResolver(loadIndex(t))
+	resolver := newResolver(loadIndex(t), testRules())
 	for _, testCase := range resolveCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
@@ -355,7 +354,7 @@ func TestInjectKeepsPresetRule(t *testing.T) {
 			findings := []finding.Finding{{
 				AnalyzerID: testCase.analyzerID, File: testCase.file, RuleID: testCase.presetRule,
 			}}
-			injectRuleSummaries(findings, idx)
+			injectRuleSummaries(findings, idx, testRules())
 			if findings[0].RuleID != testCase.wantRule {
 				t.Fatalf("RuleID %q, want %q", findings[0].RuleID, testCase.wantRule)
 			}
@@ -370,7 +369,7 @@ func TestInjectKeepsPresetRule(t *testing.T) {
 func TestFitsRejectsLanguageMismatch(t *testing.T) {
 	t.Parallel()
 
-	resolver := newResolver(loadIndex(t))
+	resolver := newResolver(loadIndex(t), testRules())
 	testCases := []struct {
 		name     string
 		ruleID   string

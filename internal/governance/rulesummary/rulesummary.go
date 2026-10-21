@@ -1,106 +1,29 @@
 package rulesummary
 
 import (
-	"maps"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-const ID = "rule-injection"
-
-func defaultRuleMap() map[string]string {
-	// A new analyzer goes here by exact ID; sub-ID tools also need a lookupRule prefix.
-	rules := map[string]string{
-		"file-size":              "source-files",
-		"text-markers":           "source-files",
-		"typographic-markers":    "source-files",
-		"ai-frontmatter":         "source-files",
-		"import-groups":          "imports",
-		"naming":                 "naming",
-		"top-of-file":            "comments",
-		"big-comment":            "comments",
-		"history-narration":      "comments",
-		"doc-comment":            "effective-go",
-		"body-header-comment":    "effective-go",
-		"too-many-results":       "effective-go",
-		"ungrouped-interfaces":   "effective-go",
-		"single-letter-name":     "naming",
-		"variadic-index":         "flag-arguments",
-		"package-level-var":      "code-smells",
-		"package-file-count":     "code-placement-go",
-		"test-comment":           "comments",
-		"simplification-path":    "minimalism",
-		"single-use-declaration": "minimalism",
-		"control-flow":           "code-smells",
-		"shadowing":              "effective-go",
-		"complexity":             "code-smells",
-		// The short-decl-reuse finding comes from the shadowing analyzer, but the fix it asks
-		// for, a var declaration above the call, is the named-returns rule's territory.
-		"short-decl-reuse":   "named-returns",
-		"named-returns":      "named-returns",
-		"time-discipline":    "concurrency",
-		"context-discipline": "concurrency",
-		"pprof-labels":       "security",
-		"arch-boundary":      "dependency-rule",
-		"import-cycle":       "module-boundaries",
-		"golangci-lint":      "code-smells",
-	}
-	maps.Copy(rules, commitRuleMap())
-	return rules
-}
-
-func commitRuleMap() map[string]string {
-	return map[string]string{
-		"branch-name":              "commits",
-		"commit-lint":              "commits",
-		"commit-initial":           "commits",
-		"commit-merge":             "commits",
-		"commit-emoji-required":    "commits",
-		"commit-emoji-count":       "commits",
-		"commit-emoji-catalog":     "commits",
-		"commit-emoji-prohibited":  "commits",
-		"commit-emoji-repeat":      "commits",
-		"commit-emoji-soft-repeat": "commits",
-		"commit-type-required":     "commits",
-		"commit-type-enum":         "commits",
-		"commit-scope-charset":     "commits",
-		"commit-desc-required":     "commits",
-		"commit-desc-length":       "commits",
-		"commit-desc-capitalize":   "commits",
-		"commit-desc-no-period":    "commits",
-		"commit-body-length":       "commits",
-		"commit-body-total-length": "commits",
-		"commit-no-coauthor":       "commits",
-		"commit-move-purity":       "commits",
+func Attach(
+	index *knowledge.Index, defaults map[string]string,
+) func([]finding.Finding) []finding.Finding {
+	return func(findings []finding.Finding) []finding.Finding {
+		injectRuleSummaries(findings, index, defaults)
+		return findings
 	}
 }
 
-var _ pass.InPlaceAnalyzer = (*Analyzer)(nil)
-
-type Analyzer struct {
-	index *knowledge.Index
-}
-
-func NewAnalyzer(index *knowledge.Index) *Analyzer {
+func injectRuleSummaries(
+	findings []finding.Finding, index *knowledge.Index, defaults map[string]string,
+) {
 	// A nil index is accepted and skips injection.
-	return &Analyzer{index: index}
-}
-
-func (analyzer *Analyzer) TransformsInPlace() {}
-
-func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	injectRuleSummaries(ctx.Findings, analyzer.index)
-	return nil
-}
-
-func injectRuleSummaries(findings []finding.Finding, index *knowledge.Index) {
 	if index == nil {
 		return
 	}
-	rules := newResolver(index)
+	rules := newResolver(index, defaults)
 	for idx := range findings {
 		finding := &findings[idx]
 		if finding.RuleSummary != "" {
@@ -121,11 +44,7 @@ func lookupRule(rules map[string]string, analyzerID string) string {
 	}
 	// Sub-IDs like "golangci-lint/gocyclo" come from the delegated linter.
 	if strings.HasPrefix(analyzerID, "golangci-lint/") {
-		return "code-smells"
+		return rules["golangci-lint"]
 	}
 	return ""
-}
-
-func Describe() pass.Descriptor {
-	return pass.Descriptor{ID: ID}
 }

@@ -44,10 +44,10 @@ type resolver struct {
 	known     map[string]bool
 }
 
-func newResolver(index *knowledge.Index) resolver {
+func newResolver(index *knowledge.Index, defaults map[string]string) resolver {
 	return resolver{
 		index:     index,
-		defaults:  defaultRuleMap(),
+		defaults:  defaults,
 		languages: languageRules(),
 		fallbacks: neutralFallbacks(),
 		known:     languageTags(),

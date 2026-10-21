@@ -5,13 +5,19 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/complexity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/packagevar"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/shadowing"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/singleuse"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/importgroup"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/identifier"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/signature/variadicindex"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 type stubAnalyzer struct {
@@ -39,7 +45,7 @@ func TestPipelineRun(t *testing.T) {
 	}, nil)
 
 	ctx := &pass.Context{}
-	findings := pipe.run(ctx)
+	findings := pipe.run(ctx, nil)
 	if len(findings) != 2 {
 		t.Fatalf("expected 2 findings, got %d", len(findings))
 	}
@@ -69,7 +75,7 @@ func TestPipelineDisabledAnalyzer(t *testing.T) {
 	}, nil)
 
 	ctx := &pass.Context{}
-	findings := pipe.run(ctx)
+	findings := pipe.run(ctx, nil)
 	if len(findings) != 1 {
 		t.Fatalf("expected 1 finding (disabled analyzer skipped), got %d", len(findings))
 	}
@@ -94,7 +100,7 @@ func TestPipelineRunsInRegistrationOrder(t *testing.T) {
 	}, nil)
 
 	ctx := &pass.Context{}
-	findings := pipe.run(ctx)
+	findings := pipe.run(ctx, nil)
 
 	want := []string{"ast", "static", "arch"}
 	if len(findings) != len(want) {
@@ -140,7 +146,7 @@ func TestPipelineAppliesOverrides(t *testing.T) {
 		}},
 	}, nil)
 
-	findings := pipe.run(&pass.Context{})
+	findings := pipe.run(&pass.Context{}, nil)
 	want := []finding.Severity{finding.SeverityInfo, finding.SeverityWarning, finding.SeverityError}
 	for idx, severity := range want {
 		if findings[idx].Severity != severity {
@@ -163,7 +169,7 @@ func TestPipelineTransformsRunInOrderAfterEveryAnalyzer(t *testing.T) {
 		{ID: "a2", Analyzer: stubAnalyzer{findings: []finding.Finding{{AnalyzerID: "a2"}}}},
 	}, []Transform{stamp("first"), stamp("second")})
 
-	findings := pipe.run(&pass.Context{})
+	findings := pipe.run(&pass.Context{}, nil)
 
 	got := make([]string, len(findings))
 	for index, finding := range findings {
@@ -172,6 +178,97 @@ func TestPipelineTransformsRunInOrderAfterEveryAnalyzer(t *testing.T) {
 	want := []string{"a1:", "a2:", "first:2 seen", "second:3 seen"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("findings = %v, want %v", got, want)
+	}
+}
+
+func TestPipelineSeedComesFirstAndIsTransformed(t *testing.T) {
+	t.Parallel()
+
+	pipe := newPipeline(nil, []registry.Built{
+		{ID: "a1", Analyzer: stubAnalyzer{findings: []finding.Finding{{AnalyzerID: "a1"}}}},
+	}, []Transform{func(findings []finding.Finding) []finding.Finding {
+		return append(findings, finding.Finding{AnalyzerID: "seen", Line: len(findings)})
+	}})
+
+	findings := pipe.run(&pass.Context{}, []finding.Finding{{AnalyzerID: "seed"}})
+
+	got := make([]string, len(findings))
+	for index, finding := range findings {
+		got[index] = finding.AnalyzerID
+	}
+	if !slices.Equal(got, []string{"seed", "a1", "seen"}) || findings[2].Line != 2 {
+		t.Fatalf("findings = %+v, want seed, a1, then the transform seeing both", findings)
+	}
+}
+
+func TestSessionTransformsDropPackageLevelVarAtSingleUseSite(t *testing.T) {
+	t.Parallel()
+
+	site := func(id string) finding.Finding {
+		return finding.Finding{
+			AnalyzerID: id,
+			File:       "a.go",
+			Line:       3,
+			Symbol:     "once",
+			Severity:   finding.SeverityWarning,
+		}
+	}
+	pipe := newPipeline(nil, []registry.Built{
+		{ID: singleuse.ID, Analyzer: stubAnalyzer{
+			findings: []finding.Finding{site(singleuse.ID)},
+		}},
+		{ID: packagevar.ID, Analyzer: stubAnalyzer{
+			findings: []finding.Finding{site(packagevar.ID)},
+		}},
+	}, (&Session{}).transforms())
+
+	findings := pipe.run(&pass.Context{}, nil)
+
+	if len(findings) != 1 || findings[0].AnalyzerID != singleuse.ID {
+		t.Fatalf("findings = %+v, want the single-use finding alone", findings)
+	}
+}
+
+func TestSessionTransformsAttachTheDescriptorRule(t *testing.T) {
+	t.Parallel()
+
+	index, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	testCases := []struct {
+		analyzerID string
+		file       string
+		wantRule   string
+	}{
+		{identifier.ID, "a.go", "naming"},
+		{variadicindex.ID, "a.go", "flag-arguments"},
+		{complexity.ID, "a.go", "code-smells"},
+		{importgroup.ID, "a.go", "imports"},
+		{importgroup.ID, "lib/a.dart", "dart-style"},
+		{shadowing.ReuseID, "a.go", "named-returns"},
+		{"commit-desc-length", "", "commits"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.analyzerID+" "+testCase.file, func(t *testing.T) {
+			t.Parallel()
+			sess := &Session{index: index}
+			pipe := newPipeline(nil, []registry.Built{{
+				ID: testCase.analyzerID,
+				Analyzer: stubAnalyzer{findings: []finding.Finding{{
+					AnalyzerID: testCase.analyzerID, File: testCase.file, Message: "m",
+				}}},
+			}}, sess.transforms())
+
+			findings := pipe.run(&pass.Context{}, nil)
+
+			if len(findings) != 1 || findings[0].RuleID != testCase.wantRule {
+				t.Fatalf("findings = %+v, want RuleID %q", findings, testCase.wantRule)
+			}
+			if findings[0].RuleSummary == "" {
+				t.Fatalf("rule %q attached no summary", testCase.wantRule)
+			}
+		})
 	}
 }
 
@@ -241,33 +338,5 @@ func TestOrderFindings(t *testing.T) {
 				t.Fatalf("order = %v, want %v", got, testCase.want)
 			}
 		})
-	}
-}
-
-func TestSessionTransformsDropPackageLevelVarAtSingleUseSite(t *testing.T) {
-	t.Parallel()
-
-	site := func(id string) finding.Finding {
-		return finding.Finding{
-			AnalyzerID: id,
-			File:       "a.go",
-			Line:       3,
-			Symbol:     "once",
-			Severity:   finding.SeverityWarning,
-		}
-	}
-	pipe := newPipeline(nil, []registry.Built{
-		{ID: singleuse.ID, Analyzer: stubAnalyzer{
-			findings: []finding.Finding{site(singleuse.ID)},
-		}},
-		{ID: packagevar.ID, Analyzer: stubAnalyzer{
-			findings: []finding.Finding{site(packagevar.ID)},
-		}},
-	}, (&Session{}).transforms())
-
-	findings := pipe.run(&pass.Context{})
-
-	if len(findings) != 1 || findings[0].AnalyzerID != singleuse.ID {
-		t.Fatalf("findings = %+v, want the single-use finding alone", findings)
 	}
 }

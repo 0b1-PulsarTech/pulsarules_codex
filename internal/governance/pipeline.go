@@ -10,6 +10,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/rulesummary"
 )
 
 type Transform func([]finding.Finding) []finding.Finding
@@ -26,19 +27,15 @@ func newPipeline(
 	return &pipeline{analyzers: analyzers, cfg: cfg, transforms: transforms}
 }
 
-func (pipe *pipeline) run(ctx *pass.Context) []finding.Finding {
+func (pipe *pipeline) run(ctx *pass.Context, seed []finding.Finding) []finding.Finding {
+	findings := slices.Clone(seed)
 	for _, entry := range pipe.analyzers {
 		if !pipe.enabled(entry.ID) {
 			continue
 		}
-		findings := entry.Analyzer.Analyze(ctx)
-		// An in-place analyzer already appended to ctx.Findings; skip its return.
-		if _, inPlace := entry.Analyzer.(pass.InPlaceAnalyzer); inPlace {
-			continue
-		}
-		ctx.Findings = append(ctx.Findings, pipe.overridden(entry.ID, findings)...)
+		reported := entry.Analyzer.Analyze(ctx)
+		findings = append(findings, pipe.overridden(entry.ID, reported)...)
 	}
-	findings := ctx.Findings
 	for _, transform := range pipe.transforms {
 		findings = transform(findings)
 	}
@@ -63,6 +60,14 @@ func (pipe *pipeline) enabled(id string) bool {
 	return cfg.Enabled
 }
 
+func (sess *Session) transforms() []Transform {
+	return []Transform{
+		packagevar.DropSingleUseDuplicates,
+		rulesummary.Attach(sess.index, registry.Rules()),
+		orderFindings,
+	}
+}
+
 func orderFindings(findings []finding.Finding) []finding.Finding {
 	slices.SortStableFunc(findings, func(left, right finding.Finding) int {
 		return cmp.Or(
@@ -79,6 +84,9 @@ func orderFindings(findings []finding.Finding) []finding.Finding {
 	})
 }
 
-func (sess *Session) transforms() []Transform {
-	return []Transform{packagevar.DropSingleUseDuplicates, orderFindings}
+func (sess *Session) seedFindings() []finding.Finding {
+	if sess.policyErr == nil {
+		return nil
+	}
+	return []finding.Finding{configFinding(sess.policyErr)}
 }

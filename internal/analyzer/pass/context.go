@@ -49,7 +49,6 @@ type Context struct {
 	Syntax        *syntax.Cache
 	Sources       source.Provider
 	Skips         source.SkipSet
-	Findings      []finding.Finding
 
 	goPackages     *gomod.Index
 	goPackagesOnce sync.Once
