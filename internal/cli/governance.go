@@ -153,7 +153,7 @@ func governanceConfig(opts *version.Options, root string) (*config.GovernanceCon
 		return nil, fmt.Errorf("invalid --typographic-severity: %w", err)
 	}
 	if opts.TypographicSeverity != "" {
-		cfg.SetParam(character.TypographicID, config.ParamSeverity, opts.TypographicSeverity)
+		cfg.SetSeverity(character.TypographicID, opts.TypographicSeverity)
 	}
 	if err = branch.ValidateExtraTypes(opts.BranchExtraTypes); err != nil {
 		return nil, fmt.Errorf("invalid --branch-extra-types: %w", err)

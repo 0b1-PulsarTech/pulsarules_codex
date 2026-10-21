@@ -200,31 +200,18 @@ func TestSeverityPrecedence(t *testing.T) {
 		{"global analyzer severity", "", func(cfg *config.GovernanceConfig) {
 			cfg.SetSeverity(typographic, "warning")
 		}, "warning", "warning"},
-		{"params severity", "", func(cfg *config.GovernanceConfig) {
-			cfg.SetParam(typographic, "severity", "info")
-		}, "info", "info"},
-		{
-			"analyzer severity beats an earlier params severity",
-			"",
-			func(cfg *config.GovernanceConfig) {
-				cfg.SetParam(typographic, "severity", "info")
-				cfg.SetSeverity(typographic, "warning")
-			},
-			"warning",
-			"warning",
-		},
 		{"per-path override beats the global severity", "", func(cfg *config.GovernanceConfig) {
 			cfg.SetSeverity(typographic, "warning")
 			cfg.Overrides = append(cfg.Overrides, webOverride("info"))
 		}, "info", "warning"},
 		{"CLI flag beats the file severity", "", func(cfg *config.GovernanceConfig) {
 			cfg.SetSeverity(typographic, "warning")
-			cfg.SetParam(typographic, "severity", "info")
+			cfg.SetSeverity(typographic, "info")
 		}, "info", "info"},
 		{"per-path override beats the CLI flag", "", func(cfg *config.GovernanceConfig) {
 			cfg.SetSeverity(typographic, "warning")
 			cfg.Overrides = append(cfg.Overrides, webOverride("error"))
-			cfg.SetParam(typographic, "severity", "info")
+			cfg.SetSeverity(typographic, "info")
 		}, "error", "info"},
 		{"later per-path override wins", "", func(cfg *config.GovernanceConfig) {
 			cfg.Overrides = append(cfg.Overrides, webOverride("info"), webOverride("warning"))
@@ -269,19 +256,9 @@ func TestOwnerSeverityGovernsSubIDs(t *testing.T) {
 			"ai-frontmatter doc.md": "error", "file-size big.go": "error",
 		}},
 		{
-			"params severity on text-markers reaches ai-frontmatter",
-			func(cfg *config.GovernanceConfig) { cfg.SetParam("text-markers", "severity", "warning") },
-			map[string]string{"ai-frontmatter doc.md": "warning", "file-size big.go": "error"},
-		},
-		{
 			"analyzer severity on text-markers reaches ai-frontmatter",
 			func(cfg *config.GovernanceConfig) { cfg.SetSeverity("text-markers", "info") },
 			map[string]string{"ai-frontmatter doc.md": "info", "file-size big.go": "error"},
-		},
-		{
-			"params severity on file-size lowers the hard cap too",
-			func(cfg *config.GovernanceConfig) { cfg.SetParam("file-size", "severity", "warning") },
-			map[string]string{"ai-frontmatter doc.md": "error", "file-size big.go": "warning"},
 		},
 		{
 			"file-size severity lowers the hard cap too",

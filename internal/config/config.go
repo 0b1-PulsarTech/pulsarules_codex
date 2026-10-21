@@ -52,13 +52,7 @@ func Defaults() *GovernanceConfig {
 	}
 }
 
-const ParamSeverity = "severity"
-
 func (govCfg *GovernanceConfig) SetParam(analyzerID, key string, value any) {
-	if severity, isName := value.(string); isName && key == ParamSeverity {
-		govCfg.SetSeverity(analyzerID, severity)
-		return
-	}
 	if govCfg.Analyzers == nil {
 		govCfg.Analyzers = map[string]AnalyzerConfig{}
 	}
