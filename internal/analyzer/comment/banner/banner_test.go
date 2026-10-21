@@ -134,18 +134,6 @@ func runLanguageCases(t *testing.T, testCases []languageCase) {
 	}
 }
 
-func TestTopOfFile_SeverityParam(t *testing.T) {
-	t.Parallel()
-
-	config := &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
-		"top-of-file": {Enabled: true, Params: map[string]any{pass.ParamSeverity: "error"}},
-	}}
-	findings := analyzeSource(t, "a.ts", "// a note\nconst a = 1\n", config)
-	if len(findings) != 1 || findings[0].Severity != finding.SeverityError {
-		t.Fatalf("want one error-severity finding, got %+v", findings)
-	}
-}
-
 func TestTopOfFile_ConfiguredUnknownExtensionSkipped(t *testing.T) {
 	t.Parallel()
 

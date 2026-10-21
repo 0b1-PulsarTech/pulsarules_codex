@@ -32,8 +32,8 @@ func NewAnalyzer() *Analyzer {
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	pathReporter := pass.ResolveReporter(analyzer.pathReporter, ctx)
+	reporter := analyzer.reporter
+	pathReporter := analyzer.pathReporter
 	return ctx.EachSyntaxFile(func(fc pass.FileChange, file *syntax.File) []finding.Finding {
 		return append(
 			checkFile(fc, file, reporter),

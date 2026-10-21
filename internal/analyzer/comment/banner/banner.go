@@ -27,7 +27,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		if !ok {
 			return nil
 		}
-		return []finding.Finding{reporterFor(ctx, ID, fc.Extension).At(
+		return []finding.Finding{reporterFor(fc.Extension).At(
 			fc.Path,
 			lineNum,
 			"file starts with a comment",
@@ -44,12 +44,12 @@ func defaultExtensions() []string {
 	)
 }
 
-func reporterFor(ctx *pass.Context, id, extension string) finding.Reporter {
+func reporterFor(extension string) finding.Reporter {
 	severity := finding.SeverityWarning
 	if language.ForExtension(extension).ID == language.Go {
 		severity = finding.SeverityError
 	}
-	return pass.ResolveReporter(finding.NewReporter(id, severity, finding.CatSyntax), ctx)
+	return finding.NewReporter(ID, severity, finding.CatSyntax)
 }
 
 func Describe() pass.Descriptor {

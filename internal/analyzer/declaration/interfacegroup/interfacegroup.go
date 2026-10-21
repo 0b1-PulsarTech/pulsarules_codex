@@ -18,10 +18,7 @@ func NewAnalyzer() *Analyzer {
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := pass.ResolveReporter(
-		finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
-		ctx,
-	)
+	reporter := finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if fc.Generated {
 			return nil

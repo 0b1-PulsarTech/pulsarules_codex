@@ -45,7 +45,7 @@ func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Fi
 	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}
-	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	reporter := analyzer.reporter
 
 	modulePath, findings := resolveModuleOrFindings(reporter, ctx.GoModule())
 	if modulePath == "" {
@@ -79,7 +79,7 @@ func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []finding.Findin
 	if ctx.ProjectDir == "" || ctx.Sources == nil {
 		return nil
 	}
-	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	reporter := analyzer.reporter
 
 	modulePath, findings := resolveModuleOrFindings(reporter, ctx.GoModule())
 	if modulePath == "" {

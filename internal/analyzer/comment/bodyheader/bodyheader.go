@@ -28,7 +28,7 @@ func (analyzer *Analyzer) reporter() finding.Reporter {
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	const defaultMinLines = 2
-	reporter := pass.ResolveReporter(analyzer.reporter(), ctx)
+	reporter := analyzer.reporter()
 	minLines := ctx.Params(ID).Int(paramMinLines, defaultMinLines)
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if fc.Generated {

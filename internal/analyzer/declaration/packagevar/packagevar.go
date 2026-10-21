@@ -27,7 +27,7 @@ func NewAnalyzer() *Analyzer {
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	reporter := analyzer.reporter
 	dirScans := scanDirs(ctx)
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		dir := dirOf(fc.Path)

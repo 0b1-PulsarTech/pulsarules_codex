@@ -32,7 +32,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	maxFiles := params.Int(paramMaxFiles, 10)
 	exempt := exemptions{patterns: params.Strings(paramExempt, nil)}
 	eligible := pass.ExtensionFilter(ctx, ID, []string{".go"})
-	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	reporter := analyzer.reporter
 	anchors := changedAnchors(ctx, eligible)
 
 	var findings []finding.Finding

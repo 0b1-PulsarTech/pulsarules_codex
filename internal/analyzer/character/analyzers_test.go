@@ -135,51 +135,6 @@ func TestCarrierSeverityByClass(t *testing.T) {
 	}
 }
 
-func TestTypographicSeverityIsConfigurable(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name     string
-		severity string
-		want     finding.Severity
-	}{
-		{name: "default blocks", want: finding.SeverityError},
-		{
-			name:     "warning keeps the report without the gate",
-			severity: "warning",
-			want:     finding.SeverityWarning,
-		},
-		{name: "info reports quietly", severity: "info", want: finding.SeverityInfo},
-		{
-			name:     "unrecognized value keeps the blocking default",
-			severity: "fatal",
-			want:     finding.SeverityError,
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctx := markdownContext(t, "a\u2014b\n")
-			if testCase.severity != "" {
-				ctx.Config = &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
-					"typographic-markers": {
-						Enabled: true,
-						Params:  map[string]any{"severity": testCase.severity},
-					},
-				}}
-			}
-			got := NewTypographicAnalyzer().Analyze(ctx)
-			if len(got) != 1 {
-				t.Fatalf("findings = %+v, want exactly one", got)
-			}
-			if got[0].Severity != testCase.want {
-				t.Errorf("severity = %v, want %v", got[0].Severity, testCase.want)
-			}
-		})
-	}
-}
-
 func TestEachAnalyzerReadsOnlyItsOwnExtensions(t *testing.T) {
 	t.Parallel()
 

@@ -25,7 +25,7 @@ func NewAnalyzer() *Analyzer {
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	warning := pass.ResolveReporter(analyzer.reporter, ctx)
+	warning := analyzer.reporter
 	// A severity override on file-size downgrades the cap too, since both share one ID.
 	hardCap := finding.NewReporter(ID, finding.SeverityError, finding.CatProject)
 	eligible := pass.ExtensionFilter(ctx, ID, language.SourceExtensions())

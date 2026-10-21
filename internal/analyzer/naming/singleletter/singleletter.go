@@ -31,7 +31,7 @@ func (analyzer *Analyzer) reporter() finding.Reporter {
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	params := ctx.Params(ID)
 	cfg := settings{
-		reporter:     pass.ResolveReporter(analyzer.reporter(), ctx),
+		reporter:     analyzer.reporter(),
 		exportedOnly: params.Bool(paramExportedOnly, false),
 		allowed:      params.Strings(paramAllowedNames, nil),
 	}

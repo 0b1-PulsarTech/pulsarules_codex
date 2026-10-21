@@ -123,7 +123,7 @@ func TestAnalyzer_Analyze_ParamsOverride(t *testing.T) {
 		StagedRenames: []pass.Rename{{OldPath: "old.go", NewPath: "new.go", Score: 92}},
 		Config: &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
 			"commit-move-purity": {
-				Params: map[string]any{"min_similarity": 95, "severity": "error"},
+				Params: map[string]any{"min_similarity": 95},
 			},
 		}},
 	}
@@ -136,8 +136,8 @@ func TestAnalyzer_Analyze_ParamsOverride(t *testing.T) {
 			findings,
 		)
 	}
-	if findings[0].Severity != finding.SeverityError {
-		t.Fatalf("Severity = %d, want SeverityError when configured", findings[0].Severity)
+	if findings[0].Severity != finding.SeverityWarning {
+		t.Fatalf("Severity = %d, want the analyzer's own warning", findings[0].Severity)
 	}
 }
 

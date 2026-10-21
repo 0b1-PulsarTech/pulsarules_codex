@@ -91,15 +91,6 @@ func TestAnalyze_HonoursConfiguredSeverity(t *testing.T) {
 			}},
 			want: finding.SeverityWarning,
 		},
-		{
-			name: "configured severity overrides the default",
-			config: &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
-				"complexity": {
-					Params: map[string]any{"max_func_lines": 1, "severity": "error"},
-				},
-			}},
-			want: finding.SeverityError,
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

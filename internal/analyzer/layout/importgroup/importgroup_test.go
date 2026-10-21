@@ -353,13 +353,6 @@ func TestAnalyze_PathSeverityFromConfig(t *testing.T) {
 		want   finding.Severity
 	}{
 		{name: "default severity is warning", want: finding.SeverityWarning},
-		{
-			name: "configured severity overrides the default",
-			config: &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
-				pathID: {Params: map[string]any{"severity": "error"}},
-			}},
-			want: finding.SeverityError,
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

@@ -52,8 +52,8 @@ func (analyzer *Analyzer) resolveThresholds(ctx *pass.Context) thresholds {
 		maxComplexity: params.Int(paramMaxComplexity, analyzer.maxComplexity),
 		maxFuncLines:  params.Int(paramMaxFuncLines, analyzer.maxFuncLines),
 		maxParams:     params.Int(paramMaxParams, analyzer.maxParams),
-		warnReporter:  pass.ResolveReporter(analyzer.warnReporter, ctx),
-		infoReporter:  pass.ResolveReporter(analyzer.infoReporter, ctx),
+		warnReporter:  analyzer.warnReporter,
+		infoReporter:  analyzer.infoReporter,
 	}
 }
 

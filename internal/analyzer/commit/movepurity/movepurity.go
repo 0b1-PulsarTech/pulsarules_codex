@@ -32,7 +32,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	}
 	params := ctx.Params(ID)
 	minSimilarity := params.Int(ParamMinSimilarity, analyzer.minSimilarity)
-	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	reporter := analyzer.reporter
 
 	var moves *moveContext
 	if analyzer.reader != nil {

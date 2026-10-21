@@ -117,47 +117,15 @@ func TestAnalyze_NilRepo(t *testing.T) {
 	}
 }
 
-func TestAnalyze_SeverityParam(t *testing.T) {
+func TestAnalyze_DefaultSeverityBlocks(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct {
-		name     string
-		severity string
-		want     finding.Severity
-	}{
-		{name: "unset keeps the blocking default", want: finding.SeverityError},
-		{
-			name:     "configured warning overrides the default",
-			severity: "warning",
-			want:     finding.SeverityWarning,
-		},
-		{
-			name:     "unrecognized value keeps the blocking default",
-			severity: "bogus",
-			want:     finding.SeverityError,
-		},
+	got := NewAnalyzer(repoStub{branch: "spike/idea"}).Analyze(&pass.Context{})
+	if len(got) != 1 {
+		t.Fatalf("findings = %+v, want exactly one", got)
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctx := &pass.Context{}
-			if testCase.severity != "" {
-				ctx.Config = &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
-					ID: {
-						Enabled: true,
-						Params:  map[string]any{"severity": testCase.severity},
-					},
-				}}
-			}
-			got := NewAnalyzer(repoStub{branch: "spike/idea"}).Analyze(ctx)
-			if len(got) != 1 {
-				t.Fatalf("findings = %+v, want exactly one", got)
-			}
-			if got[0].Severity != testCase.want {
-				t.Errorf("severity = %v, want %v", got[0].Severity, testCase.want)
-			}
-		})
+	if got[0].Severity != finding.SeverityError {
+		t.Errorf("severity = %v, want %v", got[0].Severity, finding.SeverityError)
 	}
 }
 

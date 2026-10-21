@@ -21,7 +21,7 @@ func (analyzer *Analyzer) reporter() finding.Reporter {
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := pass.ResolveReporter(analyzer.reporter(), ctx)
+	reporter := analyzer.reporter()
 	return ctx.EachSyntaxFile(func(fc pass.FileChange, file *syntax.File) []finding.Finding {
 		if fc.Generated {
 			return nil

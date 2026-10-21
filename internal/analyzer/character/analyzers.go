@@ -43,9 +43,9 @@ func NewTextAnalyzer() *TextAnalyzer {
 
 func (analyzer *TextAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporters := textReporters{
-		carrier:     pass.ResolveReporter(analyzer.reporters.carrier, ctx),
-		contextual:  pass.ResolveReporter(analyzer.reporters.contextual, ctx),
-		frontmatter: pass.ResolveReporter(analyzer.reporters.frontmatter, ctx),
+		carrier:     analyzer.reporters.carrier,
+		contextual:  analyzer.reporters.contextual,
+		frontmatter: analyzer.reporters.frontmatter,
 	}
 	eligible := pass.ExtensionFilter(ctx, TextID, markedExtensions())
 	return eachMarkedFile(ctx, eligible, func(fc pass.FileChange, src string) []finding.Finding {
@@ -82,7 +82,7 @@ func NewTypographicAnalyzer() *TypographicAnalyzer {
 }
 
 func (analyzer *TypographicAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	reporter := analyzer.reporter
 	eligible := pass.ExtensionFilter(ctx, TypographicID, markedExtensions())
 	return eachMarkedFile(ctx, eligible, func(fc pass.FileChange, src string) []finding.Finding {
 		return checkTypographic(fc, src, reporter)

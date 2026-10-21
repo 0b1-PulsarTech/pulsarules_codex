@@ -14,19 +14,19 @@ type Finding struct {
 }
 
 type Reporter struct {
-	AnalyzerID string
-	Severity   Severity
+	analyzerID string
+	severity   Severity
 	category   Category
 }
 
 func NewReporter(analyzerID string, severity Severity, category Category) Reporter {
-	return Reporter{AnalyzerID: analyzerID, Severity: severity, category: category}
+	return Reporter{analyzerID: analyzerID, severity: severity, category: category}
 }
 
 func (reporter Reporter) At(file string, line int, message, suggestion string) Finding {
 	return Finding{
-		AnalyzerID: reporter.AnalyzerID,
-		Severity:   reporter.Severity,
+		AnalyzerID: reporter.analyzerID,
+		Severity:   reporter.severity,
 		Category:   reporter.category,
 		File:       file,
 		Line:       line,
@@ -37,8 +37,8 @@ func (reporter Reporter) At(file string, line int, message, suggestion string) F
 
 func (reporter Reporter) New(message string) Finding {
 	return Finding{
-		AnalyzerID: reporter.AnalyzerID,
-		Severity:   reporter.Severity,
+		AnalyzerID: reporter.analyzerID,
+		Severity:   reporter.severity,
 		Category:   reporter.category,
 		Message:    message,
 	}

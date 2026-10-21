@@ -29,8 +29,8 @@ func NewAnalyzer() *Analyzer {
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reps := fileReporters{
-		shadow: pass.ResolveReporter(analyzer.shadowReporter, ctx),
-		reuse:  pass.ResolveReporter(analyzer.reuseReporter, ctx),
+		shadow: analyzer.shadowReporter,
+		reuse:  analyzer.reuseReporter,
 	}
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		return analyzer.checkFile(ctx.ASTCache.FileSet(), fc, file, reps)

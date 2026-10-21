@@ -27,7 +27,7 @@ func NewAnalyzer() *Analyzer {
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	ml := analyzer.resolveMaxLines(ctx)
-	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
+	reporter := analyzer.reporter
 	extFilter := pass.ExtensionFilter(ctx, ID, language.SourceExtensions())
 	eligible := func(fc pass.FileChange) bool {
 		return extFilter(fc) && language.ForExtension(fc.Extension).ID != ""

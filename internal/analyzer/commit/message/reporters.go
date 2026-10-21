@@ -1,9 +1,6 @@
 package message
 
-import (
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-)
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 
 type rule int
 
@@ -63,13 +60,6 @@ func defaultRuleReporters() ruleReporters {
 	var reporters ruleReporters
 	for index, spec := range ruleSpecs() {
 		reporters[index] = finding.NewReporter(spec.id, spec.severity, finding.CatCommit)
-	}
-	return reporters
-}
-
-func (reporters ruleReporters) resolved(ctx *pass.Context) ruleReporters {
-	for index := range reporters {
-		reporters[index] = pass.ResolveReporter(reporters[index], ctx)
 	}
 	return reporters
 }

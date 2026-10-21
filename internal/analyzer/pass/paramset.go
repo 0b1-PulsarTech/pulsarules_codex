@@ -4,8 +4,6 @@ import (
 	"maps"
 	"strconv"
 	"strings"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 )
 
 type ParamSet map[string]any
@@ -92,15 +90,6 @@ func (params ParamSet) String(key string, fallback string) string {
 		return fallback
 	}
 	return val
-}
-
-const ParamSeverity = "severity"
-
-func (params ParamSet) Severity(fallback finding.Severity) finding.Severity {
-	if severity, err := finding.ParseSeverity(params.String(ParamSeverity, "")); err == nil {
-		return severity
-	}
-	return fallback
 }
 
 func (ctx *Context) Params(analyzerID string) ParamSet {

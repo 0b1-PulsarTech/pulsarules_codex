@@ -25,7 +25,7 @@ func (analyzer *Analyzer) reporter() finding.Reporter {
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	reporter := pass.ResolveReporter(analyzer.reporter(), ctx)
+	reporter := analyzer.reporter()
 	return ctx.EachGoFile(func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if !fc.IsTest || fc.Generated {
 			return nil
