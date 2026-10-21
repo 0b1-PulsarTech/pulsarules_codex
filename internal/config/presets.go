@@ -2,6 +2,7 @@ package config
 
 import (
 	"maps"
+	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
@@ -14,11 +15,17 @@ const (
 	PresetMinimal     = "minimal"
 )
 
-func presetTable() map[string]map[string]pass.AnalyzerConfig {
+type preset struct {
+	name      string
+	analyzers map[string]pass.AnalyzerConfig
+}
+
+func presetTable() []preset {
 	// Only overrides relative to the default are listed; absent analyzers stay enabled.
-	return map[string]map[string]pass.AnalyzerConfig{
-		PresetMinimal: minimalAnalyzers(),
-		PresetStrict:  strictAnalyzers(),
+	return []preset{
+		{name: PresetRecommended},
+		{name: PresetStrict, analyzers: strictAnalyzers()},
+		{name: PresetMinimal, analyzers: minimalAnalyzers()},
 	}
 }
 
@@ -77,25 +84,27 @@ func strictAnalyzers() map[string]pass.AnalyzerConfig {
 }
 
 func (govCfg *GovernanceConfig) ApplyPreset() {
-	overrides, ok := presetTable()[govCfg.Preset]
-	// Unknown presets are left alone; callers validate the name before this.
-	if !ok {
-		return
+	for _, listed := range presetTable() {
+		// Unknown presets are left alone; callers validate the name before this.
+		if listed.name != govCfg.Preset || listed.analyzers == nil {
+			continue
+		}
+		if govCfg.Analyzers == nil {
+			govCfg.Analyzers = make(map[string]pass.AnalyzerConfig)
+		}
+		maps.Copy(govCfg.Analyzers, listed.analyzers)
 	}
-	if govCfg.Analyzers == nil {
-		govCfg.Analyzers = make(map[string]pass.AnalyzerConfig)
-	}
-	maps.Copy(govCfg.Analyzers, overrides)
 }
 
 func ValidPreset(name string) bool {
-	if name == PresetRecommended {
-		return true
-	}
-	_, ok := presetTable()[name]
-	return ok
+	return slices.Contains(Presets(), name)
 }
 
 func Presets() []string {
-	return []string{PresetRecommended, PresetStrict, PresetMinimal}
+	table := presetTable()
+	names := make([]string, len(table))
+	for idx, listed := range table {
+		names[idx] = listed.name
+	}
+	return names
 }

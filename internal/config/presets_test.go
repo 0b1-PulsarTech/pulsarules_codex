@@ -161,3 +161,37 @@ func TestApplyPreset_MinimalSingleLetters(t *testing.T) {
 		t.Fatalf("single-letter-name = %+v, want enabled with exported_only", got)
 	}
 }
+
+func TestPresetTable(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		preset     string
+		wantValid  bool
+		wantNilMap bool
+	}{
+		{
+			name: "recommended lists no override", preset: PresetRecommended,
+			wantValid: true, wantNilMap: true,
+		},
+		{name: "strict lists overrides", preset: PresetStrict, wantValid: true},
+		{name: "minimal lists overrides", preset: PresetMinimal, wantValid: true},
+		{name: "empty is not a preset", preset: ""},
+		{name: "case matters", preset: "Strict"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := ValidPreset(testCase.preset); got != testCase.wantValid {
+				t.Errorf("ValidPreset(%q) = %v, want %v", testCase.preset, got, testCase.wantValid)
+			}
+			cfg := &GovernanceConfig{Preset: testCase.preset}
+			cfg.ApplyPreset()
+			if (cfg.Analyzers == nil) != (testCase.wantNilMap || !testCase.wantValid) {
+				t.Errorf("Analyzers = %v after ApplyPreset(%q)", cfg.Analyzers, testCase.preset)
+			}
+		})
+	}
+}
