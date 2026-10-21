@@ -379,3 +379,61 @@ func TestOpencodeInstall_GoplsLanguages(t *testing.T) {
 		})
 	}
 }
+
+//nolint:paralleltest // fakeToolsOnPath needs t.Setenv, which bars t.Parallel.
+func TestOpencodeInstall_WiresEveryAvailableServer(t *testing.T) {
+	testCases := []struct {
+		name      string
+		languages detect.Set
+		tools     []string
+		want      []string
+		wantNot   []string
+	}{
+		{
+			name:      "go and dart projects get both servers",
+			languages: detect.NewSet(language.Go, language.Dart),
+			tools:     []string{"gopls", "dart"},
+			want:      []string{`"gopls"`, `"dart"`, `"mcp-server"`},
+		},
+		{
+			name:      "a dart project gets only the dart server",
+			languages: detect.NewSet(language.Dart),
+			tools:     []string{"gopls", "dart"},
+			want:      []string{`"dart"`},
+			wantNot:   []string{`"gopls"`},
+		},
+		{
+			name:      "a server whose tool is missing is left out",
+			languages: detect.NewSet(language.Go, language.Dart),
+			tools:     []string{"gopls"},
+			want:      []string{`"gopls"`},
+			wantNot:   []string{`"dart"`},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			fakeToolsOnPath(t, testCase.tools...)
+			base := t.TempDir()
+			ctx := newTestContext(t, base, []string{"go-style"})
+			ctx.Languages = testCase.languages
+			ctx.NoMCP = false
+			if _, err := (opencodeTarget{}).Install(ctx); err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+			config, err := os.ReadFile(filepath.Join(base, "opencode.json"))
+			if err != nil {
+				t.Fatalf("read opencode.json: %v", err)
+			}
+			for _, want := range testCase.want {
+				if !strings.Contains(string(config), want) {
+					t.Errorf("config lacks %s: %s", want, config)
+				}
+			}
+			for _, wantNot := range testCase.wantNot {
+				if strings.Contains(string(config), wantNot) {
+					t.Errorf("config has %s: %s", wantNot, config)
+				}
+			}
+		})
+	}
+}

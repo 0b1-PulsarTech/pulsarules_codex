@@ -17,7 +17,7 @@ func TestUnwireConfig_RemovesOurWiring(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	if err := WireConfig(projectDir, WithGopls); err != nil {
+	if err := WireConfig(projectDir, testServers()); err != nil {
 		t.Fatalf("WireConfig: %v", err)
 	}
 
@@ -302,7 +302,7 @@ func TestUnwireConfig_Idempotent(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	if err := WireConfig(projectDir, WithGopls); err != nil {
+	if err := WireConfig(projectDir, testServers()); err != nil {
 		t.Fatalf("WireConfig: %v", err)
 	}
 	if _, err := UnwireConfig(projectDir); err != nil {
@@ -359,5 +359,23 @@ func TestUnwireConfig_UnreadableSections(t *testing.T) {
 				t.Errorf("file = %q (%v), want it untouched", got, readErr)
 			}
 		})
+	}
+}
+
+func TestUnwireConfig_RemovesEveryManagedServer(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	seed := `{"mcp":{"gopls":{"type":"local"},"dart":{"type":"local"},` +
+		`"mine":{"type":"local","command":["mine"]}}}`
+	seedFile(t, filepath.Join(projectDir, "opencode.json"), seed)
+
+	changed, err := UnwireConfig(projectDir)
+	if err != nil || !changed {
+		t.Fatalf("UnwireConfig = %v, %v, want true, nil", changed, err)
+	}
+	config := readConfig(t, projectDir)
+	if _, ok := config.MCP["mine"]; !ok || len(config.MCP) != 1 {
+		t.Errorf("mcp = %v, want only the user's own server", config.MCP)
 	}
 }

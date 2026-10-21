@@ -39,7 +39,7 @@ func TestWriteMCP_FreshFile(t *testing.T) {
 func TestRenderServers_EscapesRepoDir(t *testing.T) {
 	t.Parallel()
 
-	servers := []server{{Name: "gopls", Command: "gopls", Args: []string{"mcp"}}}
+	servers := []Server{{Name: "gopls", Command: "gopls", Args: []string{"mcp"}}}
 	testCases := []struct {
 		name    string
 		repoDir string
@@ -225,4 +225,14 @@ func readServer(tb testing.TB, repoDir, name string) mcpServer {
 		tb.Fatalf("missing server %q in %+v", name, config.MCPServers)
 	}
 	return server
+}
+
+func TestManagedNames(t *testing.T) {
+	t.Parallel()
+
+	got := ManagedNames()
+	want := []string{"dart", "gopls"}
+	if !slices.Equal(got, want) {
+		t.Errorf("ManagedNames = %v, want %v", got, want)
+	}
 }

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
@@ -22,14 +23,7 @@ const legacyAgentsInstructionGlob = ".opencode/AGENTS.md"
 
 const legacySkillsInstructionGlob = SkillsSubdir + "/*/SKILL.md"
 
-type GoplsWiring string
-
-const (
-	WithGopls    GoplsWiring = "with-gopls"
-	WithoutGopls GoplsWiring = "without-gopls"
-)
-
-func WireConfig(projectDir string, gopls GoplsWiring) error {
+func WireConfig(projectDir string, servers []mcp.Server) error {
 	path := filepath.Join(projectDir, configFile)
 	doc, err := jsondoc.Load(path)
 	if err != nil {
@@ -46,10 +40,8 @@ func WireConfig(projectDir string, gopls GoplsWiring) error {
 	if err = mergeSkills(doc); err != nil {
 		return fmt.Errorf("merge skills: %w", err)
 	}
-	if gopls == WithGopls {
-		if err = mergeMCP(doc); err != nil {
-			return fmt.Errorf("merge gopls mcp: %w", err)
-		}
+	if err = mergeMCP(doc, servers); err != nil {
+		return fmt.Errorf("merge mcp: %w", err)
 	}
 
 	if err = doc.Save(); err != nil {
@@ -75,22 +67,34 @@ func mergeInstructions(doc *jsondoc.Document) error {
 	return jsondoc.SetSection(doc, "instructions", instructions)
 }
 
-func mergeMCP(doc *jsondoc.Document) error {
-	servers, err := jsondoc.Section[map[string]json.RawMessage](doc, "mcp")
+type serverEntry struct {
+	Command []string `json:"command"`
+	Enabled bool     `json:"enabled"`
+	Type    string   `json:"type"`
+}
+
+func mergeMCP(doc *jsondoc.Document, servers []mcp.Server) error {
+	if len(servers) == 0 {
+		return nil
+	}
+	merged, err := jsondoc.Section[map[string]json.RawMessage](doc, "mcp")
 	if err != nil {
 		return err
 	}
-	if servers == nil {
-		servers = map[string]json.RawMessage{}
+	if merged == nil {
+		merged = map[string]json.RawMessage{}
 	}
-	gopls, err := json.Marshal(map[string]any{
-		"type":    "local",
-		"command": []string{"gopls", "mcp"},
-		"enabled": true,
-	})
-	if err != nil {
-		return fmt.Errorf("marshal gopls mcp: %w", err)
+	for _, srv := range servers {
+		entry := serverEntry{
+			Type:    "local",
+			Command: append([]string{srv.Command}, srv.Args...),
+			Enabled: true,
+		}
+		raw, marshalErr := json.Marshal(entry)
+		if marshalErr != nil {
+			return fmt.Errorf("marshal %s mcp: %w", srv.Name, marshalErr)
+		}
+		merged[srv.Name] = raw
 	}
-	servers["gopls"] = gopls
-	return jsondoc.SetSection(doc, "mcp", servers)
+	return jsondoc.SetSection(doc, "mcp", merged)
 }

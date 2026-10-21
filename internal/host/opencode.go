@@ -7,6 +7,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
 )
 
@@ -30,15 +31,13 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 	if err := installSkills(ctx, dest, &report); err != nil {
 		return report, err
 	}
-	gopls := opencode.WithoutGopls
+	var servers []mcp.Server
 	if !ctx.NoMCP {
-		generated, err := goplsSkill(ctx, dest, &report)
-		if err != nil {
+		if err := goplsSkill(ctx, dest, &report); err != nil {
 			return report, err
 		}
-		if generated {
-			gopls = opencode.WithGopls
-		}
+		// A skipped server is reported by the claude target; opencode wires what it can run.
+		servers, _ = mcp.Available(ctx.Languages)
 	}
 	if err := writeAgents(ctx, &report); err != nil {
 		return report, err
@@ -46,7 +45,7 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 	if err := retireLegacyAgents(ctx.Base, &report); err != nil {
 		return report, err
 	}
-	if err := opencode.WireConfig(ctx.Base, gopls); err != nil {
+	if err := opencode.WireConfig(ctx.Base, servers); err != nil {
 		return report, fmt.Errorf("wire opencode config: %w", err)
 	}
 	if !ctx.NoHooks {

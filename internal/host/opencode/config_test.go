@@ -6,13 +6,15 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 )
 
 func TestWireConfig_FreshFile(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	if err := WireConfig(projectDir, WithGopls); err != nil {
+	if err := WireConfig(projectDir, testServers()); err != nil {
 		t.Fatalf("WireConfig: %v", err)
 	}
 	config := readConfig(t, projectDir)
@@ -34,12 +36,15 @@ func TestWireConfig_FreshFile(t *testing.T) {
 	if !slices.Contains(config.Skills.Paths, SkillsSubdir) {
 		t.Errorf("skills.paths missing %q, got %v", SkillsSubdir, config.Skills.Paths)
 	}
-	gopls, ok := config.MCP["gopls"]
-	if !ok {
-		t.Fatalf("missing gopls mcp server, got %v", config.MCP)
-	}
-	if gopls.Type != "local" || !gopls.Enabled {
-		t.Errorf("gopls server = %+v, want type=local enabled=true", gopls)
+	wantCommands := map[string][]string{"gopls": {"gopls", "mcp"}, "dart": {"dart", "mcp-server"}}
+	for name, wantCommand := range wantCommands {
+		server, ok := config.MCP[name]
+		if !ok {
+			t.Fatalf("missing %s mcp server, got %v", name, config.MCP)
+		}
+		if server.Type != "local" || !server.Enabled || !slices.Equal(server.Command, wantCommand) {
+			t.Errorf("%s server = %+v, want local enabled %v", name, server, wantCommand)
+		}
 	}
 }
 
@@ -88,7 +93,7 @@ func TestWireConfig_LegacyInstructionEntry(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := WireConfig(projectDir, WithoutGopls); err != nil {
+	if err := WireConfig(projectDir, nil); err != nil {
 		t.Fatalf("WireConfig: %v", err)
 	}
 
@@ -120,7 +125,7 @@ func TestWireConfig_LegacySkillsGlob(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := WireConfig(projectDir, WithoutGopls); err != nil {
+	if err := WireConfig(projectDir, nil); err != nil {
 		t.Fatalf("WireConfig: %v", err)
 	}
 
@@ -136,16 +141,23 @@ func TestWireConfig_LegacySkillsGlob(t *testing.T) {
 	}
 }
 
-func TestWireConfig_NoGopls(t *testing.T) {
+func TestWireConfig_NoServers(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	if err := WireConfig(projectDir, WithoutGopls); err != nil {
+	if err := WireConfig(projectDir, nil); err != nil {
 		t.Fatalf("WireConfig: %v", err)
 	}
 	config := readConfig(t, projectDir)
 	if _, ok := config.MCP["gopls"]; ok {
-		t.Errorf("gopls server present with gopls=WithoutGopls")
+		t.Errorf("gopls server present with gopls=nil")
+	}
+}
+
+func testServers() []mcp.Server {
+	return []mcp.Server{
+		{Name: "gopls", Command: "gopls", Args: []string{"mcp"}},
+		{Name: "dart", Command: "dart", Args: []string{"mcp-server"}},
 	}
 }
 
@@ -195,7 +207,7 @@ func wireTwice(tb testing.TB, projectDir string) {
 	tb.Helper()
 
 	for range 2 {
-		if err := WireConfig(projectDir, WithGopls); err != nil {
+		if err := WireConfig(projectDir, testServers()); err != nil {
 			tb.Fatalf("WireConfig: %v", err)
 		}
 	}

@@ -41,12 +41,10 @@ func Remove(repoDir string) (changed bool, err error) {
 func removeManagedServers(servers map[string]json.RawMessage) bool {
 	changed := false
 	// Uninstall cannot know the detected languages, so every managed server is removed.
-	for _, srvs := range managedServersByLanguage() {
-		for _, srv := range srvs {
-			if _, present := servers[srv.Name]; present {
-				delete(servers, srv.Name)
-				changed = true
-			}
+	for _, name := range ManagedNames() {
+		if _, present := servers[name]; present {
+			delete(servers, name)
+			changed = true
 		}
 	}
 	return changed

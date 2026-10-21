@@ -25,7 +25,7 @@ func wireClaudeMCP(ctx Context, skillsDir string, report *Report) error {
 		}
 		report.Warn("%s not on PATH; skipping its MCP server", name)
 	}
-	if _, err = goplsSkill(ctx, skillsDir, report); err != nil {
+	if err = goplsSkill(ctx, skillsDir, report); err != nil {
 		return fmt.Errorf("generate gopls skill: %w", err)
 	}
 	if len(wired) > 0 {
@@ -72,23 +72,20 @@ func generateGoplsSkill(templates fs.FS, skillsDir, instructions string, report 
 	return nil
 }
 
-func goplsSkill(ctx Context, dest string, report *Report) (generated bool, err error) {
+func goplsSkill(ctx Context, dest string, report *Report) error {
 	switch {
 	case !ctx.Languages.Has(language.Go):
 		// No Go detected: neither the server nor its navigation skill applies.
-		return false, nil
+		return nil
 	case mcp.GoplsOnPath():
-		instructions, instructionsErr := goplsInstructions()
-		if instructionsErr != nil {
-			return false, instructionsErr
+		instructions, err := goplsInstructions()
+		if err != nil {
+			return err
 		}
-		if err = generateGoplsSkill(ctx.Templates, dest, instructions, report); err != nil {
-			return false, err
-		}
-		return true, nil
+		return generateGoplsSkill(ctx.Templates, dest, instructions, report)
 	default:
 		// A missing tool is a warning, never an install failure.
 		report.Warn(noGoplsWarning)
-		return false, nil
+		return nil
 	}
 }

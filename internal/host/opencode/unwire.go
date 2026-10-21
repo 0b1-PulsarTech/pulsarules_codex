@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
@@ -75,11 +76,14 @@ func stripInstructions(instructions *[]string) bool {
 }
 
 func stripManagedMCP(servers map[string]json.RawMessage) bool {
-	if _, present := servers["gopls"]; !present {
-		return false
+	changed := false
+	for _, name := range mcp.ManagedNames() {
+		if _, present := servers[name]; present {
+			delete(servers, name)
+			changed = true
+		}
 	}
-	delete(servers, "gopls")
-	return true
+	return changed
 }
 
 func stripSkills(doc *jsondoc.Document) (bool, error) {

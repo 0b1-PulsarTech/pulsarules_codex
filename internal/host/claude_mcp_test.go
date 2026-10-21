@@ -205,10 +205,17 @@ func TestClaudeInstall_GoplsLanguages(t *testing.T) {
 
 func fakeGoplsOnPath(tb testing.TB) {
 	tb.Helper()
+	fakeToolsOnPath(tb, "gopls")
+}
+
+func fakeToolsOnPath(tb testing.TB, names ...string) {
+	tb.Helper()
 	dir := tb.TempDir()
-	script := "#!/bin/sh\necho fake gopls instructions\n"
-	if err := os.WriteFile(filepath.Join(dir, "gopls"), []byte(script), 0o700); err != nil {
-		tb.Fatalf("write fake gopls: %v", err)
+	script := "#!/bin/sh\necho fake instructions\n"
+	for _, name := range names {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(script), 0o700); err != nil {
+			tb.Fatalf("write fake %s: %v", name, err)
+		}
 	}
 	tb.Setenv("PATH", dir)
 }
@@ -247,12 +254,13 @@ func TestGoplsSkill_Branches(t *testing.T) {
 			ctx.Languages = testCase.languages
 
 			var report Report
-			generated, err := goplsSkill(ctx, t.TempDir(), &report)
-			if err != nil {
+			dest := t.TempDir()
+			if err := goplsSkill(ctx, dest, &report); err != nil {
 				t.Fatalf("goplsSkill: %v", err)
 			}
-			if generated != testCase.wantGenerated {
-				t.Errorf("generated = %v, want %v", generated, testCase.wantGenerated)
+			_, statErr := os.Stat(filepath.Join(dest, "gopls-navigation", "SKILL.md"))
+			if generated := statErr == nil; generated != testCase.wantGenerated {
+				t.Errorf("skill generated = %v, want %v", statErr == nil, testCase.wantGenerated)
 			}
 			warned := strings.Contains(strings.Join(report.Warnings, "\n"), noGoplsWarning)
 			if warned != testCase.wantWarn {
