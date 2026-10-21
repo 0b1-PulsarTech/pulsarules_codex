@@ -8,15 +8,8 @@ import (
 )
 
 func toAnalysisConfig(cfg *config.GovernanceConfig) *pass.AnalysisConfig {
-	analyzers := make(map[string]pass.AnalyzerConfig, len(cfg.Analyzers))
-	for id, ac := range cfg.Analyzers {
-		analyzers[id] = pass.AnalyzerConfig{
-			Enabled: ac.Enabled,
-			Params:  ac.Params,
-		}
-	}
 	return &pass.AnalysisConfig{
-		Analyzers:        analyzers,
+		Analyzers:        cfg.Analyzers,
 		IncludeGenerated: cfg.IncludeGenerated,
 		TestGlobs:        cfg.TestGlobs,
 		Overrides:        slices.Concat(cfg.SeverityRules, cfg.Overrides),
@@ -25,7 +18,7 @@ func toAnalysisConfig(cfg *config.GovernanceConfig) *pass.AnalysisConfig {
 }
 
 func enabledDelegated(
-	entries []pass.DelegatedCommand, analyzers map[string]config.AnalyzerConfig,
+	entries []pass.DelegatedCommand, analyzers map[string]pass.AnalyzerConfig,
 ) []pass.DelegatedCommand {
 	// Dropped here: the analyzers under internal/analyzer/ may not read Analyzers directly.
 	return slices.DeleteFunc(slices.Clone(entries), func(entry pass.DelegatedCommand) bool {

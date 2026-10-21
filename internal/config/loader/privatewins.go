@@ -16,7 +16,7 @@ func privateWinsOverrides(
 	kept := make([]projectfile.OverrideEntry, 0, len(base.Overrides))
 	for _, entry := range base.Overrides {
 		trimmed := maps.Clone(entry.Analyzers)
-		maps.DeleteFunc(trimmed, func(id string, _ projectfile.OverrideRules) bool {
+		maps.DeleteFunc(trimmed, func(id string, _ projectfile.AnalyzerEntry) bool {
 			project, _, _ := strings.Cut(id, "/")
 			return isOff(project)
 		})

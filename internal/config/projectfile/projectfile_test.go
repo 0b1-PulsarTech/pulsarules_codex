@@ -48,7 +48,7 @@ func TestDecodeFile(t *testing.T) {
 		},
 		Overrides: []OverrideEntry{{
 			Files: []string{"web/test/**"},
-			Analyzers: map[string]OverrideRules{
+			Analyzers: map[string]AnalyzerEntry{
 				"single-letter-name": {Enabled: &disabled},
 				"file-size":          {Severity: "warning"},
 			},

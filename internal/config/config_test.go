@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
 )
 
@@ -35,7 +36,7 @@ func TestSetParam(t *testing.T) {
 
 			cfg := Defaults()
 			if testCase.seeded != nil {
-				cfg.Analyzers[analyzerID] = AnalyzerConfig{Params: testCase.seeded}
+				cfg.Analyzers[analyzerID] = pass.AnalyzerConfig{Params: testCase.seeded}
 			}
 			cfg.SetParam(analyzerID, key, value)
 

@@ -23,13 +23,11 @@ func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 		govCfg.Overrides = append(govCfg.Overrides, toCoreOverride(override))
 	}
 	for _, entry := range file.Delegated {
-		govCfg.Delegated = append(govCfg.Delegated, pass.DelegatedCommand{
-			ID:     entry.ID,
-			Dir:    entry.Dir,
-			Format: entry.Format,
-			Rule:   entry.Rule,
-			Run:    slices.Clone(entry.Run),
-		})
+		// Same fields as core.DelegatedCommand; the yaml tags live on the file side only.
+		// The conversion copies reference fields shallowly: clone any new one below.
+		command := pass.DelegatedCommand(entry)
+		command.Run = slices.Clone(entry.Run)
+		govCfg.Delegated = append(govCfg.Delegated, command)
 	}
 	return file.CheckOverrides(govCfg)
 }
@@ -55,11 +53,11 @@ func (file *File) CheckOverrides(govCfg *config.GovernanceConfig) error {
 
 func applyAnalyzer(govCfg *config.GovernanceConfig, id string, entry AnalyzerEntry) {
 	if govCfg.Analyzers == nil {
-		govCfg.Analyzers = map[string]config.AnalyzerConfig{}
+		govCfg.Analyzers = map[string]pass.AnalyzerConfig{}
 	}
 	current, found := govCfg.Analyzers[id]
 	if !found {
-		current = config.AnalyzerConfig{Enabled: true}
+		current = pass.AnalyzerConfig{Enabled: true}
 	}
 	// Enabled is a pointer: absent keeps the current choice, false switches the analyzer off.
 	if entry.Enabled != nil {
@@ -80,9 +78,11 @@ func applyAnalyzer(govCfg *config.GovernanceConfig, id string, entry AnalyzerEnt
 func toCoreOverride(entry OverrideEntry) pass.Override {
 	analyzers := make(map[string]pass.OverrideConfig, len(entry.Analyzers))
 	for id, rules := range entry.Analyzers {
-		analyzers[id] = pass.OverrideConfig{
-			Enabled: rules.Enabled, Severity: rules.Severity, Params: maps.Clone(rules.Params),
-		}
+		// Same fields as core.OverrideConfig; a field added to one breaks this conversion.
+		// The conversion copies reference fields shallowly: clone any new one below.
+		override := pass.OverrideConfig(rules)
+		override.Params = maps.Clone(rules.Params)
+		analyzers[id] = override
 	}
 	return pass.NewOverride(entry.Files, analyzers)
 }

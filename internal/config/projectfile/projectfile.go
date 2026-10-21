@@ -60,13 +60,7 @@ type AnalyzerEntry struct {
 
 type OverrideEntry struct {
 	Files     []string                 `yaml:"files"`
-	Analyzers map[string]OverrideRules `yaml:"analyzers"`
-}
-
-type OverrideRules struct {
-	Enabled  *bool          `yaml:"enabled"`
-	Severity string         `yaml:"severity"`
-	Params   map[string]any `yaml:"params"`
+	Analyzers map[string]AnalyzerEntry `yaml:"analyzers"`
 }
 
 type DelegatedEntry struct {

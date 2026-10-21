@@ -5,6 +5,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 const (
@@ -13,16 +14,16 @@ const (
 	PresetMinimal     = "minimal"
 )
 
-func presetTable() map[string]map[string]AnalyzerConfig {
+func presetTable() map[string]map[string]pass.AnalyzerConfig {
 	// Only overrides relative to the default are listed; absent analyzers stay enabled.
-	return map[string]map[string]AnalyzerConfig{
+	return map[string]map[string]pass.AnalyzerConfig{
 		PresetMinimal: minimalAnalyzers(),
 		PresetStrict:  strictAnalyzers(),
 	}
 }
 
-func minimalAnalyzers() map[string]AnalyzerConfig {
-	return map[string]AnalyzerConfig{
+func minimalAnalyzers() map[string]pass.AnalyzerConfig {
+	return map[string]pass.AnalyzerConfig{
 		// AST and arch analyzers are disabled in minimal mode.
 		"control-flow":       {Enabled: false},
 		"shadowing":          {Enabled: false},
@@ -54,14 +55,14 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 	}
 }
 
-func strictAnalyzers() map[string]AnalyzerConfig {
+func strictAnalyzers() map[string]pass.AnalyzerConfig {
 	const (
 		strictMaxFileLines = 180
 		strictMaxFuncLines = 50
 		strictMaxParams    = 4
 		strictComplexity   = 10
 	)
-	return map[string]AnalyzerConfig{
+	return map[string]pass.AnalyzerConfig{
 		// Same number as the analyzer's default; stated here anyway since this
 		// is the policy layer a caller reads to learn the project's limit.
 		filesize.ID: {Enabled: true, Params: map[string]any{
@@ -82,7 +83,7 @@ func (govCfg *GovernanceConfig) ApplyPreset() {
 		return
 	}
 	if govCfg.Analyzers == nil {
-		govCfg.Analyzers = make(map[string]AnalyzerConfig)
+		govCfg.Analyzers = make(map[string]pass.AnalyzerConfig)
 	}
 	maps.Copy(govCfg.Analyzers, overrides)
 }

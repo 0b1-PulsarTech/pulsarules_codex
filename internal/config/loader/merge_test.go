@@ -62,10 +62,10 @@ func mergeListCases() []mergeCase {
 			base:    "version: 1\n" + overrideOf("a", "severity: info"),
 			private: "version: 1\n" + overrideOf("b", "enabled: false"),
 			want: projectfile.File{Overrides: []projectfile.OverrideEntry{
-				{Files: []string{"a"}, Analyzers: map[string]projectfile.OverrideRules{
+				{Files: []string{"a"}, Analyzers: map[string]projectfile.AnalyzerEntry{
 					"file-size": {Severity: "info"},
 				}},
-				{Files: []string{"b"}, Analyzers: map[string]projectfile.OverrideRules{
+				{Files: []string{"b"}, Analyzers: map[string]projectfile.AnalyzerEntry{
 					"file-size": {Enabled: new(false)},
 				}},
 			}},
@@ -92,10 +92,10 @@ func mergeEntryCases() []mergeCase {
 			base:    "version: 1\n" + overrideOf("a", "severity: info"),
 			private: "version: 1\n" + overrideOf("b", "enabled: false"),
 			want: projectfile.File{Overrides: []projectfile.OverrideEntry{
-				{Files: []string{"a"}, Analyzers: map[string]projectfile.OverrideRules{
+				{Files: []string{"a"}, Analyzers: map[string]projectfile.AnalyzerEntry{
 					"file-size": {Severity: "info"},
 				}},
-				{Files: []string{"b"}, Analyzers: map[string]projectfile.OverrideRules{
+				{Files: []string{"b"}, Analyzers: map[string]projectfile.AnalyzerEntry{
 					"file-size": {Enabled: new(false)},
 				}},
 			}},

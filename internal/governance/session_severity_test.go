@@ -21,7 +21,7 @@ func TestToAnalysisConfig(t *testing.T) {
 	cfg.Preset = config.PresetMinimal
 	cfg.ApplyPreset()
 
-	cfg.Analyzers["kept-on"] = config.AnalyzerConfig{Enabled: true}
+	cfg.Analyzers["kept-on"] = pass.AnalyzerConfig{Enabled: true}
 
 	pc := toAnalysisConfig(cfg)
 	if pc == nil {
@@ -140,7 +140,7 @@ func setDisabledDelegated(cfg *config.GovernanceConfig) {
 		{ID: "on"},
 		{ID: "unlisted"},
 	}
-	cfg.Analyzers = map[string]config.AnalyzerConfig{
+	cfg.Analyzers = map[string]pass.AnalyzerConfig{
 		"off": {Enabled: false},
 		"on":  {Enabled: true},
 	}

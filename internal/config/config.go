@@ -4,7 +4,7 @@ import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 
 type GovernanceConfig struct {
 	Preset           string
-	Analyzers        map[string]AnalyzerConfig
+	Analyzers        map[string]pass.AnalyzerConfig
 	IncludeGenerated bool
 	SkipDirs         []string
 	SeverityRules    []pass.Override
@@ -13,25 +13,20 @@ type GovernanceConfig struct {
 	Delegated        []pass.DelegatedCommand
 }
 
-type AnalyzerConfig struct {
-	Enabled bool
-	Params  map[string]any
-}
-
 func Defaults() *GovernanceConfig {
 	return &GovernanceConfig{
 		Preset:    PresetRecommended,
-		Analyzers: map[string]AnalyzerConfig{},
+		Analyzers: map[string]pass.AnalyzerConfig{},
 	}
 }
 
 func (govCfg *GovernanceConfig) SetParam(analyzerID, key string, value any) {
 	if govCfg.Analyzers == nil {
-		govCfg.Analyzers = map[string]AnalyzerConfig{}
+		govCfg.Analyzers = map[string]pass.AnalyzerConfig{}
 	}
 	cfg, ok := govCfg.Analyzers[analyzerID]
 	if !ok {
-		cfg = AnalyzerConfig{Enabled: true}
+		cfg = pass.AnalyzerConfig{Enabled: true}
 	}
 	if cfg.Params == nil {
 		cfg.Params = map[string]any{}

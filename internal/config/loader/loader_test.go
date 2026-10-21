@@ -231,7 +231,7 @@ type enabledCase struct {
 	name        string
 	preset      string
 	analyzers   map[string]projectfile.AnalyzerEntry
-	overrides   []map[string]projectfile.OverrideRules
+	overrides   []map[string]projectfile.AnalyzerEntry
 	flag        string
 	wantEnabled map[string]bool
 	wantErr     string
@@ -239,7 +239,7 @@ type enabledCase struct {
 
 func enabledCases() []enabledCase {
 	enable, disable := true, false
-	narrow := projectfile.OverrideRules{Enabled: &enable}
+	narrow := projectfile.AnalyzerEntry{Enabled: &enable}
 	fileSizeOff := map[string]projectfile.AnalyzerEntry{"file-size": {Enabled: &disable}}
 	return []enabledCase{
 		{
@@ -251,43 +251,43 @@ func enabledCases() []enabledCase {
 		{
 			name:      "override enabling a file-disabled analyzer",
 			analyzers: fileSizeOff,
-			overrides: []map[string]projectfile.OverrideRules{{"file-size": narrow}},
+			overrides: []map[string]projectfile.AnalyzerEntry{{"file-size": narrow}},
 			wantErr: ".pulsarules.yaml: overrides[0].analyzers.file-size.enabled: " +
 				"file-size is disabled for the whole project; an override can only narrow it",
 		},
 		{
 			name:      "override enabling a preset-disabled analyzer",
 			preset:    config.PresetMinimal,
-			overrides: []map[string]projectfile.OverrideRules{{"complexity": narrow}},
+			overrides: []map[string]projectfile.AnalyzerEntry{{"complexity": narrow}},
 			wantErr:   "overrides[0].analyzers.complexity.enabled: complexity is disabled",
 		},
 		{
 			name:      "override enabling a disabled analyzer by sub-id",
 			analyzers: map[string]projectfile.AnalyzerEntry{"golangci-lint": {Enabled: &disable}},
-			overrides: []map[string]projectfile.OverrideRules{{"golangci-lint/errcheck": narrow}},
+			overrides: []map[string]projectfile.AnalyzerEntry{{"golangci-lint/errcheck": narrow}},
 			wantErr: "overrides[0].analyzers.golangci-lint/errcheck.enabled: " +
 				"golangci-lint is disabled",
 		},
 		{
 			name:      "override disabling stays valid",
 			analyzers: fileSizeOff,
-			overrides: []map[string]projectfile.OverrideRules{{"file-size": {Enabled: &disable}}},
+			overrides: []map[string]projectfile.AnalyzerEntry{{"file-size": {Enabled: &disable}}},
 		},
 		{
 			name:      "override enabling an enabled analyzer",
-			overrides: []map[string]projectfile.OverrideRules{{"file-size": narrow}},
+			overrides: []map[string]projectfile.AnalyzerEntry{{"file-size": narrow}},
 		},
 	}
 }
 
 func presetEnabledCases() []enabledCase {
 	enable, disable := true, false
-	narrow := projectfile.OverrideRules{Enabled: &enable}
+	narrow := projectfile.AnalyzerEntry{Enabled: &enable}
 	return []enabledCase{
 		{
 			name:   "preset enables, one override disables, a later one re-enables",
 			preset: config.PresetStrict,
-			overrides: []map[string]projectfile.OverrideRules{
+			overrides: []map[string]projectfile.AnalyzerEntry{
 				{"complexity": {Enabled: &disable}}, {"complexity": narrow},
 			},
 			wantEnabled: map[string]bool{"complexity": true},
@@ -300,7 +300,7 @@ func presetEnabledCases() []enabledCase {
 		{
 			name:      "override enabling an analyzer the flag preset disabled",
 			flag:      config.PresetMinimal,
-			overrides: []map[string]projectfile.OverrideRules{{"complexity": narrow}},
+			overrides: []map[string]projectfile.AnalyzerEntry{{"complexity": narrow}},
 			wantErr:   "overrides[0].analyzers.complexity.enabled: complexity is disabled",
 		},
 	}

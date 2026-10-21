@@ -286,7 +286,7 @@ func TestSession_PackageLevelVarState(t *testing.T) {
 			cfg := config.Defaults()
 			cfg.ApplyPreset()
 			if testCase.disableSingleUse {
-				cfg.Analyzers["single-use-declaration"] = config.AnalyzerConfig{Enabled: false}
+				cfg.Analyzers["single-use-declaration"] = pass.AnalyzerConfig{Enabled: false}
 			}
 			result := NewSession(&goldenRepo{root: repoDir}, "", nil, testCatalog(t), cfg).
 				Analyze(ScopeChanged, nil, FileSetAll)
@@ -337,7 +337,7 @@ func analyzeTestPolicyRepo(
 
 	cfg := config.Defaults()
 	cfg.ApplyPreset()
-	cfg.Analyzers["package-file-count"] = config.AnalyzerConfig{
+	cfg.Analyzers["package-file-count"] = pass.AnalyzerConfig{
 		Enabled: true, Params: map[string]any{"extensions": []string{".ts"}},
 	}
 	sess := NewSession(&goldenRepo{root: dir}, "", nil, testCatalog(t), cfg)
