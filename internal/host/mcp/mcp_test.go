@@ -12,6 +12,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpserver"
 )
 
 //nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
@@ -41,7 +42,7 @@ func TestWriteMCP_FreshFile(t *testing.T) {
 func TestRenderServers_EscapesRepoDir(t *testing.T) {
 	t.Parallel()
 
-	servers := []Server{{Name: "gopls", Command: "gopls", Args: []string{"mcp"}}}
+	servers := []mcpserver.Server{{Name: "gopls", Command: "gopls", Args: []string{"mcp"}}}
 	testCases := []struct {
 		name    string
 		repoDir string
@@ -283,15 +284,5 @@ func TestWriteMCP_NullInputIsWired(t *testing.T) {
 				t.Errorf("gopls command = %q, want gopls", got.Command)
 			}
 		})
-	}
-}
-
-func TestManagedNames(t *testing.T) {
-	t.Parallel()
-
-	got := ManagedNames()
-	want := []string{"dart", "gopls"}
-	if !slices.Equal(got, want) {
-		t.Errorf("ManagedNames = %v, want %v", got, want)
 	}
 }

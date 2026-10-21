@@ -4,28 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
-	"os/exec"
 	"path/filepath"
-	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpserver"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/gitignore"
 )
-
-type Server struct {
-	Name    string
-	Command string
-	Args    []string
-}
-
-func managedServersByLanguage() map[detect.Language][]Server {
-	return map[detect.Language][]Server{
-		language.Go:   {{Name: "gopls", Command: "gopls", Args: []string{"mcp"}}},
-		language.Dart: {{Name: "dart", Command: "dart", Args: []string{"mcp-server"}}},
-	}
-}
 
 type serverEntry struct {
 	Command string   `json:"command"`
@@ -36,8 +21,8 @@ type serverEntry struct {
 func Write(
 	repoDir string, languages detect.Set,
 ) (wired, skipped []string, err error) {
-	var available []Server
-	available, skipped = Available(languages)
+	var available []mcpserver.Server
+	available, skipped = mcpserver.Available(languages.Sorted())
 	if len(available) == 0 {
 		return nil, skipped, nil
 	}
@@ -69,38 +54,9 @@ func Write(
 	return wired, skipped, nil
 }
 
-func ManagedNames() []string {
-	var names []string
-	for _, servers := range managedServersByLanguage() {
-		for _, srv := range servers {
-			names = append(names, srv.Name)
-		}
-	}
-	slices.Sort(names)
-	return names
-}
-
-func serversFor(languages detect.Set) []Server {
-	var servers []Server
-	managed := managedServersByLanguage()
-	for _, lang := range languages.Sorted() {
-		servers = append(servers, managed[lang]...)
-	}
-	return servers
-}
-
-func Available(languages detect.Set) (available []Server, skippedNames []string) {
-	for _, srv := range serversFor(languages) {
-		if _, lookErr := exec.LookPath(srv.Command); lookErr == nil {
-			available = append(available, srv)
-		} else {
-			skippedNames = append(skippedNames, srv.Name)
-		}
-	}
-	return available, skippedNames
-}
-
-func renderServers(repoDir string, servers []Server) (map[string]json.RawMessage, error) {
+func renderServers(
+	repoDir string, servers []mcpserver.Server,
+) (map[string]json.RawMessage, error) {
 	rendered := make(map[string]json.RawMessage, len(servers))
 	for _, srv := range servers {
 		raw, err := json.Marshal(serverEntry{Command: srv.Command, Args: srv.Args, Cwd: repoDir})

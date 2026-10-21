@@ -172,9 +172,29 @@ func TestRemoveMCP_ChangedSignal(t *testing.T) {
 			wantChanged: false,
 		},
 		{
-			name:        "present with gopls entry",
-			seed:        `{"mcpServers": {"gopls": {"command": "gopls", "args": ["mcp"]}}}`,
+			name:        "present with our gopls entry",
+			seed:        `{"mcpServers": {"gopls": {"command": "gopls", "args": ["mcp"], "cwd": "REPO"}}}`,
 			wantChanged: true,
+		},
+		{
+			name:        "a user gopls entry from another directory",
+			seed:        `{"mcpServers": {"gopls": {"command": "gopls", "args": ["mcp"], "cwd": "/elsewhere"}}}`,
+			wantChanged: false,
+		},
+		{
+			name:        "a user gopls entry with no cwd",
+			seed:        `{"mcpServers": {"gopls": {"command": "gopls", "args": ["mcp"]}}}`,
+			wantChanged: false,
+		},
+		{
+			name:        "a user server of ours name running another command",
+			seed:        `{"mcpServers": {"gopls": {"command": "my-gopls", "cwd": "REPO"}}}`,
+			wantChanged: false,
+		},
+		{
+			name:        "an entry that is not an object",
+			seed:        `{"mcpServers": {"gopls": "gopls mcp"}}`,
+			wantChanged: false,
 		},
 	}
 	for _, testCase := range testCases {
@@ -183,7 +203,8 @@ func TestRemoveMCP_ChangedSignal(t *testing.T) {
 			repoDir := t.TempDir()
 			if testCase.seed != "" {
 				path := filepath.Join(repoDir, ".mcp.json")
-				if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
+				seed := strings.ReplaceAll(testCase.seed, "REPO", filepath.ToSlash(repoDir))
+				if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
 					t.Fatalf("seed: %v", err)
 				}
 			}
@@ -272,5 +293,44 @@ func TestRemoveMCP_NullFileIsLeftAlone(t *testing.T) {
 	}
 	if got, readErr := os.ReadFile(path); readErr != nil || string(got) != "null" {
 		t.Errorf("file = %q (%v), want it untouched", got, readErr)
+	}
+}
+
+func TestRemove_KeepsAUserServerWithOurName(t *testing.T) {
+	t.Parallel()
+
+	repoDir := t.TempDir()
+	seed := `{"mcpServers": {"gopls": {"command": "gopls", "args": ["serve"], "cwd": "/mine"}}}`
+	path := filepath.Join(repoDir, ".mcp.json")
+	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	if _, err := Remove(repoDir); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	got, err := os.ReadFile(path) //nolint:gosec // temp dir.
+	if err != nil || string(got) != seed {
+		t.Errorf("the user's file = %q, %v, want it untouched: %q", got, err, seed)
+	}
+}
+
+func TestRemove_RecognisesOursThroughASymlink(t *testing.T) {
+	t.Parallel()
+
+	repoDir := t.TempDir()
+	link := filepath.Join(t.TempDir(), "repo")
+	if err := os.Symlink(repoDir, link); err != nil {
+		t.Skipf("symlinks are unavailable: %v", err)
+	}
+	seed := `{"mcpServers": {"gopls": {"command": "gopls", "args": ["mcp"], "cwd": "` +
+		filepath.ToSlash(link) + `"}}}`
+	if err := os.WriteFile(filepath.Join(repoDir, ".mcp.json"), []byte(seed), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	changed, err := Remove(repoDir)
+	if err != nil || !changed {
+		t.Errorf("Remove = %v, %v, want our entry removed through the link", changed, err)
 	}
 }

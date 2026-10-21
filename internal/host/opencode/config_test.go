@@ -8,8 +8,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpserver"
 )
 
 func TestWireConfig_FreshFile(t *testing.T) {
@@ -255,8 +255,8 @@ func TestWireConfig_NullInputIsWired(t *testing.T) {
 	}
 }
 
-func testServers() []mcp.Server {
-	return []mcp.Server{
+func testServers() []mcpserver.Server {
+	return []mcpserver.Server{
 		{Name: "gopls", Command: "gopls", Args: []string{"mcp"}},
 		{Name: "dart", Command: "dart", Args: []string{"mcp-server"}},
 	}

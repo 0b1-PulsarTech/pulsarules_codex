@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpserver"
 )
 
 const configFile = "opencode.json"
@@ -23,7 +23,7 @@ const legacyAgentsInstructionGlob = ".opencode/AGENTS.md"
 
 const legacySkillsInstructionGlob = SkillsSubdir + "/*/SKILL.md"
 
-func WireConfig(projectDir string, servers []mcp.Server) error {
+func WireConfig(projectDir string, servers []mcpserver.Server) error {
 	path := filepath.Join(projectDir, configFile)
 	doc, err := jsondoc.Load(path)
 	if err != nil {
@@ -73,7 +73,7 @@ type serverEntry struct {
 	Type    string   `json:"type"`
 }
 
-func mergeMCP(doc *jsondoc.Document, servers []mcp.Server) error {
+func mergeMCP(doc *jsondoc.Document, servers []mcpserver.Server) error {
 	if len(servers) == 0 {
 		return nil
 	}

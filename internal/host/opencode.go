@@ -7,8 +7,8 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpserver"
 )
 
 type opencodeTarget struct{}
@@ -31,13 +31,13 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 	if err := installSkills(ctx, dest, &report); err != nil {
 		return report, err
 	}
-	var servers []mcp.Server
+	var servers []mcpserver.Server
 	if !ctx.NoMCP {
 		if err := goplsSkill(ctx, dest, &report); err != nil {
 			return report, err
 		}
-		// A skipped server is reported by the claude target; opencode wires what it can run.
-		servers, _ = mcp.Available(ctx.Languages)
+		// A server not on PATH is skipped unreported here; only the claude target reports it.
+		servers, _ = mcpserver.Available(ctx.Languages.Sorted())
 	}
 	if err := writeAgents(ctx, &report); err != nil {
 		return report, err

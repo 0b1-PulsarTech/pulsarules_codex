@@ -53,7 +53,8 @@ func TestUnwireClaudeMCP_NotesWhenGoplsRemoved(t *testing.T) {
 	t.Parallel()
 
 	repoDir := t.TempDir()
-	seed := `{"mcpServers": {"gopls": {"command": "gopls", "args": ["mcp"]}}}`
+	seed := `{"mcpServers": {"gopls": {"command": "gopls", "args": ["mcp"], "cwd": "` +
+		filepath.ToSlash(repoDir) + `"}}}`
 	path := filepath.Join(repoDir, ".mcp.json")
 	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
 		t.Fatalf("seed .mcp.json: %v", err)
