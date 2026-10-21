@@ -9,6 +9,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
 )
 
+const ID = "simplification-path"
+
 type Analyzer struct {
 	reporter finding.Reporter
 }
@@ -16,17 +18,17 @@ type Analyzer struct {
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
 		reporter: finding.NewReporter(
-			"simplification-path", finding.SeverityWarning, finding.CatSyntax,
+			ID, finding.SeverityWarning, finding.CatSyntax,
 		),
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return "simplification-path" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	extFilter := pass.ExtensionFilter(ctx, analyzer.ID(), language.SourceExtensions())
+	extFilter := pass.ExtensionFilter(ctx, ID, language.SourceExtensions())
 	eligible := func(fc pass.FileChange) bool {
 		return extFilter(fc) && language.ForExtension(fc.Extension).ID != ""
 	}
@@ -101,4 +103,12 @@ func blockNamesUpgradePath(syntax lexer.CommentSyntax, lines []string) bool {
 	// still one label.
 	block := strings.ToLower(strings.Join(words, " "))
 	return strings.Contains(block, "upgrade path:") || strings.Contains(block, "revisit when")
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "minimalism",
+		Params: []string{pass.ParamExtensions},
+	}
 }

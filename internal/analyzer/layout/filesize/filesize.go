@@ -9,6 +9,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
+const ID = "file-size"
+
 type Analyzer struct {
 	maxLines int
 	reporter finding.Reporter
@@ -18,23 +20,23 @@ func NewAnalyzer() *Analyzer {
 	const defaultMaxLines = 180
 	return &Analyzer{
 		maxLines: defaultMaxLines,
-		reporter: finding.NewReporter("file-size", finding.SeverityWarning, finding.CatProject),
+		reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatProject),
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return "file-size" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	warning := pass.ResolveReporter(analyzer.reporter, ctx)
 	// A severity override on file-size downgrades the cap too, since both share one ID.
-	hardCap := finding.NewReporter(analyzer.ID(), finding.SeverityError, finding.CatProject)
-	eligible := pass.ExtensionFilter(ctx, analyzer.ID(), language.SourceExtensions())
+	hardCap := finding.NewReporter(ID, finding.SeverityError, finding.CatProject)
+	eligible := pass.ExtensionFilter(ctx, ID, language.SourceExtensions())
 	return pass.EachChangedFile(
 		ctx,
 		eligible,
 		func(fc pass.FileChange, src []byte) []finding.Finding {
-			params := ctx.ParamsAt(analyzer.ID(), fc.Path)
+			params := ctx.ParamsAt(ID, fc.Path)
 			limits := newLineLimits(
 				params.Int(ParamMaxLines, analyzer.maxLines), errorLines(params, fc.Extension),
 			)
@@ -67,4 +69,12 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 
 func countLines(src []byte) int {
 	return bytes.Count(src, []byte{'\n'})
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "source-files",
+		Params: []string{ParamMaxLines, ParamErrorLines, pass.ParamExtensions},
+	}
 }

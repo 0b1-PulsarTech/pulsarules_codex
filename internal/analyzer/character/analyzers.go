@@ -10,6 +10,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/markdown"
 )
 
+const (
+	TextID        = "text-markers"
+	TypographicID = "typographic-markers"
+)
+
 type textReporters struct {
 	carrier     finding.Reporter
 	contextual  finding.Reporter
@@ -25,14 +30,10 @@ func NewTextAnalyzer() *TextAnalyzer {
 		// Classes `clean --write` removes outright: no neighbouring context can justify
 		// them, and the bidi controls among them are the Trojan Source vector
 		// (CVE-2021-42574), so they block.
-		carrier: finding.NewReporter("text-markers", finding.SeverityError, finding.CatSyntax),
+		carrier: finding.NewReporter(TextID, finding.SeverityError, finding.CatSyntax),
 		// Invisible characters that may be load-bearing (emoji glue, script joiners)
 		// cannot be judged here, so they advise instead of blocking.
-		contextual: finding.NewReporter(
-			"text-markers",
-			finding.SeverityWarning,
-			finding.CatSyntax,
-		),
+		contextual: finding.NewReporter(TextID, finding.SeverityWarning, finding.CatSyntax),
 		frontmatter: finding.NewReporter(
 			"ai-frontmatter",
 			finding.SeverityError,
@@ -41,7 +42,7 @@ func NewTextAnalyzer() *TextAnalyzer {
 	}}
 }
 
-func (analyzer *TextAnalyzer) ID() string { return "text-markers" }
+func (analyzer *TextAnalyzer) ID() string { return TextID }
 
 func (analyzer *TextAnalyzer) Stage() finding.StageID { return finding.StageStatic }
 
@@ -51,7 +52,7 @@ func (analyzer *TextAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		contextual:  pass.ResolveReporter(analyzer.reporters.contextual, ctx),
 		frontmatter: pass.ResolveReporter(analyzer.reporters.frontmatter, ctx),
 	}
-	eligible := pass.ExtensionFilter(ctx, analyzer.ID(), markedExtensions())
+	eligible := pass.ExtensionFilter(ctx, TextID, markedExtensions())
 	return eachMarkedFile(ctx, eligible, func(fc pass.FileChange, src string) []finding.Finding {
 		return checkCarriers(fc, src, reporters)
 	})
@@ -81,21 +82,17 @@ func NewTypographicAnalyzer() *TypographicAnalyzer {
 	return &TypographicAnalyzer{
 		// Blocks by default; a project that treats ASCII punctuation as house style
 		// lowers it with the analyzer's "severity" key.
-		reporter: finding.NewReporter(
-			"typographic-markers",
-			finding.SeverityError,
-			finding.CatSyntax,
-		),
+		reporter: finding.NewReporter(TypographicID, finding.SeverityError, finding.CatSyntax),
 	}
 }
 
-func (analyzer *TypographicAnalyzer) ID() string { return "typographic-markers" }
+func (analyzer *TypographicAnalyzer) ID() string { return TypographicID }
 
 func (analyzer *TypographicAnalyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *TypographicAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
-	eligible := pass.ExtensionFilter(ctx, analyzer.ID(), markedExtensions())
+	eligible := pass.ExtensionFilter(ctx, TypographicID, markedExtensions())
 	return eachMarkedFile(ctx, eligible, func(fc pass.FileChange, src string) []finding.Finding {
 		return checkTypographic(fc, src, reporter)
 	})
@@ -142,4 +139,20 @@ func hintMarks(
 		})
 	}
 	return hinted
+}
+
+func DescribeText() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     TextID,
+		Rule:   "source-files",
+		Params: []string{pass.ParamExtensions},
+	}
+}
+
+func DescribeTypographic() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     TypographicID,
+		Rule:   "source-files",
+		Params: []string{pass.ParamExtensions},
+	}
 }

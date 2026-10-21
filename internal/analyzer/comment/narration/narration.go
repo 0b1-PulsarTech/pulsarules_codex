@@ -9,22 +9,24 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
+const ID = "history-narration"
+
 type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) ID() string             { return "history-narration" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *Analyzer) reporter() finding.Reporter {
-	return finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatSyntax)
+	return finding.NewReporter(ID, finding.SeverityWarning, finding.CatSyntax)
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(analyzer.reporter(), ctx)
-	extFilter := pass.ExtensionFilter(ctx, analyzer.ID(), language.SourceExtensions())
+	extFilter := pass.ExtensionFilter(ctx, ID, language.SourceExtensions())
 	eligible := func(fc pass.FileChange) bool {
 		return extFilter(fc) && language.ForExtension(fc.Extension).ID != ""
 	}
@@ -73,4 +75,12 @@ func scanFile(
 		}
 	}
 	return findings
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "comments",
+		Params: []string{pass.ParamExtensions},
+	}
 }

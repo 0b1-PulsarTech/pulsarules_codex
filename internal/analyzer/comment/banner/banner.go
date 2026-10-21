@@ -6,17 +6,19 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
+const ID = "top-of-file"
+
 type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) ID() string             { return "top-of-file" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	extFilter := pass.ExtensionFilter(ctx, analyzer.ID(), defaultExtensions())
+	extFilter := pass.ExtensionFilter(ctx, ID, defaultExtensions())
 	// Required header lines (lexer.ExemptHeaderSpan) are skipped so a hand comment after
 	// them is still flagged; a lexer.IsContentStartLine line ends the scan, and a
 	// generated file is exempt in full.
@@ -28,7 +30,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		if !ok {
 			return nil
 		}
-		return []finding.Finding{reporterFor(ctx, analyzer.ID(), fc.Extension).At(
+		return []finding.Finding{reporterFor(ctx, ID, fc.Extension).At(
 			fc.Path,
 			lineNum,
 			"file starts with a comment",
@@ -51,4 +53,12 @@ func reporterFor(ctx *pass.Context, id, extension string) finding.Reporter {
 		severity = finding.SeverityError
 	}
 	return pass.ResolveReporter(finding.NewReporter(id, severity, finding.CatSyntax), ctx)
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "comments",
+		Params: []string{pass.ParamExtensions},
+	}
 }
