@@ -9,8 +9,11 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/character"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/branch"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
@@ -145,19 +148,19 @@ func governanceConfig(opts *version.Options, root string) (*config.GovernanceCon
 	}
 
 	if opts.GolangciConfig != "" {
-		cfg.SetParam("golangci-lint", "config_path", opts.GolangciConfig)
+		cfg.SetParam(golangcilint.ID, golangcilint.ParamConfigPath, opts.GolangciConfig)
 	}
 	if err = finding.ValidateSeverityName(opts.TypographicSeverity); err != nil {
 		return nil, fmt.Errorf("invalid --typographic-severity: %w", err)
 	}
 	if opts.TypographicSeverity != "" {
-		cfg.SetParam("typographic-markers", "severity", opts.TypographicSeverity)
+		cfg.SetParam(character.TypographicID, pass.ParamSeverity, opts.TypographicSeverity)
 	}
 	if err = branch.ValidateExtraTypes(opts.BranchExtraTypes); err != nil {
 		return nil, fmt.Errorf("invalid --branch-extra-types: %w", err)
 	}
 	if opts.BranchExtraTypes != "" {
-		cfg.SetParam("branch-name", "extra_types", opts.BranchExtraTypes)
+		cfg.SetParam(branch.ID, branch.ParamExtraTypes, opts.BranchExtraTypes)
 	}
 	return cfg, nil
 }

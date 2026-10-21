@@ -3,6 +3,7 @@ package config
 import (
 	"maps"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
 )
 
@@ -32,7 +33,7 @@ func minimalAnalyzers() map[string]AnalyzerConfig {
 		// into panic tracebacks, so the lightest preset must not disable it.
 		"arch-boundary": {Enabled: false},
 		"import-cycle":  {Enabled: false},
-		"golangci-lint": {Enabled: false},
+		golangcilint.ID: {Enabled: false},
 		// First-adoption noise: both flag hundreds of tests and declarations
 		// written before their rules.
 		"test-comment":           {Enabled: false},

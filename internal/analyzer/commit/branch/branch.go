@@ -12,7 +12,7 @@ import (
 
 const (
 	ID              = "branch-name"
-	paramExtraTypes = "extra_types"
+	ParamExtraTypes = "extra_types"
 )
 
 type branchReader interface {
@@ -67,7 +67,7 @@ func allowedTypes(params pass.ParamSet) []string {
 	// Gitflow prefixes are allowed by default: the check exists to stop a tool-generated
 	// name reaching a remote, not to block a project's own gitflow convention.
 	allowed := slices.Concat(commitmsg.AllowedTypes(), gitflowTypes)
-	allowed = append(allowed, params.Strings(paramExtraTypes, nil)...)
+	allowed = append(allowed, params.Strings(ParamExtraTypes, nil)...)
 	slices.Sort(allowed)
 	return slices.Compact(allowed)
 }
@@ -120,6 +120,6 @@ func Describe() pass.Descriptor {
 	return pass.Descriptor{
 		ID:     ID,
 		Rule:   "commits",
-		Params: []string{paramExtraTypes},
+		Params: []string{ParamExtraTypes},
 	}
 }

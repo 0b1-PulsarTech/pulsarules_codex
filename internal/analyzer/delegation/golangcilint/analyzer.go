@@ -10,7 +10,7 @@ import (
 
 const (
 	ID              = "golangci-lint"
-	paramConfigPath = "config_path"
+	ParamConfigPath = "config_path"
 )
 
 type Analyzer struct {
@@ -45,13 +45,13 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 
 func extractGolangciConfigPath(ctx *pass.Context) string {
 	// Through ctx.Params, not ctx.Config, which dereferences a nil Config.
-	return ctx.Params(ID).String(paramConfigPath, "")
+	return ctx.Params(ID).String(ParamConfigPath, "")
 }
 
 func Describe() pass.Descriptor {
 	return pass.Descriptor{
 		ID:     ID,
 		Rule:   "code-smells",
-		Params: []string{paramConfigPath},
+		Params: []string{ParamConfigPath},
 	}
 }
