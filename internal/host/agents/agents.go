@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"text/template"
 
@@ -28,28 +27,18 @@ type agentsDoc struct {
 	Skills             []skillRef
 }
 
+const FileName = "AGENTS.md"
+
 func Write(
 	templates fs.FS, projectDir string, idx *knowledge.Index, ids []string,
-) (wrote bool, err error) {
-	path := filepath.Join(projectDir, "AGENTS.md")
-	var exists, ours bool
-	exists, ours, err = ownedfile.Check(path)
+) (ownedfile.Outcome, error) {
+	tmpl, err := template.ParseFS(templates, "docs/AGENTS.md.tmpl")
 	if err != nil {
-		return false, fmt.Errorf("check %q: %w", path, err)
+		return ownedfile.Kept, fmt.Errorf("parse AGENTS.md.tmpl: %w", err)
 	}
-	if exists && !ours {
-		return false, nil
-	}
-
-	var tmpl *template.Template
-	tmpl, err = template.ParseFS(templates, "docs/AGENTS.md.tmpl")
+	contractText, err := contract.Session(templates)
 	if err != nil {
-		return false, fmt.Errorf("parse AGENTS.md.tmpl: %w", err)
-	}
-	var contractText string
-	contractText, err = contract.Session(templates)
-	if err != nil {
-		return false, fmt.Errorf("routing contract: %w", err)
+		return ownedfile.Kept, fmt.Errorf("routing contract: %w", err)
 	}
 	const defaultProjectDescription = "A Go service following the pulsarules_codex " +
 		"engineering standards."
@@ -61,17 +50,9 @@ func Write(
 	}
 	var buf bytes.Buffer
 	if err = tmpl.Execute(&buf, doc); err != nil {
-		return false, fmt.Errorf("render AGENTS.md: %w", err)
+		return ownedfile.Kept, fmt.Errorf("render AGENTS.md: %w", err)
 	}
-
-	if err = os.MkdirAll(projectDir, disk.DirPrivate); err != nil {
-		return false, fmt.Errorf("mkdir %q: %w", projectDir, err)
-	}
-	// Path is under the caller's project dir.
-	if err = os.WriteFile(path, buf.Bytes(), disk.FilePrivate); err != nil {
-		return false, fmt.Errorf("write %q: %w", path, err)
-	}
-	return true, nil
+	return ownedfile.WriteOwned(filepath.Join(projectDir, FileName), buf.Bytes(), disk.FilePrivate)
 }
 
 func skillRefs(idx *knowledge.Index, ids []string) []skillRef {

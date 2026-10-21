@@ -90,26 +90,21 @@ func removeWorkflows(dest string, report *Report) error {
 }
 
 func writeAgents(ctx Context, report *Report) error {
-	path := filepath.Join(ctx.Base, "AGENTS.md")
-	wrote, err := agents.Write(ctx.Templates, ctx.Base, ctx.Index, ctx.IDs)
+	outcome, err := agents.Write(ctx.Templates, ctx.Base, ctx.Index, ctx.IDs)
 	if err != nil {
 		return fmt.Errorf("write agents: %w", err)
 	}
-	if wrote {
-		report.Note("wrote %s", path)
-	} else {
-		report.Warn("kept existing user-authored %s (not overwritten)", path)
-	}
+	report.Merge(outcome.ReportWrite(filepath.Join(ctx.Base, agents.FileName), "wrote %s"))
 	return nil
 }
 
 func removeAgents(base string, report *Report) error {
-	path := filepath.Join(base, "AGENTS.md")
-	removed, err := agents.RemoveAgents(base)
+	path := filepath.Join(base, agents.FileName)
+	outcome, err := ownedfile.RemoveOwned(path)
 	if err != nil {
 		return fmt.Errorf("remove agents: %w", err)
 	}
-	if removed {
+	if outcome == ownedfile.Removed {
 		report.Note("removed %s", path)
 	}
 	return nil

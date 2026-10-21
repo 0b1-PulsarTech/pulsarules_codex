@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 )
 
 const seededBody = "---\ndescription: seed\nglobs:\nalwaysApply: false\n---\n" +
@@ -46,7 +48,7 @@ func TestWriteRule(t *testing.T) {
 			if err != nil {
 				t.Fatalf("WriteRule: %v", err)
 			}
-			if wrote != testCase.wantWrote {
+			if (wrote == ownedfile.Wrote) != testCase.wantWrote {
 				t.Errorf("wrote = %v, want %v", wrote, testCase.wantWrote)
 			}
 

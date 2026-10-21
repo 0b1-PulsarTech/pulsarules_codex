@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/contract"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -27,8 +28,8 @@ func TestWriteAgents_MatchesSessionStart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WriteAgents: %v", err)
 	}
-	if !wrote {
-		t.Fatal("wrote = false, want true for a fresh project dir")
+	if wrote != ownedfile.Wrote {
+		t.Fatalf("outcome = %v, want Wrote for a fresh project dir", wrote)
 	}
 
 	//nolint:gosec // temp dir.

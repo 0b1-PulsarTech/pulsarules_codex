@@ -23,8 +23,8 @@ func TestWriteAgents_RendersOnlySelectedSkills(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WriteAgents: %v", err)
 	}
-	if !wrote {
-		t.Fatal("wrote = false, want true for a fresh project dir")
+	if wrote != ownedfile.Wrote {
+		t.Fatalf("outcome = %v, want Wrote for a fresh project dir", wrote)
 	}
 
 	//nolint:gosec // temp dir.
@@ -94,7 +94,7 @@ func TestWriteAgents_OwnershipDiscipline(t *testing.T) {
 			if writeErr != nil {
 				t.Fatalf("WriteAgents: %v", writeErr)
 			}
-			if wrote != testCase.wantWrote {
+			if (wrote == ownedfile.Wrote) != testCase.wantWrote {
 				t.Errorf("wrote = %v, want %v", wrote, testCase.wantWrote)
 			}
 

@@ -76,16 +76,12 @@ func writeCursorRules(ctx Context, report *Report) error {
 }
 
 func writeCursorFile(base, id, body string, report *Report) error {
-	wrote, err := cursor.WriteRule(base, id, body)
+	outcome, err := cursor.WriteRule(base, id, body)
 	if err != nil {
 		return fmt.Errorf("write cursor rule %q: %w", id, err)
 	}
 	path := filepath.Join(base, cursor.RulesDir, id+".mdc")
-	if wrote {
-		report.Note("installed: %s", path)
-	} else {
-		report.Warn("kept existing user-authored %s (not overwritten)", path)
-	}
+	report.Merge(outcome.ReportWrite(path, "installed: %s"))
 	return nil
 }
 
