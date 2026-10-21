@@ -4,53 +4,45 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 )
 
-type registered struct {
-	id       string
-	analyzer pass.Analyzer
-}
-
-type Pipeline struct {
-	analyzers []registered
+type pipeline struct {
+	analyzers []registry.Built
 	cfg       *pass.AnalysisConfig
 }
 
-func NewPipeline(cfg *pass.AnalysisConfig) *Pipeline {
-	return &Pipeline{cfg: cfg}
+func newPipeline(cfg *pass.AnalysisConfig, analyzers []registry.Built) *pipeline {
+	return &pipeline{analyzers: analyzers, cfg: cfg}
 }
 
-func (pipeline *Pipeline) Register(id string, analyzer pass.Analyzer) {
-	pipeline.analyzers = append(pipeline.analyzers, registered{id: id, analyzer: analyzer})
-}
-
-func (pipeline *Pipeline) Run(ctx *pass.Context) []finding.Finding {
-	for _, entry := range pipeline.analyzers {
-		if !pipeline.enabled(entry.id) {
+func (pipe *pipeline) run(ctx *pass.Context) []finding.Finding {
+	for _, entry := range pipe.analyzers {
+		if !pipe.enabled(entry.ID) {
 			continue
 		}
-		findings := entry.analyzer.Analyze(ctx)
+		findings := entry.Analyzer.Analyze(ctx)
 		// An in-place analyzer already appended to ctx.Findings; skip its return.
-		if _, inPlace := entry.analyzer.(pass.InPlaceAnalyzer); inPlace {
+		if _, inPlace := entry.Analyzer.(pass.InPlaceAnalyzer); inPlace {
 			continue
 		}
-		ctx.Findings = append(ctx.Findings, pipeline.overridden(entry.id, findings)...)
+		ctx.Findings = append(ctx.Findings, pipe.overridden(entry.ID, findings)...)
 	}
 	return ctx.Findings
 }
 
-func (pipeline *Pipeline) overridden(id string, findings []finding.Finding) []finding.Finding {
-	if pipeline.cfg == nil {
+func (pipe *pipeline) overridden(id string, findings []finding.Finding) []finding.Finding {
+	if pipe.cfg == nil {
 		return findings
 	}
-	return overrides.Apply(findings, id, pipeline.cfg.Overrides)
+	return overrides.Apply(findings, id, pipe.cfg.Overrides)
 }
 
-func (pipeline *Pipeline) enabled(id string) bool {
-	if pipeline.cfg == nil {
+func (pipe *pipeline) enabled(id string) bool {
+	if pipe.cfg == nil {
 		return true
 	}
-	cfg, ok := pipeline.cfg.Analyzers[id]
+	cfg, ok := pipe.cfg.Analyzers[id]
 	if !ok {
 		return true
 	}

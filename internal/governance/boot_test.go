@@ -21,8 +21,7 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 	cfg.ApplyPreset()
 	analysisCfg := toAnalysisConfig(cfg)
 
-	pipeline := NewPipeline(analysisCfg)
-	pipeline.Register("seed", stubAnalyzer{
+	seed := registry.Built{ID: "seed", Analyzer: stubAnalyzer{
 		findings: []finding.Finding{
 			{
 				AnalyzerID: "seed",
@@ -53,16 +52,14 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 				Message:    "warn",
 			},
 		},
-	})
-	if err := pipeline.registerForScope(
-		registry.Deps{Emoji: testCatalog(t)},
-		ScopeChanged,
-	); err != nil {
-		t.Fatalf("registerForScope: %v", err)
-	}
+	}}
+	pipe := newPipeline(analysisCfg, slices.Concat(
+		[]registry.Built{seed},
+		registry.Analyzers(registry.Deps{Emoji: testCatalog(t)}, maxGateFor(ScopeChanged)),
+	))
 
 	ctx := &pass.Context{Config: analysisCfg}
-	findings := pipeline.Run(ctx)
+	findings := pipe.run(ctx)
 
 	if len(findings) != 3 {
 		t.Fatalf("expected 3 findings after dedup, got %d: %+v", len(findings), findings)
@@ -136,13 +133,10 @@ func TestMaxGateFor_ReproducesScopeMembership(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			built, err := registry.Analyzers(
+			built := registry.Analyzers(
 				registry.Deps{Emoji: testCatalog(t)},
 				maxGateFor(testCase.scope),
 			)
-			if err != nil {
-				t.Fatalf("Analyzers: %v", err)
-			}
 			got := make([]string, len(built))
 			for idx, analyzer := range built {
 				got[idx] = analyzer.ID

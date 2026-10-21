@@ -1,8 +1,6 @@
 package registry
 
 import (
-	"errors"
-	"fmt"
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/command"
@@ -14,7 +12,6 @@ import (
 
 type Gate int
 
-// Gates are ordered: a scope runs every analyzer whose gate is at or below its own.
 const (
 	GateStatic Gate = iota
 	GateArch
@@ -36,7 +33,7 @@ type Deps struct {
 
 type entry struct {
 	pass.Descriptor
-	build    func(Deps) (pass.Analyzer, error)
+	build    func(Deps) pass.Analyzer
 	gate     Gate
 	internal bool
 }
@@ -46,25 +43,20 @@ type Built struct {
 	Analyzer pass.Analyzer
 }
 
-func Analyzers(deps Deps, maxGate Gate) ([]Built, error) {
+func Analyzers(deps Deps, maxGate Gate) []Built {
 	return build(specs(), deps, maxGate)
 }
 
-func build(table []entry, deps Deps, maxGate Gate) ([]Built, error) {
+func build(table []entry, deps Deps, maxGate Gate) []Built {
 	built := make([]Built, 0, len(table))
-	var failures []error
 	for _, spec := range table {
+		// Gates are ordered: a scope runs every analyzer at or below its own gate.
 		if spec.gate > maxGate {
 			continue
 		}
-		analyzer, err := spec.build(deps)
-		if err != nil {
-			failures = append(failures, fmt.Errorf("build %s: %w", spec.ID, err))
-			continue
-		}
-		built = append(built, Built{ID: spec.ID, Analyzer: analyzer})
+		built = append(built, Built{ID: spec.ID, Analyzer: spec.build(deps)})
 	}
-	return built, errors.Join(failures...)
+	return built
 }
 
 func IDs() []string {
@@ -100,8 +92,8 @@ func DelegatedFormats() []string {
 	return command.Formats()
 }
 
-func plain[Built pass.Analyzer](
-	desc pass.Descriptor, gate Gate, ctor func() Built,
+func plain[Concrete pass.Analyzer](
+	desc pass.Descriptor, gate Gate, ctor func() Concrete,
 ) entry {
 	return viaDeps(desc, gate, func(Deps) pass.Analyzer { return ctor() })
 }
@@ -110,7 +102,7 @@ func viaDeps(desc pass.Descriptor, gate Gate, ctor func(Deps) pass.Analyzer) ent
 	return entry{
 		Descriptor: desc,
 		gate:       gate,
-		build:      func(deps Deps) (pass.Analyzer, error) { return ctor(deps), nil },
+		build:      ctor,
 	}
 }
 

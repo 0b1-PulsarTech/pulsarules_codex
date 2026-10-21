@@ -445,24 +445,3 @@ func TestSession_InvalidTestGlob(t *testing.T) {
 		t.Fatalf("defaults must still classify web/test/a.mjs as a test, got %+v", changed)
 	}
 }
-
-func TestSession_AnalyzerBuildFailureSurfaces(t *testing.T) {
-	t.Parallel()
-
-	sess := NewSession(nil, "feat: x", nil, nil, nil)
-	findings := sess.Analyze(ScopeCommit, nil, FileSetChanged).Findings
-
-	var failure *finding.Finding
-	for idx := range findings {
-		if findings[idx].AnalyzerID == "registry" {
-			failure = &findings[idx]
-		}
-	}
-	if failure == nil {
-		t.Fatalf("no registry finding for a missing emoji catalog: %+v", findings)
-	}
-	if failure.Severity != finding.SeverityError ||
-		!strings.Contains(failure.Message, "build commit-lint: emoji catalog is not loaded") {
-		t.Fatalf("registry finding = %+v", *failure)
-	}
-}

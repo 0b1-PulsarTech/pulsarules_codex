@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"errors"
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/arch"
@@ -41,8 +40,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/rulesummary"
 )
 
-var errNoEmojiCatalog = errors.New("emoji catalog is not loaded")
-
 func specs() []entry {
 	// Run order: package-level-var follows single-use-declaration, and output goes last.
 	return slices.Concat(contentSpecs(), syntaxSpecs(), styleSpecs(), []entry{
@@ -65,16 +62,9 @@ func contentSpecs() []entry {
 		plain(banner.Describe(), GateStatic, banner.NewAnalyzer),
 		plain(blocksize.Describe(), GateStatic, blocksize.NewAnalyzer),
 		plain(simplification.Describe(), GateStatic, simplification.NewAnalyzer),
-		{
-			Descriptor: message.Describe(),
-			build: func(deps Deps) (pass.Analyzer, error) {
-				if deps.Emoji == nil {
-					return nil, errNoEmojiCatalog
-				}
-				return message.NewAnalyzer(deps.Emoji), nil
-			},
-			gate: GateStatic,
-		},
+		viaDeps(message.Describe(), GateStatic, func(deps Deps) pass.Analyzer {
+			return message.NewAnalyzer(deps.Emoji)
+		}),
 		viaDeps(movepurity.Describe(), GateStatic, func(deps Deps) pass.Analyzer {
 			return movepurity.NewAnalyzer(deps.Repo)
 		}),

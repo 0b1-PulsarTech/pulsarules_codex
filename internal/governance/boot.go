@@ -14,14 +14,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
-func (pipeline *Pipeline) registerForScope(deps registry.Deps, scope Scope) error {
-	analyzers, err := registry.Analyzers(deps, maxGateFor(scope))
-	for _, analyzer := range analyzers {
-		pipeline.Register(analyzer.ID, analyzer.Analyzer)
-	}
-	return err
-}
-
 func maxGateFor(scope Scope) registry.Gate {
 	switch scope {
 	case ScopeCommit:

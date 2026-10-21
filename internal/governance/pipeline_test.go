@@ -6,6 +6,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
@@ -17,23 +18,24 @@ func (stub stubAnalyzer) Analyze(_ *pass.Context) []finding.Finding {
 	return stub.findings
 }
 
-func TestPipelineRegisterAndRun(t *testing.T) {
+func TestPipelineRun(t *testing.T) {
 	t.Parallel()
 
-	pipeline := NewPipeline(nil)
-	pipeline.Register("a1", stubAnalyzer{
-		findings: []finding.Finding{
-			{AnalyzerID: "a1", Message: "issue 1", Severity: finding.SeverityWarning},
-		},
-	})
-	pipeline.Register("a2", stubAnalyzer{
-		findings: []finding.Finding{
-			{AnalyzerID: "a2", Message: "issue 2", Severity: finding.SeverityError},
-		},
+	pipe := newPipeline(nil, []registry.Built{
+		{ID: "a1", Analyzer: stubAnalyzer{
+			findings: []finding.Finding{
+				{AnalyzerID: "a1", Message: "issue 1", Severity: finding.SeverityWarning},
+			},
+		}},
+		{ID: "a2", Analyzer: stubAnalyzer{
+			findings: []finding.Finding{
+				{AnalyzerID: "a2", Message: "issue 2", Severity: finding.SeverityError},
+			},
+		}},
 	})
 
 	ctx := &pass.Context{}
-	findings := pipeline.Run(ctx)
+	findings := pipe.run(ctx)
 	if len(findings) != 2 {
 		t.Fatalf("expected 2 findings, got %d", len(findings))
 	}
@@ -53,16 +55,17 @@ func TestPipelineDisabledAnalyzer(t *testing.T) {
 			"disabled": {Enabled: false},
 		},
 	}
-	pipeline := NewPipeline(cfg)
-	pipeline.Register("disabled", stubAnalyzer{
-		findings: []finding.Finding{{AnalyzerID: "disabled", Message: "should not appear"}},
-	})
-	pipeline.Register("enabled", stubAnalyzer{
-		findings: []finding.Finding{{AnalyzerID: "enabled", Message: "should appear"}},
+	pipe := newPipeline(cfg, []registry.Built{
+		{ID: "disabled", Analyzer: stubAnalyzer{
+			findings: []finding.Finding{{AnalyzerID: "disabled", Message: "should not appear"}},
+		}},
+		{ID: "enabled", Analyzer: stubAnalyzer{
+			findings: []finding.Finding{{AnalyzerID: "enabled", Message: "should appear"}},
+		}},
 	})
 
 	ctx := &pass.Context{}
-	findings := pipeline.Run(ctx)
+	findings := pipe.run(ctx)
 	if len(findings) != 1 {
 		t.Fatalf("expected 1 finding (disabled analyzer skipped), got %d", len(findings))
 	}
@@ -87,15 +90,16 @@ var _ pass.InPlaceAnalyzer = stubInPlaceAnalyzer{}
 func TestPipelineInPlaceAnalyzerNotAppended(t *testing.T) {
 	t.Parallel()
 
-	pipeline := NewPipeline(nil)
-	pipeline.Register("producer", stubAnalyzer{
-		findings: []finding.Finding{
-			{AnalyzerID: "one"}, {AnalyzerID: "two"},
-		},
+	pipe := newPipeline(nil, []registry.Built{
+		{ID: "producer", Analyzer: stubAnalyzer{
+			findings: []finding.Finding{
+				{AnalyzerID: "one"}, {AnalyzerID: "two"},
+			},
+		}},
+		{ID: "transformer", Analyzer: stubInPlaceAnalyzer{}},
 	})
-	pipeline.Register("transformer", stubInPlaceAnalyzer{})
 
-	findings := pipeline.Run(&pass.Context{})
+	findings := pipe.run(&pass.Context{})
 	if len(findings) != 1 {
 		t.Fatalf(
 			"expected 1 finding (one dropped, none appended), got %d: %+v",
@@ -111,19 +115,20 @@ func TestPipelineInPlaceAnalyzerNotAppended(t *testing.T) {
 func TestPipelineRunsInRegistrationOrder(t *testing.T) {
 	t.Parallel()
 
-	pipeline := NewPipeline(nil)
-	pipeline.Register("ast", stubAnalyzer{
-		findings: []finding.Finding{{AnalyzerID: "ast"}},
-	})
-	pipeline.Register("static", stubAnalyzer{
-		findings: []finding.Finding{{AnalyzerID: "static"}},
-	})
-	pipeline.Register("arch", stubAnalyzer{
-		findings: []finding.Finding{{AnalyzerID: "arch"}},
+	pipe := newPipeline(nil, []registry.Built{
+		{ID: "ast", Analyzer: stubAnalyzer{
+			findings: []finding.Finding{{AnalyzerID: "ast"}},
+		}},
+		{ID: "static", Analyzer: stubAnalyzer{
+			findings: []finding.Finding{{AnalyzerID: "static"}},
+		}},
+		{ID: "arch", Analyzer: stubAnalyzer{
+			findings: []finding.Finding{{AnalyzerID: "arch"}},
+		}},
 	})
 
 	ctx := &pass.Context{}
-	findings := pipeline.Run(ctx)
+	findings := pipe.run(ctx)
 
 	want := []string{"ast", "static", "arch"}
 	if len(findings) != len(want) {
@@ -151,20 +156,25 @@ func TestPipelineAppliesOverrides(t *testing.T) {
 			Analyzers: map[string]pass.OverrideConfig{"file-size": {Severity: "warning"}},
 		}},
 	})
-	pipeline := NewPipeline(cfg)
-	pipeline.Register("golangci-lint", stubAnalyzer{
-		findings: []finding.Finding{{
-			AnalyzerID: "golangci-lint/errcheck", File: "main.go", Severity: finding.SeverityError,
+	pipe := newPipeline(cfg, []registry.Built{
+		{ID: "golangci-lint", Analyzer: stubAnalyzer{
+			findings: []finding.Finding{
+				{
+					AnalyzerID: "golangci-lint/errcheck",
+					File:       "main.go",
+					Severity:   finding.SeverityError,
+				},
+			},
+		}},
+		{ID: "file-size", Analyzer: stubAnalyzer{
+			findings: []finding.Finding{
+				{AnalyzerID: "file-size", File: "web/test/a.dart", Severity: finding.SeverityError},
+				{AnalyzerID: "file-size", File: "web/lib/b.dart", Severity: finding.SeverityError},
+			},
 		}},
 	})
-	pipeline.Register("file-size", stubAnalyzer{
-		findings: []finding.Finding{
-			{AnalyzerID: "file-size", File: "web/test/a.dart", Severity: finding.SeverityError},
-			{AnalyzerID: "file-size", File: "web/lib/b.dart", Severity: finding.SeverityError},
-		},
-	})
 
-	findings := pipeline.Run(&pass.Context{})
+	findings := pipe.run(&pass.Context{})
 	want := []finding.Severity{finding.SeverityInfo, finding.SeverityWarning, finding.SeverityError}
 	for idx, severity := range want {
 		if findings[idx].Severity != severity {

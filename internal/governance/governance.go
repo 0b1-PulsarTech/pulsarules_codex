@@ -73,12 +73,9 @@ func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Res
 	discovery := sess.Discover(scope, status, files)
 	ctx := sess.Load(discovery)
 
-	pipeline := NewPipeline(sess.cfgAnalysis)
 	deps := registry.Deps{Index: sess.index, Repo: sess.repo, Emoji: sess.catalog}
-	if err := pipeline.registerForScope(deps, scope); err != nil {
-		ctx.Findings = append(ctx.Findings, registryFinding(err))
-	}
-	findings := pipeline.Run(ctx)
+	pipe := newPipeline(sess.cfgAnalysis, registry.Analyzers(deps, maxGateFor(scope)))
+	findings := pipe.run(ctx)
 
 	if sess.cfgAnalysis.IncludeGenerated {
 		return Result{Findings: findings}
