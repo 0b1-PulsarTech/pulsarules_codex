@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -436,5 +437,22 @@ func TestRun_HostileTreeStaysOnOneLine(t *testing.T) {
 		if forged := forgedLines(text); len(forged) > 0 {
 			t.Errorf("%s has forged lines %q in %q", name, forged, text)
 		}
+	}
+}
+
+func TestUninstallBase_SettingsFiles(t *testing.T) {
+	t.Parallel()
+
+	opts := &version.Options{Project: t.TempDir(), HooksScope: "local"}
+	_, got, err := uninstallBase(opts)
+	if err != nil || !slices.Equal(got, []string{"settings.local.json"}) {
+		t.Fatalf("uninstallBase = %v, %v, want the local file", got, err)
+	}
+
+	opts.HooksScope = "bogus"
+	_, _, err = uninstallBase(opts)
+	const want = `settings files: invalid --hooks-scope "bogus" (want project|local)`
+	if err == nil || err.Error() != want {
+		t.Errorf("err = %v, want %q", err, want)
 	}
 }

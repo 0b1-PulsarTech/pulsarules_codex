@@ -7,6 +7,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
@@ -60,11 +61,12 @@ func uninstallBase(opts *version.Options) (absBase string, settingsFiles []strin
 	if err != nil {
 		return "", nil, fmt.Errorf("base dir: %w", err)
 	}
-	settingsFiles, err = opts.SettingsFiles()
+	var scope flags.HooksScope
+	scope, err = flags.ParseHooksScope(opts.HooksScope)
 	if err != nil {
 		return "", nil, fmt.Errorf("settings files: %w", err)
 	}
-	return absBase, settingsFiles, nil
+	return absBase, scope.Files(), nil
 }
 
 func uninstallTargets(

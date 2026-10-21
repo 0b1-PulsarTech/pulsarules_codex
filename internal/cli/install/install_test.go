@@ -213,3 +213,42 @@ func TestRun_RejectsAnUnknownTargetBeforeWriting(t *testing.T) {
 		t.Errorf("rejected install created .claude, stat err = %v", statErr)
 	}
 }
+
+func TestResolveInstallConfig_SettingsFile(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		scope    string
+		want     string
+		wantText string
+	}{
+		{name: "empty means project", want: "settings.json"},
+		{name: "project", scope: "project", want: "settings.json"},
+		{name: "local", scope: "local", want: "settings.local.json"},
+		{
+			name:     "bogus is refused",
+			scope:    "bogus",
+			wantText: `settings file: invalid --hooks-scope "bogus" (want project|local)`,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			opts := &version.Options{Project: t.TempDir(), HooksScope: testCase.scope}
+			cfg, err := resolveInstallConfig(opts)
+			if testCase.wantText != "" {
+				if err == nil || err.Error() != testCase.wantText {
+					t.Fatalf("err = %v, want %q", err, testCase.wantText)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("resolveInstallConfig: %v", err)
+			}
+			if cfg.settingsFile != testCase.want {
+				t.Errorf("settingsFile = %q, want %q", cfg.settingsFile, testCase.want)
+			}
+		})
+	}
+}

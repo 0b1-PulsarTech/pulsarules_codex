@@ -1,10 +1,6 @@
 package version
 
-import (
-	"fmt"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-)
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 
 type Options struct {
 	Command  string
@@ -52,36 +48,6 @@ type Options struct {
 
 	Scenario string
 	Artifact string
-}
-
-const (
-	settingsProject = "settings.json"
-	settingsLocal   = "settings.local.json"
-)
-
-func (opts *Options) SettingsFileName() (string, error) {
-	switch opts.HooksScope {
-	case "", "project":
-		return settingsProject, nil
-	case "local":
-		return settingsLocal, nil
-	default:
-		return "", fmt.Errorf("invalid --hooks-scope %q (want project|local)", opts.HooksScope)
-	}
-}
-
-func (opts *Options) SettingsFiles() ([]string, error) {
-	switch opts.HooksScope {
-	case "":
-		// Uninstall has no record of which scope install used, so check both.
-		return []string{settingsProject, settingsLocal}, nil
-	case "project":
-		return []string{settingsProject}, nil
-	case "local":
-		return []string{settingsLocal}, nil
-	default:
-		return nil, fmt.Errorf("invalid --hooks-scope %q (want project|local)", opts.HooksScope)
-	}
 }
 
 func (opts *Options) applyDefaults() {

@@ -7,6 +7,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 	"golang.org/x/term"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/claude"
@@ -126,7 +127,7 @@ func resolveInstallConfig(opts *version.Options) (installConfig, error) {
 	if err != nil {
 		return installConfig{}, fmt.Errorf("base dir: %w", err)
 	}
-	settingsFile, err := opts.SettingsFileName()
+	scope, err := flags.ParseHooksScope(opts.HooksScope)
 	if err != nil {
 		return installConfig{}, fmt.Errorf("settings file: %w", err)
 	}
@@ -134,5 +135,5 @@ func resolveInstallConfig(opts *version.Options) (installConfig, error) {
 	if err != nil {
 		return installConfig{}, err
 	}
-	return installConfig{absBase: absBase, settingsFile: settingsFile, gitHooks: gitHooks}, nil
+	return installConfig{absBase: absBase, settingsFile: scope.File(), gitHooks: gitHooks}, nil
 }

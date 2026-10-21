@@ -299,49 +299,6 @@ func TestBaseDir_GlobalRelativeHomeIsMadeAbsolute(t *testing.T) {
 	}
 }
 
-func TestSettingsFiles(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name       string
-		hooksScope string
-		want       []string
-		wantErr    bool
-	}{
-		{name: "default unwires both", want: []string{"settings.json", "settings.local.json"}},
-		{
-			name:       "project narrows to project",
-			hooksScope: "project",
-			want:       []string{"settings.json"},
-		},
-		{
-			name:       "local narrows to local",
-			hooksScope: "local",
-			want:       []string{"settings.local.json"},
-		},
-		{name: "invalid scope errors", hooksScope: "bogus", wantErr: true},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			opts := Options{HooksScope: testCase.hooksScope}
-			got, err := opts.SettingsFiles()
-			if testCase.wantErr {
-				if err == nil {
-					t.Fatalf("expected error for --hooks-scope %q", testCase.hooksScope)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("SettingsFiles: %v", err)
-			}
-			if !slices.Equal(got, testCase.want) {
-				t.Errorf("SettingsFiles() = %v, want %v", got, testCase.want)
-			}
-		})
-	}
-}
-
 func TestExplicitTargets(t *testing.T) {
 	t.Parallel()
 
