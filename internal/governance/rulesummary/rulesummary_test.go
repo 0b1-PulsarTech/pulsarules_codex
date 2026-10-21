@@ -36,7 +36,7 @@ func TestInjectRuleSummaries(t *testing.T) {
 		},
 	}
 
-	injectRuleSummaries(findings, idx, testRules())
+	Attach(idx, testRules())(findings)
 
 	check := func(t *testing.T, findingIdx int, wantRuleID string, wantSummary bool) {
 		t.Helper()
@@ -71,7 +71,7 @@ func TestInjectRuleSummaries_NilIndex(t *testing.T) {
 		{AnalyzerID: "file-size", Severity: finding.SeverityWarning, Message: "file too long"},
 	}
 
-	injectRuleSummaries(findings, nil, testRules())
+	Attach(nil, testRules())(findings)
 
 	if findings[0].RuleSummary != "" {
 		t.Fatalf("expected empty RuleSummary with nil index, got %q", findings[0].RuleSummary)
@@ -95,7 +95,7 @@ func TestInjectRuleSummaries_PreexistingRuleID(t *testing.T) {
 		},
 	}
 
-	injectRuleSummaries(findings, idx, testRules())
+	Attach(idx, testRules())(findings)
 
 	if findings[0].RuleID != "imports" {
 		t.Fatalf("RuleID should remain pre-set: got %q", findings[0].RuleID)
@@ -122,7 +122,7 @@ func TestInjectRuleSummaries_AlreadyHasSummary(t *testing.T) {
 		},
 	}
 
-	injectRuleSummaries(findings, idx, testRules())
+	Attach(idx, testRules())(findings)
 
 	if findings[0].RuleSummary != "custom summary" {
 		t.Fatalf("existing RuleSummary should not be overwritten: got %q", findings[0].RuleSummary)

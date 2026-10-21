@@ -264,7 +264,7 @@ func TestInjectKeepsPresetRule(t *testing.T) {
 			findings := []finding.Finding{{
 				AnalyzerID: testCase.analyzerID, File: testCase.file, RuleID: testCase.presetRule,
 			}}
-			injectRuleSummaries(findings, idx, testRules())
+			Attach(idx, testRules())(findings)
 			if findings[0].RuleID != testCase.wantRule {
 				t.Fatalf("RuleID %q, want %q", findings[0].RuleID, testCase.wantRule)
 			}

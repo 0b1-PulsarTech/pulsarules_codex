@@ -11,30 +11,24 @@ func Attach(
 	index *knowledge.Index, defaults map[string]string,
 ) func([]finding.Finding) []finding.Finding {
 	return func(findings []finding.Finding) []finding.Finding {
-		injectRuleSummaries(findings, index, defaults)
+		// A nil index is accepted and skips injection.
+		if index == nil {
+			return findings
+		}
+		rules := newResolver(index, defaults)
+		for idx := range findings {
+			finding := &findings[idx]
+			if finding.RuleSummary != "" {
+				continue
+			}
+			if finding.RuleID == "" {
+				finding.RuleID = rules.resolve(finding.AnalyzerID, finding.File)
+			}
+			if finding.RuleID != "" {
+				finding.RuleSummary = index.Summary(knowledge.KindRule, finding.RuleID)
+			}
+		}
 		return findings
-	}
-}
-
-func injectRuleSummaries(
-	findings []finding.Finding, index *knowledge.Index, defaults map[string]string,
-) {
-	// A nil index is accepted and skips injection.
-	if index == nil {
-		return
-	}
-	rules := newResolver(index, defaults)
-	for idx := range findings {
-		finding := &findings[idx]
-		if finding.RuleSummary != "" {
-			continue
-		}
-		if finding.RuleID == "" {
-			finding.RuleID = rules.resolve(finding.AnalyzerID, finding.File)
-		}
-		if finding.RuleID != "" {
-			finding.RuleSummary = index.Summary(knowledge.KindRule, finding.RuleID)
-		}
 	}
 }
 
