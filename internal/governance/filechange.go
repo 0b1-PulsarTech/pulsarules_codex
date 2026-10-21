@@ -101,6 +101,13 @@ func configFinding(err error) finding.Finding {
 	)
 }
 
+func (sess *Session) seedFindings() []finding.Finding {
+	if sess.policyErr == nil {
+		return nil
+	}
+	return []finding.Finding{configFinding(sess.policyErr)}
+}
+
 func (sess *Session) stagedRenames() []pass.Rename {
 	const renameProbeScore = 1
 	// Low so a partial rename still reaches move-purity, which judges it against its own

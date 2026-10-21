@@ -157,7 +157,7 @@ func TestPipelineAppliesOverrides(t *testing.T) {
 func TestPipelineTransformsRunInOrderAfterEveryAnalyzer(t *testing.T) {
 	t.Parallel()
 
-	stamp := func(id string) Transform {
+	stamp := func(id string) transform {
 		return func(findings []finding.Finding) []finding.Finding {
 			seen := fmt.Sprintf("%d seen", len(findings))
 			return append(findings, finding.Finding{AnalyzerID: id, Message: seen})
@@ -166,7 +166,7 @@ func TestPipelineTransformsRunInOrderAfterEveryAnalyzer(t *testing.T) {
 	pipe := newPipeline(nil, []registry.Built{
 		{ID: "a1", Analyzer: stubAnalyzer{findings: []finding.Finding{{AnalyzerID: "a1"}}}},
 		{ID: "a2", Analyzer: stubAnalyzer{findings: []finding.Finding{{AnalyzerID: "a2"}}}},
-	}, []Transform{stamp("first"), stamp("second")})
+	}, []transform{stamp("first"), stamp("second")})
 
 	findings := pipe.run(&pass.Context{}, nil)
 
@@ -185,7 +185,7 @@ func TestPipelineSeedComesFirstAndIsTransformed(t *testing.T) {
 
 	pipe := newPipeline(nil, []registry.Built{
 		{ID: "a1", Analyzer: stubAnalyzer{findings: []finding.Finding{{AnalyzerID: "a1"}}}},
-	}, []Transform{func(findings []finding.Finding) []finding.Finding {
+	}, []transform{func(findings []finding.Finding) []finding.Finding {
 		return append(findings, finding.Finding{AnalyzerID: "seen", Line: len(findings)})
 	}})
 

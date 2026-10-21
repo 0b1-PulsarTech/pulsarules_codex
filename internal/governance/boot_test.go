@@ -9,17 +9,12 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntaxreport"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
-func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
+func TestSessionTransformsSortAndDedupe(t *testing.T) {
 	t.Parallel()
-
-	cfg := config.Defaults()
-	cfg.ApplyPreset()
-	analysisCfg := toAnalysisConfig(cfg)
 
 	seed := registry.Built{ID: "seed", Analyzer: stubAnalyzer{
 		findings: []finding.Finding{
@@ -53,13 +48,9 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 			},
 		},
 	}}
-	pipe := newPipeline(analysisCfg, slices.Concat(
-		[]registry.Built{seed},
-		registry.Analyzers(registry.Deps{Emoji: testCatalog(t)}, maxGateFor(ScopeChanged)),
-	), []Transform{orderFindings})
+	pipe := newPipeline(nil, []registry.Built{seed}, (&Session{}).transforms())
 
-	ctx := &pass.Context{Config: analysisCfg}
-	findings := pipe.run(ctx, nil)
+	findings := pipe.run(&pass.Context{}, nil)
 
 	if len(findings) != 3 {
 		t.Fatalf("expected 3 findings after dedup, got %d: %+v", len(findings), findings)

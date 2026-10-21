@@ -13,16 +13,16 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/rulesummary"
 )
 
-type Transform func([]finding.Finding) []finding.Finding
+type transform func([]finding.Finding) []finding.Finding
 
 type pipeline struct {
 	analyzers  []registry.Built
 	cfg        *pass.AnalysisConfig
-	transforms []Transform
+	transforms []transform
 }
 
 func newPipeline(
-	cfg *pass.AnalysisConfig, analyzers []registry.Built, transforms []Transform,
+	cfg *pass.AnalysisConfig, analyzers []registry.Built, transforms []transform,
 ) *pipeline {
 	return &pipeline{analyzers: analyzers, cfg: cfg, transforms: transforms}
 }
@@ -36,8 +36,8 @@ func (pipe *pipeline) run(ctx *pass.Context, seed []finding.Finding) []finding.F
 		reported := entry.Analyzer.Analyze(ctx)
 		findings = append(findings, pipe.overridden(entry.ID, reported)...)
 	}
-	for _, transform := range pipe.transforms {
-		findings = transform(findings)
+	for _, apply := range pipe.transforms {
+		findings = apply(findings)
 	}
 	return findings
 }
@@ -60,8 +60,8 @@ func (pipe *pipeline) enabled(id string) bool {
 	return cfg.Enabled
 }
 
-func (sess *Session) transforms() []Transform {
-	return []Transform{
+func (sess *Session) transforms() []transform {
+	return []transform{
 		packagevar.DropSingleUseDuplicates,
 		rulesummary.Attach(sess.index, registry.Rules()),
 		orderFindings,
@@ -82,11 +82,4 @@ func orderFindings(findings []finding.Finding) []finding.Finding {
 			left.Line == right.Line &&
 			left.Message == right.Message
 	})
-}
-
-func (sess *Session) seedFindings() []finding.Finding {
-	if sess.policyErr == nil {
-		return nil
-	}
-	return []finding.Finding{configFinding(sess.policyErr)}
 }
