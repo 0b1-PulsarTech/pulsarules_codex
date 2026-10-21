@@ -5,11 +5,10 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 )
-
-const fileSizeID = "file-size"
 
 func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 	if file.IncludeGenerated != nil {
@@ -139,9 +138,9 @@ func (val *validator) checkOverrideParams(field *Field, id string, params map[st
 	if params == nil {
 		return
 	}
-	if id != fileSizeID {
+	if id != filesize.ID {
 		val.fail(field, "per-path params are only supported for %s, not %s",
-			fileSizeID, clipValue(id))
+			filesize.ID, clipValue(id))
 		return
 	}
 	val.checkAnalyzerParams(field, id, params)
@@ -153,17 +152,17 @@ func (val *validator) checkOverrideParams(field *Field, id string, params map[st
 
 func (val *validator) checkAnalyzerParams(field *Field, id string, params map[string]any) {
 	val.checkParams(field, id, params)
-	if id == fileSizeID {
+	if id == filesize.ID {
 		val.checkLimitParams(field, params)
 	}
 }
 
 func (val *validator) checkLimitParams(field *Field, params map[string]any) {
-	const maxLinesParam, errorLinesParam = "max_lines", "error_lines"
-	soft := val.limitParam(field, params, maxLinesParam, 1)
-	hard := val.limitParam(field, params, errorLinesParam, 0)
+	soft := val.limitParam(field, params, filesize.ParamMaxLines, 1)
+	hard := val.limitParam(field, params, filesize.ParamErrorLines, 0)
 	if soft > 0 && hard > 0 && hard <= soft {
-		val.fail(field.key(errorLinesParam), "must be above %s (%d)", maxLinesParam, soft)
+		val.fail(field.key(filesize.ParamErrorLines), "must be above %s (%d)",
+			filesize.ParamMaxLines, soft)
 	}
 }
 

@@ -1,6 +1,10 @@
 package config
 
-import "maps"
+import (
+	"maps"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
+)
 
 const (
 	PresetRecommended = "recommended"
@@ -59,7 +63,9 @@ func strictAnalyzers() map[string]AnalyzerConfig {
 	return map[string]AnalyzerConfig{
 		// Same number as the analyzer's default; stated here anyway since this
 		// is the policy layer a caller reads to learn the project's limit.
-		"file-size": {Enabled: true, Params: map[string]any{"max_lines": strictMaxFileLines}},
+		filesize.ID: {Enabled: true, Params: map[string]any{
+			filesize.ParamMaxLines: strictMaxFileLines,
+		}},
 		"complexity": {Enabled: true, Params: map[string]any{
 			"max_complexity": strictComplexity,
 			"max_func_lines": strictMaxFuncLines,
