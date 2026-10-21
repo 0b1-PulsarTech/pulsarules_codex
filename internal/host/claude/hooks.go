@@ -18,7 +18,6 @@ const (
 	RootDir      = ".claude"
 	SkillsSubdir = "skills"
 	binSubdir    = "bin"
-	binaryName   = "pulsarules_cli"
 )
 
 const reminderScriptAsset = "skill-router-reminder.sh"
@@ -68,18 +67,10 @@ func InstallHook(templates fs.FS, claudeDir string) (backedUp []string, err erro
 			backedUp = append(backedUp, note)
 		}
 	}
-	if err = installBinary(claudeDir); err != nil {
+	if err = selfbin.Install(filepath.Join(claudeDir, binSubdir)); err != nil {
 		return backedUp, err
 	}
 	return backedUp, nil
-}
-
-func installBinary(claudeDir string) error {
-	dst := filepath.Join(claudeDir, binSubdir, binaryName)
-	if err := selfbin.Copy(dst); err != nil {
-		return fmt.Errorf("copy installer binary: %w", err)
-	}
-	return nil
 }
 
 type reminderScriptValues struct {
@@ -96,7 +87,7 @@ func renderReminderScript(name string, body []byte) ([]byte, error) {
 	const logFileName = "hook-execution.log"
 	// path.Join, not filepath.Join: these paths are embedded in a bash script.
 	values := reminderScriptValues{
-		BinaryRelPath: path.Join(RootDir, binSubdir, binaryName),
+		BinaryRelPath: path.Join(RootDir, binSubdir, selfbin.Name),
 		SkillsRelPath: path.Join(RootDir, SkillsSubdir),
 		LogRelPath:    path.Join(RootDir, logFileName),
 	}

@@ -35,7 +35,8 @@ func Install(dir string, templates fs.FS) (backedUp []string, err error) {
 	if note != "" {
 		backedUp = append(backedUp, note)
 	}
-	if err = installBinary(dir); err != nil {
+	// The embedded plugin script hardcodes this path; keep them in sync.
+	if err = selfbin.Install(binDir(dir)); err != nil {
 		return backedUp, fmt.Errorf("install binary: %w", err)
 	}
 	if err = gitignore.Ensure(filepath.Join(dir, ".opencode"), "/bin/"); err != nil {
@@ -44,13 +45,8 @@ func Install(dir string, templates fs.FS) (backedUp []string, err error) {
 	return backedUp, nil
 }
 
-func installBinary(dir string) error {
-	// The embedded plugin script hardcodes this path; keep them in sync.
-	dst := filepath.Join(dir, binaryRel)
-	if err := selfbin.Copy(dst); err != nil {
-		return fmt.Errorf("copy installer binary: %w", err)
-	}
-	return nil
+func binDir(dir string) string {
+	return filepath.Join(dir, filepath.Dir(filepath.FromSlash(binaryRel)))
 }
 
 type PluginRemoval struct {
@@ -78,11 +74,11 @@ func Uninstall(dir string) (PluginRemoval, error) {
 	if err = disk.RemoveEmptyDir(pluginsDir); err != nil {
 		return res, fmt.Errorf("remove empty plugins dir: %w", err)
 	}
-	binDir := filepath.Join(dir, ".opencode", "bin")
-	if err = os.RemoveAll(filepath.Join(dir, binaryRel)); err != nil {
-		return res, fmt.Errorf("remove installer binary: %w", err)
+	binPath := binDir(dir)
+	if err = selfbin.Remove(binPath); err != nil {
+		return res, err
 	}
-	if err = disk.RemoveEmptyDir(binDir); err != nil {
+	if err = disk.RemoveEmptyDir(binPath); err != nil {
 		return res, fmt.Errorf("remove empty bin dir: %w", err)
 	}
 	if _, err = gitignore.Remove(filepath.Join(dir, ".opencode"), "/bin/"); err != nil {

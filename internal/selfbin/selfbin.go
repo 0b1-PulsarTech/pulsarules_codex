@@ -10,7 +10,23 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 )
 
-func Copy(dst string) error {
+const Name = "pulsarules_cli"
+
+func Install(dir string) error {
+	if err := copyTo(filepath.Join(dir, Name)); err != nil {
+		return fmt.Errorf("copy installer binary: %w", err)
+	}
+	return nil
+}
+
+func Remove(dir string) error {
+	if err := os.RemoveAll(filepath.Join(dir, Name)); err != nil {
+		return fmt.Errorf("remove installer binary: %w", err)
+	}
+	return nil
+}
+
+func copyTo(dst string) error {
 	exe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("resolve running binary: %w", err)

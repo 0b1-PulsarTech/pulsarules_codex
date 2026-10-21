@@ -4,12 +4,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 type seedFunc func(t *testing.T) (dst string, verify func(t *testing.T))
 
-func TestCopy(t *testing.T) {
+func TestCopyTo(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -31,7 +32,7 @@ func TestCopy(t *testing.T) {
 			t.Parallel()
 
 			dst, verify := testCase.seed(t)
-			err := Copy(dst)
+			err := copyTo(dst)
 			if testCase.wantErr {
 				if err == nil {
 					t.Fatal("expected an error, got nil")
@@ -39,7 +40,7 @@ func TestCopy(t *testing.T) {
 				return
 			}
 			if err != nil {
-				t.Fatalf("Copy: %v", err)
+				t.Fatalf("copyTo: %v", err)
 			}
 			verify(t)
 		})
@@ -162,5 +163,59 @@ func requireExecutable(t *testing.T, path string) {
 	}
 	if stat.Mode().Perm() != 0o755 {
 		t.Errorf("mode = %v, want 0755", stat.Mode().Perm())
+	}
+}
+
+func TestInstallAndRemove(t *testing.T) {
+	t.Parallel()
+
+	dir := filepath.Join(t.TempDir(), "bin")
+	if err := Install(dir); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	requireExecutable(t, filepath.Join(dir, Name))
+
+	if err := Remove(dir); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(dir, Name)); !os.IsNotExist(err) {
+		t.Errorf("binary still present after Remove: %v", err)
+	}
+	if err := Remove(dir); err != nil {
+		t.Errorf("Remove of an absent binary = %v, want nil", err)
+	}
+}
+
+func TestInstall_Failure(t *testing.T) {
+	t.Parallel()
+
+	blocker := filepath.Join(t.TempDir(), "blocker")
+	if err := os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
+		t.Fatalf("seed blocker: %v", err)
+	}
+	err := Install(blocker)
+	if err == nil || !strings.Contains(err.Error(), "copy installer binary") {
+		t.Fatalf("Install(file as dir) err = %v, want a copy installer binary error", err)
+	}
+}
+
+func TestRemove_Failure(t *testing.T) {
+	t.Parallel()
+
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, Name), []byte("x"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+	err := Remove(dir)
+	if err == nil || !strings.Contains(err.Error(), "remove installer binary") {
+		t.Fatalf("Remove(read-only dir) err = %v, want a remove installer binary error", err)
 	}
 }

@@ -4,11 +4,13 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -269,5 +271,13 @@ func TestUninstall_RestoresForeignPlugin(t *testing.T) {
 	got, err := os.ReadFile(pluginPath)
 	if err != nil || string(got) != foreign {
 		t.Errorf("plugin content = %q (%v), want the foreign original back", got, err)
+	}
+}
+
+func TestBinaryRel_EndsWithSelfbinName(t *testing.T) {
+	t.Parallel()
+
+	if got := path.Base(binaryRel); got != selfbin.Name {
+		t.Errorf("binaryRel base = %q, want selfbin.Name %q", got, selfbin.Name)
 	}
 }

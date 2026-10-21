@@ -1,6 +1,9 @@
 package githook
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
+)
 
 type hookSpec struct {
 	description string
@@ -69,7 +72,7 @@ case "$COMMON_DIR" in
 [/]*) ;;
 *) COMMON_DIR="$PROJECT_DIR/$COMMON_DIR" ;;
 esac
-BINARY="$COMMON_DIR/hooks/` + binaryName + `"
+BINARY="$COMMON_DIR/hooks/` + selfbin.Name + `"
 [ -x "$BINARY" ] || exit 0
 `
 	// The preamble resolves the installer via the shared hooks dir, so a hook fired from

@@ -37,7 +37,7 @@ function makeRunHook({ bin, root, $ }) {
 // Revisit when opencode adds a hook whose output the model reads back.
 export const PulsarulesGovernance = async ({ directory, worktree, $ }) => {
   const root = worktree || directory;
-  // Must match opencodehook.go's binDirRel and selfbin.Name.
+  // Must match internal/host/opencode/plugin.go's binaryRel constant.
   const bin = `${root}/.opencode/bin/pulsarules_cli`;
 
   // .opencode/bin/ is gitignored, so a fresh clone has no binary yet; stay

@@ -13,8 +13,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
-const binaryName = "pulsarules_cli"
-
 func Install(dir string, hooks []string, opts Options) (backedUp []string, err error) {
 	if len(hooks) == 0 {
 		return nil, nil
@@ -45,11 +43,7 @@ func Install(dir string, hooks []string, opts Options) (backedUp []string, err e
 }
 
 func InstallBinary(dir string) error {
-	dst := filepath.Join(hooksDir(dir), binaryName)
-	if err := selfbin.Copy(dst); err != nil {
-		return fmt.Errorf("copy installer binary: %w", err)
-	}
-	return nil
+	return selfbin.Install(hooksDir(dir))
 }
 
 func HookNames() []string {
@@ -88,8 +82,8 @@ func Uninstall(dir string) (UninstallResult, error) {
 	if res.Orphaned, err = ownedfile.OrphanNotes(paths...); err != nil {
 		return res, err
 	}
-	if err = os.RemoveAll(filepath.Join(dest, binaryName)); err != nil {
-		return res, fmt.Errorf("remove installer binary: %w", err)
+	if err = selfbin.Remove(dest); err != nil {
+		return res, err
 	}
 	return res, nil
 }

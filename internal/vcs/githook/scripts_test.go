@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
 func TestHookScript_Rendering(t *testing.T) {
@@ -36,7 +37,7 @@ func TestHookScript_Rendering(t *testing.T) {
 				return
 			}
 			for _, want := range []string{
-				"#!/bin/sh", ownedfile.Marker, "--git-common-dir", binaryName,
+				"#!/bin/sh", ownedfile.Marker, "--git-common-dir", selfbin.Name,
 				testCase.wantCommand,
 			} {
 				if !strings.Contains(script, want) {

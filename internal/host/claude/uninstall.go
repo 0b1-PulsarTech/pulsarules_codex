@@ -2,11 +2,11 @@ package claude
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
 func UninstallHook(claudeDir string) (restored, orphaned []string, err error) {
@@ -33,8 +33,8 @@ func UninstallHook(claudeDir string) (restored, orphaned []string, err error) {
 		return restored, orphaned, fmt.Errorf("remove empty hooks dir: %w", err)
 	}
 	binDir := filepath.Join(claudeDir, "bin")
-	if err = os.RemoveAll(filepath.Join(binDir, binaryName)); err != nil {
-		return restored, orphaned, fmt.Errorf("remove installer binary: %w", err)
+	if err = selfbin.Remove(binDir); err != nil {
+		return restored, orphaned, err
 	}
 	if err = disk.RemoveEmptyDir(binDir); err != nil {
 		return restored, orphaned, fmt.Errorf("remove empty bin dir: %w", err)
