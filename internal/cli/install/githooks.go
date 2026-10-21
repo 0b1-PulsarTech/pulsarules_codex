@@ -48,9 +48,7 @@ func validateGitHooks(hooks []string) error {
 
 func installPostTargets(opts *version.Options, cfg installConfig) error {
 	if !opts.NoGitHooks {
-		rpt, hookErr := install.Git(install.Context{
-			Dir:                 cfg.absBase,
-			GitHooks:            cfg.gitHooks,
+		rpt, hookErr := install.Git(cfg.absBase, cfg.gitHooks, githook.Options{
 			TypographicSeverity: opts.TypographicSeverity,
 			BranchExtraTypes:    opts.BranchExtraTypes,
 		})

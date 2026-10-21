@@ -39,7 +39,7 @@ func TestUninstallGit_GitRemovedHooks(t *testing.T) {
 				}
 			}
 
-			rpt, err := UninstallGit(UninstallContext{Dir: dir})
+			rpt, err := UninstallGit(dir)
 			if err != nil {
 				t.Fatalf("Uninstall(git): %v", err)
 			}
@@ -81,7 +81,7 @@ func TestUninstallGit_GitOrphanedBackup(
 		t.Fatalf("second githook.Install: %v", err)
 	}
 
-	rpt, err := UninstallGit(UninstallContext{Dir: dir})
+	rpt, err := UninstallGit(dir)
 	if err != nil {
 		t.Fatalf("Uninstall(git): %v", err)
 	}
@@ -126,7 +126,7 @@ func TestInstall_Git_ContextHooks(
 				t.Fatalf("mkdir .git: %v", err)
 			}
 
-			_, err := Git(Context{Dir: dir, GitHooks: testCase.gitHooks})
+			_, err := Git(dir, testCase.gitHooks, githook.Options{})
 			if err != nil {
 				t.Fatalf("Install(git): %v", err)
 			}
@@ -156,7 +156,7 @@ func TestInstall_Git_ForeignHookBackup(t *testing.T) {
 	foreign := "#!/bin/sh\nnpx lint-staged\n"
 	seedFile(t, preCommit, foreign, 0o755)
 
-	rpt, err := Git(Context{Dir: dir, GitHooks: []string{"pre-commit"}})
+	rpt, err := Git(dir, []string{"pre-commit"}, githook.Options{})
 	if err != nil {
 		t.Fatalf("Install(git): %v", err)
 	}
@@ -165,7 +165,7 @@ func TestInstall_Git_ForeignHookBackup(t *testing.T) {
 	}
 	assertContent(t, preCommit+ownedfile.BackupSuffix, foreign)
 
-	uninstallReport, err := UninstallGit(UninstallContext{Dir: dir})
+	uninstallReport, err := UninstallGit(dir)
 	if err != nil {
 		t.Fatalf("Uninstall(git): %v", err)
 	}
@@ -210,11 +210,11 @@ func TestInstall_Git_OwnHookOverwrite(
 		t.Fatalf("mkdir .git: %v", err)
 	}
 
-	ctx := Context{Dir: dir, GitHooks: []string{"pre-commit"}}
-	if _, err := Git(ctx); err != nil {
+	preCommit := []string{"pre-commit"}
+	if _, err := Git(dir, preCommit, githook.Options{}); err != nil {
 		t.Fatalf("first Install(git): %v", err)
 	}
-	rpt, err := Git(ctx)
+	rpt, err := Git(dir, preCommit, githook.Options{})
 	if err != nil {
 		t.Fatalf("second Install(git): %v", err)
 	}
@@ -230,22 +230,27 @@ func TestInstall_Git_OwnHookOverwrite(
 func TestInstall_Git_UnknownHook(t *testing.T) {
 	t.Parallel()
 
-	_, err := Git(Context{Dir: t.TempDir(), GitHooks: []string{"bogus"}})
-	if err == nil {
-		t.Fatal("expected error for unknown git hook name")
+	_, err := Git(t.TempDir(), []string{"bogus"}, githook.Options{})
+	want := "install git: install git hooks: unknown git hook " +
+		`"bogus" (want ` + strings.Join(githook.HookNames(), "|") + ")"
+	if err == nil || err.Error() != want {
+		t.Fatalf("Git err = %v, want %q", err, want)
 	}
 }
 
-func TestUninstallGit_Opencode(t *testing.T) {
+func TestUninstallGit_FailureWording(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-
-	rpt, err := UninstallOpencode(UninstallContext{Dir: dir})
-	if err != nil {
-		t.Fatalf("Uninstall(opencode) on untouched dir: %v", err)
+	hookPath := filepath.Join(dir, ".git", "hooks", "commit-msg")
+	if err := os.MkdirAll(hookPath, 0o755); err != nil {
+		t.Fatalf("seed a directory in place of the hook: %v", err)
 	}
-	if len(rpt.Notes) != 0 {
-		t.Errorf("Notes = %v, want none for untouched dir", rpt.Notes)
+
+	_, err := UninstallGit(dir)
+	want := `uninstall git: uninstall git hooks: uninstall hook "commit-msg": check "` +
+		hookPath + `": read "` + hookPath + `": read ` + hookPath + `: is a directory`
+	if err == nil || err.Error() != want {
+		t.Fatalf("UninstallGit err = %v, want %q", err, want)
 	}
 }

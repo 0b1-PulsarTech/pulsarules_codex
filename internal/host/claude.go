@@ -41,11 +41,7 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 	if ctx.NoHooks {
 		return report, nil
 	}
-	sub, err := install.Claude(install.Context{
-		Dir:          claudeDir,
-		Templates:    ctx.Templates,
-		SettingsFile: ctx.SettingsFile,
-	})
+	sub, err := install.Claude(claudeDir, ctx.Templates, ctx.SettingsFile)
 	report.Merge(sub)
 	if err != nil {
 		return report, fmt.Errorf("install hooks: %w", err)
@@ -82,8 +78,7 @@ func (claudeTarget) Uninstall(ctx UninstallContext) (Report, error) {
 func unwireClaudeHooks(claudeDir string, files []string, report *Report) error {
 	var errs []error
 	for _, settingsFile := range files {
-		uctx := install.UninstallContext{Dir: claudeDir, SettingsFile: settingsFile}
-		sub, err := install.UninstallClaude(uctx)
+		sub, err := install.UninstallClaude(claudeDir, settingsFile)
 		if err != nil {
 			if warnUnparseable(report, err) {
 				continue

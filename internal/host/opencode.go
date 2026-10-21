@@ -49,10 +49,7 @@ func (opencodeTarget) Install(ctx Context) (Report, error) {
 		return report, fmt.Errorf("wire opencode config: %w", err)
 	}
 	if !ctx.NoHooks {
-		sub, installErr := install.Opencode(install.Context{
-			Dir:       ctx.Base,
-			Templates: ctx.Templates,
-		})
+		sub, installErr := install.Opencode(ctx.Base, ctx.Templates)
 		report.Merge(sub)
 		if installErr != nil {
 			report.Warn("opencode plugin: %v", installErr)
@@ -76,7 +73,7 @@ func (opencodeTarget) Uninstall(ctx UninstallContext) (Report, error) {
 	if err := unwireOpencodeConfig(ctx.Base, &report); err != nil {
 		return report, err
 	}
-	sub, err := install.UninstallOpencode(install.UninstallContext{Dir: ctx.Base})
+	sub, err := install.UninstallOpencode(ctx.Base)
 	if err != nil {
 		return report, fmt.Errorf("uninstall opencode plugin: %w", err)
 	}

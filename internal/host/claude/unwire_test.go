@@ -3,6 +3,7 @@ package claude
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -349,6 +350,7 @@ func TestUnwireSettings_UserHookTimeout(t *testing.T) {
 func TestUnwireSettings_Warnings(t *testing.T) {
 	t.Parallel()
 
+	hooksType := fmt.Sprintf("%T", map[string][]hookGroup(nil))
 	testCases := []struct {
 		name         string
 		settingsFile string
@@ -378,7 +380,7 @@ func TestUnwireSettings_Warnings(t *testing.T) {
 		{
 			name: "hooks of the wrong type", settingsFile: "settings.json", seed: `{"hooks":[]}`,
 			want: "hooks: json: cannot unmarshal array into Go value of type " +
-				"map[string][]claude.hookGroup",
+				hooksType,
 		},
 	}
 	for _, testCase := range testCases {

@@ -36,7 +36,7 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	}
 	errs := uninstallTargets(deps, targets, ctx)
 
-	gitReport, hookErr := install.UninstallGit(install.UninstallContext{Dir: absBase})
+	gitReport, hookErr := install.UninstallGit(absBase)
 	gitReport.Print(os.Stdout, os.Stderr)
 	if hookErr != nil {
 		errs = append(errs, hookErr)

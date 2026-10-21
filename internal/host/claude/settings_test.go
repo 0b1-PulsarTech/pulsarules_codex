@@ -3,6 +3,7 @@ package claude
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -250,8 +251,8 @@ func TestWireSettings_ParseFailureWording(t *testing.T) {
 
 	const objectCause = "json: cannot unmarshal array into Go value of type " +
 		"map[string]jsontext.Value"
-	const hooksCause = "json: cannot unmarshal array into Go value of type " +
-		"map[string][]claude.hookGroup"
+	hooksCause := "json: cannot unmarshal array into Go value of type " +
+		fmt.Sprintf("%T", map[string][]hookGroup(nil))
 	testCases := []struct {
 		name         string
 		settingsFile string
