@@ -9,10 +9,16 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 )
 
+const (
+	mergedJoin   = " + "
+	mergedSuffix = " (merged)"
+)
+
 func merge(base, private *projectfile.File, presetFlag string) (*projectfile.File, error) {
 	keptBase := privateWinsOverrides(base, private, presetFlag)
 	merged := &projectfile.File{
 		Path:             mergedName(base, private),
+		Sources:          []string{base.Path, private.Path},
 		Version:          base.Version,
 		Preset:           cmp.Or(private.Preset, base.Preset),
 		IncludeGenerated: cmp.Or(private.IncludeGenerated, base.IncludeGenerated),

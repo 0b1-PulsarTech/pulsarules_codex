@@ -247,7 +247,9 @@ func TestCapReportKeepsTheMeaning(t *testing.T) {
 			err := error(&fileError{File: prefix, Err: errors.New(text)})
 			if testCase.merged != "" {
 				prefix = testCase.file + " + " + testCase.merged + " (merged)"
-				file = &projectfile.File{Path: prefix}
+				file = &projectfile.File{
+					Path: prefix, Sources: []string{testCase.file, testCase.merged},
+				}
 				err = errors.New(problems(prefix, testCase.count))
 			}
 			got := capReport(err, file)

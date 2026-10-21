@@ -42,6 +42,7 @@ type Rules struct {
 
 type File struct {
 	Path             string                   `yaml:"-"`
+	Sources          []string                 `yaml:"-"`
 	Version          int                      `yaml:"version"`
 	Preset           string                   `yaml:"preset"`
 	IncludeGenerated *bool                    `yaml:"include_generated"`

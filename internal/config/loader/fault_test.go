@@ -27,8 +27,17 @@ func TestFaultFile(t *testing.T) {
 		{
 			"merged file by its base",
 			bad,
-			&projectfile.File{Path: "a.yaml + b + c.yaml (merged)"},
-			"a.yaml",
+			&projectfile.File{
+				Path:    "a + b.yaml + c.yaml (merged)",
+				Sources: []string{"a + b.yaml", "c.yaml"},
+			},
+			"a + b.yaml",
+		},
+		{
+			"a path that only looks merged stays whole",
+			bad,
+			&projectfile.File{Path: "a.yaml + c.yaml (merged)"},
+			"a.yaml + c.yaml (merged)",
 		},
 		{
 			"private path holding the separator stays whole",

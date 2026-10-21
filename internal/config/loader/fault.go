@@ -2,14 +2,8 @@ package loader
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
-)
-
-const (
-	mergedJoin   = " + "
-	mergedSuffix = " (merged)"
 )
 
 type fileError struct {
@@ -52,9 +46,8 @@ func faultFile(err error, file *projectfile.File) string {
 	if file == nil {
 		return projectfile.Name
 	}
-	if names, isMerged := strings.CutSuffix(file.Path, mergedSuffix); isMerged {
-		base, _, _ := strings.Cut(names, mergedJoin)
-		return base
+	if len(file.Sources) > 0 {
+		return file.Sources[0]
 	}
 	return file.Path
 }

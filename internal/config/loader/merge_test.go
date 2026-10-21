@@ -159,6 +159,7 @@ func TestMerge(t *testing.T) {
 			}
 			want := testCase.want
 			want.Path = ".pulsarules.yaml + .git/pulsarules.yaml (merged)"
+			want.Sources = []string{".pulsarules.yaml", ".git/pulsarules.yaml"}
 			want.Version = 1
 			if !reflect.DeepEqual(*got, want) {
 				t.Fatalf("merge() = %+v, want %+v", *got, want)
@@ -284,7 +285,7 @@ func TestMergeMatchesSingleFile(t *testing.T) {
 				t.Fatalf("merge() error = %v", err)
 			}
 			want := parseFile(t, "single.yaml", testCase.single)
-			got.Path, want.Path = "", ""
+			got.Path, got.Sources, want.Path = "", nil, ""
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("merge() = %+v, want %+v", *got, *want)
 			}
