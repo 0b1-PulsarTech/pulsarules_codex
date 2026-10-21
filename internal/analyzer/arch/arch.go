@@ -10,6 +10,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const (
+	PackageBoundaryID = "arch-boundary"
+	ImportCycleID     = "import-cycle"
+)
+
 func resolveModuleOrFindings(
 	reporter finding.Reporter,
 	module pass.Module,
@@ -32,11 +37,11 @@ type PackageBoundaryAnalyzer struct {
 
 func NewPackageBoundaryAnalyzer() *PackageBoundaryAnalyzer {
 	return &PackageBoundaryAnalyzer{
-		reporter: finding.NewReporter("arch-boundary", finding.SeverityError, finding.CatArch),
+		reporter: finding.NewReporter(PackageBoundaryID, finding.SeverityError, finding.CatArch),
 	}
 }
 
-func (analyzer *PackageBoundaryAnalyzer) ID() string             { return "arch-boundary" }
+func (analyzer *PackageBoundaryAnalyzer) ID() string             { return PackageBoundaryID }
 func (analyzer *PackageBoundaryAnalyzer) Stage() finding.StageID { return finding.StageArch }
 
 func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -69,11 +74,11 @@ type ImportCycleAnalyzer struct {
 
 func NewImportCycleAnalyzer() *ImportCycleAnalyzer {
 	return &ImportCycleAnalyzer{
-		reporter: finding.NewReporter("import-cycle", finding.SeverityError, finding.CatArch),
+		reporter: finding.NewReporter(ImportCycleID, finding.SeverityError, finding.CatArch),
 	}
 }
 
-func (analyzer *ImportCycleAnalyzer) ID() string             { return "import-cycle" }
+func (analyzer *ImportCycleAnalyzer) ID() string             { return ImportCycleID }
 func (analyzer *ImportCycleAnalyzer) Stage() finding.StageID { return finding.StageArch }
 
 func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -107,4 +112,12 @@ func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []finding.Findin
 		))
 	}
 	return findings
+}
+
+func DescribeBoundary() pass.Descriptor {
+	return pass.Descriptor{ID: PackageBoundaryID, Rule: "dependency-rule"}
+}
+
+func DescribeCycle() pass.Descriptor {
+	return pass.Descriptor{ID: ImportCycleID, Rule: "module-boundaries"}
 }

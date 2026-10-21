@@ -9,13 +9,15 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const ID = "output"
+
 var _ pass.InPlaceAnalyzer = (*Analyzer)(nil)
 
 type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer { return &Analyzer{} }
 
-func (analyzer *Analyzer) ID() string { return "output" }
+func (analyzer *Analyzer) ID() string { return ID }
 
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageOutput }
 
@@ -39,4 +41,8 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 			left.Message == right.Message
 	})
 	return nil
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID}
 }

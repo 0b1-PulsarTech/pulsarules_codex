@@ -10,7 +10,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
 
-const ID = "branch-name"
+const (
+	ID              = "branch-name"
+	paramExtraTypes = "extra_types"
+)
 
 type branchReader interface {
 	CurrentBranch() (string, error)
@@ -67,7 +70,7 @@ func allowedTypes(params pass.ParamSet) []string {
 	// Gitflow prefixes are allowed by default: the check exists to stop a tool-generated
 	// name reaching a remote, not to block a project's own gitflow convention.
 	allowed := slices.Concat(commitmsg.AllowedTypes(), gitflowTypes)
-	allowed = append(allowed, params.Strings("extra_types", nil)...)
+	allowed = append(allowed, params.Strings(paramExtraTypes, nil)...)
 	slices.Sort(allowed)
 	return slices.Compact(allowed)
 }
@@ -114,4 +117,12 @@ func validExtraTypes(spec string) bool {
 
 func isExtraTypeChar(char rune) bool {
 	return char == '-' || (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9')
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "commits",
+		Params: []string{paramExtraTypes},
+	}
 }

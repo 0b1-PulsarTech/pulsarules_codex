@@ -127,3 +127,7 @@ func unrelatedStagedEdits(
 	}
 	return edits, unlinks
 }
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "commits", Params: []string{ParamMinSimilarity}}
+}

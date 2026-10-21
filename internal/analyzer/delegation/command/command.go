@@ -38,3 +38,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	}
 	return findings
 }
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID}
+}

@@ -9,6 +9,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
+const ID = "rule-injection"
+
 func defaultRuleMap() map[string]string {
 	// A new analyzer goes here by exact ID; sub-ID tools also need a lookupRule prefix.
 	rules := map[string]string{
@@ -87,7 +89,7 @@ func NewAnalyzer(index *knowledge.Index) *Analyzer {
 	return &Analyzer{index: index}
 }
 
-func (analyzer *Analyzer) ID() string             { return "rule-injection" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageRuleInjection }
 
 func (analyzer *Analyzer) TransformsInPlace() {}
@@ -125,4 +127,8 @@ func lookupRule(rules map[string]string, analyzerID string) string {
 		return "code-smells"
 	}
 	return ""
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID}
 }

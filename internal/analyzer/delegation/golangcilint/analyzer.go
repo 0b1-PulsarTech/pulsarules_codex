@@ -8,7 +8,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-const golangciLintID = "golangci-lint"
+const (
+	ID              = "golangci-lint"
+	paramConfigPath = "config_path"
+)
 
 type Analyzer struct {
 	path    string
@@ -24,12 +27,12 @@ func NewAnalyzer(golangciLintPath string) *Analyzer {
 		// Per call, not aggregated over runPerModule's loop: modules vary in size,
 		// so sharing one budget would starve a large one.
 		timeout: golangciLintTimeout,
-		failure: finding.NewReporter(golangciLintID, finding.SeverityError, finding.CatSyntax),
-		warning: finding.NewReporter(golangciLintID, finding.SeverityWarning, finding.CatSyntax),
+		failure: finding.NewReporter(ID, finding.SeverityError, finding.CatSyntax),
+		warning: finding.NewReporter(ID, finding.SeverityWarning, finding.CatSyntax),
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return golangciLintID }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -45,5 +48,13 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 
 func extractGolangciConfigPath(ctx *pass.Context) string {
 	// Through ctx.Params, not ctx.Config, which dereferences a nil Config.
-	return ctx.Params(golangciLintID).String("config_path", "")
+	return ctx.Params(ID).String(paramConfigPath, "")
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "code-smells",
+		Params: []string{paramConfigPath},
+	}
 }

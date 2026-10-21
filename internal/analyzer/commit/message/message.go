@@ -75,3 +75,11 @@ func (cfg emojiWindowConfig) merge(params pass.ParamSet) emojiWindowConfig {
 	cfg.Suggestions = params.Int(ParamEmojiSuggestions, cfg.Suggestions)
 	return cfg
 }
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "commits",
+		Params: []string{ParamEmojiHardWindow, ParamEmojiSoftWindow, ParamEmojiSuggestions},
+	}
+}
