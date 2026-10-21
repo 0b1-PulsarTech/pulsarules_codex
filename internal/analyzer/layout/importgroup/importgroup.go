@@ -14,7 +14,7 @@ import (
 
 const (
 	ID     = "import-groups"
-	PathID = ID + "/path"
+	pathID = ID + "/path"
 )
 
 const aliasHint = "configure a project alias (package.json `imports` or tsconfig `paths`) " +
@@ -28,7 +28,7 @@ type Analyzer struct {
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
 		reporter:     finding.NewReporter(ID, finding.SeverityError, finding.CatSyntax),
-		pathReporter: finding.NewReporter(PathID, finding.SeverityWarning, finding.CatSyntax),
+		pathReporter: finding.NewReporter(pathID, finding.SeverityWarning, finding.CatSyntax),
 	}
 }
 

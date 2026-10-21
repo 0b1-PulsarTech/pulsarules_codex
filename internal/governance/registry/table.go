@@ -70,7 +70,7 @@ func contentSpecs() []entry {
 			return branch.NewAnalyzer(deps.Repo)
 		}),
 		plain(golangcilint.Describe(), GateFullOnly, func() *golangcilint.Analyzer {
-			return golangcilint.NewAnalyzer("golangci-lint")
+			return golangcilint.NewAnalyzer(golangcilint.ID)
 		}),
 		hide(viaDeps(command.Describe(), GateFullOnly, func(deps Deps) pass.Analyzer {
 			return command.NewAnalyzer(deps.Index)
