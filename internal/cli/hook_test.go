@@ -1,14 +1,19 @@
-package hook
+package cli
 
 import (
 	"bytes"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/wrapped-owls/goremy-di/remy"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -20,7 +25,7 @@ func TestPrintHookError_StaysOnOneLine(t *testing.T) {
 	t.Parallel()
 
 	var out strings.Builder
-	printHookError(&out, "get templates", errors.New("open a\n[ERROR] forged"))
+	hook.PrintHookError(&out, "get templates", errors.New("open a\n[ERROR] forged"))
 	want := `hook: get templates: open a\n[ERROR] forged` + "\n"
 	if out.String() != want {
 		t.Errorf("output = %q, want %q", out.String(), want)
@@ -44,7 +49,7 @@ func TestGovernChanges_EmptyRepo(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	got, count := governChanges(dir, status, nil, testEmojiCatalog(t))
+	got, count := hook.GovernChanges(dir, status, nil, testEmojiCatalog(t))
 	if got != "" {
 		t.Errorf("block = %q, want empty for an empty repo", got)
 	}
@@ -56,7 +61,7 @@ func TestGovernChanges_EmptyRepo(t *testing.T) {
 func TestGovernChanges_NotARepository(t *testing.T) {
 	t.Parallel()
 
-	block, count := governChanges(t.TempDir(), vcs.Status{}, nil, testEmojiCatalog(t))
+	block, count := hook.GovernChanges(t.TempDir(), vcs.Status{}, nil, testEmojiCatalog(t))
 	if count != 1 || !strings.Contains(block, "open repository:") {
 		t.Fatalf("governChanges() = %q, %d, want the open-repository error", block, count)
 	}
@@ -83,7 +88,7 @@ func TestGovernChanges_SuppressionBlock(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	block, count := governChanges(dir, status, nil, testEmojiCatalog(t))
+	block, count := hook.GovernChanges(dir, status, nil, testEmojiCatalog(t))
 	if count != 1 {
 		t.Fatalf("count = %d, want 1 (the generated file's finding is suppressed)", count)
 	}
@@ -126,7 +131,7 @@ func runDirtyCheck(t *testing.T, configYAML string) (string, int) {
 	if err != nil {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
-	return governChanges(dir, status, nil, testEmojiCatalog(t))
+	return hook.GovernChanges(dir, status, nil, testEmojiCatalog(t))
 }
 
 type projectConfigCase struct {
@@ -204,7 +209,10 @@ func TestHookStop_RealGovernance(t *testing.T) {
 	var out bytes.Buffer
 	t.Setenv("PULSARULES_PROJECT_DIR", dir)
 	t.Setenv("PULSARULES_SKILLS_DIR", "")
-	disp := newHookDispatcher(index, testEmojiCatalog(t), templates.New(assets), nil, &out)
+	disp := hook.NewHookDispatcher(
+		index, func() (*emoji.Catalog, error) { return testEmojiCatalog(t), nil },
+		templates.New(assets), nil, &out,
+	)
 
 	_ = disp.Dispatch("stop", []byte(`{"session_id":"real-governance"}`))
 	for _, want := range []string{
@@ -224,4 +232,72 @@ func testEmojiCatalog(t *testing.T) *emoji.Catalog {
 		t.Fatalf("emoji.NewCatalog: %v", err)
 	}
 	return catalog
+}
+
+func captureStderr(t *testing.T, body func()) string {
+	t.Helper()
+
+	file, err := os.CreateTemp(t.TempDir(), "stderr")
+	if err != nil {
+		t.Fatalf("create stderr capture: %v", err)
+	}
+	saved := os.Stderr
+	os.Stderr = file
+	defer func() { os.Stderr = saved }()
+	body()
+	if _, err = file.Seek(0, 0); err != nil {
+		t.Fatalf("rewind stderr capture: %v", err)
+	}
+	captured, err := io.ReadAll(file)
+	if err != nil {
+		t.Fatalf("read stderr capture: %v", err)
+	}
+	return string(captured)
+}
+
+func TestHookStop_CatalogFailureSkipsGovernance(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+
+	index, assets, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	dir := t.TempDir()
+	initGitRepo(t, dir)
+	writeHookFile(t, dir, "violation.go", "package x\n\n// bad note \u2014 here\n")
+	t.Setenv("PULSARULES_PROJECT_DIR", dir)
+	t.Setenv("PULSARULES_SKILLS_DIR", "")
+	var out bytes.Buffer
+	disp := hook.NewHookDispatcher(
+		index, func() (*emoji.Catalog, error) { return nil, errors.New("catalog unavailable") },
+		templates.New(assets), nil, &out,
+	)
+
+	stderr := captureStderr(t, func() {
+		_ = disp.Dispatch("stop", []byte(`{"session_id":"catalog-failure"}`))
+	})
+
+	if !strings.Contains(stderr, "hook: get emoji catalog: catalog unavailable") {
+		t.Errorf("stderr = %q, want the catalog failure", stderr)
+	}
+	if strings.Contains(out.String(), "Governance checks:") {
+		t.Errorf("stop ran governance without a catalog:\n%s", out.String())
+	}
+}
+
+func TestRunHook_OtherModesDoNotNeedTheCatalog(t *testing.T) {
+	t.Setenv("PULSARULES_PROJECT_DIR", t.TempDir())
+	t.Setenv("PULSARULES_SKILLS_DIR", "")
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	bindWithoutCatalog(t, inj, t.TempDir())
+	stderr := captureStderr(t, func() {
+		if err := hook.RunHook(inj, &version.Options{Mode: "pre-search"}); err != nil {
+			t.Errorf("runHook(pre-search) = %v, want nil", err)
+		}
+	})
+
+	if strings.Contains(stderr, "emoji catalog") {
+		t.Errorf("pre-search resolved the emoji catalog: %q", stderr)
+	}
 }

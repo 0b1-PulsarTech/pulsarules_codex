@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"maps"
 	"os"
 	"os/exec"
@@ -17,6 +18,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
 func TestRun_UnknownCommand(t *testing.T) {
@@ -330,6 +333,58 @@ func TestRun_GovernanceReportsFindings(t *testing.T) {
 			}
 			if got := outcome(Run(inj, opts)); !strings.HasPrefix(got, testCase.want) {
 				t.Errorf("Run outcome = %q, want prefix %q", got, testCase.want)
+			}
+		})
+	}
+}
+
+func bindWithoutCatalog(t *testing.T, inj remy.Injector, dir string) {
+	t.Helper()
+
+	initGitRepo(t, dir)
+	repo, err := vcs.Open(dir)
+	if err != nil {
+		t.Fatalf("vcs.Open: %v", err)
+	}
+	index, assets, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("load knowledge: %v", err)
+	}
+	remy.RegisterInstance(inj, repo)
+	remy.RegisterInstance(inj, index)
+	remy.RegisterInstance(inj, templates.New(assets))
+	remy.RegisterInstance(inj, slog.New(slog.DiscardHandler))
+}
+
+func TestCatalogFailureFailsTheCommand(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		run  func(inj remy.Injector) error
+	}{
+		{
+			name: "commit-lint",
+			run: func(inj remy.Injector) error {
+				return runCommitLint(inj, &version.Options{CommitMsg: "feat: x"})
+			},
+		},
+		{
+			name: "governance",
+			run: func(inj remy.Injector) error {
+				return runGovernance(inj, &version.Options{ProjectDir: "."})
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+			bindWithoutCatalog(t, inj, t.TempDir())
+			err := testCase.run(inj)
+			if err == nil || !strings.Contains(err.Error(), "get emoji catalog") {
+				t.Fatalf("err = %v, want one naming %q", err, "get emoji catalog")
 			}
 		})
 	}
