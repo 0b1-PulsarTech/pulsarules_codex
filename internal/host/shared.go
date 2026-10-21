@@ -1,10 +1,12 @@
 package host
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/agents"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -44,4 +46,12 @@ func removeAgents(base string, report *Report) error {
 		report.Note("removed %s", path)
 	}
 	return nil
+}
+
+func warnUnparseable(report *Report, err error) bool {
+	if !errors.Is(err, jsondoc.ErrUnparseable) {
+		return false
+	}
+	report.Warn("%v", err)
+	return true
 }

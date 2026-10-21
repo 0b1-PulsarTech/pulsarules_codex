@@ -9,7 +9,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/claude"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 type claudeTarget struct{}
@@ -86,8 +85,7 @@ func unwireClaudeHooks(claudeDir string, files []string, report *Report) error {
 		uctx := install.UninstallContext{Dir: claudeDir, SettingsFile: settingsFile}
 		sub, err := install.UninstallClaude(uctx)
 		if err != nil {
-			if errors.Is(err, jsondoc.ErrUnparseable) {
-				report.Warn("%v", err)
+			if warnUnparseable(report, err) {
 				continue
 			}
 			errs = append(errs, fmt.Errorf("uninstall hooks (%s): %w", settingsFile, err))

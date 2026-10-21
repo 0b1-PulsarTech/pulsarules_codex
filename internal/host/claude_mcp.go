@@ -2,7 +2,6 @@ package host
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/fs"
 	"path/filepath"
@@ -10,7 +9,6 @@ import (
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 )
@@ -42,8 +40,7 @@ func wireClaudeMCP(ctx Context, skillsDir string, report *Report) error {
 func unwireClaudeMCP(repoDir string, report *Report) error {
 	changed, err := mcp.Remove(repoDir)
 	if err != nil {
-		if errors.Is(err, jsondoc.ErrUnparseable) {
-			report.Warn("%v", err)
+		if warnUnparseable(report, err) {
 			return nil
 		}
 		return fmt.Errorf("remove mcp: %w", err)

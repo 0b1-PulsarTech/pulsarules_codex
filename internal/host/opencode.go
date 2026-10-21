@@ -1,7 +1,6 @@
 package host
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,7 +8,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
 type opencodeTarget struct{}
@@ -110,8 +108,7 @@ func retireLegacyAgents(base string, report *Report) error {
 func unwireOpencodeConfig(projectDir string, report *Report) error {
 	changed, err := opencode.UnwireConfig(projectDir)
 	if err != nil {
-		if errors.Is(err, jsondoc.ErrUnparseable) {
-			report.Warn("%v", err)
+		if warnUnparseable(report, err) {
 			return nil
 		}
 		return fmt.Errorf("unwire opencode config: %w", err)
