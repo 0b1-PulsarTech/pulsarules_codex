@@ -74,7 +74,9 @@ func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Res
 	ctx := sess.Load(discovery)
 
 	deps := registry.Deps{Index: sess.index, Repo: sess.repo, Emoji: sess.catalog}
-	pipe := newPipeline(sess.cfgAnalysis, registry.Analyzers(deps, maxGateFor(scope)))
+	pipe := newPipeline(
+		sess.cfgAnalysis, registry.Analyzers(deps, maxGateFor(scope)), sess.transforms(),
+	)
 	findings := pipe.run(ctx)
 
 	if sess.cfgAnalysis.IncludeGenerated {

@@ -56,7 +56,7 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 	pipe := newPipeline(analysisCfg, slices.Concat(
 		[]registry.Built{seed},
 		registry.Analyzers(registry.Deps{Emoji: testCatalog(t)}, maxGateFor(ScopeChanged)),
-	))
+	), []Transform{orderFindings})
 
 	ctx := &pass.Context{Config: analysisCfg}
 	findings := pipe.run(ctx)
@@ -105,7 +105,7 @@ func TestMaxGateFor_ReproducesScopeMembership(t *testing.T) {
 		"variadic-index", "too-many-results", "ungrouped-interfaces", "package-level-var",
 		"package-file-count", "time-discipline", "context-discipline", "pprof-labels",
 	}
-	tail := []string{"rule-injection", "output"}
+	tail := []string{"rule-injection"}
 	arch := []string{"arch-boundary", "import-cycle"}
 
 	testCases := []struct {

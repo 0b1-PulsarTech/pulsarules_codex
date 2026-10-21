@@ -30,7 +30,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/importgroup"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/identifier"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/singleletter"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/output"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/security/pproflabel"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/signature/namedreturns"
@@ -41,14 +40,13 @@ import (
 )
 
 func specs() []entry {
-	// Run order: package-level-var follows single-use-declaration, and output goes last.
+	// Run order is table order; ordering and dedupe of the results is a pipeline transform.
 	return slices.Concat(contentSpecs(), syntaxSpecs(), styleSpecs(), []entry{
 		plain(arch.DescribeBoundary(), GateArch, arch.NewPackageBoundaryAnalyzer),
 		plain(arch.DescribeCycle(), GateArch, arch.NewImportCycleAnalyzer),
 		hide(viaDeps(rulesummary.Describe(), GateStatic, func(deps Deps) pass.Analyzer {
 			return rulesummary.NewAnalyzer(deps.Index)
 		})),
-		hide(plain(output.Describe(), GateStatic, output.NewAnalyzer)),
 	})
 }
 

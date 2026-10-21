@@ -1,19 +1,28 @@
 package governance
 
 import (
+	"cmp"
+	"slices"
+	"strings"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 )
 
+type Transform func([]finding.Finding) []finding.Finding
+
 type pipeline struct {
-	analyzers []registry.Built
-	cfg       *pass.AnalysisConfig
+	analyzers  []registry.Built
+	cfg        *pass.AnalysisConfig
+	transforms []Transform
 }
 
-func newPipeline(cfg *pass.AnalysisConfig, analyzers []registry.Built) *pipeline {
-	return &pipeline{analyzers: analyzers, cfg: cfg}
+func newPipeline(
+	cfg *pass.AnalysisConfig, analyzers []registry.Built, transforms []Transform,
+) *pipeline {
+	return &pipeline{analyzers: analyzers, cfg: cfg, transforms: transforms}
 }
 
 func (pipe *pipeline) run(ctx *pass.Context) []finding.Finding {
@@ -28,7 +37,11 @@ func (pipe *pipeline) run(ctx *pass.Context) []finding.Finding {
 		}
 		ctx.Findings = append(ctx.Findings, pipe.overridden(entry.ID, findings)...)
 	}
-	return ctx.Findings
+	findings := ctx.Findings
+	for _, transform := range pipe.transforms {
+		findings = transform(findings)
+	}
+	return findings
 }
 
 func (pipe *pipeline) overridden(id string, findings []finding.Finding) []finding.Finding {
@@ -47,4 +60,20 @@ func (pipe *pipeline) enabled(id string) bool {
 		return true
 	}
 	return cfg.Enabled
+}
+
+func orderFindings(findings []finding.Finding) []finding.Finding {
+	slices.SortStableFunc(findings, func(left, right finding.Finding) int {
+		return cmp.Or(
+			cmp.Compare(right.Severity, left.Severity),
+			strings.Compare(left.File, right.File),
+			cmp.Compare(left.Line, right.Line),
+		)
+	})
+	return slices.CompactFunc(findings, func(left, right finding.Finding) bool {
+		return left.AnalyzerID == right.AnalyzerID &&
+			left.File == right.File &&
+			left.Line == right.Line &&
+			left.Message == right.Message
+	})
 }

@@ -52,7 +52,7 @@ func TestConfigurableIDs(t *testing.T) {
 			t.Errorf("%q: listed = %v, internal flag = %v", spec.ID, got, spec.internal)
 		}
 	}
-	for _, hidden := range []string{"rule-injection", "output", "delegated-command"} {
+	for _, hidden := range []string{"rule-injection", "delegated-command"} {
 		if slices.Contains(listed, hidden) {
 			t.Fatalf("ConfigurableIDs() = %v, want %q hidden", listed, hidden)
 		}
