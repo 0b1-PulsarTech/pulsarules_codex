@@ -9,11 +9,23 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/gitignore"
 )
 
-type claudeInstaller struct{}
+func Claude(ctx Context) (report.Report, error) {
+	rpt, err := installClaude(ctx)
+	if err != nil {
+		return rpt, fmt.Errorf("install claude: %w", err)
+	}
+	return rpt, nil
+}
 
-func (claudeInstaller) Name() string { return "claude" }
+func UninstallClaude(ctx UninstallContext) (report.Report, error) {
+	rpt, err := uninstallClaude(ctx)
+	if err != nil {
+		return rpt, fmt.Errorf("uninstall claude: %w", err)
+	}
+	return rpt, nil
+}
 
-func (claudeInstaller) Install(ctx Context) (report.Report, error) {
+func installClaude(ctx Context) (report.Report, error) {
 	claudeDir := ctx.Dir
 	settingsFile := ctx.SettingsFile
 	if settingsFile == "" {
@@ -34,7 +46,7 @@ func (claudeInstaller) Install(ctx Context) (report.Report, error) {
 	return rpt, nil
 }
 
-func (claudeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
+func uninstallClaude(ctx UninstallContext) (report.Report, error) {
 	claudeDir := ctx.Dir
 	settingsFile := ctx.SettingsFile
 	if settingsFile == "" {

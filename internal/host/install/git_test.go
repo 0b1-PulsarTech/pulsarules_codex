@@ -13,51 +13,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/githook"
 )
 
-func TestNewRegistry(t *testing.T) {
-	t.Parallel()
-
-	reg := NewRegistry()
-	if len(reg.byName) != 3 {
-		t.Fatalf("expected 3 installers, got %d: %v", len(reg.byName), reg.byName)
-	}
-	for _, want := range []string{"claude", "git", "opencode"} {
-		if _, found := reg.byName[want]; !found {
-			t.Errorf("missing installer %q", want)
-		}
-	}
-}
-
-func TestInstall_UnknownName(t *testing.T) {
-	t.Parallel()
-
-	reg := NewRegistry()
-	_, err := reg.Install("nonexistent", Context{Dir: t.TempDir()})
-	if err == nil {
-		t.Fatal("expected error for unknown installer")
-	}
-}
-
-func TestUninstall_UnknownNameErrors(t *testing.T) {
-	t.Parallel()
-
-	reg := NewRegistry()
-	_, err := reg.Uninstall("nonexistent", UninstallContext{Dir: t.TempDir()})
-	if err == nil {
-		t.Fatal("expected error for unknown installer")
-	}
-}
-
-func TestUninstall_GitDispatch(t *testing.T) {
-	t.Parallel()
-
-	reg := NewRegistry()
-	dir := t.TempDir()
-	if _, err := reg.Uninstall("git", UninstallContext{Dir: dir}); err != nil {
-		t.Fatalf("Uninstall(git): %v", err)
-	}
-}
-
-func TestRegistryUninstall_GitRemovedHooks(t *testing.T) {
+func TestUninstallGit_GitRemovedHooks(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -72,7 +28,6 @@ func TestRegistryUninstall_GitRemovedHooks(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			reg := NewRegistry()
 			dir := t.TempDir()
 			if testCase.install {
 				if _, err := githook.Install(
@@ -84,7 +39,7 @@ func TestRegistryUninstall_GitRemovedHooks(t *testing.T) {
 				}
 			}
 
-			rpt, err := reg.Uninstall("git", UninstallContext{Dir: dir})
+			rpt, err := UninstallGit(UninstallContext{Dir: dir})
 			if err != nil {
 				t.Fatalf("Uninstall(git): %v", err)
 			}
@@ -98,12 +53,11 @@ func TestRegistryUninstall_GitRemovedHooks(t *testing.T) {
 	}
 }
 
-func TestRegistryUninstall_GitOrphanedBackup(
+func TestUninstallGit_GitOrphanedBackup(
 	t *testing.T,
 ) {
 	t.Parallel()
 
-	reg := NewRegistry()
 	dir := t.TempDir()
 	hooksPath := filepath.Join(dir, ".git", "hooks")
 	if err := os.MkdirAll(hooksPath, 0o750); err != nil {
@@ -127,7 +81,7 @@ func TestRegistryUninstall_GitOrphanedBackup(
 		t.Fatalf("second githook.Install: %v", err)
 	}
 
-	rpt, err := reg.Uninstall("git", UninstallContext{Dir: dir})
+	rpt, err := UninstallGit(UninstallContext{Dir: dir})
 	if err != nil {
 		t.Fatalf("Uninstall(git): %v", err)
 	}
@@ -167,13 +121,12 @@ func TestInstall_Git_ContextHooks(
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			reg := NewRegistry()
 			dir := t.TempDir()
 			if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
 				t.Fatalf("mkdir .git: %v", err)
 			}
 
-			_, err := reg.Install("git", Context{Dir: dir, GitHooks: testCase.gitHooks})
+			_, err := Git(Context{Dir: dir, GitHooks: testCase.gitHooks})
 			if err != nil {
 				t.Fatalf("Install(git): %v", err)
 			}
@@ -198,13 +151,12 @@ func TestInstall_Git_ContextHooks(
 func TestInstall_Git_ForeignHookBackup(t *testing.T) {
 	t.Parallel()
 
-	reg := NewRegistry()
 	dir := t.TempDir()
 	preCommit := filepath.Join(dir, ".git", "hooks", "pre-commit")
 	foreign := "#!/bin/sh\nnpx lint-staged\n"
 	seedFile(t, preCommit, foreign, 0o755)
 
-	rpt, err := reg.Install("git", Context{Dir: dir, GitHooks: []string{"pre-commit"}})
+	rpt, err := Git(Context{Dir: dir, GitHooks: []string{"pre-commit"}})
 	if err != nil {
 		t.Fatalf("Install(git): %v", err)
 	}
@@ -213,7 +165,7 @@ func TestInstall_Git_ForeignHookBackup(t *testing.T) {
 	}
 	assertContent(t, preCommit+ownedfile.BackupSuffix, foreign)
 
-	uninstallReport, err := reg.Uninstall("git", UninstallContext{Dir: dir})
+	uninstallReport, err := UninstallGit(UninstallContext{Dir: dir})
 	if err != nil {
 		t.Fatalf("Uninstall(git): %v", err)
 	}
@@ -253,17 +205,16 @@ func TestInstall_Git_OwnHookOverwrite(
 ) {
 	t.Parallel()
 
-	reg := NewRegistry()
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
 		t.Fatalf("mkdir .git: %v", err)
 	}
 
 	ctx := Context{Dir: dir, GitHooks: []string{"pre-commit"}}
-	if _, err := reg.Install("git", ctx); err != nil {
+	if _, err := Git(ctx); err != nil {
 		t.Fatalf("first Install(git): %v", err)
 	}
-	rpt, err := reg.Install("git", ctx)
+	rpt, err := Git(ctx)
 	if err != nil {
 		t.Fatalf("second Install(git): %v", err)
 	}
@@ -279,20 +230,18 @@ func TestInstall_Git_OwnHookOverwrite(
 func TestInstall_Git_UnknownHook(t *testing.T) {
 	t.Parallel()
 
-	reg := NewRegistry()
-	_, err := reg.Install("git", Context{Dir: t.TempDir(), GitHooks: []string{"bogus"}})
+	_, err := Git(Context{Dir: t.TempDir(), GitHooks: []string{"bogus"}})
 	if err == nil {
 		t.Fatal("expected error for unknown git hook name")
 	}
 }
 
-func TestRegistryUninstall_Opencode(t *testing.T) {
+func TestUninstallGit_Opencode(t *testing.T) {
 	t.Parallel()
 
-	reg := NewRegistry()
 	dir := t.TempDir()
 
-	rpt, err := reg.Uninstall("opencode", UninstallContext{Dir: dir})
+	rpt, err := UninstallOpencode(UninstallContext{Dir: dir})
 	if err != nil {
 		t.Fatalf("Uninstall(opencode) on untouched dir: %v", err)
 	}

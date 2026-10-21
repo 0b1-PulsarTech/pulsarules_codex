@@ -47,7 +47,7 @@ func Run(inj remy.Injector, opts *version.Options) error {
 		}
 	}
 
-	return installPostTargets(opts, cfg, deps)
+	return installPostTargets(opts, cfg)
 }
 
 func printHooksBlock() error {
@@ -88,17 +88,16 @@ func newTargetContext(
 	}
 
 	return host.Context{
-		Templates:      deps.templates,
-		Index:          deps.idx,
-		Renderer:       deps.rnd,
-		HookInstallers: deps.hooks,
-		Base:           cfg.absBase,
-		IDs:            ids,
-		RouterFilter:   routerFilter,
-		NoMCP:          opts.NoMCP,
-		NoHooks:        opts.NoHooks,
-		SettingsFile:   cfg.settingsFile,
-		Languages:      languages,
+		Templates:    deps.templates,
+		Index:        deps.idx,
+		Renderer:     deps.rnd,
+		Base:         cfg.absBase,
+		IDs:          ids,
+		RouterFilter: routerFilter,
+		NoMCP:        opts.NoMCP,
+		NoHooks:      opts.NoHooks,
+		SettingsFile: cfg.settingsFile,
+		Languages:    languages,
 	}, nil
 }
 

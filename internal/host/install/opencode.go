@@ -8,11 +8,23 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/report"
 )
 
-type opencodeInstaller struct{}
+func Opencode(ctx Context) (report.Report, error) {
+	rpt, err := installOpencode(ctx)
+	if err != nil {
+		return rpt, fmt.Errorf("install opencode: %w", err)
+	}
+	return rpt, nil
+}
 
-func (opencodeInstaller) Name() string { return "opencode" }
+func UninstallOpencode(ctx UninstallContext) (report.Report, error) {
+	rpt, err := uninstallOpencode(ctx)
+	if err != nil {
+		return rpt, fmt.Errorf("uninstall opencode: %w", err)
+	}
+	return rpt, nil
+}
 
-func (opencodeInstaller) Install(ctx Context) (report.Report, error) {
+func installOpencode(ctx Context) (report.Report, error) {
 	ledger, err := opencode.Install(ctx.Dir, ctx.Templates)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("install opencode hook: %w", err)
@@ -25,7 +37,7 @@ func (opencodeInstaller) Install(ctx Context) (report.Report, error) {
 	return rpt, nil
 }
 
-func (opencodeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
+func uninstallOpencode(ctx UninstallContext) (report.Report, error) {
 	res, err := opencode.Uninstall(ctx.Dir)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("uninstall opencode hook: %w", err)

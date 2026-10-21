@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 )
 
 func TestAgentsTargetName(t *testing.T) {
@@ -98,7 +96,7 @@ func TestAgentsTargetUninstall(t *testing.T) {
 		t.Fatalf("Install did not write %q: %v", agentsDoc, statErr)
 	}
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	uctx := UninstallContext{Base: base}
 	if _, err := (agentsTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
@@ -121,7 +119,7 @@ func TestAgentsUninstall_KeepSkills(t *testing.T) {
 	}
 	agentsDoc := filepath.Join(base, "AGENTS.md")
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry(), KeepSkills: true}
+	uctx := UninstallContext{Base: base, KeepSkills: true}
 	if _, err := (agentsTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
@@ -140,7 +138,7 @@ func TestAgentsUninstall_UserAuthored(t *testing.T) {
 		t.Fatalf("seed user-authored AGENTS.md: %v", err)
 	}
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	uctx := UninstallContext{Base: base}
 	if _, err := (agentsTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
@@ -182,7 +180,7 @@ func TestAgentsInstall_UserAuthoredRoundTrip(t *testing.T) {
 		)
 	}
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	uctx := UninstallContext{Base: base}
 	if _, err = (agentsTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}

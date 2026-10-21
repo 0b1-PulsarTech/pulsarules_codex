@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -24,15 +23,14 @@ func newTestContext(tb testing.TB, base string, ids []string) Context {
 		tb.Fatalf("new renderer: %v", err)
 	}
 	return Context{
-		Templates:      templates,
-		Index:          idx,
-		Renderer:       rnd,
-		HookInstallers: install.NewRegistry(),
-		Base:           base,
-		IDs:            ids,
-		NoMCP:          true,
-		NoHooks:        true,
-		SettingsFile:   "settings.json",
+		Templates:    templates,
+		Index:        idx,
+		Renderer:     rnd,
+		Base:         base,
+		IDs:          ids,
+		NoMCP:        true,
+		NoHooks:      true,
+		SettingsFile: "settings.json",
 	}
 }
 

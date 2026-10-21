@@ -42,7 +42,7 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 	if ctx.NoHooks {
 		return report, nil
 	}
-	sub, err := ctx.HookInstallers.Install("claude", install.Context{
+	sub, err := install.Claude(install.Context{
 		Dir:          claudeDir,
 		Templates:    ctx.Templates,
 		SettingsFile: ctx.SettingsFile,
@@ -71,12 +71,7 @@ func (claudeTarget) Uninstall(ctx UninstallContext) (Report, error) {
 	if err := unwireClaudeMCP(ctx.Base, &report); err != nil {
 		return report, err
 	}
-	if err := unwireClaudeHooks(
-		ctx.HookUninstallers,
-		claudeDir,
-		ctx.SettingsFiles,
-		&report,
-	); err != nil {
+	if err := unwireClaudeHooks(claudeDir, ctx.SettingsFiles, &report); err != nil {
 		return report, err
 	}
 	if err := disk.RemoveEmptyDir(claudeDir); err != nil {
@@ -85,13 +80,11 @@ func (claudeTarget) Uninstall(ctx UninstallContext) (Report, error) {
 	return report, nil
 }
 
-func unwireClaudeHooks(
-	hooks *install.Registry, claudeDir string, files []string, report *Report,
-) error {
+func unwireClaudeHooks(claudeDir string, files []string, report *Report) error {
 	var errs []error
 	for _, settingsFile := range files {
 		uctx := install.UninstallContext{Dir: claudeDir, SettingsFile: settingsFile}
-		sub, err := hooks.Uninstall("claude", uctx)
+		sub, err := install.UninstallClaude(uctx)
 		if err != nil {
 			if errors.Is(err, jsondoc.ErrUnparseable) {
 				report.Warn("%v", err)

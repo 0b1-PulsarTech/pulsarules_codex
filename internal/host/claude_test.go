@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 )
 
 func TestClaudeTargetName(t *testing.T) {
@@ -61,9 +59,8 @@ func TestClaudeUninstall_BothSettings(t *testing.T) {
 	}
 
 	uctx := UninstallContext{
-		Base:             base,
-		HookUninstallers: install.NewRegistry(),
-		SettingsFiles:    []string{"settings.json", "settings.local.json"},
+		Base:          base,
+		SettingsFiles: []string{"settings.json", "settings.local.json"},
 	}
 	if _, err := (claudeTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
@@ -91,9 +88,8 @@ func TestClaudeUninstall_LocalScopeNoSettings(t *testing.T) {
 	}
 
 	uctx := UninstallContext{
-		Base:             base,
-		HookUninstallers: install.NewRegistry(),
-		SettingsFiles:    []string{"settings.json", "settings.local.json"},
+		Base:          base,
+		SettingsFiles: []string{"settings.json", "settings.local.json"},
 	}
 	report, err := (claudeTarget{}).Uninstall(uctx)
 	if err != nil {
@@ -216,10 +212,9 @@ func TestClaudeTargetUninstall(t *testing.T) {
 			requirePresent(t, skillDoc)
 
 			uctx := UninstallContext{
-				Base:             base,
-				HookUninstallers: install.NewRegistry(),
-				SettingsFiles:    []string{"settings.json"},
-				KeepSkills:       testCase.keepSkills,
+				Base:          base,
+				SettingsFiles: []string{"settings.json"},
+				KeepSkills:    testCase.keepSkills,
 			}
 			report, err := (claudeTarget{}).Uninstall(uctx)
 			if err != nil {
@@ -255,9 +250,8 @@ func TestClaudeUninstall_UserFile(t *testing.T) {
 	}
 
 	uctx := UninstallContext{
-		Base:             base,
-		HookUninstallers: install.NewRegistry(),
-		SettingsFiles:    []string{"settings.json"},
+		Base:          base,
+		SettingsFiles: []string{"settings.json"},
 	}
 	if _, err := (claudeTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
@@ -299,10 +293,9 @@ func TestClaudeUninstall_NoteOnRemoval(t *testing.T) {
 			}
 
 			uctx := UninstallContext{
-				Base:             base,
-				HookUninstallers: install.NewRegistry(),
-				SettingsFiles:    []string{"settings.json"},
-				KeepSkills:       true,
+				Base:          base,
+				SettingsFiles: []string{"settings.json"},
+				KeepSkills:    true,
 			}
 			report, err := (claudeTarget{}).Uninstall(uctx)
 			if err != nil {

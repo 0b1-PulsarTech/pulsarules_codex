@@ -16,7 +16,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -145,13 +144,11 @@ func captureStreams(tb testing.TB, fn func()) (stdout, stderr string) {
 func TestInstallPostTargets_EmptyGitHooks(t *testing.T) {
 	dir := t.TempDir()
 	opts := &version.Options{NoGitHooks: false}
-	hookReg := install.NewRegistry()
 
 	output, _ := captureStreams(t, func() {
 		if err := installPostTargets(
 			opts,
 			installConfig{absBase: dir, gitHooks: []string{}},
-			installCollaborators{hooks: hookReg},
 		); err != nil {
 			t.Fatalf("installPostTargets: %v", err)
 		}

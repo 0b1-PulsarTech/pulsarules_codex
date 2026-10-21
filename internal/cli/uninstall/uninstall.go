@@ -30,14 +30,13 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	}
 
 	ctx := host.UninstallContext{
-		Base:             absBase,
-		HookUninstallers: deps.hooks,
-		SettingsFiles:    settingsFiles,
-		KeepSkills:       opts.KeepSkills,
+		Base:          absBase,
+		SettingsFiles: settingsFiles,
+		KeepSkills:    opts.KeepSkills,
 	}
 	errs := uninstallTargets(deps, targets, ctx)
 
-	gitReport, hookErr := deps.hooks.Uninstall("git", install.UninstallContext{Dir: absBase})
+	gitReport, hookErr := install.UninstallGit(install.UninstallContext{Dir: absBase})
 	gitReport.Print(os.Stdout, os.Stderr)
 	if hookErr != nil {
 		errs = append(errs, hookErr)

@@ -422,9 +422,8 @@ func TestRun_HostileTreeStaysOnOneLine(t *testing.T) {
 		t.Fatalf("resolve: %v", err)
 	}
 	report, _ := deps.targets.Uninstall("claude", host.UninstallContext{
-		Base:             projectDir,
-		HookUninstallers: deps.hooks,
-		SettingsFiles:    []string{"settings.json"},
+		Base:          projectDir,
+		SettingsFiles: []string{"settings.json"},
 	})
 
 	var stdout, stderr strings.Builder

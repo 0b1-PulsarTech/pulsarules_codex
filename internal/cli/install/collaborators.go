@@ -7,7 +7,6 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -17,7 +16,6 @@ type installCollaborators struct {
 	rnd       *render.Renderer
 	templates fs.FS
 	targets   *host.Registry
-	hooks     *install.Registry
 }
 
 func resolveInstallCollaborators(inj remy.Injector) (installCollaborators, error) {
@@ -37,15 +35,10 @@ func resolveInstallCollaborators(inj remy.Injector) (installCollaborators, error
 	if err != nil {
 		return installCollaborators{}, fmt.Errorf("get target registry: %w", err)
 	}
-	hooks, err := remy.Get[*install.Registry](inj)
-	if err != nil {
-		return installCollaborators{}, fmt.Errorf("get install registry: %w", err)
-	}
 	return installCollaborators{
 		idx:       idx,
 		rnd:       rnd,
 		templates: templates,
 		targets:   targets,
-		hooks:     hooks,
 	}, nil
 }

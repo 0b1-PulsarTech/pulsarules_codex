@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/opencode"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
@@ -239,7 +238,7 @@ func TestOpencodeTargetUninstall(t *testing.T) {
 	agentsDoc := filepath.Join(base, "AGENTS.md")
 	requirePresent(t, agentsDoc)
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	uctx := UninstallContext{Base: base}
 	report, err := (opencodeTarget{}).Uninstall(uctx)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
@@ -270,7 +269,7 @@ func TestOpencodeUninstall_UserFile(t *testing.T) {
 		t.Fatalf("seed user file: %v", err)
 	}
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	uctx := UninstallContext{Base: base}
 	if _, err := (opencodeTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
@@ -288,7 +287,7 @@ func TestOpencodeUninstall_NoPluginNote(t *testing.T) {
 	t.Parallel()
 
 	base := t.TempDir()
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	uctx := UninstallContext{Base: base}
 	report, err := (opencodeTarget{}).Uninstall(uctx)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
@@ -310,7 +309,7 @@ func TestOpencodeUninstall_KeepSkills(t *testing.T) {
 	}
 	agentsDoc := filepath.Join(base, "AGENTS.md")
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry(), KeepSkills: true}
+	uctx := UninstallContext{Base: base, KeepSkills: true}
 	if _, err := (opencodeTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
@@ -329,7 +328,7 @@ func TestOpencodeUninstall_UserAuthored(t *testing.T) {
 		t.Fatalf("seed user-authored AGENTS.md: %v", err)
 	}
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	uctx := UninstallContext{Base: base}
 	if _, err := (opencodeTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}

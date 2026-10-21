@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 )
 
@@ -145,7 +144,7 @@ func TestCursorTargetUninstall(t *testing.T) {
 		t.Fatalf("Install did not write %q: %v", rulesDir, statErr)
 	}
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	uctx := UninstallContext{Base: base}
 	report, err := (cursorTarget{}).Uninstall(uctx)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
@@ -176,7 +175,7 @@ func TestCursorTargetUninstall_KeepSkills(t *testing.T) {
 	}
 	rulePath := filepath.Join(base, ".cursor", "rules", "go-style.mdc")
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry(), KeepSkills: true}
+	uctx := UninstallContext{Base: base, KeepSkills: true}
 	if _, err := (cursorTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
@@ -198,7 +197,7 @@ func TestCursorTargetUninstall_ForeignRuleSurvives(t *testing.T) {
 		t.Fatalf("seed foreign rule: %v", err)
 	}
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	uctx := UninstallContext{Base: base}
 	if _, err := (cursorTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
@@ -222,7 +221,7 @@ func TestCursorUninstall_UserFile(t *testing.T) {
 		t.Fatalf("seed user file: %v", err)
 	}
 
-	uctx := UninstallContext{Base: base, HookUninstallers: install.NewRegistry()}
+	uctx := UninstallContext{Base: base}
 	if _, err := (cursorTarget{}).Uninstall(uctx); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}

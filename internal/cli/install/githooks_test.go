@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 )
 
 func TestValidateGitHooks(t *testing.T) {
@@ -123,8 +122,7 @@ func TestInstallPostTargets_Branches(t *testing.T) {
 
 			var runErr error
 			stdout, stderr := captureStreams(t, func() {
-				deps := installCollaborators{hooks: install.NewRegistry()}
-				runErr = installPostTargets(opts, cfg, deps)
+				runErr = installPostTargets(opts, cfg)
 			})
 			if runErr != nil {
 				t.Fatalf("installPostTargets: %v", runErr)
@@ -174,8 +172,7 @@ func TestInstallPostTargets_BakesOptions(t *testing.T) {
 
 			var runErr error
 			captureStreams(t, func() {
-				deps := installCollaborators{hooks: install.NewRegistry()}
-				runErr = installPostTargets(&testCase.opts, cfg, deps)
+				runErr = installPostTargets(&testCase.opts, cfg)
 			})
 			if runErr != nil {
 				t.Fatalf("installPostTargets: %v", runErr)

@@ -6,8 +6,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 )
 
 func TestRegistryHas(t *testing.T) {
@@ -115,9 +113,8 @@ func TestRegistryUninstall(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			uctx := UninstallContext{
-				Base:             t.TempDir(),
-				HookUninstallers: install.NewRegistry(),
-				SettingsFiles:    []string{"settings.json"},
+				Base:          t.TempDir(),
+				SettingsFiles: []string{"settings.json"},
 			}
 			_, err := NewRegistry().Uninstall(testCase.target, uctx)
 			if testCase.wantErr {

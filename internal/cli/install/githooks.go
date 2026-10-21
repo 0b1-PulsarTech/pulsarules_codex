@@ -46,15 +46,10 @@ func validateGitHooks(hooks []string) error {
 	return nil
 }
 
-func installPostTargets(
-	opts *version.Options,
-	cfg installConfig,
-	deps installCollaborators,
-) error {
+func installPostTargets(opts *version.Options, cfg installConfig) error {
 	if !opts.NoGitHooks {
-		rpt, hookErr := deps.hooks.Install("git", install.Context{
+		rpt, hookErr := install.Git(install.Context{
 			Dir:                 cfg.absBase,
-			Templates:           deps.templates,
 			GitHooks:            cfg.gitHooks,
 			TypographicSeverity: opts.TypographicSeverity,
 			BranchExtraTypes:    opts.BranchExtraTypes,
