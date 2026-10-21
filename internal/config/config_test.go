@@ -91,11 +91,8 @@ func TestSetSeverity(t *testing.T) {
 		{"naming", "error"},
 	}
 	for _, testCase := range testCases {
-		if got := effectiveSeverity(
-			cfg,
-			testCase.analyzerID,
-			finding.SeverityError,
-		); got != testCase.want {
+		got := effectiveSeverity(cfg, testCase.analyzerID, finding.SeverityError)
+		if got != testCase.want {
 			t.Errorf("severity(%s) = %q, want %q", testCase.analyzerID, got, testCase.want)
 		}
 	}
