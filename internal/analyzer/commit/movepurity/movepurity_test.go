@@ -116,6 +116,33 @@ func analyzeCases() []movePurityCase {
 	}
 }
 
+func TestAnalyzer_Analyze_DefaultMinSimilarity(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		score        int
+		wantFindings int
+	}{
+		{"one below the default is low similarity", 89, 1},
+		{"the default itself is accepted", 90, 0},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := &pass.Context{
+				StagedRenames: scored("old.go", "new.go", testCase.score),
+			}
+			findings := NewAnalyzer(nil).Analyze(ctx)
+			if len(findings) != testCase.wantFindings {
+				t.Fatalf("score %d with no params: %d findings, want %d: %+v",
+					testCase.score, len(findings), testCase.wantFindings, findings)
+			}
+		})
+	}
+}
+
 func TestAnalyzer_Analyze_ParamsOverride(t *testing.T) {
 	t.Parallel()
 
