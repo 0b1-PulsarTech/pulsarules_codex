@@ -11,24 +11,29 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const (
+	ID            = "body-header-comment"
+	paramMinLines = "min_lines"
+)
+
 type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) ID() string { return "body-header-comment" }
+func (analyzer *Analyzer) ID() string { return ID }
 
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) reporter() finding.Reporter {
-	return finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatAST)
+	return finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	const defaultMinLines = 2
 	reporter := pass.ResolveReporter(analyzer.reporter(), ctx)
-	minLines := ctx.Params(analyzer.ID()).Int("min_lines", defaultMinLines)
+	minLines := ctx.Params(ID).Int(paramMinLines, defaultMinLines)
 	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
 		if fc.Generated {
 			return nil
@@ -98,4 +103,12 @@ func headerGroups(all []*ast.CommentGroup, body *ast.BlockStmt) []*ast.CommentGr
 		}
 	}
 	return groups
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "effective-go",
+		Params: []string{paramMinLines},
+	}
 }

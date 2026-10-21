@@ -5,6 +5,14 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const ID = "complexity"
+
+const (
+	paramMaxComplexity = "max_complexity"
+	paramMaxFuncLines  = "max_func_lines"
+	paramMaxParams     = "max_params"
+)
+
 type Analyzer struct {
 	maxComplexity int
 	maxFuncLines  int
@@ -24,12 +32,12 @@ func NewAnalyzer() *Analyzer {
 		maxComplexity: defaultMaxComplexity,
 		maxFuncLines:  defaultMaxFuncLines,
 		maxParams:     defaultMaxParams,
-		warnReporter:  finding.NewReporter("complexity", finding.SeverityWarning, finding.CatAST),
-		infoReporter:  finding.NewReporter("complexity", finding.SeverityInfo, finding.CatAST),
+		warnReporter:  finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
+		infoReporter:  finding.NewReporter(ID, finding.SeverityInfo, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return "complexity" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -42,12 +50,20 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 }
 
 func (analyzer *Analyzer) resolveThresholds(ctx *pass.Context) thresholds {
-	params := ctx.Params(analyzer.ID())
+	params := ctx.Params(ID)
 	return thresholds{
-		maxComplexity: params.Int("max_complexity", analyzer.maxComplexity),
-		maxFuncLines:  params.Int("max_func_lines", analyzer.maxFuncLines),
-		maxParams:     params.Int("max_params", analyzer.maxParams),
+		maxComplexity: params.Int(paramMaxComplexity, analyzer.maxComplexity),
+		maxFuncLines:  params.Int(paramMaxFuncLines, analyzer.maxFuncLines),
+		maxParams:     params.Int(paramMaxParams, analyzer.maxParams),
 		warnReporter:  pass.ResolveReporter(analyzer.warnReporter, ctx),
 		infoReporter:  pass.ResolveReporter(analyzer.infoReporter, ctx),
+	}
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "code-smells",
+		Params: []string{paramMaxComplexity, paramMaxFuncLines, paramMaxParams},
 	}
 }

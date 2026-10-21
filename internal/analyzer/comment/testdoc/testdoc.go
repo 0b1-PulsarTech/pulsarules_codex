@@ -12,18 +12,20 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const ID = "test-comment"
+
 type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) ID() string { return "test-comment" }
+func (analyzer *Analyzer) ID() string { return ID }
 
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) reporter() finding.Reporter {
-	return finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatAST)
+	return finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -108,4 +110,8 @@ func bodyComments(all []*ast.CommentGroup, fn *ast.FuncDecl) []*ast.CommentGroup
 		}
 	}
 	return groups
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "comments"}
 }

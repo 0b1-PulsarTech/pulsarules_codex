@@ -12,6 +12,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const ID = "pprof-labels"
+
 type Analyzer struct {
 	reporter finding.Reporter
 }
@@ -20,11 +22,11 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{
 		// SeverityError, unlike every other CatAST reporter: a PII label leaking into
 		// a panic traceback is a security incident, not a style nit, so it blocks.
-		reporter: finding.NewReporter("pprof-labels", finding.SeverityError, finding.CatAST),
+		reporter: finding.NewReporter(ID, finding.SeverityError, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return "pprof-labels" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -94,4 +96,8 @@ func isPIILabelKey(key string) bool {
 		return true
 	}
 	return false
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "security"}
 }

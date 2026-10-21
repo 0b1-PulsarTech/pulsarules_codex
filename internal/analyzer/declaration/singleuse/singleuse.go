@@ -5,6 +5,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const ID = "single-use-declaration"
+
 type Analyzer struct {
 	provider declarationSource
 	reporter finding.Reporter
@@ -13,15 +15,11 @@ type Analyzer struct {
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
 		provider: goProvider{},
-		reporter: finding.NewReporter(
-			"single-use-declaration",
-			finding.SeverityWarning,
-			finding.CatAST,
-		),
+		reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string { return "single-use-declaration" }
+func (analyzer *Analyzer) ID() string { return ID }
 
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
@@ -38,4 +36,8 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		findings = append(findings, checkCandidate(ctx, analyzer.provider, decl, reporter)...)
 	}
 	return findings
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "minimalism"}
 }

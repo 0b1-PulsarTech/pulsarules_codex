@@ -8,21 +8,19 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const ID = "context-discipline"
+
 type Analyzer struct {
 	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: finding.NewReporter(
-			"context-discipline",
-			finding.SeverityWarning,
-			finding.CatAST,
-		),
+		reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return "context-discipline" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -116,4 +114,8 @@ func isFireAndForgetDone(goStmt *ast.GoStmt) bool {
 		return false
 	}
 	return isDoneReceiveNode(funcLit.Body.List[0], nil)
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "concurrency"}
 }

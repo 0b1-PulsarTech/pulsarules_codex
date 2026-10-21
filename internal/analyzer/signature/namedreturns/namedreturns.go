@@ -11,17 +11,19 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const ID = "named-returns"
+
 type Analyzer struct {
 	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: finding.NewReporter("named-returns", finding.SeverityWarning, finding.CatAST),
+		reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return "named-returns" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -92,4 +94,8 @@ func duplicateResultType(results *ast.FieldList) (string, bool) {
 		seen[name] = true
 	}
 	return "", false
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "named-returns"}
 }

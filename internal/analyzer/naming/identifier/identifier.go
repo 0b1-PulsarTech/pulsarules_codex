@@ -8,17 +8,19 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const ID = "naming"
+
 type Analyzer struct {
 	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: finding.NewReporter("naming", finding.SeverityWarning, finding.CatSyntax),
+		reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatSyntax),
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return "naming" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -49,4 +51,8 @@ func (analyzer *Analyzer) checkFile(
 	checker.run()
 
 	return findings
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "naming"}
 }

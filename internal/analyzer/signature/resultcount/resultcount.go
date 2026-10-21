@@ -10,20 +10,25 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const (
+	ID              = "too-many-results"
+	paramMaxResults = "max_results"
+)
+
 type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) ID() string             { return "too-many-results" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	const defaultMaxResults = 3
-	limit := ctx.Params(analyzer.ID()).Int("max_results", defaultMaxResults)
+	limit := ctx.Params(ID).Int(paramMaxResults, defaultMaxResults)
 	reporter := pass.ResolveReporter(
-		finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatAST),
+		finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 		ctx,
 	)
 	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
@@ -83,4 +88,12 @@ func sitesOf(decl ast.Node) []goast.FuncSite {
 		return goast.InterfaceMethodSites(node)
 	}
 	return nil
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "effective-go",
+		Params: []string{paramMaxResults},
+	}
 }

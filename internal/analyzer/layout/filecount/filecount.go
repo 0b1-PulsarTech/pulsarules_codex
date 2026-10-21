@@ -9,6 +9,11 @@ import (
 
 const ID = "package-file-count"
 
+const (
+	paramMaxFiles = "max_files"
+	paramExempt   = "exempt"
+)
+
 type Analyzer struct {
 	reporter finding.Reporter
 }
@@ -27,8 +32,8 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		return nil
 	}
 	params := ctx.Params(ID)
-	maxFiles := params.Int("max_files", 10)
-	exempt := exemptions{patterns: params.Strings("exempt", nil)}
+	maxFiles := params.Int(paramMaxFiles, 10)
+	exempt := exemptions{patterns: params.Strings(paramExempt, nil)}
 	eligible := pass.ExtensionFilter(ctx, ID, []string{".go"})
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
 	anchors := changedAnchors(ctx, eligible)
@@ -67,4 +72,12 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		))
 	}
 	return findings
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "code-placement-go",
+		Params: []string{paramMaxFiles, paramExempt, pass.ParamExtensions},
+	}
 }

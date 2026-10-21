@@ -9,18 +9,20 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const ID = "ungrouped-interfaces"
+
 type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) ID() string             { return "ungrouped-interfaces" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	reporter := pass.ResolveReporter(
-		finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatAST),
+		finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 		ctx,
 	)
 	return pass.RunPerGoFile(ctx, func(fc pass.FileChange, file *ast.File) []finding.Finding {
@@ -116,4 +118,8 @@ func mainGroup(decls []interfaceDecl) *ast.GenDecl {
 		}
 	}
 	return best
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "effective-go"}
 }

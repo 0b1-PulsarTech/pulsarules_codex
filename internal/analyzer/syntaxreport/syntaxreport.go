@@ -25,7 +25,7 @@ func NewAnalyzer(language language.ID) *Analyzer {
 	return &Analyzer{language: language}
 }
 
-func (analyzer *Analyzer) ID() string { return string(analyzer.language) + "-syntax" }
+func (analyzer *Analyzer) ID() string { return idFor(analyzer.language) }
 
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
@@ -112,3 +112,9 @@ func leadingNumber(text string) int {
 	}
 	return line
 }
+
+func Describe(lang language.ID) pass.Descriptor {
+	return pass.Descriptor{ID: idFor(lang)}
+}
+
+func idFor(lang language.ID) string { return string(lang) + "-syntax" }

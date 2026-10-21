@@ -78,3 +78,7 @@ func alreadyReported(ctx *pass.Context) map[site]bool {
 func isTestFile(file string) bool { return strings.HasSuffix(file, "_test.go") }
 
 func dirOf(file string) string { return path.Dir(filepath.ToSlash(file)) }
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "code-smells"}
+}

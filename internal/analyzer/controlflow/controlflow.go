@@ -9,6 +9,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
+const ID = "control-flow"
+
 type Analyzer struct {
 	maxNesting int
 	reporter   finding.Reporter
@@ -18,11 +20,11 @@ func NewAnalyzer() *Analyzer {
 	const defaultMaxNesting = 4
 	return &Analyzer{
 		maxNesting: defaultMaxNesting,
-		reporter:   finding.NewReporter("control-flow", finding.SeverityWarning, finding.CatAST),
+		reporter:   finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return "control-flow" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -67,4 +69,8 @@ func (analyzer *Analyzer) checkBlocks(
 		))
 	}
 	return findings
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "code-smells"}
 }

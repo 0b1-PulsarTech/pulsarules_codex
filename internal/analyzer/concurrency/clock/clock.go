@@ -9,17 +9,19 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const ID = "time-discipline"
+
 type Analyzer struct {
 	reporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: finding.NewReporter("time-discipline", finding.SeverityWarning, finding.CatAST),
+		reporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return "time-discipline" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -113,4 +115,8 @@ func clockSeamFieldName(file *ast.File, field *ast.Field) (string, bool) {
 		return "", false
 	}
 	return field.Names[0].Name, true
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "concurrency"}
 }

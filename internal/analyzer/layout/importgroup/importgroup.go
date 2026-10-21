@@ -12,6 +12,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 )
 
+const ID = "import-groups"
+
 const aliasHint = "configure a project alias (package.json `imports` or tsconfig `paths`) " +
 	"and import through it"
 
@@ -22,11 +24,7 @@ type Analyzer struct {
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		reporter: finding.NewReporter(
-			"import-groups",
-			finding.SeverityError,
-			finding.CatSyntax,
-		),
+		reporter: finding.NewReporter(ID, finding.SeverityError, finding.CatSyntax),
 		pathReporter: finding.NewReporter(
 			"import-groups/path",
 			finding.SeverityWarning,
@@ -35,7 +33,7 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return "import-groups" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -104,4 +102,8 @@ func suggestedOrder(file *syntax.File) string {
 		names[len(names)-1] = "this module"
 	}
 	return strings.Join(names, ", ")
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "imports"}
 }

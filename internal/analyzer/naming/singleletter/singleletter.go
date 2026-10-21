@@ -12,25 +12,32 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
+const ID = "single-letter-name"
+
+const (
+	paramExportedOnly = "exported_only"
+	paramAllowedNames = "allowed_names"
+)
+
 type Analyzer struct{}
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) ID() string             { return "single-letter-name" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) reporter() finding.Reporter {
-	return finding.NewReporter(analyzer.ID(), finding.SeverityWarning, finding.CatAST)
+	return finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST)
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
-	params := ctx.Params(analyzer.ID())
+	params := ctx.Params(ID)
 	cfg := settings{
 		reporter:     pass.ResolveReporter(analyzer.reporter(), ctx),
-		exportedOnly: params.Bool("exported_only", false),
-		allowed:      params.Strings("allowed_names", nil),
+		exportedOnly: params.Bool(paramExportedOnly, false),
+		allowed:      params.Strings(paramAllowedNames, nil),
 	}
 	return syntaxfiles.Each(ctx, func(fc pass.FileChange, file *syntax.File) []finding.Finding {
 		if fc.Generated {
@@ -70,4 +77,12 @@ func isSingleLetter(name string) bool {
 	}
 	letter, _ := utf8.DecodeRuneInString(name)
 	return unicode.IsLetter(letter)
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{
+		ID:     ID,
+		Rule:   "naming",
+		Params: []string{paramExportedOnly, paramAllowedNames},
+	}
 }

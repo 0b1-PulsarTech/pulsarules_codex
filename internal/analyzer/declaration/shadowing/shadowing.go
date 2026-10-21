@@ -9,6 +9,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
+const ID = "shadowing"
+
 type Analyzer struct {
 	shadowReporter finding.Reporter
 	reuseReporter  finding.Reporter
@@ -16,7 +18,7 @@ type Analyzer struct {
 
 func NewAnalyzer() *Analyzer {
 	return &Analyzer{
-		shadowReporter: finding.NewReporter("shadowing", finding.SeverityWarning, finding.CatAST),
+		shadowReporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 		// The two findings share scope machinery but say opposite things.
 		reuseReporter: finding.NewReporter(
 			"short-decl-reuse",
@@ -26,7 +28,7 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return "shadowing" }
+func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -131,4 +133,8 @@ func declareFields(scopes *scopeStack, lists ...*ast.FieldList) {
 			}
 		}
 	}
+}
+
+func Describe() pass.Descriptor {
+	return pass.Descriptor{ID: ID, Rule: "effective-go"}
 }
