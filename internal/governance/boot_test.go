@@ -22,8 +22,7 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 	analysisCfg := toAnalysisConfig(cfg)
 
 	sr := newPipeline(analysisCfg)
-	sr.Register(stubAnalyzer{
-		id:    "seed",
+	sr.Register("seed", stubAnalyzer{
 		stage: finding.StageStatic,
 		findings: []finding.Finding{
 			{
@@ -56,7 +55,9 @@ func TestRegisterForScope_OutputAnalyzer(t *testing.T) {
 			},
 		},
 	})
-	sr.registerForScope(nil, nil, ScopeChanged)
+	if err := sr.registerForScope(registry.Deps{}, ScopeChanged); err != nil {
+		t.Fatalf("registerForScope: %v", err)
+	}
 
 	ctx := &pass.Context{Config: analysisCfg}
 	findings := sr.RunStages(ctx)
@@ -95,11 +96,14 @@ func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
 	static := []string{
 		"file-size", "text-markers", "typographic-markers", "import-groups", "naming",
 		"top-of-file", "big-comment", "simplification-path", "commit-lint",
-		"commit-move-purity", "go-syntax", "dart-syntax", "typescript-syntax",
-		"javascript-syntax", "svelte-syntax", "control-flow", "shadowing", "complexity",
-		"named-returns", "test-comment", "single-use-declaration", "doc-comment",
-		"body-header-comment", "history-narration", "single-letter-name", "variadic-index",
-		"too-many-results", "ungrouped-interfaces", "package-level-var",
+		"commit-move-purity", "history-narration",
+	}
+	late := []string{"branch-name", "golangci-lint", "delegated-command"}
+	style := []string{
+		"go-syntax", "dart-syntax", "typescript-syntax", "javascript-syntax", "svelte-syntax",
+		"control-flow", "shadowing", "complexity", "named-returns", "test-comment",
+		"single-use-declaration", "doc-comment", "body-header-comment", "single-letter-name",
+		"variadic-index", "too-many-results", "ungrouped-interfaces", "package-level-var",
 		"package-file-count", "time-discipline", "context-discipline", "pprof-labels",
 	}
 	tail := []string{"rule-injection", "output"}
@@ -113,33 +117,30 @@ func TestGatesFor_ReproducesScopeMembership(t *testing.T) {
 		{
 			name:  "full",
 			scope: ScopeFull,
-			want: slices.Concat(
-				static,
-				[]string{"branch-name"},
-				arch,
-				[]string{"golangci-lint", "delegated-command"},
-				tail,
-			),
+			want:  slices.Concat(static, late, style, arch, tail),
 		},
 		{
 			name:  "commit",
 			scope: ScopeCommit,
-			want:  slices.Concat(static, tail),
+			want:  slices.Concat(static, style, tail),
 		},
 		{
 			name:  "changed",
 			scope: ScopeChanged,
-			want:  slices.Concat(static, arch, tail),
+			want:  slices.Concat(static, style, arch, tail),
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			built := registry.Analyzers(nil, nil, maxGateFor(testCase.scope))
+			built, err := registry.Analyzers(registry.Deps{}, maxGateFor(testCase.scope))
+			if err != nil {
+				t.Fatalf("Analyzers: %v", err)
+			}
 			got := make([]string, len(built))
 			for idx, analyzer := range built {
-				got[idx] = analyzer.ID()
+				got[idx] = analyzer.ID
 			}
 			if !slices.Equal(got, testCase.want) {
 				t.Fatalf("ids = %v, want %v", got, testCase.want)

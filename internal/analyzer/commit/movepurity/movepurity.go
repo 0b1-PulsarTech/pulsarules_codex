@@ -26,15 +26,13 @@ func NewAnalyzer(reader gitReader) *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) ID() string { return ID }
-
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if len(ctx.StagedRenames) == 0 {
 		return nil
 	}
-	params := ctx.Params(analyzer.ID())
+	params := ctx.Params(ID)
 	minSimilarity := params.Int(ParamMinSimilarity, analyzer.minSimilarity)
 	reporter := pass.ResolveReporter(analyzer.reporter, ctx)
 

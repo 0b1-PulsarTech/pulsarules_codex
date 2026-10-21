@@ -25,8 +25,6 @@ func NewAnalyzer(language language.ID) *Analyzer {
 	return &Analyzer{language: language}
 }
 
-func (analyzer *Analyzer) ID() string { return idFor(analyzer.language) }
-
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -36,7 +34,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 
 func (analyzer *Analyzer) unparsed(ctx *pass.Context) []finding.Finding {
 	reporter := finding.NewReporter(
-		analyzer.ID()+"/unparsed",
+		idFor(analyzer.language)+"/unparsed",
 		finding.SeverityWarning,
 		finding.CatSyntax,
 	)
@@ -58,7 +56,7 @@ func (analyzer *Analyzer) unparsed(ctx *pass.Context) []finding.Finding {
 
 func (analyzer *Analyzer) unavailable(ctx *pass.Context) []finding.Finding {
 	reporter := finding.NewReporter(
-		analyzer.ID()+"/unavailable",
+		idFor(analyzer.language)+"/unavailable",
 		finding.SeverityInfo,
 		finding.CatSyntax,
 	)

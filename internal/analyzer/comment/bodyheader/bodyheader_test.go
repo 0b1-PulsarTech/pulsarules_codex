@@ -3,7 +3,6 @@ package bodyheader
 import (
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 )
@@ -86,9 +85,6 @@ func TestAnalyzerIdentity(t *testing.T) {
 	t.Parallel()
 
 	analyzer := NewAnalyzer()
-	if analyzer.ID() != "body-header-comment" || analyzer.Stage() != finding.StageAST {
-		t.Fatalf("id = %q stage = %v", analyzer.ID(), analyzer.Stage())
-	}
 	if got := analyzer.Analyze(&pass.Context{}); len(got) != 0 {
 		t.Fatalf("findings without an AST cache = %+v", got)
 	}

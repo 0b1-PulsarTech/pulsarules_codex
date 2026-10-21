@@ -1,8 +1,13 @@
 package registry
 
 import (
+	"errors"
+	"reflect"
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 func TestIDs_PackageLevelVarOrder(t *testing.T) {
@@ -45,8 +50,8 @@ func TestConfigurableIDs(t *testing.T) {
 
 	listed := ConfigurableIDs()
 	for _, spec := range specs() {
-		if got := slices.Contains(listed, spec.id); got == spec.internal {
-			t.Errorf("%q: listed = %v, internal flag = %v", spec.id, got, spec.internal)
+		if got := slices.Contains(listed, spec.ID); got == spec.internal {
+			t.Errorf("%q: listed = %v, internal flag = %v", spec.ID, got, spec.internal)
 		}
 	}
 	for _, hidden := range []string{"rule-injection", "output", "delegated-command"} {
@@ -75,6 +80,10 @@ func TestSpecs_Golden(t *testing.T) {
 		{"simplification-path", GateStatic, false},
 		{"commit-lint", GateStatic, false},
 		{"commit-move-purity", GateStatic, false},
+		{"history-narration", GateStatic, false},
+		{"branch-name", GateFullOnly, false},
+		{"golangci-lint", GateFullOnly, false},
+		{"delegated-command", GateFullOnly, true},
 		{"go-syntax", GateStatic, false},
 		{"dart-syntax", GateStatic, false},
 		{"typescript-syntax", GateStatic, false},
@@ -88,7 +97,6 @@ func TestSpecs_Golden(t *testing.T) {
 		{"single-use-declaration", GateStatic, false},
 		{"doc-comment", GateStatic, false},
 		{"body-header-comment", GateStatic, false},
-		{"history-narration", GateStatic, false},
 		{"single-letter-name", GateStatic, false},
 		{"variadic-index", GateStatic, false},
 		{"too-many-results", GateStatic, false},
@@ -98,11 +106,8 @@ func TestSpecs_Golden(t *testing.T) {
 		{"time-discipline", GateStatic, false},
 		{"context-discipline", GateStatic, false},
 		{"pprof-labels", GateStatic, false},
-		{"branch-name", GateFullOnly, false},
 		{"arch-boundary", GateArch, false},
 		{"import-cycle", GateArch, false},
-		{"golangci-lint", GateFullOnly, false},
-		{"delegated-command", GateFullOnly, true},
 		{"rule-injection", GateStatic, true},
 		{"output", GateStatic, true},
 	}
@@ -112,9 +117,57 @@ func TestSpecs_Golden(t *testing.T) {
 	}
 	for idx, testCase := range testCases {
 		spec := table[idx]
-		got := specRow{spec.id, spec.gate, spec.internal}
+		got := specRow{spec.ID, spec.gate, spec.internal}
 		if got != testCase {
 			t.Errorf("specs()[%d] = %+v, want %+v", idx, got, testCase)
 		}
+	}
+}
+
+func TestParams_Golden(t *testing.T) {
+	t.Parallel()
+
+	want := map[string][]string{
+		"file-size":           {"max_lines", "error_lines", "extensions"},
+		"big-comment":         {"max_lines", "extensions"},
+		"text-markers":        {"extensions"},
+		"typographic-markers": {"extensions"},
+		"top-of-file":         {"extensions"},
+		"simplification-path": {"extensions"},
+		"history-narration":   {"extensions"},
+		"package-file-count":  {"max_files", "exempt", "extensions"},
+		"complexity":          {"max_complexity", "max_func_lines", "max_params"},
+		"single-letter-name":  {"exported_only", "allowed_names"},
+		"too-many-results":    {"max_results"},
+		"body-header-comment": {"min_lines"},
+		"branch-name":         {"extra_types"},
+		"golangci-lint":       {"config_path"},
+		"commit-lint":         {"emoji_hard_window", "emoji_soft_window", "emoji_suggestions"},
+		"commit-move-purity":  {"min_similarity"},
+	}
+	if got := Params(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("Params() = %v, want %v", got, want)
+	}
+}
+
+func TestBuild_FailureSurfaces(t *testing.T) {
+	t.Parallel()
+
+	failing := errors.New("catalog unavailable")
+	broken := viaDeps(pass.Descriptor{ID: "broken"}, GateStatic, nil)
+	broken.build = func(Deps) (pass.Analyzer, error) { return nil, failing }
+	table := []entry{
+		viaDeps(pass.Descriptor{ID: "first"}, GateStatic, func(Deps) pass.Analyzer { return nil }),
+		broken,
+		viaDeps(pass.Descriptor{ID: "late"}, GateFullOnly, func(Deps) pass.Analyzer { return nil }),
+	}
+
+	built, err := build(table, Deps{}, []Gate{GateStatic})
+
+	if !errors.Is(err, failing) || !strings.Contains(err.Error(), "build broken: ") {
+		t.Fatalf("build error = %v, want it to wrap %v naming broken", err, failing)
+	}
+	if len(built) != 1 {
+		t.Fatalf("built %d analyzers, want the one that did not fail", len(built))
 	}
 }

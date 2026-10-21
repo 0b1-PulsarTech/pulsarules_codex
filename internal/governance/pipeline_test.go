@@ -10,12 +10,10 @@ import (
 )
 
 type stubAnalyzer struct {
-	id       string
 	stage    finding.StageID
 	findings []finding.Finding
 }
 
-func (stub stubAnalyzer) ID() string             { return stub.id }
 func (stub stubAnalyzer) Stage() finding.StageID { return stub.stage }
 func (stub stubAnalyzer) Analyze(_ *pass.Context) []finding.Finding {
 	return stub.findings
@@ -25,15 +23,13 @@ func TestStageRunnerRegisterAndRun(t *testing.T) {
 	t.Parallel()
 
 	runner := newPipeline(nil)
-	runner.Register(stubAnalyzer{
-		id:    "a1",
+	runner.Register("a1", stubAnalyzer{
 		stage: finding.StageStatic,
 		findings: []finding.Finding{
 			{AnalyzerID: "a1", Message: "issue 1", Severity: finding.SeverityWarning},
 		},
 	})
-	runner.Register(stubAnalyzer{
-		id:    "a2",
+	runner.Register("a2", stubAnalyzer{
 		stage: finding.StageAST,
 		findings: []finding.Finding{
 			{AnalyzerID: "a2", Message: "issue 2", Severity: finding.SeverityError},
@@ -62,13 +58,11 @@ func TestStageRunnerDisabledAnalyzer(t *testing.T) {
 		},
 	}
 	runner := newPipeline(cfg)
-	runner.Register(stubAnalyzer{
-		id:       "disabled",
+	runner.Register("disabled", stubAnalyzer{
 		stage:    finding.StageStatic,
 		findings: []finding.Finding{{AnalyzerID: "disabled", Message: "should not appear"}},
 	})
-	runner.Register(stubAnalyzer{
-		id:       "enabled",
+	runner.Register("enabled", stubAnalyzer{
 		stage:    finding.StageStatic,
 		findings: []finding.Finding{{AnalyzerID: "enabled", Message: "should appear"}},
 	})
@@ -84,11 +78,9 @@ func TestStageRunnerDisabledAnalyzer(t *testing.T) {
 }
 
 type stubInPlaceAnalyzer struct {
-	id    string
 	stage finding.StageID
 }
 
-func (stub stubInPlaceAnalyzer) ID() string             { return stub.id }
 func (stub stubInPlaceAnalyzer) Stage() finding.StageID { return stub.stage }
 func (stub stubInPlaceAnalyzer) TransformsInPlace()     {}
 
@@ -105,14 +97,13 @@ func TestStageRunnerInPlaceAnalyzerNotAppended(t *testing.T) {
 	t.Parallel()
 
 	runner := newPipeline(nil)
-	runner.Register(stubAnalyzer{
-		id:    "producer",
+	runner.Register("producer", stubAnalyzer{
 		stage: finding.StageStatic,
 		findings: []finding.Finding{
 			{AnalyzerID: "one"}, {AnalyzerID: "two"},
 		},
 	})
-	runner.Register(stubInPlaceAnalyzer{id: "transformer", stage: finding.StageOutput})
+	runner.Register("transformer", stubInPlaceAnalyzer{stage: finding.StageOutput})
 
 	findings := runner.RunStages(&pass.Context{})
 	if len(findings) != 1 {
@@ -131,18 +122,15 @@ func TestStageRunnerOrdersByStage(t *testing.T) {
 	t.Parallel()
 
 	runner := newPipeline(nil)
-	runner.Register(stubAnalyzer{
-		id:       "ast",
+	runner.Register("ast", stubAnalyzer{
 		stage:    finding.StageAST,
 		findings: []finding.Finding{{AnalyzerID: "ast"}},
 	})
-	runner.Register(stubAnalyzer{
-		id:       "static",
+	runner.Register("static", stubAnalyzer{
 		stage:    finding.StageStatic,
 		findings: []finding.Finding{{AnalyzerID: "static"}},
 	})
-	runner.Register(stubAnalyzer{
-		id:       "arch",
+	runner.Register("arch", stubAnalyzer{
 		stage:    finding.StageArch,
 		findings: []finding.Finding{{AnalyzerID: "arch"}},
 	})
@@ -177,15 +165,13 @@ func TestStageRunnerAppliesOverrides(t *testing.T) {
 		}},
 	})
 	runner := newPipeline(cfg)
-	runner.Register(stubAnalyzer{
-		id:    "golangci-lint",
+	runner.Register("golangci-lint", stubAnalyzer{
 		stage: finding.StageStatic,
 		findings: []finding.Finding{{
 			AnalyzerID: "golangci-lint/errcheck", File: "main.go", Severity: finding.SeverityError,
 		}},
 	})
-	runner.Register(stubAnalyzer{
-		id:    "file-size",
+	runner.Register("file-size", stubAnalyzer{
 		stage: finding.StageStatic,
 		findings: []finding.Finding{
 			{AnalyzerID: "file-size", File: "web/test/a.dart", Severity: finding.SeverityError},

@@ -6,55 +6,57 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
 )
 
+type registered struct {
+	id       string
+	analyzer pass.Analyzer
+}
+
 type StageRunner struct {
-	stages map[finding.StageID][]pass.Analyzer
+	stages map[finding.StageID][]registered
 	cfg    *pass.AnalysisConfig
 }
 
 func newPipeline(cfg *pass.AnalysisConfig) *StageRunner {
 	return &StageRunner{
-		stages: make(map[finding.StageID][]pass.Analyzer),
+		stages: make(map[finding.StageID][]registered),
 		cfg:    cfg,
 	}
 }
 
-func (runner *StageRunner) Register(analyzer pass.Analyzer) {
-	runner.stages[analyzer.Stage()] = append(runner.stages[analyzer.Stage()], analyzer)
+func (runner *StageRunner) Register(id string, analyzer pass.Analyzer) {
+	stage := analyzer.Stage()
+	runner.stages[stage] = append(runner.stages[stage], registered{id: id, analyzer: analyzer})
 }
 
 func (runner *StageRunner) RunStages(ctx *pass.Context) []finding.Finding {
 	for stage := finding.StageContext; stage <= finding.StageOutput; stage++ {
-		analyzers := runner.stages[stage]
-		for _, analyzer := range analyzers {
-			if !runner.enabled(analyzer) {
+		for _, entry := range runner.stages[stage] {
+			if !runner.enabled(entry.id) {
 				continue
 			}
-			findings := analyzer.Analyze(ctx)
+			findings := entry.analyzer.Analyze(ctx)
 			// An in-place analyzer already appended to ctx.Findings; skip its return.
-			if _, inPlace := analyzer.(pass.InPlaceAnalyzer); inPlace {
+			if _, inPlace := entry.analyzer.(pass.InPlaceAnalyzer); inPlace {
 				continue
 			}
-			ctx.Findings = append(ctx.Findings, runner.overridden(analyzer, findings)...)
+			ctx.Findings = append(ctx.Findings, runner.overridden(entry.id, findings)...)
 		}
 	}
 	return ctx.Findings
 }
 
-func (runner *StageRunner) overridden(
-	analyzer pass.Analyzer,
-	findings []finding.Finding,
-) []finding.Finding {
+func (runner *StageRunner) overridden(id string, findings []finding.Finding) []finding.Finding {
 	if runner.cfg == nil {
 		return findings
 	}
-	return overrides.Apply(findings, analyzer.ID(), runner.cfg.Overrides)
+	return overrides.Apply(findings, id, runner.cfg.Overrides)
 }
 
-func (runner *StageRunner) enabled(analyzer pass.Analyzer) bool {
+func (runner *StageRunner) enabled(id string) bool {
 	if runner.cfg == nil {
 		return true
 	}
-	cfg, ok := runner.cfg.Analyzers[analyzer.ID()]
+	cfg, ok := runner.cfg.Analyzers[id]
 	if !ok {
 		return true
 	}

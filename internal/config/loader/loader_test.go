@@ -103,6 +103,11 @@ func loadCases() []loadCase {
 			wantErr: ".pulsarules.yaml: analyzers.file-size.params.max_line: unknown param",
 		},
 		{
+			name:    "unknown param on an analyzer whose keys are package consts",
+			content: "version: 1\nanalyzers: {commit-lint: {params: {emoji_window: 1}}}\n",
+			wantErr: ".pulsarules.yaml: analyzers.commit-lint.params.emoji_window: unknown param",
+		},
+		{
 			name:    "pipeline analyzer is not configurable",
 			content: "version: 1\nanalyzers: {output: {enabled: false}}\n",
 			wantErr: ".pulsarules.yaml: analyzers.output: unknown analyzer",

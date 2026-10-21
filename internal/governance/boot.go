@@ -12,17 +12,14 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
-	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func (runner *StageRunner) registerForScope(
-	index *knowledge.Index,
-	repo Repository,
-	scope Scope,
-) {
-	for _, analyzer := range registry.Analyzers(index, repo, maxGateFor(scope)) {
-		runner.Register(analyzer)
+func (runner *StageRunner) registerForScope(deps registry.Deps, scope Scope) error {
+	analyzers, err := registry.Analyzers(deps, maxGateFor(scope))
+	for _, analyzer := range analyzers {
+		runner.Register(analyzer.ID, analyzer.Analyzer)
 	}
+	return err
 }
 
 func maxGateFor(scope Scope) []registry.Gate {

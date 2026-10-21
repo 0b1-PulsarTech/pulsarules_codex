@@ -8,6 +8,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/testfile"
@@ -69,7 +70,10 @@ func (sess *Session) Analyze(scope Scope, status *vcs.Status, files FileSet) Res
 	ctx := sess.Load(discovery)
 
 	sr := newPipeline(sess.cfgAnalysis)
-	sr.registerForScope(sess.index, sess.repo, scope)
+	deps := registry.Deps{Index: sess.index, Repo: sess.repo}
+	if err := sr.registerForScope(deps, scope); err != nil {
+		ctx.Findings = append(ctx.Findings, registryFinding(err))
+	}
 	findings := sr.RunStages(ctx)
 
 	if sess.cfgAnalysis.IncludeGenerated {

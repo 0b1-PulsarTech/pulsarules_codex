@@ -168,12 +168,3 @@ func TestAnalyzeNilCache(t *testing.T) {
 		t.Fatalf("findings = %v, want none", got)
 	}
 }
-
-func TestIdentity(t *testing.T) {
-	t.Parallel()
-
-	analyzer := NewAnalyzer()
-	if analyzer.ID() != "package-level-var" || analyzer.Stage() != finding.StageAST {
-		t.Fatalf("id=%q stage=%v", analyzer.ID(), analyzer.Stage())
-	}
-}

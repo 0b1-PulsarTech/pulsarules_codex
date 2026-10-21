@@ -130,18 +130,6 @@ func TestInjectRuleSummaries_AlreadyHasSummary(t *testing.T) {
 	}
 }
 
-func TestRuleInjectionAnalyzer_Stage(t *testing.T) {
-	t.Parallel()
-
-	analyzer := NewAnalyzer(nil)
-	if analyzer.Stage() != finding.StageRuleInjection {
-		t.Fatalf("expected StageRuleInjection, got %d", analyzer.Stage())
-	}
-	if analyzer.ID() != "rule-injection" {
-		t.Fatalf("expected ID rule-injection, got %q", analyzer.ID())
-	}
-}
-
 func TestAnalyzer_Summaries(t *testing.T) {
 	t.Parallel()
 

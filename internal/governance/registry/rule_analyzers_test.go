@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -64,5 +65,27 @@ func TestRuleAnalyzersCheck_EmbeddedKnowledge(t *testing.T) {
 	}
 	if problems := RuleAnalyzersCheck(idx); len(problems) != 0 {
 		t.Errorf("embedded rules should declare only registered analyzers, got %v", problems)
+	}
+}
+
+func TestDescriptorRule_ListsTheAnalyzer(t *testing.T) {
+	t.Parallel()
+
+	idx, _, err := knowledge.Load("")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	for _, spec := range specs() {
+		if spec.Rule == "" {
+			continue
+		}
+		rule, found := idx.Rule(spec.Rule)
+		if !found {
+			t.Errorf("%s: rule %q is not in the knowledge catalog", spec.ID, spec.Rule)
+			continue
+		}
+		if !slices.Contains(rule.Analyzers, spec.ID) {
+			t.Errorf("%s: rule %q lists analyzers %v", spec.ID, spec.Rule, rule.Analyzers)
+		}
 	}
 }

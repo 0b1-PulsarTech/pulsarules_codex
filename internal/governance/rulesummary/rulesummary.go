@@ -89,7 +89,6 @@ func NewAnalyzer(index *knowledge.Index) *Analyzer {
 	return &Analyzer{index: index}
 }
 
-func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageRuleInjection }
 
 func (analyzer *Analyzer) TransformsInPlace() {}

@@ -101,6 +101,11 @@ func configFinding(err error) finding.Finding {
 	)
 }
 
+func registryFinding(err error) finding.Finding {
+	return finding.NewReporter("registry", finding.SeverityError, finding.CatProject).
+		New(err.Error())
+}
+
 func (sess *Session) stagedRenames() []pass.Rename {
 	const renameProbeScore = 1
 	// Low so a partial rename still reaches move-purity, which judges it against its own

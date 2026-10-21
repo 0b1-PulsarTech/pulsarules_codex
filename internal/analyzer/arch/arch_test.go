@@ -183,17 +183,6 @@ func TestImportCycleAnalyzer_Analyze_NoProjectDir(t *testing.T) {
 	}
 }
 
-func TestArchAnalyzers_ReportTheirRegisteredID(t *testing.T) {
-	t.Parallel()
-
-	if id := NewPackageBoundaryAnalyzer().ID(); id != "arch-boundary" {
-		t.Errorf("ID() = %q, want arch-boundary", id)
-	}
-	if id := NewImportCycleAnalyzer().ID(); id != "import-cycle" {
-		t.Errorf("ID() = %q, want import-cycle", id)
-	}
-}
-
 func TestAnalyzers_Analyze_NilSources(t *testing.T) {
 	t.Parallel()
 

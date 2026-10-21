@@ -41,7 +41,6 @@ func NewPackageBoundaryAnalyzer() *PackageBoundaryAnalyzer {
 	}
 }
 
-func (analyzer *PackageBoundaryAnalyzer) ID() string             { return PackageBoundaryID }
 func (analyzer *PackageBoundaryAnalyzer) Stage() finding.StageID { return finding.StageArch }
 
 func (analyzer *PackageBoundaryAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -78,7 +77,6 @@ func NewImportCycleAnalyzer() *ImportCycleAnalyzer {
 	}
 }
 
-func (analyzer *ImportCycleAnalyzer) ID() string             { return ImportCycleID }
 func (analyzer *ImportCycleAnalyzer) Stage() finding.StageID { return finding.StageArch }
 
 func (analyzer *ImportCycleAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {

@@ -35,8 +35,6 @@ func NewAnalyzer(catalog *emoji.Catalog) *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) ID() string { return ID }
-
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -45,7 +43,7 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	}
 
 	msg := commitmsg.Parse(ctx.CommitMsg)
-	windowCfg := analyzer.windowCfg.merge(ctx.Params(analyzer.ID()))
+	windowCfg := analyzer.windowCfg.merge(ctx.Params(ID))
 
 	reporters := analyzer.reporters.resolved(ctx)
 	findings := make([]finding.Finding, 0, typicalFindingCapacity)

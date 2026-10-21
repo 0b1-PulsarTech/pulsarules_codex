@@ -3,7 +3,6 @@ package message
 import (
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 )
@@ -26,18 +25,6 @@ func historyOf(shortcodes ...string) []pass.GitCommitEntry {
 		)
 	}
 	return entries
-}
-
-func TestCommitAnalyzerID(t *testing.T) {
-	t.Parallel()
-
-	analyzer := newTestAnalyzer(t)
-	if analyzer.ID() != "commit-lint" {
-		t.Errorf("ID = %q, want commit-lint", analyzer.ID())
-	}
-	if analyzer.Stage() != finding.StageStatic {
-		t.Errorf("Stage = %v, want StageStatic", analyzer.Stage())
-	}
 }
 
 type analyzeCase struct {

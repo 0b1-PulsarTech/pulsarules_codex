@@ -42,8 +42,6 @@ func NewTextAnalyzer() *TextAnalyzer {
 	}}
 }
 
-func (analyzer *TextAnalyzer) ID() string { return TextID }
-
 func (analyzer *TextAnalyzer) Stage() finding.StageID { return finding.StageStatic }
 
 func (analyzer *TextAnalyzer) Analyze(ctx *pass.Context) []finding.Finding {
@@ -85,8 +83,6 @@ func NewTypographicAnalyzer() *TypographicAnalyzer {
 		reporter: finding.NewReporter(TypographicID, finding.SeverityError, finding.CatSyntax),
 	}
 }
-
-func (analyzer *TypographicAnalyzer) ID() string { return TypographicID }
 
 func (analyzer *TypographicAnalyzer) Stage() finding.StageID { return finding.StageStatic }
 

@@ -1,5 +1,0 @@
-package x
-
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
-
-func Limit(params pass.ParamSet) int { return params.Int("max_lines", 0) }

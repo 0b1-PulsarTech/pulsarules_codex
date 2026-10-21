@@ -1,8 +1,11 @@
 package registry
 
 import (
+	"errors"
+	"fmt"
 	"slices"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -23,42 +26,49 @@ type Repository interface {
 	Dir(side vcs.Side, dir string) ([]string, error)
 }
 
-type analyzerBuilder func(
-	index *knowledge.Index,
-	repo Repository,
-) pass.Analyzer
+type Deps struct {
+	Index *knowledge.Index
+	Repo  Repository
+}
 
-type analyzerSpec struct {
-	id       string
-	build    analyzerBuilder
+type entry struct {
+	pass.Descriptor
+	build    func(Deps) (pass.Analyzer, error)
 	gate     Gate
 	internal bool
 }
 
-func Analyzers(
-	index *knowledge.Index,
-	repo Repository,
-	gates []Gate,
-) []pass.Analyzer {
-	table := specs()
-	built := make([]pass.Analyzer, 0, len(table))
+type Built struct {
+	ID       string
+	Analyzer pass.Analyzer
+}
+
+func Analyzers(deps Deps, gates []Gate) ([]Built, error) {
+	return build(specs(), deps, gates)
+}
+
+func build(table []entry, deps Deps, gates []Gate) ([]Built, error) {
+	built := make([]Built, 0, len(table))
+	var failures []error
 	for _, spec := range table {
 		if !slices.Contains(gates, spec.gate) {
 			continue
 		}
-		if analyzer := spec.build(index, repo); analyzer != nil {
-			built = append(built, analyzer)
+		analyzer, err := spec.build(deps)
+		if err != nil {
+			failures = append(failures, fmt.Errorf("build %s: %w", spec.ID, err))
+			continue
 		}
+		built = append(built, Built{ID: spec.ID, Analyzer: analyzer})
 	}
-	return built
+	return built, errors.Join(failures...)
 }
 
 func IDs() []string {
 	table := specs()
 	ids := make([]string, len(table))
 	for idx, spec := range table {
-		// A builder can return nil, so the id is declared rather than derived via ID().
-		ids[idx] = spec.id
+		ids[idx] = spec.ID
 	}
 	return ids
 }
@@ -67,27 +77,41 @@ func ConfigurableIDs() []string {
 	var ids []string
 	for _, spec := range specs() {
 		if !spec.internal {
-			ids = append(ids, spec.id)
+			ids = append(ids, spec.ID)
 		}
 	}
 	return ids
 }
 
-func specs() []analyzerSpec {
-	// Table order is run order; package-level-var dedupes against single-use-declaration.
-	return slices.Concat(coreSpecs(), commitSpecs(), astSpecs(), styleSpecs(), pipelineSpecs())
+func Params() map[string][]string {
+	params := make(map[string][]string)
+	for _, spec := range specs() {
+		if len(spec.Params) > 0 {
+			params[spec.ID] = slices.Clone(spec.Params)
+		}
+	}
+	return params
 }
 
-func gatedSpec[Built pass.Analyzer](id string, gate Gate, ctor func() Built) analyzerSpec {
-	return analyzerSpec{
-		id: id,
-		build: func(_ *knowledge.Index, _ Repository) pass.Analyzer {
-			return ctor()
-		},
-		gate: gate,
+func DelegatedFormats() []string {
+	return command.Formats()
+}
+
+func plain[Built pass.Analyzer](
+	desc pass.Descriptor, gate Gate, ctor func() Built,
+) entry {
+	return viaDeps(desc, gate, func(Deps) pass.Analyzer { return ctor() })
+}
+
+func viaDeps(desc pass.Descriptor, gate Gate, ctor func(Deps) pass.Analyzer) entry {
+	return entry{
+		Descriptor: desc,
+		gate:       gate,
+		build:      func(deps Deps) (pass.Analyzer, error) { return ctor(deps), nil },
 	}
 }
 
-func staticSpec[Built pass.Analyzer](id string, ctor func() Built) analyzerSpec {
-	return gatedSpec(id, GateStatic, ctor)
+func hide(spec entry) entry {
+	spec.internal = true
+	return spec
 }

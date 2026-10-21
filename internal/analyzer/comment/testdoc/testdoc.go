@@ -20,8 +20,6 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{}
 }
 
-func (analyzer *Analyzer) ID() string { return ID }
-
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) reporter() finding.Reporter {

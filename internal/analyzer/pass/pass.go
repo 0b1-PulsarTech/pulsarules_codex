@@ -10,7 +10,6 @@ type (
 	}
 
 	Analyzer interface {
-		ID() string
 		Stage() finding.StageID
 		Analyze(ctx *Context) []finding.Finding
 	}

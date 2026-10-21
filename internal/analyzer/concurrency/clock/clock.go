@@ -21,7 +21,6 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-func (analyzer *Analyzer) ID() string             { return ID }
 func (analyzer *Analyzer) Stage() finding.StageID { return finding.StageAST }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {

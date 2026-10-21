@@ -11,18 +11,6 @@ import (
 
 var errMissing = errors.New("missing blob")
 
-func TestAnalyzer_Identity(t *testing.T) {
-	t.Parallel()
-
-	analyzer := NewAnalyzer(nil)
-	if analyzer.ID() != "commit-move-purity" {
-		t.Fatalf("ID() = %q, want commit-move-purity", analyzer.ID())
-	}
-	if analyzer.Stage() != finding.StageStatic {
-		t.Fatalf("Stage() = %d, want StageStatic", analyzer.Stage())
-	}
-}
-
 type movePurityCase struct {
 	name          string
 	ctx           *pass.Context

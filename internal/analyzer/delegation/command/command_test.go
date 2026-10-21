@@ -18,15 +18,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
-func TestAnalyzerIdentity(t *testing.T) {
-	t.Parallel()
-
-	analyzer := NewAnalyzer(nil)
-	if analyzer.ID() != ID || analyzer.Stage() != finding.StageStatic {
-		t.Fatalf("ID %q Stage %v", analyzer.ID(), analyzer.Stage())
-	}
-}
-
 func TestAnalyze(t *testing.T) {
 	t.Parallel()
 

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/gosyntax/astcache"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
@@ -164,15 +163,6 @@ func TestAnalyze(t *testing.T) {
 				t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
 			}
 		})
-	}
-}
-
-func TestAnalyzerIdentity(t *testing.T) {
-	t.Parallel()
-
-	analyzer := NewAnalyzer()
-	if analyzer.ID() != "history-narration" || analyzer.Stage() != finding.StageStatic {
-		t.Fatalf("id = %q stage = %v", analyzer.ID(), analyzer.Stage())
 	}
 }
 

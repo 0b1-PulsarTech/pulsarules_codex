@@ -210,7 +210,7 @@ func TestAnalyze(t *testing.T) {
 	}
 }
 
-func TestIdentity(t *testing.T) {
+func TestDescribe(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -227,9 +227,8 @@ func TestIdentity(t *testing.T) {
 		t.Run(testCase.wantID, func(t *testing.T) {
 			t.Parallel()
 
-			analyzer := NewAnalyzer(testCase.language)
-			if analyzer.ID() != testCase.wantID || analyzer.Stage() != finding.StageAST {
-				t.Fatalf("ID %q stage %v", analyzer.ID(), analyzer.Stage())
+			if got := Describe(testCase.language).ID; got != testCase.wantID {
+				t.Fatalf("Describe(%q).ID = %q, want %q", testCase.language, got, testCase.wantID)
 			}
 		})
 	}
