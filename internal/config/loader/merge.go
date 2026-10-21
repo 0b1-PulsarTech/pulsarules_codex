@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 )
 
 const (
@@ -23,8 +24,8 @@ func (stack layers) merge() (*projectfile.File, error) {
 		Version:          base.Version,
 		Preset:           cmp.Or(private.Preset, base.Preset),
 		IncludeGenerated: cmp.Or(private.IncludeGenerated, base.IncludeGenerated),
-		SkipDirs:         union(base.SkipDirs, private.SkipDirs),
-		Tests:            union(base.Tests, private.Tests),
+		SkipDirs:         ordered.Dedupe(slices.Concat(base.SkipDirs, private.SkipDirs)),
+		Tests:            ordered.Dedupe(slices.Concat(base.Tests, private.Tests)),
 		Analyzers:        mergeAnalyzers(base.Analyzers, private.Analyzers),
 		Overrides:        slices.Concat(keptBase, private.Overrides),
 		Delegated:        mergeDelegated(base.Delegated, private.Delegated),
@@ -60,18 +61,6 @@ func checkMergedSizes(merged *projectfile.File) error {
 		}
 	}
 	return nil
-}
-
-func union(base, private []string) []string {
-	seen := make(map[string]bool, len(base)+len(private))
-	var merged []string
-	for _, item := range slices.Concat(base, private) {
-		if !seen[item] {
-			seen[item] = true
-			merged = append(merged, item)
-		}
-	}
-	return merged
 }
 
 func mergeAnalyzers(
