@@ -13,6 +13,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -51,7 +52,7 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 	if err != nil {
 		return fmt.Errorf("get emoji catalog: %w", err)
 	}
-	cfg, configFindings := loader.ForRoot(root)
+	cfg, configFindings := loader.NewLoader(registry.ConfigRules()).ForRoot(root)
 	sess := governance.NewSession(repo, idx, catalog, cfg)
 	// An explicit empty status keeps this a pure message linter. A nil
 	// status would have discovery read the worktree, and content findings from

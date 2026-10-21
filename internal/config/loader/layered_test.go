@@ -363,7 +363,7 @@ func TestForRootLayered(t *testing.T) {
 	for _, testCase := range forRootCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, findings := ForRoot(testCase.spec.build(t))
+			_, findings := testLoader().ForRoot(testCase.spec.build(t))
 			assertConfigFinding(t, findings, testCase.wantFile, testCase.wantMessage)
 			if testCase.wantNoSubstr != "" &&
 				strings.Contains(findings[0].Message, testCase.wantNoSubstr) {
@@ -427,7 +427,7 @@ func TestLoadPrivateFailsClosed(t *testing.T) {
 			if testCase.withBase {
 				spec.base = baseStrict
 			}
-			file, err := loadLayers(spec.build(t), testCase.resolve, "")
+			file, err := testLoader().loadLayers(spec.build(t), testCase.resolve, "")
 			if testCase.wantErr != "" {
 				assertErrorHas(t, err, []string{testCase.wantErr})
 				if got := faultFile(err, nil); got != "<git-common-dir>/pulsarules.yaml" {

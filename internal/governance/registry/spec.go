@@ -3,7 +3,6 @@ package registry
 import (
 	"slices"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -59,7 +58,7 @@ func build(table []entry, deps Deps, maxGate Gate) []Built {
 	return built
 }
 
-func IDs() []string {
+func specIDs() []string {
 	table := specs()
 	ids := make([]string, len(table))
 	for idx, spec := range table {
@@ -68,7 +67,7 @@ func IDs() []string {
 	return ids
 }
 
-func ConfigurableIDs() []string {
+func configurableIDs() []string {
 	var ids []string
 	for _, spec := range specs() {
 		if !spec.internal {
@@ -78,7 +77,7 @@ func ConfigurableIDs() []string {
 	return ids
 }
 
-func Params() map[string][]string {
+func specParams() map[string][]string {
 	params := make(map[string][]string)
 	for _, spec := range specs() {
 		if len(spec.Params) > 0 {
@@ -86,10 +85,6 @@ func Params() map[string][]string {
 		}
 	}
 	return params
-}
-
-func DelegatedFormats() []string {
-	return command.Formats()
 }
 
 func plain[Concrete pass.Analyzer](

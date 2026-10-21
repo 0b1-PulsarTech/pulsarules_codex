@@ -7,7 +7,7 @@ import (
 )
 
 func RuleAnalyzersCheck(idx *knowledge.Index) []string {
-	ids := IDs()
+	ids := specIDs()
 	known := make(map[string]bool, len(ids))
 	for _, id := range ids {
 		known[id] = true

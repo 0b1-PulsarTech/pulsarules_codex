@@ -14,6 +14,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -100,7 +101,7 @@ func GovernChanges(
 		) + "\n", 1
 	}
 	// The empty commit message is deliberate: only the git commit-msg hook validates one.
-	cfg, configFindings := loader.ForRoot(repo.Root())
+	cfg, configFindings := loader.NewLoader(registry.ConfigRules()).ForRoot(repo.Root())
 	sess := governance.NewSession(repo, index, catalog, cfg)
 	result := sess.Analyze(governance.Request{
 		Scope:  governance.ScopeChanged,

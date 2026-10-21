@@ -8,11 +8,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 )
 
-func privateWinsOverrides(
-	base, private *projectfile.File, presetFlag string,
-) []projectfile.OverrideEntry {
+func (stack layers) privateWins() []projectfile.OverrideEntry {
+	base := stack.base
 	// The private file is clone-local and never published, so what it switches off stays off.
-	isOff := privateDisables(base, private, presetFlag)
+	isOff := stack.privateDisables()
 	kept := make([]projectfile.OverrideEntry, 0, len(base.Overrides))
 	for _, entry := range base.Overrides {
 		trimmed := maps.Clone(entry.Analyzers)
@@ -29,12 +28,11 @@ func privateWinsOverrides(
 	return kept
 }
 
-func privateDisables(
-	base, private *projectfile.File, presetFlag string,
-) func(id string) bool {
+func (stack layers) privateDisables() func(id string) bool {
+	base, private := stack.base, stack.private
 	// Only a choice made in the private file drops a team override: the flag alone never does.
 	chosen := presetDisabled(private.Preset)
-	effective := presetDisabled(cmp.Or(presetFlag, private.Preset))
+	effective := presetDisabled(cmp.Or(stack.preset, private.Preset))
 	return func(id string) bool {
 		if entry := private.Analyzers[id]; entry.Enabled != nil {
 			return !*entry.Enabled

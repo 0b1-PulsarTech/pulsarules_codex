@@ -138,7 +138,7 @@ func TestLoadCutsAMergedReportOnlyAtItsOwnLead(t *testing.T) {
 				worktree: true, privateLen: testCase.privateLen, base: base,
 				private: "version: 1\n",
 			}
-			_, err := Load(spec.build(t), "", config.PresetMinimal)
+			_, err := testLoader().Load(spec.build(t), "", config.PresetMinimal)
 			if err == nil {
 				t.Fatal("Load() = nil, want the narrowing faults")
 			}
@@ -167,7 +167,7 @@ func TestLocateFaultDropsTheRoot(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			root := layout{deep: testCase.deep}.build(t)
-			_, err := loadLayers(root, resolve, "")
+			_, err := testLoader().loadLayers(root, resolve, "")
 			got := capReport(err, nil)
 			requireFits(t, errorFinding(got), "git -C . rev-parse: context deadline exceeded")
 			if !errors.Is(got, context.DeadlineExceeded) || strings.Contains(got.Error(), root) {

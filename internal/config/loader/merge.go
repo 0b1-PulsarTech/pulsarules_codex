@@ -14,8 +14,9 @@ const (
 	mergedSuffix = " (merged)"
 )
 
-func merge(base, private *projectfile.File, presetFlag string) (*projectfile.File, error) {
-	keptBase := privateWinsOverrides(base, private, presetFlag)
+func (stack layers) merge() (*projectfile.File, error) {
+	base, private := stack.base, stack.private
+	keptBase := stack.privateWins()
 	merged := &projectfile.File{
 		Path:             mergedName(base, private),
 		Sources:          []string{base.Path, private.Path},
@@ -32,7 +33,7 @@ func merge(base, private *projectfile.File, presetFlag string) (*projectfile.Fil
 	if err := checkMergedSizes(merged); err != nil {
 		return nil, err
 	}
-	if err := merged.Validate(configRules()); err != nil {
+	if err := merged.Validate(stack.rules); err != nil {
 		return nil, err
 	}
 	return merged, nil

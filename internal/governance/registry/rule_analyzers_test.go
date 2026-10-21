@@ -11,7 +11,7 @@ import (
 func TestRuleAnalyzersCheck(t *testing.T) {
 	t.Parallel()
 
-	registered := IDs()
+	registered := specIDs()
 	if len(registered) == 0 {
 		t.Fatal("expected at least one registered analyzer id")
 	}

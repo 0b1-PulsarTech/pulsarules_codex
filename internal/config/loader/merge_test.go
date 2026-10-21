@@ -12,7 +12,7 @@ import (
 
 func parseFile(t *testing.T, name, content string) *projectfile.File {
 	t.Helper()
-	file, err := projectfile.Parse(name, []byte(content), configRules())
+	file, err := projectfile.Parse(name, []byte(content), testLoader().rules)
 	if err != nil {
 		t.Fatalf("Parse(%s) error = %v", name, err)
 	}
@@ -153,7 +153,7 @@ func TestMerge(t *testing.T) {
 			t.Parallel()
 			base := parseFile(t, ".pulsarules.yaml", testCase.base)
 			private := parseFile(t, ".git/pulsarules.yaml", testCase.private)
-			got, err := merge(base, private, "")
+			got, err := layers{base: base, private: private, rules: testLoader().rules}.merge()
 			if err != nil {
 				t.Fatalf("merge() error = %v", err)
 			}
@@ -209,7 +209,7 @@ func TestMergeLimits(t *testing.T) {
 			t.Parallel()
 			base := parseFile(t, ".pulsarules.yaml", testCase.base)
 			private := parseFile(t, ".git/pulsarules.yaml", testCase.private)
-			_, err := merge(base, private, "")
+			_, err := layers{base: base, private: private, rules: testLoader().rules}.merge()
 			assertErrorHas(t, err, []string{testCase.want})
 		})
 	}
@@ -280,7 +280,7 @@ func TestMergeMatchesSingleFile(t *testing.T) {
 			t.Parallel()
 			base := parseFile(t, ".pulsarules.yaml", testCase.base)
 			private := parseFile(t, ".git/pulsarules.yaml", testCase.private)
-			got, err := merge(base, private, "")
+			got, err := layers{base: base, private: private, rules: testLoader().rules}.merge()
 			if err != nil {
 				t.Fatalf("merge() error = %v", err)
 			}
@@ -374,11 +374,14 @@ func TestMergeSizeBoundaries(t *testing.T) {
 			t.Parallel()
 			base := parseFile(t, ".pulsarules.yaml", testCase.base)
 			private, err := projectfile.Parse(
-				".git/pulsarules.yaml", []byte(testCase.private), privateRules(base))
+				".git/pulsarules.yaml",
+				[]byte(testCase.private),
+				privateRules(testLoader().rules, base),
+			)
 			if err != nil {
 				t.Fatalf("Parse(private) error = %v", err)
 			}
-			_, err = merge(base, private, "")
+			_, err = layers{base: base, private: private, rules: testLoader().rules}.merge()
 			if testCase.wantErr == "" {
 				if err != nil {
 					t.Fatalf("merge() error = %v", err)

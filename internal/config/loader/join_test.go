@@ -182,12 +182,12 @@ func TestLoadCapsTheJoinedReport(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, findings := ForRoot(testCase.spec.build(t))
-			if len(findings) != 1 {
-				t.Fatalf("findings = %+v, want exactly one", findings)
+			_, reported := testLoader().ForRoot(testCase.spec.build(t))
+			if len(reported) != 1 {
+				t.Fatalf("findings = %+v, want exactly one", reported)
 			}
-			got := findings[0]
-			rendered := renderHook(findings)
+			got := reported[0]
+			rendered := renderHook(reported)
 			if len(rendered) > maxJoinedReport {
 				t.Fatalf("rendered line = %d bytes, want at most %d",
 					len(rendered), maxJoinedReport)

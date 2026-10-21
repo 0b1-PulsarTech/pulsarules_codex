@@ -112,12 +112,29 @@ func TestPrivateRulesWithoutBase(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := privateRules(testCase.base).AnalyzerIDs
-			want := slices.Concat(configRules().AnalyzerIDs, testCase.wantExtra)
+			got := privateRules(testLoader().rules, testCase.base).AnalyzerIDs
+			want := slices.Concat(testLoader().rules.AnalyzerIDs, testCase.wantExtra)
 			if !slices.Equal(got, want) {
 				t.Fatalf("AnalyzerIDs = %d ids, want %d", len(got), len(want))
 			}
 		})
+	}
+}
+
+func TestPrivateRulesLeaveTheSharedIDsAlone(t *testing.T) {
+	t.Parallel()
+
+	shared := make([]string, 1, 8)
+	shared[0] = "file-size"
+	rules := projectfile.Rules{AnalyzerIDs: shared}
+	base := &projectfile.File{Delegated: []projectfile.DelegatedEntry{{ID: "x"}}}
+
+	first := privateRules(rules, base).AnalyzerIDs
+	other := &projectfile.File{Delegated: []projectfile.DelegatedEntry{{ID: "y"}}}
+	privateRules(rules, other)
+	if first[1] != "x" || shared[:2][1] != "" {
+		t.Fatalf("ids = %v, shared spare slot = %q, want the loader rules untouched",
+			first, shared[:2][1])
 	}
 }
 
@@ -140,7 +157,7 @@ func TestFailedBaseDoesNotBlameDelegatedIDs(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			spec := layout{base: doc("bogus: 1", declared), private: testCase.private, git: true}
-			_, findings := ForRoot(spec.build(t))
+			_, findings := testLoader().ForRoot(spec.build(t))
 			assertConfigFinding(
 				t, findings, projectfile.Name, ".pulsarules.yaml: line 2: bogus")
 			named := strings.Contains(findings[0].Message, ".git/pulsarules.yaml")

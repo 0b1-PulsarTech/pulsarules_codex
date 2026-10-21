@@ -19,6 +19,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -101,7 +102,9 @@ func projectConfig(opts *version.Options, root string) (*config.GovernanceConfig
 			"invalid --preset %q (want %s)", opts.Preset, strings.Join(config.Presets(), "|"),
 		)
 	}
-	file, err := loader.Load(root, opts.Config, opts.Preset)
+	file, err := loader.NewLoader(registry.ConfigRules()).Load(
+		root, opts.Config, opts.Preset,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -77,7 +77,7 @@ func TestPrivateWinsOverBaseOverrides(t *testing.T) {
 			t.Parallel()
 			spec := layout{base: testCase.base, private: testCase.private, git: true}
 			root := spec.build(t)
-			cfg, findings := ForRoot(root)
+			cfg, findings := testLoader().ForRoot(root)
 			if len(findings) != 0 {
 				t.Fatalf("ForRoot() findings = %+v, want none", findings)
 			}
@@ -136,7 +136,7 @@ func TestPrivateWinsKeepsWhatItShould(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			spec := layout{base: testCase.base, private: testCase.private, git: true}
-			cfg, findings := ForRoot(spec.build(t))
+			cfg, findings := testLoader().ForRoot(spec.build(t))
 			if len(findings) != 0 {
 				t.Fatalf("ForRoot() findings = %+v, want none", findings)
 			}
@@ -174,14 +174,14 @@ func TestPrivateWins_NarrowsEachFile(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			spec := layout{base: testCase.base, private: testCase.private, git: true}
-			_, findings := ForRoot(spec.build(t))
+			_, findings := testLoader().ForRoot(spec.build(t))
 			assertConfigFinding(t, findings, testCase.wantFile, testCase.wantErr)
 		})
 	}
 }
 
 func loadAndBuild(root, flag string) (*config.GovernanceConfig, error) {
-	file, err := Load(root, "", flag)
+	file, err := testLoader().Load(root, "", flag)
 	if err != nil {
 		return nil, err
 	}

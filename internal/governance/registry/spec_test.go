@@ -12,7 +12,7 @@ func TestIDs_NoDuplicates(t *testing.T) {
 	t.Parallel()
 
 	seen := make(map[string]bool)
-	for _, id := range IDs() {
+	for _, id := range specIDs() {
 		if seen[id] {
 			t.Errorf("duplicate analyzer id %q", id)
 		}
@@ -23,15 +23,18 @@ func TestIDs_NoDuplicates(t *testing.T) {
 func TestDelegatedFormats(t *testing.T) {
 	t.Parallel()
 
-	if !slices.Contains(DelegatedFormats(), "dart-analyze-json") {
-		t.Fatalf("DelegatedFormats() = %v, want dart-analyze-json", DelegatedFormats())
+	if !slices.Contains(ConfigRules().DelegatedFormats, "dart-analyze-json") {
+		t.Fatalf(
+			"ConfigRules().DelegatedFormats = %v, want dart-analyze-json",
+			ConfigRules().DelegatedFormats,
+		)
 	}
 }
 
 func TestConfigurableIDs(t *testing.T) {
 	t.Parallel()
 
-	listed := ConfigurableIDs()
+	listed := configurableIDs()
 	for _, spec := range specs() {
 		if got := slices.Contains(listed, spec.ID); got == spec.internal {
 			t.Errorf("%q: listed = %v, internal flag = %v", spec.ID, got, spec.internal)
@@ -39,7 +42,7 @@ func TestConfigurableIDs(t *testing.T) {
 	}
 	for _, hidden := range []string{"delegated-command"} {
 		if slices.Contains(listed, hidden) {
-			t.Fatalf("ConfigurableIDs() = %v, want %q hidden", listed, hidden)
+			t.Fatalf("configurableIDs() = %v, want %q hidden", listed, hidden)
 		}
 	}
 }
@@ -65,8 +68,8 @@ func TestParams_Golden(t *testing.T) {
 		"commit-lint":         {"emoji_hard_window", "emoji_soft_window", "emoji_suggestions"},
 		"commit-move-purity":  {"min_similarity"},
 	}
-	if got := Params(); !reflect.DeepEqual(got, want) {
-		t.Fatalf("Params() = %v, want %v", got, want)
+	if got := specParams(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("specParams() = %v, want %v", got, want)
 	}
 }
 

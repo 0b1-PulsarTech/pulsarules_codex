@@ -2,8 +2,10 @@ package loader
 
 import (
 	"context"
+	"go/build"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -148,7 +150,7 @@ func loadWithin(t *testing.T, root, explicit string) loadResult {
 	const deadline = 5 * time.Second
 	done := make(chan loadResult, 1)
 	go func() {
-		file, err := Load(root, explicit, "")
+		file, err := testLoader().Load(root, explicit, "")
 		done <- loadResult{file: file, err: err}
 	}()
 	ctx, cancel := context.WithTimeout(t.Context(), deadline)
@@ -375,7 +377,7 @@ func TestForRoot(t *testing.T) {
 			if testCase.content != "" {
 				writeConfig(t, dir, testCase.content)
 			}
-			cfg, findings := ForRoot(dir)
+			cfg, findings := testLoader().ForRoot(dir)
 			if cfg.Preset != config.PresetRecommended || len(cfg.Overrides) != 0 {
 				t.Errorf("cfg = %+v, want defaults", cfg)
 			}
@@ -408,19 +410,49 @@ func assertConfigFinding(t *testing.T, findings []finding.Finding, file, message
 func TestForRoot_EmptyRootUsesDefaults(t *testing.T) {
 	t.Parallel()
 
-	cfg, findings := ForRoot("")
+	cfg, findings := testLoader().ForRoot("")
 	if len(findings) != 0 || cfg.Preset != config.PresetRecommended {
 		t.Fatalf("ForRoot(empty) = %+v, %+v", cfg, findings)
 	}
 }
 
-func TestRulesReserveEveryBuiltInID(t *testing.T) {
+func TestLoaderUsesInjectedRules(t *testing.T) {
 	t.Parallel()
 
-	reserved := configRules().ReservedIDs
-	for _, id := range append(registry.IDs(), config.AnalyzerID) {
-		if !slices.Contains(reserved, id) {
-			t.Errorf("ReservedIDs lacks %q", id)
-		}
+	path := writeConfig(t, t.TempDir(), "version: 1\nanalyzers:\n  file-size: {}\n")
+	known := projectfile.Rules{AnalyzerIDs: []string{"file-size"}}
+	testCases := []struct {
+		name    string
+		rules   projectfile.Rules
+		wantErr bool
+	}{
+		{name: "an id the rules list is known", rules: known},
+		{name: "an id the rules omit is unknown", rules: projectfile.Rules{}, wantErr: true},
 	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := NewLoader(testCase.rules).Load("", path, "")
+			if (err != nil) != testCase.wantErr {
+				t.Fatalf("Load() error = %v, wantErr %v", err, testCase.wantErr)
+			}
+		})
+	}
+}
+
+func TestLoaderDoesNotLinkTheRegistry(t *testing.T) {
+	t.Parallel()
+
+	pkg, err := build.ImportDir(".", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(pkg.Imports, reflect.TypeFor[registry.Built]().PkgPath()) {
+		t.Fatalf("imports = %v, want the rules injected, not the registry linked", pkg.Imports)
+	}
+}
+
+func testLoader() *Loader {
+	return NewLoader(registry.ConfigRules())
 }

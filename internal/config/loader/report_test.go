@@ -54,11 +54,11 @@ func TestLoadBudgetsTheRenderedLine(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, findings := ForRoot(testCase.spec.build(t))
-			if len(findings) != 1 {
-				t.Fatalf("findings = %d, want exactly one", len(findings))
+			_, reported := testLoader().ForRoot(testCase.spec.build(t))
+			if len(reported) != 1 {
+				t.Fatalf("findings = %d, want exactly one", len(reported))
 			}
-			requireFits(t, findings[0])
+			requireFits(t, reported[0])
 		})
 	}
 }
@@ -337,11 +337,11 @@ func TestLoadCapsEveryConfigError(t *testing.T) {
 			if testCase.spec.unreadable && os.Geteuid() == 0 {
 				t.Skip("root opens a mode 000 file")
 			}
-			_, findings := ForRoot(testCase.spec.build(t))
-			if len(findings) != 1 {
-				t.Fatalf("findings = %d, want exactly one", len(findings))
+			_, reported := testLoader().ForRoot(testCase.spec.build(t))
+			if len(reported) != 1 {
+				t.Fatalf("findings = %d, want exactly one", len(reported))
 			}
-			requireFits(t, findings[0], testCase.reason, "pulsarules.yaml")
+			requireFits(t, reported[0], testCase.reason, "pulsarules.yaml")
 		})
 	}
 }
@@ -373,7 +373,7 @@ func TestLoadCapsAnExplicitPath(t *testing.T) {
 			}
 			path := filepath.Join(dir, privateFileName)
 			write(t, path, testCase.content)
-			file, err := Load("", path, "")
+			file, err := testLoader().Load("", path, "")
 			if err == nil {
 				_, err = Build(file, "")
 			}
@@ -406,7 +406,7 @@ func TestCapReportCutsAtAProblem(t *testing.T) {
 					t.Fatalf("mkdir: %v", mkErr)
 				}
 				write(t, filepath.Join(dir, privateFileName), unknownKeys())
-				_, err = Load("", filepath.Join(dir, privateFileName), "")
+				_, err = testLoader().Load("", filepath.Join(dir, privateFileName), "")
 			}
 			got := err.Error()
 			if testCase.wantMarker != strings.HasSuffix(got, moreProblems) {

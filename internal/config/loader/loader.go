@@ -9,32 +9,30 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-func configRules() projectfile.Rules {
-	return projectfile.Rules{
-		AnalyzerIDs:      registry.ConfigurableIDs(),
-		ReservedIDs:      append(registry.IDs(), config.AnalyzerID),
-		Params:           registry.Params(),
-		DelegatedFormats: registry.DelegatedFormats(),
-	}
+type Loader struct {
+	rules projectfile.Rules
 }
 
-func Load(root, explicit, presetFlag string) (*projectfile.File, error) {
-	file, err := load(root, explicit, presetFlag)
+func NewLoader(rules projectfile.Rules) *Loader {
+	return &Loader{rules: rules}
+}
+
+func (loader *Loader) Load(root, explicit, presetFlag string) (*projectfile.File, error) {
+	file, err := loader.load(root, explicit, presetFlag)
 	return file, capReport(err, file)
 }
 
-func load(root, explicit, presetFlag string) (*projectfile.File, error) {
+func (loader *Loader) load(root, explicit, presetFlag string) (*projectfile.File, error) {
 	if explicit != "" {
-		return loadFile(explicit, explicit, configRules())
+		return loadFile(explicit, explicit, loader.rules)
 	}
 	if root == "" {
 		return nil, nil
 	}
-	return loadLayers(root, vcs.CommonDir, presetFlag)
+	return loader.loadLayers(root, vcs.CommonDir, presetFlag)
 }
 
 func loadFile(path, display string, rules projectfile.Rules) (*projectfile.File, error) {
@@ -80,8 +78,8 @@ func withPreset(file *projectfile.File, presetFlag string) *config.GovernanceCon
 	return cfg
 }
 
-func ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
-	file, err := Load(root, "", "")
+func (loader *Loader) ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
+	file, err := loader.Load(root, "", "")
 	if err == nil {
 		var cfg *config.GovernanceConfig
 		if cfg, err = Build(file, ""); err == nil {

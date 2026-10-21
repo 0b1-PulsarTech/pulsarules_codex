@@ -13,12 +13,18 @@ const privateFileName = "pulsarules.yaml"
 
 type commonDirResolver func(dir string) (string, error)
 
-func loadLayers(
+type layers struct {
+	base, private *projectfile.File
+	preset        string
+	rules         projectfile.Rules
+}
+
+func (loader *Loader) loadLayers(
 	root string, resolve commonDirResolver, presetFlag string,
 ) (*projectfile.File, error) {
 	base, baseErr := loadOptional(filepath.Join(root, projectfile.Name),
-		projectfile.Name, configRules())
-	rules := privateRules(base)
+		projectfile.Name, loader.rules)
+	rules := privateRules(loader.rules, base)
 	// A failed base hides its delegated ids, so the private ids cannot be judged yet.
 	rules.AnyAnalyzer = baseErr != nil
 	private, privateErr := loadPrivate(root, resolve, rules)
@@ -34,33 +40,35 @@ func loadLayers(
 	case base == nil:
 		return private, nil
 	}
-	return mergeLayers(base, private, presetFlag)
+	stack := layers{base: base, private: private, preset: presetFlag, rules: loader.rules}
+	return stack.combine()
 }
 
-func mergeLayers(
-	base, private *projectfile.File, presetFlag string,
-) (*projectfile.File, error) {
+func (stack layers) combine() (*projectfile.File, error) {
 	// Each file alone must build, so a fault of one file is never blamed on the merge.
-	for _, layer := range []*projectfile.File{base, private} {
+	for _, layer := range []*projectfile.File{stack.base, stack.private} {
 		if _, err := Build(layer, ""); err != nil {
 			return nil, &fileError{File: layer.Path, Err: err}
 		}
 	}
-	merged, err := merge(base, private, presetFlag)
+	merged, err := stack.merge()
 	if err != nil {
-		return nil, &fileError{File: base.Path, Lead: mergedName(base, private), Err: err}
+		return nil, &fileError{
+			File: stack.base.Path, Lead: mergedName(stack.base, stack.private), Err: err,
+		}
 	}
-	if err = checkPrivateOverrides(merged, private, presetFlag); err != nil {
+	if err = stack.checkOverrides(merged); err != nil {
 		return nil, err
 	}
 	return merged, nil
 }
 
-func checkPrivateOverrides(merged, private *projectfile.File, presetFlag string) error {
+func (stack layers) checkOverrides(merged *projectfile.File) error {
+	private := stack.private
 	// Checked against the merged project state, but numbered as in the private file.
 	project := *merged
 	project.Overrides = merged.Overrides[:len(merged.Overrides)-len(private.Overrides)]
-	cfg, err := Build(&project, presetFlag)
+	cfg, err := Build(&project, stack.preset)
 	if err != nil {
 		return &fileError{File: faultFile(nil, merged), Err: err}
 	}
