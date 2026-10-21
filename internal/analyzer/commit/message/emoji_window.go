@@ -9,6 +9,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
 
+// A window becomes git log -n, which rejects anything above MaxInt32, and the history reader
+// adds one for a dropped HEAD. 100000 subjects is far past any real history check.
+const maxEmojiWindow = 100000
+
 type emojiWindowConfig struct {
 	HardWindow  int
 	SoftWindow  int
@@ -35,8 +39,8 @@ func HistoryWindow(params pass.ParamSet) int {
 }
 
 func (cfg emojiWindowConfig) merge(params pass.ParamSet) emojiWindowConfig {
-	cfg.HardWindow = params.Int(ParamEmojiHardWindow, cfg.HardWindow)
-	cfg.SoftWindow = params.Int(ParamEmojiSoftWindow, cfg.SoftWindow)
+	cfg.HardWindow = min(params.Int(ParamEmojiHardWindow, cfg.HardWindow), maxEmojiWindow)
+	cfg.SoftWindow = min(params.Int(ParamEmojiSoftWindow, cfg.SoftWindow), maxEmojiWindow)
 	cfg.Suggestions = params.Int(ParamEmojiSuggestions, cfg.Suggestions)
 	return cfg
 }

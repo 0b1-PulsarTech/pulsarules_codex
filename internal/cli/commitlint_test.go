@@ -75,6 +75,9 @@ func TestRunCommitLint_EmojiWindowFallsBack(t *testing.T) {
 			"      emoji_soft_window: null\n", true},
 		{"negative windows fall back", wrapper + "      emoji_hard_window: -1\n" +
 			"      emoji_soft_window: -1\n", true},
+		{"a MaxInt64 window is clamped", wrapper +
+			"      emoji_hard_window: 9223372036854775807\n" +
+			"      emoji_soft_window: 9223372036854775807\n", true},
 		{"a valid window is honoured", wrapper + "      emoji_hard_window: 3\n", true},
 	}
 	for _, testCase := range testCases {

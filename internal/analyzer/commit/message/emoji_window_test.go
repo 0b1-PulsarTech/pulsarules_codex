@@ -1,6 +1,7 @@
 package message
 
 import (
+	"math"
 	"slices"
 	"strings"
 	"testing"
@@ -184,5 +185,43 @@ func TestDefaultEmojiWindowConfig(t *testing.T) {
 	}
 	if got.SoftWindow <= got.HardWindow {
 		t.Fatalf("soft window %d must exceed hard window %d", got.SoftWindow, got.HardWindow)
+	}
+}
+
+func TestWindowsClampToTheCeiling(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		value int
+		want  int
+	}{
+		{"MaxInt64", math.MaxInt64, maxEmojiWindow},
+		{"MaxInt64 minus one", math.MaxInt64 - 1, maxEmojiWindow},
+		{"MaxInt32 plus one", math.MaxInt32 + 1, maxEmojiWindow},
+		{"ceiling plus one", maxEmojiWindow + 1, maxEmojiWindow},
+		{"ceiling", maxEmojiWindow, maxEmojiWindow},
+		{"below the ceiling", maxEmojiWindow - 1, maxEmojiWindow - 1},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			params := pass.ParamSet{
+				ParamEmojiHardWindow: testCase.value,
+				ParamEmojiSoftWindow: testCase.value,
+			}
+			merged := defaultEmojiWindowConfig().merge(params)
+			if merged.HardWindow != testCase.want || merged.SoftWindow != testCase.want {
+				t.Fatalf("merged = %+v, want both windows %d", merged, testCase.want)
+			}
+			history := HistoryWindow(params)
+			if history != testCase.want {
+				t.Fatalf("HistoryWindow = %d, want %d", history, testCase.want)
+			}
+			if history+1 <= 0 || history+1 > math.MaxInt32 {
+				t.Fatalf("HistoryWindow+1 = %d is not a usable git -n value", history+1)
+			}
+		})
 	}
 }
