@@ -19,14 +19,11 @@ func (claudeInstaller) Install(ctx Context) (report.Report, error) {
 	if settingsFile == "" {
 		settingsFile = "settings.json"
 	}
-	backedUp, err := claude.InstallHook(ctx.Templates, claudeDir)
+	ledger, err := claude.InstallHook(ctx.Templates, claudeDir)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("install claude hook: %w", err)
 	}
-	var rpt report.Report
-	for _, msg := range backedUp {
-		rpt.Warn("%s", msg)
-	}
+	rpt := ledger.Report()
 	if err = claude.WireSettings(claudeDir, settingsFile); err != nil {
 		return rpt, fmt.Errorf("wire claude settings: %w", err)
 	}
@@ -43,7 +40,7 @@ func (claudeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
 	if settingsFile == "" {
 		settingsFile = "settings.json"
 	}
-	restored, orphaned, err := claude.UninstallHook(claudeDir)
+	ledger, err := claude.UninstallHook(claudeDir)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("uninstall claude hook: %w", err)
 	}
@@ -59,11 +56,6 @@ func (claudeInstaller) Uninstall(ctx UninstallContext) (report.Report, error) {
 	if changed {
 		rpt.Note("removed hook wiring from %s", filepath.Join(claudeDir, settingsFile))
 	}
-	for _, msg := range orphaned {
-		rpt.Warn("%s", msg)
-	}
-	for _, msg := range restored {
-		rpt.Note("%s", msg)
-	}
+	rpt.Merge(ledger.Report())
 	return rpt, nil
 }

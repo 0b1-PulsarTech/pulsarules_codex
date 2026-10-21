@@ -6,6 +6,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/agents"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/docs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -20,9 +21,7 @@ func installSkills(ctx Context, dest string, report *Report) error {
 	)
 	// Install returns the backups it already made alongside the error; report them
 	// even when a later id fails.
-	for _, msg := range result.BackedUp {
-		report.Warn("%s", msg)
-	}
+	report.Merge(ownedfile.Ledger{BackedUp: result.BackedUp}.Report())
 	if err != nil {
 		return fmt.Errorf("render skills to %q: %w", dest, err)
 	}
@@ -53,9 +52,7 @@ func installWorkflows(ctx Context, dest string, report *Report) error {
 		return nil
 	}
 	result, err := docs.InstallWorkflows(ctx.Index, ctx.Renderer, dest, wfIDs)
-	for _, msg := range result.BackedUp {
-		report.Warn("%s", msg)
-	}
+	report.Merge(ownedfile.Ledger{BackedUp: result.BackedUp}.Report())
 	if err != nil {
 		return fmt.Errorf("render workflows to %q: %w", dest, err)
 	}
@@ -76,12 +73,7 @@ func removeSkills(dest string, report *Report) error {
 	for _, id := range result.Removed {
 		report.Note("removed: %s", filepath.Join(dest, id))
 	}
-	for _, msg := range result.Restored {
-		report.Note("%s", msg)
-	}
-	for _, msg := range result.Orphaned {
-		report.Warn("%s", msg)
-	}
+	report.Merge(ownedfile.Ledger{Restored: result.Restored, Orphaned: result.Orphaned}.Report())
 	return nil
 }
 
@@ -93,12 +85,7 @@ func removeWorkflows(dest string, report *Report) error {
 	for _, id := range result.Removed {
 		report.Note("removed workflow: %s", filepath.Join(dest, id))
 	}
-	for _, msg := range result.Restored {
-		report.Note("%s", msg)
-	}
-	for _, msg := range result.Orphaned {
-		report.Warn("%s", msg)
-	}
+	report.Merge(ownedfile.Ledger{Restored: result.Restored, Orphaned: result.Orphaned}.Report())
 	return nil
 }
 

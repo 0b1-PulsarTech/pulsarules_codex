@@ -85,12 +85,12 @@ func TestInstall_OwnReadOnlyHook(t *testing.T) {
 		t.Fatalf("write old hook: %v", err)
 	}
 
-	backedUp, err := Install(dir, []string{"pre-commit"}, Options{})
+	ledger, err := Install(dir, []string{"pre-commit"}, Options{})
 	if err != nil {
 		t.Fatalf("Install over read-only hook: %v", err)
 	}
-	if len(backedUp) != 0 {
-		t.Errorf("backedUp = %v, want none (the old hook was ours)", backedUp)
+	if len(ledger.BackedUp) != 0 {
+		t.Errorf("backedUp = %v, want none (the old hook was ours)", ledger.BackedUp)
 	}
 
 	updatedContent, err := os.ReadFile(preCommit)
@@ -117,14 +117,14 @@ func TestInstall_ForeignHookBackup(t *testing.T) {
 		t.Fatalf("seed foreign hook: %v", err)
 	}
 
-	backedUp, err := Install(dir, []string{"pre-commit"}, Options{})
+	ledger, err := Install(dir, []string{"pre-commit"}, Options{})
 	if err != nil {
 		t.Fatalf("Install over foreign hook: %v", err)
 	}
 	backupPath := preCommit + ownedfile.BackupSuffix
 	wantMsg := ownedfile.BackupMessage(preCommit, backupPath)
-	if len(backedUp) != 1 || backedUp[0] != wantMsg {
-		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
+	if len(ledger.BackedUp) != 1 || ledger.BackedUp[0] != wantMsg {
+		t.Fatalf("backedUp = %v, want [%q]", ledger.BackedUp, wantMsg)
 	}
 
 	gotBackup, err := os.ReadFile(backupPath) //nolint:gosec // test fixture.
@@ -155,14 +155,14 @@ func TestInstall_ExistingBackupNextSlot(t *testing.T) {
 	priorContent := "#!/bin/sh\nnpx lint-staged --even-older\n"
 	seedFile(t, priorBackup, priorContent, 0o600)
 
-	backedUp, err := Install(dir, []string{"pre-commit"}, Options{})
+	ledger, err := Install(dir, []string{"pre-commit"}, Options{})
 	if err != nil {
 		t.Fatalf("Install over foreign hook: %v", err)
 	}
 	newBackup := preCommit + ownedfile.BackupSuffix + ".1"
 	wantMsg := ownedfile.BackupMessage(preCommit, newBackup)
-	if len(backedUp) != 1 || backedUp[0] != wantMsg {
-		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
+	if len(ledger.BackedUp) != 1 || ledger.BackedUp[0] != wantMsg {
+		t.Fatalf("backedUp = %v, want [%q]", ledger.BackedUp, wantMsg)
 	}
 	assertContent(t, priorBackup, priorContent)
 	assertContent(t, newBackup, current)

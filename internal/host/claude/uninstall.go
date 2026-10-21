@@ -9,35 +9,25 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
-func UninstallHook(claudeDir string) (restored, orphaned []string, err error) {
+func UninstallHook(claudeDir string) (ledger ownedfile.Ledger, err error) {
 	hooksDir := filepath.Join(claudeDir, "hooks")
 	assets := hookAssets()
-	paths := make([]string, 0, len(assets))
-	for _, asset := range assets {
-		path := filepath.Join(hooksDir, asset.destName)
-		paths = append(paths, path)
-		_, note, removeErr := ownedfile.UninstallFile(path)
-		if removeErr != nil {
-			return restored, orphaned, removeErr
-		}
-		if note != "" {
-			restored = append(restored, note)
-		}
+	paths := make([]string, len(assets))
+	for idx, asset := range assets {
+		paths[idx] = filepath.Join(hooksDir, asset.destName)
 	}
-	// Queried before the dirs go: a numbered slot survives Restore, and
-	// nothing else would ever mention it.
-	if orphaned, err = ownedfile.OrphanNotes(paths...); err != nil {
-		return restored, orphaned, err
+	if _, ledger, err = ownedfile.UninstallFiles(paths...); err != nil {
+		return ledger, err
 	}
 	if err = disk.RemoveEmptyDir(hooksDir); err != nil {
-		return restored, orphaned, fmt.Errorf("remove empty hooks dir: %w", err)
+		return ledger, fmt.Errorf("remove empty hooks dir: %w", err)
 	}
 	binDir := filepath.Join(claudeDir, "bin")
 	if err = selfbin.Remove(binDir); err != nil {
-		return restored, orphaned, err
+		return ledger, err
 	}
 	if err = disk.RemoveEmptyDir(binDir); err != nil {
-		return restored, orphaned, fmt.Errorf("remove empty bin dir: %w", err)
+		return ledger, fmt.Errorf("remove empty bin dir: %w", err)
 	}
-	return restored, orphaned, nil
+	return ledger, nil
 }

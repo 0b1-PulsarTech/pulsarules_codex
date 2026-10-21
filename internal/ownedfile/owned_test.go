@@ -3,6 +3,7 @@ package ownedfile
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -135,7 +136,7 @@ func TestUninstallFile(t *testing.T) {
 
 			path := filepath.Join(t.TempDir(), "asset")
 			seedAsset(t, path, testCase.seed, testCase.seedBackup)
-			removed, note, err := UninstallFile(path)
+			removed, note, err := uninstallFile(path)
 			if err != nil {
 				t.Fatalf("UninstallFile: %v", err)
 			}
@@ -147,5 +148,56 @@ func TestUninstallFile(t *testing.T) {
 			}
 			assertAssetContent(t, path, testCase.wantContent)
 		})
+	}
+}
+
+func TestUninstallFiles(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	ours := filepath.Join(dir, "ours")
+	restored := filepath.Join(dir, "restored")
+	foreign := filepath.Join(dir, "foreign")
+	absent := filepath.Join(dir, "absent")
+	for path, body := range map[string]string{
+		ours:                       ownedBody,
+		restored:                   ownedBody,
+		restored + BackupSuffix:    "user original\n",
+		foreign:                    "user content\n",
+		ours + BackupSuffix + ".1": "numbered slot\n",
+	} {
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+	}
+
+	removed, ledger, err := UninstallFiles(ours, restored, foreign, absent)
+	if err != nil {
+		t.Fatalf("UninstallFiles: %v", err)
+	}
+	if !slices.Equal(removed, []string{ours, restored}) {
+		t.Errorf("removed = %q, want ours and restored", removed)
+	}
+	if !slices.Equal(ledger.Restored, []string{RestoreMessage(restored)}) {
+		t.Errorf("Restored = %q, want one restore note", ledger.Restored)
+	}
+	wantOrphan := OrphanMessage(ours, []string{ours + BackupSuffix + ".1"})
+	if !slices.Equal(ledger.Orphaned, []string{wantOrphan}) {
+		t.Errorf("Orphaned = %q, want %q", ledger.Orphaned, wantOrphan)
+	}
+	if _, statErr := os.Stat(foreign); statErr != nil {
+		t.Errorf("foreign file must survive: %v", statErr)
+	}
+}
+
+func TestUninstallFiles_CheckFails(t *testing.T) {
+	t.Parallel()
+
+	blocker := filepath.Join(t.TempDir(), "blocker")
+	if err := os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if _, _, err := UninstallFiles(filepath.Join(blocker, "hook")); err == nil {
+		t.Fatal("UninstallFiles under a file err = nil, want a check error")
 	}
 }

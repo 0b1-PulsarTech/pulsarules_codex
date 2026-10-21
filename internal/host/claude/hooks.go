@@ -41,36 +41,34 @@ func hookAssets() []hookAsset {
 	}
 }
 
-func InstallHook(templates fs.FS, claudeDir string) (backedUp []string, err error) {
+func InstallHook(templates fs.FS, claudeDir string) (ledger ownedfile.Ledger, err error) {
 	hooksDir := filepath.Join(claudeDir, "hooks")
 	if err = os.MkdirAll(hooksDir, disk.DirPrivate); err != nil {
-		return nil, fmt.Errorf("mkdir %q: %w", hooksDir, err)
+		return ledger, fmt.Errorf("mkdir %q: %w", hooksDir, err)
 	}
 	for _, asset := range hookAssets() {
 		assetBytes, readErr := fs.ReadFile(templates, "hooks/"+asset.templateName)
 		if readErr != nil {
-			return backedUp, fmt.Errorf("read template hooks/%s: %w", asset.templateName, readErr)
+			return ledger, fmt.Errorf("read template hooks/%s: %w", asset.templateName, readErr)
 		}
 		if asset.render {
 			var renderErr error
 			assetBytes, renderErr = renderReminderScript(asset.templateName, assetBytes)
 			if renderErr != nil {
-				return backedUp, renderErr
+				return ledger, renderErr
 			}
 		}
 		dst := filepath.Join(hooksDir, asset.destName)
 		note, installErr := ownedfile.InstallFile(dst, assetBytes, asset.mode)
 		if installErr != nil {
-			return backedUp, fmt.Errorf("install %q: %w", dst, installErr)
+			return ledger, fmt.Errorf("install %q: %w", dst, installErr)
 		}
-		if note != "" {
-			backedUp = append(backedUp, note)
-		}
+		ledger.AddBackup(note)
 	}
 	if err = selfbin.Install(filepath.Join(claudeDir, binSubdir)); err != nil {
-		return backedUp, err
+		return ledger, err
 	}
-	return backedUp, nil
+	return ledger, nil
 }
 
 type reminderScriptValues struct {

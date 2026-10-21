@@ -18,7 +18,7 @@ func TestUninstallHook(t *testing.T) {
 		t.Fatalf("InstallHook: %v", err)
 	}
 
-	if _, _, err := UninstallHook(claudeDir); err != nil {
+	if _, err := UninstallHook(claudeDir); err != nil {
 		t.Fatalf("UninstallHook: %v", err)
 	}
 
@@ -45,7 +45,7 @@ func TestUninstallHook_LeavesUnrelatedContent(t *testing.T) {
 		t.Fatalf("seed extra file: %v", err)
 	}
 
-	if _, _, err := UninstallHook(claudeDir); err != nil {
+	if _, err := UninstallHook(claudeDir); err != nil {
 		t.Fatalf("UninstallHook: %v", err)
 	}
 
@@ -70,7 +70,7 @@ func TestUninstallHook_ForeignReadme(t *testing.T) {
 		t.Fatalf("overwrite foreign readme: %v", err)
 	}
 
-	if _, _, err := UninstallHook(claudeDir); err != nil {
+	if _, err := UninstallHook(claudeDir); err != nil {
 		t.Fatalf("UninstallHook: %v", err)
 	}
 
@@ -104,13 +104,13 @@ func TestUninstallHook_RestoresBackup(t *testing.T) {
 		t.Fatalf("InstallHook: %v", err)
 	}
 
-	restored, _, err := UninstallHook(claudeDir)
+	ledger, err := UninstallHook(claudeDir)
 	if err != nil {
 		t.Fatalf("UninstallHook: %v", err)
 	}
 	wantMsg := ownedfile.RestoreMessage(readme)
-	if len(restored) != 1 || restored[0] != wantMsg {
-		t.Fatalf("restored = %v, want [%q]", restored, wantMsg)
+	if len(ledger.Restored) != 1 || ledger.Restored[0] != wantMsg {
+		t.Fatalf("restored = %v, want [%q]", ledger.Restored, wantMsg)
 	}
 	got, readErr := os.ReadFile(readme) //nolint:gosec // test fixture.
 	if readErr != nil {
@@ -125,7 +125,7 @@ func TestUninstallHook_Idempotent(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := filepath.Join(t.TempDir(), ".claude")
-	if _, _, err := UninstallHook(claudeDir); err != nil {
+	if _, err := UninstallHook(claudeDir); err != nil {
 		t.Fatalf("UninstallHook on untouched dir: %v", err)
 	}
 }
@@ -173,7 +173,7 @@ func TestUninstallHook_ForeignAssetSurvives(t *testing.T) {
 				t.Fatalf("write asset: %v", err)
 			}
 
-			if _, _, err := UninstallHook(claudeDir); err != nil {
+			if _, err := UninstallHook(claudeDir); err != nil {
 				t.Fatalf("UninstallHook: %v", err)
 			}
 

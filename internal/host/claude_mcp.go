@@ -12,6 +12,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 )
 
 func wireClaudeMCP(ctx Context, skillsDir string, report *Report) error {
@@ -67,9 +68,7 @@ func goplsInstructions() (string, error) {
 func generateGoplsSkill(templates fs.FS, skillsDir, instructions string, report *Report) error {
 	backedUp, genErr := mcp.GenerateGoplsSkill(templates, skillsDir, instructions)
 	// Backed-up foreign files must reach the report, or a hand-written skill is renamed silently.
-	for _, msg := range backedUp {
-		report.Warn("%s", msg)
-	}
+	report.Merge(ownedfile.Ledger{BackedUp: backedUp}.Report())
 	if genErr != nil {
 		return fmt.Errorf("generate gopls skill: %w", genErr)
 	}

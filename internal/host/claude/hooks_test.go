@@ -45,14 +45,14 @@ func TestInstallHook_ForeignReadmeBackup(t *testing.T) {
 		t.Fatalf("seed foreign readme: %v", err)
 	}
 
-	backedUp, err := InstallHook(fakeTemplates(), claudeDir)
+	ledger, err := InstallHook(fakeTemplates(), claudeDir)
 	if err != nil {
 		t.Fatalf("InstallHook: %v", err)
 	}
 	backupPath := readme + ownedfile.BackupSuffix
 	wantMsg := ownedfile.BackupMessage(readme, backupPath)
-	if len(backedUp) != 1 || backedUp[0] != wantMsg {
-		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
+	if len(ledger.BackedUp) != 1 || ledger.BackedUp[0] != wantMsg {
+		t.Fatalf("backedUp = %v, want [%q]", ledger.BackedUp, wantMsg)
 	}
 	got, readErr := os.ReadFile(backupPath) //nolint:gosec // test fixture.
 	if readErr != nil {
@@ -62,14 +62,14 @@ func TestInstallHook_ForeignReadmeBackup(t *testing.T) {
 		t.Errorf("backup content = %q, want %q", got, foreign)
 	}
 
-	secondBackedUp, err := InstallHook(fakeTemplates(), claudeDir)
+	secondLedger, err := InstallHook(fakeTemplates(), claudeDir)
 	if err != nil {
 		t.Fatalf("second InstallHook: %v", err)
 	}
-	if len(secondBackedUp) != 0 {
+	if len(secondLedger.BackedUp) != 0 {
 		t.Errorf(
 			"second InstallHook backedUp = %v, want none (it owns the file now)",
-			secondBackedUp,
+			secondLedger.BackedUp,
 		)
 	}
 }
@@ -108,14 +108,14 @@ func TestInstallHook_NextNumberedSlot(t *testing.T) {
 	priorContent := "# an even earlier version of the user's notes\n"
 	seedFile(t, priorBackup, priorContent)
 
-	backedUp, err := InstallHook(fakeTemplates(), claudeDir)
+	ledger, err := InstallHook(fakeTemplates(), claudeDir)
 	if err != nil {
 		t.Fatalf("InstallHook: %v", err)
 	}
 	newBackup := readme + ownedfile.BackupSuffix + ".1"
 	wantMsg := ownedfile.BackupMessage(readme, newBackup)
-	if len(backedUp) != 1 || backedUp[0] != wantMsg {
-		t.Fatalf("backedUp = %v, want [%q]", backedUp, wantMsg)
+	if len(ledger.BackedUp) != 1 || ledger.BackedUp[0] != wantMsg {
+		t.Fatalf("backedUp = %v, want [%q]", ledger.BackedUp, wantMsg)
 	}
 	assertContent(t, priorBackup, priorContent)
 	assertContent(t, newBackup, current)

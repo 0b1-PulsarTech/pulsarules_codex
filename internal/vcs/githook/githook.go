@@ -13,18 +13,18 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
-func Install(dir string, hooks []string, opts Options) (backedUp []string, err error) {
+func Install(dir string, hooks []string, opts Options) (ledger ownedfile.Ledger, err error) {
 	if len(hooks) == 0 {
-		return nil, nil
+		return ledger, nil
 	}
 	dest := hooksDir(dir)
 	if err = os.MkdirAll(dest, disk.DirPrivate); err != nil {
-		return nil, fmt.Errorf("mkdir %q: %w", dest, err)
+		return ledger, fmt.Errorf("mkdir %q: %w", dest, err)
 	}
 	for _, name := range hooks {
 		script, ok := hookScript(name, opts)
 		if !ok {
-			return backedUp, fmt.Errorf(
+			return ledger, fmt.Errorf(
 				"unknown git hook %q (want %s)", name, strings.Join(HookNames(), "|"),
 			)
 		}
@@ -33,13 +33,11 @@ func Install(dir string, hooks []string, opts Options) (backedUp []string, err e
 		// The tightest mode that still lets git execute the hook script.
 		note, installErr := ownedfile.InstallFile(path, []byte(script), hookMode)
 		if installErr != nil {
-			return backedUp, fmt.Errorf("install hook %q: %w", name, installErr)
+			return ledger, fmt.Errorf("install hook %q: %w", name, installErr)
 		}
-		if note != "" {
-			backedUp = append(backedUp, note)
-		}
+		ledger.AddBackup(note)
 	}
-	return backedUp, nil
+	return ledger, nil
 }
 
 func InstallBinary(dir string) error {
@@ -51,9 +49,8 @@ func HookNames() []string {
 }
 
 type UninstallResult struct {
-	Removed  []string
-	Restored []string
-	Orphaned []string
+	Removed []string
+	ownedfile.Ledger
 }
 
 func Uninstall(dir string) (UninstallResult, error) {
@@ -62,24 +59,17 @@ func Uninstall(dir string) (UninstallResult, error) {
 	specs := hookSpecs()
 	paths := make([]string, 0, len(specs))
 	for name := range specs {
-		path := filepath.Join(dest, name)
-		paths = append(paths, path)
-		removedOK, note, uninstallErr := ownedfile.UninstallFile(path)
-		if uninstallErr != nil {
-			return res, fmt.Errorf("uninstall hook %q: %w", name, uninstallErr)
-		}
-		if !removedOK {
-			continue
-		}
-		res.Removed = append(res.Removed, name)
-		if note != "" {
-			res.Restored = append(res.Restored, note)
-		}
+		paths = append(paths, filepath.Join(dest, name))
 	}
 	var err error
-	// Queried before the binary goes: a numbered slot survives Restore and
+	// The ledger is read before the binary goes: a numbered slot survives Restore and
 	// would otherwise sit in the shared hooks dir unmentioned forever.
-	if res.Orphaned, err = ownedfile.OrphanNotes(paths...); err != nil {
+	var removed []string
+	removed, res.Ledger, err = ownedfile.UninstallFiles(paths...)
+	for _, path := range removed {
+		res.Removed = append(res.Removed, filepath.Base(path))
+	}
+	if err != nil {
 		return res, err
 	}
 	if err = selfbin.Remove(dest); err != nil {

@@ -29,7 +29,7 @@ func InstallFile(path string, body []byte, mode fs.FileMode) (note string, err e
 	return note, nil
 }
 
-func UninstallFile(path string) (removed bool, note string, err error) {
+func uninstallFile(path string) (removed bool, note string, err error) {
 	var ours bool
 	_, ours, err = Check(path)
 	if err != nil {
@@ -49,4 +49,21 @@ func UninstallFile(path string) (removed bool, note string, err error) {
 		note = RestoreMessage(path)
 	}
 	return true, note, nil
+}
+
+func UninstallFiles(paths ...string) (removed []string, ledger Ledger, err error) {
+	for _, path := range paths {
+		removedOK, note, uninstallErr := uninstallFile(path)
+		if uninstallErr != nil {
+			return removed, ledger, uninstallErr
+		}
+		if !removedOK {
+			continue
+		}
+		removed = append(removed, path)
+		ledger.AddRestore(note)
+	}
+	// Queried before the caller removes the dirs: a numbered slot survives Restore.
+	ledger.Orphaned, err = OrphanNotes(paths...)
+	return removed, ledger, err
 }

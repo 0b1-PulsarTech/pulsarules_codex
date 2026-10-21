@@ -151,12 +151,12 @@ func TestInstall_ForeignFileBackup(t *testing.T) {
 		t.Fatalf("seed foreign plugin: %v", err)
 	}
 
-	backedUp, err := Install(dir, testTemplates(t))
+	ledger, err := Install(dir, testTemplates(t))
 	if err != nil {
 		t.Fatalf("Install: %v", err)
 	}
-	if len(backedUp) != 1 {
-		t.Fatalf("backedUp = %v, want exactly one backup message", backedUp)
+	if len(ledger.BackedUp) != 1 {
+		t.Fatalf("backedUp = %v, want exactly one backup message", ledger.BackedUp)
 	}
 
 	backupData, err := os.ReadFile(pluginPath + ".pulsarules-backup")
