@@ -3,6 +3,7 @@ package host
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -118,5 +119,81 @@ func TestInstallSkills_PassesRouterFilterToRouter(t *testing.T) {
 	}
 	if !strings.Contains(string(body), "go-style") {
 		t.Error("router lacks go-style, want the filtered-in skill listed")
+	}
+}
+
+func TestReportInstalled_KindWording(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		kind         docKind
+		wantNotes    []string
+		wantWarnings []string
+	}{
+		{
+			name:         "skills",
+			kind:         skillKind(),
+			wantNotes:    []string{"installed: " + filepath.Join("dest", "go-style")},
+			wantWarnings: []string{"skipped (unknown skill): nope"},
+		},
+		{
+			name:         "workflows",
+			kind:         workflowKind(),
+			wantNotes:    []string{"installed workflow: " + filepath.Join("dest", "go-style")},
+			wantWarnings: []string{"skipped workflow (unknown): nope"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			var report Report
+			result := docs.InstallResult{
+				Installed: []string{"go-style"},
+				Skipped:   []string{"nope"},
+			}
+			if err := reportInstalled(testCase.kind, "dest", result, nil, &report); err != nil {
+				t.Fatalf("reportInstalled: %v", err)
+			}
+			if !slices.Equal(report.Notes, testCase.wantNotes) ||
+				!slices.Equal(report.Warnings, testCase.wantWarnings) {
+				t.Errorf("report = %+v, want notes %q warnings %q",
+					report, testCase.wantNotes, testCase.wantWarnings)
+			}
+		})
+	}
+}
+
+func TestRemoveKind_KindWording(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		kind     docKind
+		wantNote string
+	}{
+		{name: "skills", kind: skillKind(), wantNote: "removed: "},
+		{name: "workflows", kind: workflowKind(), wantNote: "removed workflow: "},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dest := t.TempDir()
+			dir := filepath.Join(dest, "security")
+			body := "# body\n" + ownedfile.Marker + "\n"
+			if _, err := docs.Write(dir, testCase.kind.docName, body); err != nil {
+				t.Fatalf("WriteDoc: %v", err)
+			}
+
+			var report Report
+			if err := removeKind(testCase.kind, dest, &report); err != nil {
+				t.Fatalf("removeKind: %v", err)
+			}
+			if !slices.Equal(report.Notes, []string{testCase.wantNote + dir}) {
+				t.Errorf("Notes = %q, want %q", report.Notes, testCase.wantNote+dir)
+			}
+		})
 	}
 }
