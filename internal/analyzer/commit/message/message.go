@@ -70,13 +70,6 @@ func historySubjects(entries []pass.GitCommitEntry) []string {
 	return subjects
 }
 
-func (cfg emojiWindowConfig) merge(params pass.ParamSet) emojiWindowConfig {
-	cfg.HardWindow = params.Int(ParamEmojiHardWindow, cfg.HardWindow)
-	cfg.SoftWindow = params.Int(ParamEmojiSoftWindow, cfg.SoftWindow)
-	cfg.Suggestions = params.Int(ParamEmojiSuggestions, cfg.Suggestions)
-	return cfg
-}
-
 func Describe() pass.Descriptor {
 	return pass.Descriptor{
 		ID:     ID,

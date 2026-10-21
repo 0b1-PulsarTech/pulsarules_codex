@@ -10,18 +10,13 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-func (sess *Session) emojiWindow() int {
-	params := pass.ParamSet(sess.cfgAnalysis.Analyzers[message.ID].Params)
-	hard := params.Int(message.ParamEmojiHardWindow, 0)
-	// Fetch the wider window, so neither emoji rule sees fewer subjects than it counts.
-	return max(hard, params.Int(message.ParamEmojiSoftWindow, 0))
-}
-
 func (sess *Session) gitHistory() []pass.GitCommitEntry {
 	if sess.repo == nil {
 		return nil
 	}
-	window := sess.emojiWindow()
+	window := message.HistoryWindow(
+		pass.ParamSet(sess.cfgAnalysis.Analyzers[message.ID].Params),
+	)
 	if sess.commitMsg != "" {
 		// Dropping HEAD below would otherwise leave the widest window one subject short.
 		window++

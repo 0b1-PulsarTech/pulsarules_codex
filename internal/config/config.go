@@ -5,8 +5,6 @@ import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 type GovernanceConfig struct {
 	Preset           string
 	Analyzers        map[string]AnalyzerConfig
-	Emoji            EmojiConfig
-	MovePurity       MovePurityConfig
 	IncludeGenerated bool
 	SkipDirs         []string
 	SeverityRules    []pass.Override
@@ -20,35 +18,10 @@ type AnalyzerConfig struct {
 	Params  map[string]any
 }
 
-type EmojiConfig struct {
-	WindowSize      int
-	SoftWindowSize  int
-	SuggestionCount int
-}
-
-type MovePurityConfig struct {
-	MinSimilarity int
-}
-
 func Defaults() *GovernanceConfig {
-	const (
-		defaultEmojiWindowSize      = 5
-		defaultEmojiSoftWindowSize  = 20
-		defaultEmojiSuggestionCount = 7
-		defaultMoveMinSimilarity    = 90
-	)
-
 	return &GovernanceConfig{
 		Preset:    PresetRecommended,
 		Analyzers: map[string]AnalyzerConfig{},
-		Emoji: EmojiConfig{
-			WindowSize:      defaultEmojiWindowSize,
-			SoftWindowSize:  defaultEmojiSoftWindowSize,
-			SuggestionCount: defaultEmojiSuggestionCount,
-		},
-		MovePurity: MovePurityConfig{
-			MinSimilarity: defaultMoveMinSimilarity,
-		},
 	}
 }
 

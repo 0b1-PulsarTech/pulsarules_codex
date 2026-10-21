@@ -19,10 +19,18 @@ import (
 func lintInRepo(t *testing.T, configYAML, message string) error {
 	t.Helper()
 
+	return lintAfterHistory(t, configYAML, nil, message)
+}
+
+func lintAfterHistory(t *testing.T, configYAML string, history []string, message string) error {
+	t.Helper()
+
 	dir := t.TempDir()
-	if out, err := exec.CommandContext(t.Context(), "git", "-C", dir, "init").
-		CombinedOutput(); err != nil {
-		t.Fatalf("git init: %v\n%s", err, out)
+	runGit(t, dir, "init", "-q")
+	runGit(t, dir, "config", "user.email", "test@test.com")
+	runGit(t, dir, "config", "user.name", "Test")
+	for _, subject := range history {
+		runGit(t, dir, "commit", "-q", "--allow-empty", "-m", subject)
 	}
 	if configYAML != "" {
 		path := filepath.Join(dir, projectfile.Name)
@@ -35,6 +43,50 @@ func lintInRepo(t *testing.T, configYAML, message string) error {
 		t.Fatalf("DoInjections: %v", err)
 	}
 	return runCommitLint(inj, &version.Options{CommitMsg: message})
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+
+	cmd := exec.CommandContext(t.Context(), "git", append([]string{"-C", dir}, args...)...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+}
+
+func TestRunCommitLint_EmojiWindowFallsBack(t *testing.T) {
+	t.Parallel()
+
+	const (
+		repeat  = ":tea: docs(cli): Document the config flag"
+		recent  = ":tea: docs(cli): Document an earlier flag"
+		newest  = ":memo: docs(cli): Document the newest flag"
+		wrapper = "version: 1\nanalyzers:\n  commit-lint:\n    params:\n"
+	)
+	testCases := []struct {
+		name    string
+		config  string
+		wantErr bool
+	}{
+		{"no params use the defaults", "", true},
+		{"zero windows fall back", wrapper + "      emoji_hard_window: 0\n" +
+			"      emoji_soft_window: 0\n", true},
+		{"null windows fall back", wrapper + "      emoji_hard_window: null\n" +
+			"      emoji_soft_window: null\n", true},
+		{"negative windows fall back", wrapper + "      emoji_hard_window: -1\n" +
+			"      emoji_soft_window: -1\n", true},
+		{"a valid window is honoured", wrapper + "      emoji_hard_window: 3\n", true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := lintAfterHistory(t, testCase.config, []string{recent, newest}, repeat)
+			if got := errors.Is(err, ErrFindings); got != testCase.wantErr {
+				t.Fatalf("runCommitLint() error = %v, want findings %v", err, testCase.wantErr)
+			}
+		})
+	}
 }
 
 func TestRunCommitLint_ProjectConfig(t *testing.T) {

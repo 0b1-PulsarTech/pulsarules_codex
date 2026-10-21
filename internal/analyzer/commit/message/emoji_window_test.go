@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
 
@@ -77,6 +78,99 @@ func TestValidateEmoji_SuggestionsExcludeRejected(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestHistoryWindow(t *testing.T) {
+	t.Parallel()
+
+	defaults := defaultEmojiWindowConfig()
+	testCases := []struct {
+		name   string
+		params pass.ParamSet
+		want   int
+	}{
+		{
+			"no params follow the analyzer default",
+			nil,
+			max(defaults.HardWindow, defaults.SoftWindow),
+		},
+		{"a hard window above the soft one", pass.ParamSet{
+			ParamEmojiHardWindow: 25, ParamEmojiSoftWindow: 10,
+		}, 25},
+		{"a soft window above the default", pass.ParamSet{ParamEmojiSoftWindow: 30}, 30},
+		{"a hard window alone leaves the default soft", pass.ParamSet{
+			ParamEmojiHardWindow: 1,
+		}, defaults.SoftWindow},
+		{"unusable windows fall back to the defaults", pass.ParamSet{
+			ParamEmojiHardWindow: 0, ParamEmojiSoftWindow: "x",
+		}, defaults.SoftWindow},
+		{"negative windows fall back to the defaults", pass.ParamSet{
+			ParamEmojiHardWindow: -1, ParamEmojiSoftWindow: -1,
+		}, defaults.SoftWindow},
+		{"null windows fall back to the defaults", pass.ParamSet{
+			ParamEmojiHardWindow: nil, ParamEmojiSoftWindow: nil,
+		}, defaults.SoftWindow},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := HistoryWindow(testCase.params); got != testCase.want {
+				t.Fatalf("HistoryWindow = %d, want %d", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestWindowsAgreeForEveryKeyValue(t *testing.T) {
+	t.Parallel()
+
+	defaults := defaultEmojiWindowConfig()
+	const explicit = 3
+	values := []struct {
+		name  string
+		value any
+		want  func(fallback int) int
+	}{
+		{"zero", 0, func(fallback int) int { return fallback }},
+		{"negative", -2, func(fallback int) int { return fallback }},
+		{"null", nil, func(fallback int) int { return fallback }},
+		{"string", "x", func(fallback int) int { return fallback }},
+		{"float", 3.0, func(int) int { return explicit }},
+		{"valid", explicit, func(int) int { return explicit }},
+	}
+	keys := []struct {
+		name     string
+		key      string
+		fallback int
+		other    int
+		pick     func(emojiWindowConfig) int
+	}{
+		{
+			"hard", ParamEmojiHardWindow, defaults.HardWindow, defaults.SoftWindow,
+			func(cfg emojiWindowConfig) int { return cfg.HardWindow },
+		},
+		{
+			"soft", ParamEmojiSoftWindow, defaults.SoftWindow, defaults.HardWindow,
+			func(cfg emojiWindowConfig) int { return cfg.SoftWindow },
+		},
+	}
+	for _, key := range keys {
+		for _, value := range values {
+			t.Run(key.name+" "+value.name, func(t *testing.T) {
+				t.Parallel()
+
+				params := pass.ParamSet{key.key: value.value}
+				want := value.want(key.fallback)
+				if got := key.pick(defaults.merge(params)); got != want {
+					t.Fatalf("check window = %d, want %d", got, want)
+				}
+				if got := HistoryWindow(params); got != max(want, key.other) {
+					t.Fatalf("HistoryWindow = %d, want %d", got, max(want, key.other))
+				}
+			})
+		}
 	}
 }
 

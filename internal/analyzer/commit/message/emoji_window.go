@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/commitmsg"
 )
 
@@ -25,6 +26,19 @@ func defaultEmojiWindowConfig() emojiWindowConfig {
 		SoftWindow:  softWindow,
 		Suggestions: suggestions,
 	}
+}
+
+func HistoryWindow(params pass.ParamSet) int {
+	config := defaultEmojiWindowConfig().merge(params)
+	// The wider window, so neither emoji rule sees fewer subjects than it counts.
+	return max(config.HardWindow, config.SoftWindow)
+}
+
+func (cfg emojiWindowConfig) merge(params pass.ParamSet) emojiWindowConfig {
+	cfg.HardWindow = params.Int(ParamEmojiHardWindow, cfg.HardWindow)
+	cfg.SoftWindow = params.Int(ParamEmojiSoftWindow, cfg.SoftWindow)
+	cfg.Suggestions = params.Int(ParamEmojiSuggestions, cfg.Suggestions)
+	return cfg
 }
 
 func (check emojiCheck) validateWindow() []finding.Finding {

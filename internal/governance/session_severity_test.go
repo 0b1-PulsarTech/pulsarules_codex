@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/message"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
@@ -42,16 +43,30 @@ func TestToAnalysisConfig(t *testing.T) {
 	}
 }
 
-func TestToAnalysisConfig_ExplicitSetParam(t *testing.T) {
+func TestToAnalysisConfig_ParamsPassThrough(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.Defaults()
 	cfg.SetParam(movepurity.ID, movepurity.ParamMinSimilarity, 99)
+	cfg.SetParam(message.ID, message.ParamEmojiHardWindow, 3)
 
 	pc := toAnalysisConfig(cfg)
-	params := pc.Analyzers[movepurity.ID].Params
-	if got := params[movepurity.ParamMinSimilarity]; got != 99 {
-		t.Fatalf("min_similarity = %v, want explicit 99 to survive projection", got)
+	if got := pc.Analyzers[movepurity.ID].Params[movepurity.ParamMinSimilarity]; got != 99 {
+		t.Fatalf("min_similarity = %v, want the explicit 99", got)
+	}
+	if got := pc.Analyzers[message.ID].Params[message.ParamEmojiHardWindow]; got != 3 {
+		t.Fatalf("emoji_hard_window = %v, want the explicit 3", got)
+	}
+}
+
+func TestToAnalysisConfig_DefaultsCarryNoAnalyzerParams(t *testing.T) {
+	t.Parallel()
+
+	pc := toAnalysisConfig(config.Defaults())
+	for _, id := range []string{message.ID, movepurity.ID} {
+		if entry, found := pc.Analyzers[id]; found {
+			t.Errorf("%s = %+v, want no entry: the analyzer owns its defaults", id, entry)
+		}
 	}
 }
 
