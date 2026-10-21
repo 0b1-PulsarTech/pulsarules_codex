@@ -63,28 +63,36 @@ func TestRunCommitLint_EmojiWindowFallsBack(t *testing.T) {
 		newest  = ":memo: docs(cli): Document the newest flag"
 		wrapper = "version: 1\nanalyzers:\n  commit-lint:\n    params:\n"
 	)
+	fillers := []string{
+		":gear: chore(cli): Tune a setting",
+		":recycle: refactor(cli): Fold a helper",
+	}
 	testCases := []struct {
 		name    string
 		config  string
+		between []string
 		wantErr bool
 	}{
-		{"no params use the defaults", "", true},
+		{"no params use the defaults", "", nil, true},
 		{"zero windows fall back", wrapper + "      emoji_hard_window: 0\n" +
-			"      emoji_soft_window: 0\n", true},
+			"      emoji_soft_window: 0\n", nil, true},
 		{"null windows fall back", wrapper + "      emoji_hard_window: null\n" +
-			"      emoji_soft_window: null\n", true},
+			"      emoji_soft_window: null\n", nil, true},
 		{"negative windows fall back", wrapper + "      emoji_hard_window: -1\n" +
-			"      emoji_soft_window: -1\n", true},
+			"      emoji_soft_window: -1\n", nil, true},
 		{"a MaxInt64 window is clamped", wrapper +
 			"      emoji_hard_window: 9223372036854775807\n" +
-			"      emoji_soft_window: 9223372036854775807\n", true},
-		{"a valid window is honoured", wrapper + "      emoji_hard_window: 3\n", true},
+			"      emoji_soft_window: 9223372036854775807\n", nil, true},
+		{"a valid window is honoured", wrapper + "      emoji_hard_window: 3\n", nil, true},
+		{"a valid window excludes an older repeat", wrapper +
+			"      emoji_hard_window: 3\n      emoji_soft_window: 3\n", fillers, false},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := lintAfterHistory(t, testCase.config, []string{recent, newest}, repeat)
+			history := append([]string{recent}, testCase.between...)
+			err := lintAfterHistory(t, testCase.config, append(history, newest), repeat)
 			if got := errors.Is(err, ErrFindings); got != testCase.wantErr {
 				t.Fatalf("runCommitLint() error = %v, want findings %v", err, testCase.wantErr)
 			}
