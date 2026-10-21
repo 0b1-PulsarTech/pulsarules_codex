@@ -108,14 +108,9 @@ func loadCases() []loadCase {
 			wantErr: ".pulsarules.yaml: analyzers.commit-lint.params.emoji_window: unknown param",
 		},
 		{
-			name:    "pipeline analyzer is not configurable",
+			name:    "removed internal id is an unknown analyzer",
 			content: "version: 1\nanalyzers: {output: {enabled: false}}\n",
 			wantErr: ".pulsarules.yaml: analyzers.output: unknown analyzer",
-		},
-		{
-			name:    "rule-injection is not configurable",
-			content: "version: 1\nanalyzers: {rule-injection: {enabled: false}}\n",
-			wantErr: "analyzers.rule-injection: unknown analyzer",
 		},
 		{
 			name:     "explicit path named in the error",

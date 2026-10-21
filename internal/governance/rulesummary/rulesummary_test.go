@@ -25,7 +25,7 @@ func TestInjectRuleSummaries(t *testing.T) {
 			Message:    "high cyclomatic",
 		},
 		{
-			AnalyzerID: "commit-type-required",
+			AnalyzerID: "commit-lint",
 			Severity:   finding.SeverityError,
 			Message:    "type required",
 		},

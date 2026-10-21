@@ -7,7 +7,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/complexity"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/packagevar"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/shadowing"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/declaration/singleuse"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/importgroup"
@@ -246,8 +245,6 @@ func TestSessionTransformsAttachTheDescriptorRule(t *testing.T) {
 		{complexity.ID, "a.go", "code-smells"},
 		{importgroup.ID, "a.go", "imports"},
 		{importgroup.ID, "lib/a.dart", "dart-style"},
-		{shadowing.ReuseID, "a.go", "named-returns"},
-		{"commit-desc-length", "", "commits"},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.analyzerID+" "+testCase.file, func(t *testing.T) {

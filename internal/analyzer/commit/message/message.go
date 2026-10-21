@@ -56,6 +56,9 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 		config:    windowCfg,
 		reporters: reporters,
 	}.validate()...)
+	for index := range findings {
+		findings[index].RuleID = commitRule
+	}
 
 	return findings
 }
@@ -80,6 +83,5 @@ func Describe() pass.Descriptor {
 		ID:     ID,
 		Rule:   commitRule,
 		Params: []string{ParamEmojiHardWindow, ParamEmojiSoftWindow, ParamEmojiSuggestions},
-		Subs:   ruleDescriptors(),
 	}
 }

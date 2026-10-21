@@ -13,7 +13,9 @@ import (
 const (
 	TextID        = "text-markers"
 	TypographicID = "typographic-markers"
-	FrontmatterID = "ai-frontmatter"
+	frontmatterID = "ai-frontmatter"
+
+	sourceFilesRule = "source-files"
 )
 
 type textReporters struct {
@@ -35,7 +37,7 @@ func NewTextAnalyzer() *TextAnalyzer {
 		// Invisible characters that may be load-bearing (emoji glue, script joiners)
 		// cannot be judged here, so they advise instead of blocking.
 		contextual:  finding.NewReporter(TextID, finding.SeverityWarning, finding.CatSyntax),
-		frontmatter: finding.NewReporter(FrontmatterID, finding.SeverityError, finding.CatSyntax),
+		frontmatter: finding.NewReporter(frontmatterID, finding.SeverityError, finding.CatSyntax),
 	}}
 }
 
@@ -133,16 +135,15 @@ func hintMarks(
 func DescribeText() pass.Descriptor {
 	return pass.Descriptor{
 		ID:     TextID,
-		Rule:   "source-files",
+		Rule:   sourceFilesRule,
 		Params: []string{pass.ParamExtensions},
-		Subs:   []pass.Descriptor{{ID: FrontmatterID, Rule: "source-files"}},
 	}
 }
 
 func DescribeTypographic() pass.Descriptor {
 	return pass.Descriptor{
 		ID:     TypographicID,
-		Rule:   "source-files",
+		Rule:   sourceFilesRule,
 		Params: []string{pass.ParamExtensions},
 	}
 }

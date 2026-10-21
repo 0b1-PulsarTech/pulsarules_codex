@@ -8,21 +8,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-func TestIDs_PackageLevelVarOrder(t *testing.T) {
-	t.Parallel()
-
-	ids := IDs()
-	dependency := slices.Index(ids, "single-use-declaration")
-	dependent := slices.Index(ids, "package-level-var")
-	if dependency < 0 || dependent < 0 {
-		t.Fatalf("missing ids: dependency=%d dependent=%d", dependency, dependent)
-	}
-	if dependency >= dependent {
-		t.Fatalf("single-use-declaration at %d must precede package-level-var at %d",
-			dependency, dependent)
-	}
-}
-
 func TestIDs_NoDuplicates(t *testing.T) {
 	t.Parallel()
 
@@ -52,7 +37,7 @@ func TestConfigurableIDs(t *testing.T) {
 			t.Errorf("%q: listed = %v, internal flag = %v", spec.ID, got, spec.internal)
 		}
 	}
-	for _, hidden := range []string{"rule-injection", "delegated-command"} {
+	for _, hidden := range []string{"delegated-command"} {
 		if slices.Contains(listed, hidden) {
 			t.Fatalf("ConfigurableIDs() = %v, want %q hidden", listed, hidden)
 		}

@@ -73,12 +73,3 @@ func (reporters ruleReporters) resolved(ctx *pass.Context) ruleReporters {
 	}
 	return reporters
 }
-
-func ruleDescriptors() []pass.Descriptor {
-	specs := ruleSpecs()
-	descriptors := make([]pass.Descriptor, len(specs))
-	for index, spec := range specs {
-		descriptors[index] = pass.Descriptor{ID: spec.id, Rule: commitRule}
-	}
-	return descriptors
-}

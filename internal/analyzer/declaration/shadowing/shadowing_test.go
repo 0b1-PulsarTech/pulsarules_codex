@@ -348,8 +348,11 @@ func countByRule(t *testing.T, analyzer *Analyzer, source string) (shadows, reus
 		switch finding.AnalyzerID {
 		case ID:
 			shadows++
-		case ReuseID:
+		case reuseID:
 			reuses++
+			if finding.RuleID != "named-returns" {
+				t.Fatalf("reuse RuleID = %q, want named-returns", finding.RuleID)
+			}
 		default:
 			t.Fatalf("unexpected analyzer id %q", finding.AnalyzerID)
 		}

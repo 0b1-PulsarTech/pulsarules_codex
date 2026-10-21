@@ -11,7 +11,7 @@ import (
 
 const (
 	ID      = "shadowing"
-	ReuseID = "short-decl-reuse"
+	reuseID = "short-decl-reuse"
 )
 
 type Analyzer struct {
@@ -23,7 +23,7 @@ func NewAnalyzer() *Analyzer {
 	return &Analyzer{
 		shadowReporter: finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
 		// The two findings share scope machinery but say opposite things.
-		reuseReporter: finding.NewReporter(ReuseID, finding.SeverityWarning, finding.CatAST),
+		reuseReporter: finding.NewReporter(reuseID, finding.SeverityWarning, finding.CatAST),
 	}
 }
 
@@ -67,7 +67,7 @@ func (reps fileReporters) forFunc(
 				return
 			}
 			reported[name] = true
-			*findings = append(*findings, reps.reuse.At(
+			finding := reps.reuse.At(
 				fc.Path,
 				fset.Position(pos).Line,
 				fmt.Sprintf("%q is reassigned by := in the block that declares it", name),
@@ -76,7 +76,11 @@ func (reps fileReporters) forFunc(
 						"so reusing %q reads as the reassignment it is",
 					name,
 				),
-			))
+			)
+			// The fix a reuse finding asks for, a var declaration above the call, is the
+			// named-returns rule's territory.
+			finding.RuleID = "named-returns"
+			*findings = append(*findings, finding)
 		},
 	}
 }
@@ -135,8 +139,5 @@ func Describe() pass.Descriptor {
 	return pass.Descriptor{
 		ID:   ID,
 		Rule: "effective-go",
-		// The fix a reuse finding asks for, a var declaration above the call, is the
-		// named-returns rule's territory.
-		Subs: []pass.Descriptor{{ID: ReuseID, Rule: "named-returns"}},
 	}
 }

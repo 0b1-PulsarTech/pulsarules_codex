@@ -117,6 +117,12 @@ func TestCommitAnalyzerAnalyze(t *testing.T) {
 				GitHistory: testCase.gitHistory,
 			}
 			findings := newTestAnalyzer(t).Analyze(ctx)
+			for _, finding := range findings {
+				if finding.RuleID != commitRule {
+					t.Errorf("finding %s RuleID = %q, want %q",
+						finding.AnalyzerID, finding.RuleID, commitRule)
+				}
+			}
 			for _, want := range testCase.wantFinders {
 				if !hasAnalyzer(findings, want) {
 					t.Errorf("expected finding %s, got: %+v", want, findings)

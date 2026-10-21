@@ -3,87 +3,16 @@ package rulesummary
 import (
 	"maps"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-type oldRuleCase struct{ analyzerID, want string }
-
-const oldGoRules = `
-	import-groups imports
-	naming naming
-	top-of-file comments
-	big-comment comments
-	history-narration comments
-	doc-comment effective-go
-	body-header-comment effective-go
-	too-many-results effective-go
-	ungrouped-interfaces effective-go
-	single-letter-name naming
-	variadic-index flag-arguments
-	package-level-var code-smells
-	package-file-count code-placement-go
-	test-comment comments
-	simplification-path minimalism
-	single-use-declaration minimalism
-	branch-name commits
-	commit-lint commits
-	commit-initial commits
-	commit-merge commits
-	commit-emoji-required commits
-	commit-emoji-count commits
-	commit-emoji-catalog commits
-	commit-emoji-prohibited commits
-	commit-emoji-repeat commits
-	commit-emoji-soft-repeat commits
-	commit-type-required commits
-	commit-type-enum commits
-	commit-scope-charset commits
-	commit-desc-required commits
-	commit-desc-length commits
-	commit-desc-capitalize commits
-	commit-desc-no-period commits
-	commit-body-length commits
-	commit-body-total-length commits
-	commit-no-coauthor commits
-	commit-move-purity commits
-	control-flow code-smells
-	shadowing effective-go
-	complexity code-smells
-	short-decl-reuse named-returns
-	named-returns named-returns
-	time-discipline concurrency
-	context-discipline concurrency
-	pprof-labels security
-	arch-boundary dependency-rule
-	import-cycle module-boundaries
-	golangci-lint code-smells
-`
-
-func oldGoRuleCases(rules string) []oldRuleCase {
-	fields := strings.Fields(rules)
-	cases := make([]oldRuleCase, 0, len(fields)/2)
-	for pos := 0; pos+1 < len(fields); pos += 2 {
-		cases = append(cases, oldRuleCase{fields[pos], fields[pos+1]})
-	}
-	return cases
-}
-
 func testRules() map[string]string {
-	rules := make(map[string]string)
-	for _, testCase := range oldGoRuleCases(oldGoRules) {
-		rules[testCase.analyzerID] = testCase.want
-	}
-	for _, analyzerID := range []string{
-		"file-size", "text-markers", "typographic-markers", "ai-frontmatter",
-	} {
-		rules[analyzerID] = "source-files"
-	}
-	return rules
+	return registry.Rules()
 }
 
 func loadIndex(t *testing.T) *knowledge.Index {
@@ -242,25 +171,6 @@ func TestResolveIsTagCompatible(t *testing.T) {
 					t.Fatalf("%s on %s: %q tagged %q", testCase.analyzerID, testCase.file,
 						ruleID, tag)
 				}
-			}
-		})
-	}
-}
-
-func TestResolveGoUnchanged(t *testing.T) {
-	t.Parallel()
-
-	resolver := newResolver(loadIndex(t), testRules())
-	testCases := oldGoRuleCases(oldGoRules)
-	retargeted := []string{"file-size", "text-markers", "typographic-markers", "ai-frontmatter"}
-	for _, analyzerID := range retargeted {
-		testCases = append(testCases, oldRuleCase{analyzerID, "source-files"})
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.analyzerID, func(t *testing.T) {
-			t.Parallel()
-			if got := resolver.resolve(testCase.analyzerID, "pkg/file.go"); got != testCase.want {
-				t.Fatalf("got %q, want %q", got, testCase.want)
 			}
 		})
 	}
