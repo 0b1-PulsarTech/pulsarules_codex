@@ -8,8 +8,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcpserver"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpserver"
 )
 
 func TestWireConfig_FreshFile(t *testing.T) {

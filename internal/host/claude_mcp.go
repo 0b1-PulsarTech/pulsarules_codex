@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcpserver"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpserver"
 )
 
 func wireClaudeMCP(ctx Context, skillsDir string, report *Report) error {

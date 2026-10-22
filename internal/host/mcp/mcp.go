@@ -6,9 +6,9 @@ import (
 	"maps"
 	"path/filepath"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcpserver"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpserver"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/gitignore"
 )
 

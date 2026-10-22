@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcpserver"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpserver"
 )
 
 func UnwireConfig(projectDir string) (changed bool, err error) {
