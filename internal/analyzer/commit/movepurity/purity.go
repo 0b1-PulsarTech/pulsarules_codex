@@ -27,6 +27,7 @@ const (
 	verdictUnlinksLoad
 	verdictStrands
 	verdictEmbeds
+	verdictCovered
 )
 
 func (moves *moveContext) renameVerdict(rename pass.Rename) verdict {
@@ -48,10 +49,13 @@ func (moves *moveContext) renameVerdict(rename pass.Rename) verdict {
 }
 
 func (moves *moveContext) identicalVerdict(rename pass.Rename) verdict {
+	if got := moves.coveredVerdict(rename); got != verdictPure {
+		return got
+	}
 	isGo := isGoFile(rename.OldPath) && isGoFile(rename.NewPath)
 	dirs := renameDirs(rename)
 	if !isGo && !gosrc.IsCompiled(rename.OldPath) {
-		return moves.assetVerdict(rename)
+		return verdictPure
 	}
 	switch {
 	case dirs.oldDir == dirs.newDir,
@@ -68,7 +72,7 @@ func (moves *moveContext) identicalVerdict(rename pass.Rename) verdict {
 	return verdictUnsafe
 }
 
-func (moves *moveContext) assetVerdict(rename pass.Rename) verdict {
+func (moves *moveContext) coveredVerdict(rename pass.Rename) verdict {
 	dir := moves.embedCoverDir(moves.head, rename.OldPath)
 	if dir == "" {
 		dir = moves.embedCoverDir(moves.staged, rename.NewPath)
@@ -77,7 +81,7 @@ func (moves *moveContext) assetVerdict(rename pass.Rename) verdict {
 		return verdictPure
 	}
 	moves.embedDirs[rename.NewPath] = dir
-	return verdictEmbeds
+	return verdictCovered
 }
 
 func (moves *moveContext) importChangeVerdict(changedPath string) verdict {

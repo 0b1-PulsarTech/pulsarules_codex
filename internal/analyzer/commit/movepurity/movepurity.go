@@ -82,7 +82,9 @@ func renameFinding(
 			"differs only by mechanical package/import fixups but is",
 		), true
 	case got == verdictEmbeds:
-		return embedSetFinding(reporter, rename, moves.embedDirs[rename.NewPath]), true
+		return embedderFinding(reporter, rename, moves.embedDirs[rename.NewPath]), true
+	case got == verdictCovered:
+		return coveredFinding(reporter, rename, moves.embedDirs[rename.NewPath]), true
 	case got == verdictStrands:
 		return strandsCompiledFinding(reporter, rename, moves.stranded[rename.NewPath]), true
 	case isLow:
@@ -98,13 +100,21 @@ func renameFinding(
 	return renameCarriesEditFinding(reporter, rename), true
 }
 
-func embedSetFinding(reporter finding.Reporter, rename pass.Rename, dir string) finding.Finding {
-	advice := "move every file the pattern covers in the same commit, " +
-		"and keep the new location free of other files"
-	if !isGoFile(rename.NewPath) {
-		advice = "commit this rename on its own and say in its message " +
-			"which embedded files it adds or removes"
-	}
+func embedderFinding(reporter finding.Reporter, rename pass.Rename, dir string) finding.Finding {
+	return embedSetFinding(reporter, rename, dir, "move every file the pattern covers in the "+
+		"same commit, and keep the new location free of other files")
+}
+
+func coveredFinding(reporter finding.Reporter, rename pass.Rename, dir string) finding.Finding {
+	return embedSetFinding(reporter, rename, dir, "commit this rename on its own and say in "+
+		"its message which embedded files it adds or removes")
+}
+
+func embedSetFinding(
+	reporter finding.Reporter,
+	rename pass.Rename,
+	dir, advice string,
+) finding.Finding {
 	if dir == "." {
 		dir = "the module root"
 	}

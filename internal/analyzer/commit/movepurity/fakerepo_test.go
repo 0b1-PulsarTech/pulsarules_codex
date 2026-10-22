@@ -179,3 +179,93 @@ func embedLiteralNamed(pattern string) renameCase {
 func embedSrc(pkg, directive string) string {
 	return pkgFile(pkg, "import _ \"embed\"\n\n"+directive+"\nvar Data string\n")
 }
+
+func assetRow(name, directive, oldFile, newFile string) renameCase {
+	const embedderGo = "internal/assets/embed.go"
+	return renameCase{
+		name: name,
+		head: map[string]string{
+			embedderGo: embedSrc("assets", directive),
+			oldFile:    "asset\n",
+		},
+		staged: map[string]string{
+			embedderGo: embedSrc("assets", directive),
+			newFile:    "asset\n",
+		},
+		renames: []pass.Rename{pair(oldFile, newFile)},
+	}
+}
+
+func testEmbedderRow(name, directive, oldFile, newFile string) renameCase {
+	row := assetRow(name, directive, oldFile, newFile)
+	return embedderAt(row, "internal/assets/embed_test.go", embedSrc("assets", directive))
+}
+
+func embedderAt(row renameCase, file, src string) renameCase {
+	for _, tree := range []map[string]string{row.head, row.staged} {
+		delete(tree, "internal/assets/embed.go")
+		tree[file] = src
+	}
+	return row
+}
+
+func grandparentRow() renameCase {
+	const embedder, asset = "internal/web/embed.go", "internal/web/dist/css/a.css"
+	row := assetRow("pattern in a grandparent directory", "//go:embed dist", asset, "x/a.css")
+	row.head = map[string]string{embedder: embedSrc("web", "//go:embed dist"), asset: "asset\n"}
+	row.staged = map[string]string{
+		embedder:  embedSrc("web", "//go:embed dist"),
+		"x/a.css": "asset\n",
+	}
+	return row
+}
+
+func renamedEmbedderRow() renameCase {
+	const oldGo, newGo = "internal/web/a.go", "internal/web/b.go"
+	const asset, moved = "internal/web/static/x.txt", "x/x.txt"
+	src := embedSrc("web", "//go:embed static")
+	return renameCase{
+		name:    "embedder renamed inside its directory still embeds there",
+		head:    map[string]string{oldGo: src, asset: "x\n", "internal/web/static/y.txt": "y\n"},
+		staged:  map[string]string{newGo: src, moved: "x\n", "internal/web/static/y.txt": "y\n"},
+		renames: []pass.Rename{pair(asset, moved), {OldPath: oldGo, NewPath: newGo, Score: 100}},
+	}
+}
+
+func rootAssetRow() renameCase {
+	row := assetRow(
+		"asset leaves a directory embedded at the module root",
+		"//go:embed static", "static/logo.png", "other/logo.png",
+	)
+	row.head = map[string]string{
+		"embed.go": embedSrc("assets", "//go:embed static"), "static/logo.png": "asset\n",
+	}
+	row.staged = map[string]string{
+		"embed.go": embedSrc("assets", "//go:embed static"), "other/logo.png": "asset\n",
+	}
+	return row
+}
+
+func landsAtRootRow() renameCase {
+	return renameCase{
+		name: "byte-identical Go file lands at the module root",
+		head: map[string]string{
+			"a/embed.go": embedSrc("assets", "//go:embed x.txt"),
+			"a/x.txt":    "x\n",
+		},
+		staged: map[string]string{
+			"embed.go": embedSrc("assets", "//go:embed x.txt"),
+			"a/x.txt":  "x\n",
+		},
+		renames: []pass.Rename{{OldPath: "a/embed.go", NewPath: "embed.go", Score: 100}},
+	}
+}
+
+func movesToRootRow() renameCase {
+	row := landsAtRootRow()
+	row.name = "package and its embedded file move to the module root"
+	row.staged["x.txt"] = "x\n"
+	delete(row.staged, "a/x.txt")
+	row.renames = append(row.renames, pair("a/x.txt", "x.txt"))
+	return row
+}

@@ -7,22 +7,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
-func assetRow(name, directive, oldFile, newFile string) renameCase {
-	const embedderGo = "internal/assets/embed.go"
-	return renameCase{
-		name: name,
-		head: map[string]string{
-			embedderGo: embedSrc("assets", directive),
-			oldFile:    "asset\n",
-		},
-		staged: map[string]string{
-			embedderGo: embedSrc("assets", directive),
-			newFile:    "asset\n",
-		},
-		renames: []pass.Rename{pair(oldFile, newFile)},
-	}
-}
-
 func TestEmbedSet_StaysPure(t *testing.T) {
 	t.Parallel()
 
@@ -182,40 +166,43 @@ func TestEmbedSet_DetectedBeyondPackage(t *testing.T) {
 	runRenameCases(t, testCases)
 }
 
-func testEmbedderRow(name, directive, oldFile, newFile string) renameCase {
+func goAssetRow(name, directive, oldFile, newFile string) renameCase {
 	row := assetRow(name, directive, oldFile, newFile)
-	return embedderAt(row, "internal/assets/embed_test.go", embedSrc("assets", directive))
-}
-
-func embedderAt(row renameCase, file, src string) renameCase {
-	for _, tree := range []map[string]string{row.head, row.staged} {
-		delete(tree, "internal/assets/embed.go")
-		tree[file] = src
-	}
+	src := pkgFile("sub", "const K = 1\n")
+	row.head[oldFile], row.staged[newFile] = src, src
 	return row
 }
 
-func grandparentRow() renameCase {
-	const embedder, asset = "internal/web/embed.go", "internal/web/dist/css/a.css"
-	row := assetRow("pattern in a grandparent directory", "//go:embed dist", asset, "x/a.css")
-	row.head = map[string]string{embedder: embedSrc("web", "//go:embed dist"), asset: "asset\n"}
-	row.staged = map[string]string{
-		embedder:  embedSrc("web", "//go:embed dist"),
-		"x/a.css": "asset\n",
-	}
-	return row
-}
+func TestEmbedSet_GoAndCompiledFiles(t *testing.T) {
+	t.Parallel()
 
-func renamedEmbedderRow() renameCase {
-	const oldGo, newGo = "internal/web/a.go", "internal/web/b.go"
-	const asset, moved = "internal/web/static/x.txt", "x/x.txt"
-	src := embedSrc("web", "//go:embed static")
-	return renameCase{
-		name:    "embedder renamed inside its directory still embeds there",
-		head:    map[string]string{oldGo: src, asset: "x\n", "internal/web/static/y.txt": "y\n"},
-		staged:  map[string]string{newGo: src, moved: "x\n", "internal/web/static/y.txt": "y\n"},
-		renames: []pass.Rename{pair(asset, moved), {OldPath: oldGo, NewPath: newGo, Score: 100}},
+	const static, nested = "//go:embed static", "internal/assets/static/sub/b.go"
+	testRow := embedderAt(
+		goAssetRow(
+			"Go file under an embedded testdata directory moves to a sibling",
+			"//go:embed testdata",
+			"internal/assets/testdata/src/a/a.go", "internal/assets/testdata/src/b/a.go",
+		),
+		"internal/assets/embed_test.go", embedSrc("assets", "//go:embed testdata"),
+	)
+	testCases := []renameCase{
+		goAssetRow("Go package leaves the embedded directory", static, nested, "internal/o/b.go"),
+		goAssetRow("Go file enters the embedded directory", static, "internal/o/b.go", nested),
+		goAssetRow(
+			"Go file renamed inside the embedded directory",
+			static, nested, "internal/assets/static/sub/c.go",
+		),
+		testRow,
+		assetRow(
+			"compiled file leaves the embedded directory",
+			static, "internal/assets/static/x.h", "internal/other/x.h",
+		),
+		accepted(goAssetRow(
+			"Go file under testdata that no pattern covers",
+			static, "internal/assets/testdata/src/a/a.go", "internal/assets/testdata/src/b/a.go",
+		)),
 	}
+	runRenameCases(t, testCases)
 }
 
 func TestEmbedSet_GuardsFailClosed(t *testing.T) {
@@ -284,35 +271,6 @@ func TestEmbedSet_NotCovered(t *testing.T) {
 	runRenameCases(t, testCases)
 }
 
-func rootAssetRow() renameCase {
-	row := assetRow(
-		"asset leaves a directory embedded at the module root",
-		"//go:embed static", "static/logo.png", "other/logo.png",
-	)
-	row.head = map[string]string{
-		"embed.go": embedSrc("assets", "//go:embed static"), "static/logo.png": "asset\n",
-	}
-	row.staged = map[string]string{
-		"embed.go": embedSrc("assets", "//go:embed static"), "other/logo.png": "asset\n",
-	}
-	return row
-}
-
-func landsAtRootRow() renameCase {
-	return renameCase{
-		name: "byte-identical Go file lands at the module root",
-		head: map[string]string{
-			"a/embed.go": embedSrc("assets", "//go:embed x.txt"),
-			"a/x.txt":    "x\n",
-		},
-		staged: map[string]string{
-			"embed.go": embedSrc("assets", "//go:embed x.txt"),
-			"a/x.txt":  "x\n",
-		},
-		renames: []pass.Rename{{OldPath: "a/embed.go", NewPath: "embed.go", Score: 100}},
-	}
-}
-
 func TestEmbedRelocation_SameFile(t *testing.T) {
 	t.Parallel()
 
@@ -352,18 +310,13 @@ func TestEmbedRelocation_SameFile(t *testing.T) {
 	runRenameCases(t, testCases)
 }
 
-func movesToRootRow() renameCase {
-	row := landsAtRootRow()
-	row.name = "package and its embedded file move to the module root"
-	row.staged["x.txt"] = "x\n"
-	delete(row.staged, "a/x.txt")
-	row.renames = append(row.renames, pair("a/x.txt", "x.txt"))
-	return row
+type findingCase struct {
+	renameCase
+	wantMessage string
+	wantAdvice  string
 }
 
-func TestEmbedSet_Findings(t *testing.T) {
-	t.Parallel()
-
+func embedFindingCases() []findingCase {
 	const lead = "changes the files a //go:embed pattern in "
 	const goAdvice = "move every file the pattern covers in the same commit, " +
 		"and keep the new location free of other files"
@@ -386,11 +339,15 @@ func TestEmbedSet_Findings(t *testing.T) {
 		"asset leaves the embedded directory",
 		"//go:embed static", "internal/assets/static/logo.png", "internal/other/logo.png",
 	)
-	testCases := []struct {
-		renameCase
-		wantMessage string
-		wantAdvice  string
-	}{
+	goFile := goAssetRow(
+		"Go file leaves the embedded directory",
+		"//go:embed static", "internal/assets/static/sub/b.go", "internal/other/b.go",
+	)
+	compiled := assetRow(
+		"compiled file leaves the embedded directory",
+		"//go:embed static", "internal/assets/static/x.h", "internal/other/x.h",
+	)
+	return []findingCase{
 		{
 			left,
 			"move of internal/util/a.go -> internal/routing/a.go " + lead + "internal/routing includes",
@@ -400,6 +357,18 @@ func TestEmbedSet_Findings(t *testing.T) {
 		{
 			asset,
 			"move of internal/assets/static/logo.png -> internal/other/logo.png " + lead +
+				"internal/assets includes",
+			assetAdvice,
+		},
+		{
+			goFile,
+			"move of internal/assets/static/sub/b.go -> internal/other/b.go " + lead +
+				"internal/assets includes",
+			assetAdvice,
+		},
+		{
+			compiled,
+			"move of internal/assets/static/x.h -> internal/other/x.h " + lead +
 				"internal/assets includes",
 			assetAdvice,
 		},
@@ -414,7 +383,12 @@ func TestEmbedSet_Findings(t *testing.T) {
 			goAdvice,
 		},
 	}
-	for _, testCase := range testCases {
+}
+
+func TestEmbedSet_Findings(t *testing.T) {
+	t.Parallel()
+
+	for _, testCase := range embedFindingCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
