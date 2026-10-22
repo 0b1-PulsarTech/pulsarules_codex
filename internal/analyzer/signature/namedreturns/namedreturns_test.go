@@ -211,7 +211,7 @@ func analyzeSource(t *testing.T, source string) []finding.Finding {
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "foo.go")
-	if err := os.WriteFile(path, []byte(source), disk.File); err != nil {
+	if err := os.WriteFile(path, []byte(source), disk.ModeFile); err != nil {
 		t.Fatal(err)
 	}
 	src, err := os.ReadFile(path)

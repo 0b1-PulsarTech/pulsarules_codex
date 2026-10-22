@@ -14,7 +14,7 @@ func Save(path string, value any) error {
 	}
 	out = append(out, '\n')
 
-	if err = disk.WriteFileAtomic(path, out, disk.FilePrivate); err != nil {
+	if err = disk.WriteFileAtomic(path, out, disk.ModeFilePrivate); err != nil {
 		return err
 	}
 	return nil

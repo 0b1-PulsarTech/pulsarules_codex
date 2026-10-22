@@ -15,11 +15,11 @@ const PointerID = "pulsarules-contract"
 
 func WriteRule(projectDir, id, body string) (ownedfile.Outcome, error) {
 	path := filepath.Join(projectDir, RulesDir, id+".mdc")
-	return ownedfile.WriteOwned(path, []byte(body), disk.FilePrivate, makeRulesDir)
+	return ownedfile.WriteOwned(path, []byte(body), disk.ModeFilePrivate, makeRulesDir)
 }
 
 func makeRulesDir(dir string) error {
-	if err := os.MkdirAll(dir, disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(dir, disk.ModeDirPrivate); err != nil {
 		return fmt.Errorf("mkdir: %w", err)
 	}
 	return nil

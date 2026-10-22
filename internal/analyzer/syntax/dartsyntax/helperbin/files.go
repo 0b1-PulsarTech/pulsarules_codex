@@ -65,9 +65,9 @@ func (src source) materialise(target string) error {
 	err := src.each(func(name string, content []byte, isDir bool) error {
 		destination := filepath.Join(target, filepath.FromSlash(name))
 		if isDir {
-			return os.MkdirAll(destination, disk.DirPrivate)
+			return os.MkdirAll(destination, disk.ModeDirPrivate)
 		}
-		return os.WriteFile(destination, content, disk.FilePrivate)
+		return os.WriteFile(destination, content, disk.ModeFilePrivate)
 	})
 	if err != nil {
 		return fmt.Errorf("write embedded helper: %w", err)

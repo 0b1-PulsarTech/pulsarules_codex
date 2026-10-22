@@ -24,7 +24,7 @@ func TestServices_LazyFailuresStayLazy(t *testing.T) {
 	t.Parallel()
 
 	notADir := filepath.Join(t.TempDir(), "file")
-	if err := os.WriteFile(notADir, nil, disk.FilePrivate); err != nil {
+	if err := os.WriteFile(notADir, nil, disk.ModeFilePrivate); err != nil {
 		t.Fatalf("write file: %v", err)
 	}
 	testCases := []struct {

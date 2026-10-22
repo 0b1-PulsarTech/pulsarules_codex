@@ -37,7 +37,7 @@ func lintAfterHistory(t *testing.T, configYAML string, history []string, message
 	}
 	if configYAML != "" {
 		path := filepath.Join(dir, projectfile.Name)
-		if err := os.WriteFile(path, []byte(configYAML), disk.File); err != nil {
+		if err := os.WriteFile(path, []byte(configYAML), disk.ModeFile); err != nil {
 			t.Fatalf("write config: %v", err)
 		}
 	}
@@ -256,7 +256,7 @@ func TestCommand_Run_UsesTheGivenLoader(t *testing.T) {
 			runGit(t, dir, "init", "-q")
 			yaml := "version: 1\nanalyzers: {not-an-analyzer: {enabled: false}}\n"
 			path := filepath.Join(dir, projectfile.Name)
-			if err := os.WriteFile(path, []byte(yaml), disk.File); err != nil {
+			if err := os.WriteFile(path, []byte(yaml), disk.ModeFile); err != nil {
 				t.Fatalf("write config: %v", err)
 			}
 

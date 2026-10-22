@@ -13,7 +13,7 @@ import (
 )
 
 func Package(idx *knowledge.Index, rnd *render.Renderer, outPath string) (err error) {
-	if mkdirErr := os.MkdirAll(filepath.Dir(outPath), disk.DirPrivate); mkdirErr != nil {
+	if mkdirErr := os.MkdirAll(filepath.Dir(outPath), disk.ModeDirPrivate); mkdirErr != nil {
 		return fmt.Errorf("mkdir: %w", mkdirErr)
 	}
 	//nolint:gosec // outPath is a caller-supplied output destination.

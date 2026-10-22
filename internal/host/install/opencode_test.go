@@ -57,7 +57,7 @@ func TestOpencode_FailureWording(t *testing.T) {
 
 	dir := t.TempDir()
 	pluginPath := filepath.Join(dir, ".opencode", "plugins", "pulsarules-governance.js")
-	if err = os.MkdirAll(pluginPath, disk.DirPrivate); err != nil {
+	if err = os.MkdirAll(pluginPath, disk.ModeDirPrivate); err != nil {
 		t.Fatalf("seed a directory in place of the plugin: %v", err)
 	}
 	_, err = UninstallOpencode(dir)

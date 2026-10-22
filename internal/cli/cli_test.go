@@ -226,7 +226,7 @@ func servicesIn(t *testing.T, projectDir string) bootstrap.Services {
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 
-	if err := os.MkdirAll(filepath.Dir(path), disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), disk.ModeDirPrivate); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {

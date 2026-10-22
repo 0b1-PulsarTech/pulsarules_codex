@@ -49,7 +49,7 @@ func rememberFailure(ctx context.Context, dir helperDir, buildErr error) error {
 }
 
 func buildHelper(ctx context.Context, src source, dart string, dir helperDir) error {
-	if err := os.MkdirAll(dir.parent(), disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(dir.parent(), disk.ModeDirPrivate); err != nil {
 		return fmt.Errorf("create helper cache: %w", err)
 	}
 	work, err := os.MkdirTemp(dir.parent(), "build-*")

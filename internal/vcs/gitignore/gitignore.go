@@ -16,7 +16,7 @@ import (
 const markerLine = "# " + ownedfile.Marker
 
 func Ensure(dir string, entries ...string) error {
-	if err := os.MkdirAll(dir, disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(dir, disk.ModeDirPrivate); err != nil {
 		return fmt.Errorf("mkdir %q: %w", dir, err)
 	}
 	path := filepath.Join(dir, ".gitignore")
@@ -31,7 +31,7 @@ func Ensure(dir string, entries ...string) error {
 	}
 	content := appendEntries(string(existing), lines, missing)
 	//nolint:gosec // path is under the caller's dir.
-	if err = os.WriteFile(path, []byte(content), disk.FilePrivate); err != nil {
+	if err = os.WriteFile(path, []byte(content), disk.ModeFilePrivate); err != nil {
 		return fmt.Errorf("write %q: %w", path, err)
 	}
 	return nil
@@ -106,7 +106,7 @@ func Remove(dir string, entries ...string) (removed []string, err error) {
 	}
 	content := strings.Join(kept, "\n") + "\n"
 	//nolint:gosec // path is under the caller's dir.
-	if err = os.WriteFile(path, []byte(content), disk.FilePrivate); err != nil {
+	if err = os.WriteFile(path, []byte(content), disk.ModeFilePrivate); err != nil {
 		return nil, fmt.Errorf("write %q: %w", path, err)
 	}
 	return removed, nil

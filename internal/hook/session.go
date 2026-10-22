@@ -55,7 +55,7 @@ func (tracker *sessionTracker) OncePerSession(event string) bool {
 	if _, err := os.Stat(marker); err == nil {
 		return false
 	}
-	_ = os.WriteFile(marker, nil, disk.FilePrivate)
+	_ = os.WriteFile(marker, nil, disk.ModeFilePrivate)
 	return true
 }
 
@@ -67,7 +67,7 @@ func (tracker *sessionTracker) FirstEmission(event, content string) bool {
 		return false
 	}
 	//nolint:gosec // the id is a plain token or a hash, see newSessionTracker.
-	_ = os.WriteFile(marker, []byte(hash), disk.FilePrivate)
+	_ = os.WriteFile(marker, []byte(hash), disk.ModeFilePrivate)
 	return true
 }
 

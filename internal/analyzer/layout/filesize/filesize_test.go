@@ -96,7 +96,7 @@ func runAllowanceCases(t *testing.T, files map[string]int, testCases []allowance
 	dir := t.TempDir()
 	for name, lines := range files {
 		body := "package foo\n" + strings.Repeat("// filler\n", lines-1)
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), disk.File); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), disk.ModeFile); err != nil {
 			t.Fatalf("write %s: %v", name, err)
 		}
 	}
@@ -162,12 +162,12 @@ func TestAnalyze_SkipsTestdata(t *testing.T) {
 
 	dir := t.TempDir()
 	fixtureDir := filepath.Join(dir, "testdata")
-	if err := os.MkdirAll(fixtureDir, disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(fixtureDir, disk.ModeDirPrivate); err != nil {
 		t.Fatalf("mkdir testdata: %v", err)
 	}
 	body := "package fixture\n" + strings.Repeat("// filler\n", 300)
 	fixturePath := filepath.Join(fixtureDir, "big.go")
-	if err := os.WriteFile(fixturePath, []byte(body), disk.File); err != nil {
+	if err := os.WriteFile(fixturePath, []byte(body), disk.ModeFile); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
 
@@ -189,7 +189,11 @@ func TestAnalyze_ReportsOnADartFileJustLikeGo(t *testing.T) {
 
 	dir := t.TempDir()
 	body := "class Foo {\n" + strings.Repeat("  // filler\n", 300) + "}\n"
-	if err := os.WriteFile(filepath.Join(dir, "big.dart"), []byte(body), disk.File); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(dir, "big.dart"),
+		[]byte(body),
+		disk.ModeFile,
+	); err != nil {
 		t.Fatalf("write big.dart: %v", err)
 	}
 
@@ -226,7 +230,7 @@ func analyzeHardCap(
 
 	dir := t.TempDir()
 	body := strings.Repeat("// filler\n", lines)
-	if err := os.WriteFile(filepath.Join(dir, name), []byte(body), disk.File); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(body), disk.ModeFile); err != nil {
 		t.Fatalf("write %s: %v", name, err)
 	}
 	return NewAnalyzer().Analyze(&pass.Context{

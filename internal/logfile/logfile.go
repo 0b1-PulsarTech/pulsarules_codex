@@ -34,7 +34,7 @@ func New(cfg Config) (*slog.Logger, io.Closer, error) {
 
 	path := cfg.Path
 
-	if err = os.MkdirAll(filepath.Dir(path), disk.DirPrivate); err != nil {
+	if err = os.MkdirAll(filepath.Dir(path), disk.ModeDirPrivate); err != nil {
 		return nil, nil, fmt.Errorf("create log dir: %w", err)
 	}
 	if err = truncateToTail(path, maxBytes); err != nil {
@@ -42,7 +42,7 @@ func New(cfg Config) (*slog.Logger, io.Closer, error) {
 	}
 
 	//nolint:gosec // path is caller-controlled.
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, disk.FilePrivate)
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, disk.ModeFilePrivate)
 	if err != nil {
 		return nil, nil, fmt.Errorf("open log file: %w", err)
 	}
@@ -83,7 +83,7 @@ func truncateToTail(path string, maxBytes int64) error {
 	}
 	tail := raw[keepFrom+idx+1:]
 	//nolint:gosec // path is caller-controlled.
-	if err = os.WriteFile(path, tail, disk.FilePrivate); err != nil {
+	if err = os.WriteFile(path, tail, disk.ModeFilePrivate); err != nil {
 		return fmt.Errorf("write truncated log file: %w", err)
 	}
 	return nil

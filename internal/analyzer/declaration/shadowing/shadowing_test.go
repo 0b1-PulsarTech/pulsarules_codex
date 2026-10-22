@@ -288,7 +288,7 @@ func analyzeMessage(t *testing.T, analyzer *Analyzer, source string) string {
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "foo.go")
-	if err := os.WriteFile(path, []byte(source), disk.File); err != nil {
+	if err := os.WriteFile(path, []byte(source), disk.ModeFile); err != nil {
 		t.Fatal(err)
 	}
 
@@ -326,7 +326,7 @@ func countByRule(t *testing.T, analyzer *Analyzer, source string) (shadows, reus
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "foo.go")
-	if err := os.WriteFile(path, []byte(source), disk.File); err != nil {
+	if err := os.WriteFile(path, []byte(source), disk.ModeFile); err != nil {
 		t.Fatal(err)
 	}
 	src, err := os.ReadFile(path)

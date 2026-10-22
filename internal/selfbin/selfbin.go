@@ -34,7 +34,7 @@ func copyTo(dst string) error {
 	if sameFile(exe, dst) {
 		return nil
 	}
-	if err = os.MkdirAll(filepath.Dir(dst), disk.DirPrivate); err != nil {
+	if err = os.MkdirAll(filepath.Dir(dst), disk.ModeDirPrivate); err != nil {
 		return fmt.Errorf("mkdir %q: %w", filepath.Dir(dst), err)
 	}
 	exeBytes, err := os.ReadFile(exe) //nolint:gosec // copying our own executable.
@@ -46,7 +46,7 @@ func copyTo(dst string) error {
 		return fmt.Errorf("install binary: %w", err)
 	}
 	// Rename replaces the inode, so a running dst is never truncated (ETXTBSY).
-	if err = disk.WriteFileAtomic(target, exeBytes, disk.FileExec); err != nil {
+	if err = disk.WriteFileAtomic(target, exeBytes, disk.ModeFileExec); err != nil {
 		return fmt.Errorf("install binary: %w", err)
 	}
 	return nil

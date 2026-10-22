@@ -54,11 +54,11 @@ func Write(
 		return ownedfile.Kept, fmt.Errorf("render AGENTS.md: %w", err)
 	}
 	path := filepath.Join(projectDir, FileName)
-	return ownedfile.WriteOwned(path, buf.Bytes(), disk.FilePrivate, makeProjectDir)
+	return ownedfile.WriteOwned(path, buf.Bytes(), disk.ModeFilePrivate, makeProjectDir)
 }
 
 func makeProjectDir(dir string) error {
-	if err := os.MkdirAll(dir, disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(dir, disk.ModeDirPrivate); err != nil {
 		return fmt.Errorf("mkdir %q: %w", dir, err)
 	}
 	return nil

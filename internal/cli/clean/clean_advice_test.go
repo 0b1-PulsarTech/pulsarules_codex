@@ -120,7 +120,7 @@ func TestSweep_EscapePhraseIsTheSharedOne(t *testing.T) {
 
 			root := t.TempDir()
 			if err := os.WriteFile(
-				filepath.Join(root, testCase.file), []byte(testCase.body), disk.File,
+				filepath.Join(root, testCase.file), []byte(testCase.body), disk.ModeFile,
 			); err != nil {
 				t.Fatalf("write: %v", err)
 			}

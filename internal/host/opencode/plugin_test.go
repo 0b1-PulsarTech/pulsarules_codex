@@ -132,7 +132,7 @@ func TestUninstall_PluginFailureWording(t *testing.T) {
 
 	dir := t.TempDir()
 	pluginPath := filepath.Join(dir, ".opencode", "plugins", pluginName)
-	if err := os.MkdirAll(pluginPath, disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(pluginPath, disk.ModeDirPrivate); err != nil {
 		t.Fatalf("seed a directory in place of the plugin: %v", err)
 	}
 
@@ -158,7 +158,7 @@ func TestUninstall_OrphanScanFailureIsBare(t *testing.T) {
 	if err := os.Chmod(pluginsDir, 0o300); err != nil {
 		t.Fatalf("chmod: %v", err)
 	}
-	t.Cleanup(func() { _ = os.Chmod(pluginsDir, disk.DirPrivate) })
+	t.Cleanup(func() { _ = os.Chmod(pluginsDir, disk.ModeDirPrivate) })
 
 	_, err := Uninstall(dir)
 	want := `list backups of "` + filepath.Join(pluginsDir, pluginName) + `": scan "` +
@@ -183,12 +183,12 @@ func TestInstall_ForeignFileBackup(t *testing.T) {
 
 	dir := t.TempDir()
 	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
-	if err := os.MkdirAll(pluginsDir, disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(pluginsDir, disk.ModeDirPrivate); err != nil {
 		t.Fatalf("mkdir plugins: %v", err)
 	}
 	pluginPath := filepath.Join(pluginsDir, pluginName)
 	const foreignContent = "// hand-authored plugin, not ours\n"
-	if err := os.WriteFile(pluginPath, []byte(foreignContent), disk.File); err != nil {
+	if err := os.WriteFile(pluginPath, []byte(foreignContent), disk.ModeFile); err != nil {
 		t.Fatalf("seed foreign plugin: %v", err)
 	}
 

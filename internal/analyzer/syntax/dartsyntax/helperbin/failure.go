@@ -30,10 +30,10 @@ func (dir helperDir) recordFailure(cause error) error {
 	if err != nil {
 		return fmt.Errorf("encode failure marker: %w", err)
 	}
-	if mkdirErr := os.MkdirAll(dir.parent(), disk.DirPrivate); mkdirErr != nil {
+	if mkdirErr := os.MkdirAll(dir.parent(), disk.ModeDirPrivate); mkdirErr != nil {
 		return fmt.Errorf("create helper cache: %w", mkdirErr)
 	}
-	if writeErr := os.WriteFile(dir.markerPath(), payload, disk.FilePrivate); writeErr != nil {
+	if writeErr := os.WriteFile(dir.markerPath(), payload, disk.ModeFilePrivate); writeErr != nil {
 		return fmt.Errorf("write failure marker: %w", writeErr)
 	}
 	return nil

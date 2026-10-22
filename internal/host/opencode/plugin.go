@@ -20,7 +20,7 @@ const pluginTemplate = "hooks/opencode-plugin.js"
 
 func Install(dir string, templates fs.FS) (ledger ownedfile.Ledger, err error) {
 	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
-	if err = os.MkdirAll(pluginsDir, disk.DirPrivate); err != nil {
+	if err = os.MkdirAll(pluginsDir, disk.ModeDirPrivate); err != nil {
 		return ledger, fmt.Errorf("mkdir plugins: %w", err)
 	}
 	script, readErr := fs.ReadFile(templates, pluginTemplate)
@@ -28,7 +28,7 @@ func Install(dir string, templates fs.FS) (ledger ownedfile.Ledger, err error) {
 		return ledger, fmt.Errorf("read plugin template: %w", readErr)
 	}
 	pluginPath := filepath.Join(pluginsDir, pluginName)
-	note, installErr := ownedfile.InstallFile(pluginPath, script, disk.FilePrivate)
+	note, installErr := ownedfile.InstallFile(pluginPath, script, disk.ModeFilePrivate)
 	if installErr != nil {
 		return ledger, fmt.Errorf("install plugin: %w", installErr)
 	}

@@ -32,7 +32,7 @@ func run() error {
 	}
 
 	entries := buildCatalog(shortcodes, meta, usage.byEmoji)
-	if mkdirErr := os.MkdirAll(outDir, disk.DirPrivate); mkdirErr != nil {
+	if mkdirErr := os.MkdirAll(outDir, disk.ModeDirPrivate); mkdirErr != nil {
 		return fmt.Errorf("mkdir %s: %w", outDir, mkdirErr)
 	}
 	if writeCatalogErr := writeCatalog(

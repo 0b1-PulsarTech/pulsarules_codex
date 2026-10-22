@@ -13,10 +13,10 @@ import (
 const gitignoreName = ".gitignore"
 
 func writeFile(filePath, content string) error {
-	if err := os.MkdirAll(filepath.Dir(filePath), disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(filepath.Dir(filePath), disk.ModeDirPrivate); err != nil {
 		return fmt.Errorf("mkdir: %w", err)
 	}
-	if err := os.WriteFile(filePath, []byte(content), disk.FilePrivate); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), disk.ModeFilePrivate); err != nil {
 		return fmt.Errorf("write %q: %w", filePath, err)
 	}
 	return nil

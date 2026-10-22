@@ -174,7 +174,7 @@ func writeProjectConfig(t *testing.T, content string) string {
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, projectfile.Name)
-	if err := os.WriteFile(path, []byte(content), disk.File); err != nil {
+	if err := os.WriteFile(path, []byte(content), disk.ModeFile); err != nil {
 		t.Fatalf("write project config: %v", err)
 	}
 	return dir
@@ -340,7 +340,7 @@ func TestGovernanceConfig_PresetFlag(t *testing.T) {
 				t.Fatalf("git init: %v\n%s", err, out)
 			}
 			path := filepath.Join(root, ".git", "pulsarules.yaml")
-			if err := os.WriteFile(path, []byte(private), disk.File); err != nil {
+			if err := os.WriteFile(path, []byte(private), disk.ModeFile); err != nil {
 				t.Fatalf("write private config: %v", err)
 			}
 			cfg, err := (&Command{preset: testCase.preset}).governanceConfig(testLoader(), root)

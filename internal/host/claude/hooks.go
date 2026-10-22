@@ -33,10 +33,10 @@ func hookAssets() []hookAsset {
 		{
 			templateName: reminderScriptAsset + ".tmpl",
 			destName:     reminderScriptAsset,
-			mode:         disk.FileExec,
+			mode:         disk.ModeFileExec,
 			render:       true,
 		},
-		{templateName: "README.md", destName: "README.md", mode: disk.File},
+		{templateName: "README.md", destName: "README.md", mode: disk.ModeFile},
 	}
 }
 
@@ -46,7 +46,7 @@ func InstallHook(
 	loc Location,
 ) (ledger ownedfile.Ledger, err error) {
 	hooksDir := filepath.Join(claudeDir, hooksSubdir)
-	if err = os.MkdirAll(hooksDir, disk.DirPrivate); err != nil {
+	if err = os.MkdirAll(hooksDir, disk.ModeDirPrivate); err != nil {
 		return ledger, fmt.Errorf("mkdir %q: %w", hooksDir, err)
 	}
 	for _, asset := range hookAssets() {

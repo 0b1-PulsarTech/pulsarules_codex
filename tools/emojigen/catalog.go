@@ -127,7 +127,7 @@ func writeTable(path, header string, rows [][]string) error {
 		buf.WriteString(strings.Join(row, "\t"))
 		buf.WriteByte('\n')
 	}
-	if err := os.WriteFile(path, []byte(buf.String()), disk.FilePrivate); err != nil {
+	if err := os.WriteFile(path, []byte(buf.String()), disk.ModeFilePrivate); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 	return nil

@@ -18,7 +18,7 @@ func Install(dir string, hooks []string, opts Options) (ledger ownedfile.Ledger,
 		return ledger, nil
 	}
 	dest := hooksDir(dir)
-	if err = os.MkdirAll(dest, disk.DirPrivate); err != nil {
+	if err = os.MkdirAll(dest, disk.ModeDirPrivate); err != nil {
 		return ledger, fmt.Errorf("mkdir %q: %w", dest, err)
 	}
 	for _, name := range hooks {

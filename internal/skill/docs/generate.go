@@ -12,7 +12,7 @@ import (
 
 func Generate(idx *knowledge.Index, rnd *render.Renderer, outDir string) ([]string, error) {
 	skillsDir := filepath.Join(outDir, "skills")
-	if err := os.MkdirAll(skillsDir, disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(skillsDir, disk.ModeDirPrivate); err != nil {
 		return nil, fmt.Errorf("mkdir %q: %w", skillsDir, err)
 	}
 	written := make([]string, 0, len(idx.Skills))

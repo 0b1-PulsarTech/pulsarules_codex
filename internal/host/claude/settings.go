@@ -10,7 +10,7 @@ import (
 )
 
 func WireSettings(claudeDir, settingsFile string, loc Location) error {
-	if err := os.MkdirAll(claudeDir, disk.DirPrivate); err != nil {
+	if err := os.MkdirAll(claudeDir, disk.ModeDirPrivate); err != nil {
 		return fmt.Errorf("mkdir %q: %w", claudeDir, err)
 	}
 	path := filepath.Join(claudeDir, settingsFile)
