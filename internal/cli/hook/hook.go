@@ -16,15 +16,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
-type Logging struct {
-	Logger *slog.Logger
-	Closer io.Closer
-}
-
 type Collaborators struct {
 	Index       *knowledge.Index
 	Templates   templates.Set
-	OpenLogger  func() (Logging, error)
+	OpenLogger  func() (*slog.Logger, io.Closer, error)
 	LoadCatalog func() (*emoji.Catalog, error)
 	Loader      func() *loader.Loader
 }
@@ -49,19 +44,19 @@ func (cmd *Command) Run(needs Collaborators, args []string) error {
 	// simplification: the logger lookup below degrades to a no-op (log, return nil)
 	// so a hook never blocks the caller's turn over a logger hiccup.
 	// Upgrade path: revisit if a no-op ever hides a failure operators need paged on.
-	logging, err := needs.OpenLogger()
+	logger, closer, err := needs.OpenLogger()
 	if err != nil {
 		printHookError(os.Stderr, "build logger", err)
 		return nil
 	}
-	defer func() { _ = logging.Closer.Close() }()
+	defer func() { _ = closer.Close() }()
 
 	payload, _ := io.ReadAll(os.Stdin)
 
 	// Only the stop checklist lints with it, so no other hook mode needs the catalog.
 	disp := newHookDispatcher(hook.Deps{
 		Templates:  needs.Templates,
-		Logger:     logging.Logger,
+		Logger:     logger,
 		Index:      needs.Index,
 		Out:        os.Stdout,
 		ProjectDir: cmd.env.ProjectDir,

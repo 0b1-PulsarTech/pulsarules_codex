@@ -89,14 +89,10 @@ func evalsRunner(flags.Environment) runner {
 func hookRunner(env flags.Environment) runner {
 	cmd := hook.New(env)
 	return runner{command: cmd, run: func(svc bootstrap.Services, args []string) error {
-		openLogger := func() (hook.Logging, error) {
-			logger, closer, err := svc.OpenLogger()
-			return hook.Logging{Logger: logger, Closer: closer}, err
-		}
 		return cmd.Run(hook.Collaborators{
 			Index:       svc.Index,
 			Templates:   svc.Templates,
-			OpenLogger:  openLogger,
+			OpenLogger:  svc.OpenLogger,
 			LoadCatalog: svc.LoadCatalog,
 			Loader:      svc.Loader,
 		}, args)

@@ -227,11 +227,8 @@ func hookServices(t *testing.T) Collaborators {
 		Index:     index,
 		Templates: templates.New(assets),
 		Loader:    testLoader(),
-		OpenLogger: func() (Logging, error) {
-			return Logging{
-				Logger: slog.New(slog.DiscardHandler),
-				Closer: io.NopCloser(nil),
-			}, nil
+		OpenLogger: func() (*slog.Logger, io.Closer, error) {
+			return slog.New(slog.DiscardHandler), io.NopCloser(nil), nil
 		},
 	}
 }
@@ -250,8 +247,8 @@ func TestCommand_Run_NeverFailsOnALoggerFailure(t *testing.T) {
 	t.Setenv("TMPDIR", t.TempDir())
 
 	needs := hookServices(t)
-	needs.OpenLogger = func() (Logging, error) {
-		return Logging{}, errors.New("build logger: boom")
+	needs.OpenLogger = func() (*slog.Logger, io.Closer, error) {
+		return nil, nil, errors.New("build logger: boom")
 	}
 	var err error
 	var stderr string
@@ -275,11 +272,8 @@ func TestCommand_Run_NeverFailsOnALoggerFailure(t *testing.T) {
 func TestCommand_Run_ClosesTheLogger(t *testing.T) {
 	var closed bool
 	needs := hookServices(t)
-	needs.OpenLogger = func() (Logging, error) {
-		return Logging{
-			Logger: slog.New(slog.DiscardHandler),
-			Closer: closeRecorder{closed: &closed},
-		}, nil
+	needs.OpenLogger = func() (*slog.Logger, io.Closer, error) {
+		return slog.New(slog.DiscardHandler), closeRecorder{closed: &closed}, nil
 	}
 	captureStderr(t, func() { _ = New(flags.Environment{}).Run(needs, []string{"pre-search"}) })
 	if !closed {
