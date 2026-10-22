@@ -13,12 +13,12 @@ const (
 	ScopeChanged
 )
 
-type UnknownScopeError struct {
+type unknownScopeError struct {
 	Name string
 }
 
-func (err UnknownScopeError) Error() string {
-	return fmt.Sprintf("unknown scope %q (want %s)", err.Name, strings.Join(ScopeNames(), "|"))
+func (err unknownScopeError) Error() string {
+	return fmt.Sprintf("%q (want %s)", err.Name, strings.Join(scopeNames(), "|"))
 }
 
 type namedScope struct {
@@ -34,7 +34,7 @@ func scopeTable() []namedScope {
 	}
 }
 
-func ScopeNames() []string {
+func scopeNames() []string {
 	table := scopeTable()
 	names := make([]string, len(table))
 	for idx, listed := range table {
@@ -52,5 +52,5 @@ func ParseScope(raw string) (Scope, error) {
 			return listed.scope, nil
 		}
 	}
-	return ScopeFull, UnknownScopeError{Name: raw}
+	return ScopeFull, unknownScopeError{Name: raw}
 }

@@ -22,11 +22,11 @@ func TestParseScope(t *testing.T) {
 		{name: "empty defaults to ScopeFull", input: "", want: ScopeFull},
 		{
 			name: "misspelt commit is an error", input: "comit", want: ScopeFull,
-			wantErr: `unknown scope "comit" (want full|commit|changed)`,
+			wantErr: `"comit" (want full|commit|changed)`,
 		},
 		{
 			name: "case matters", input: "Full", want: ScopeFull,
-			wantErr: `unknown scope "Full" (want full|commit|changed)`,
+			wantErr: `"Full" (want full|commit|changed)`,
 		},
 	}
 	for _, testCase := range testCases {
@@ -51,8 +51,8 @@ func TestParseScope_ErrorNamesNoFlag(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseScope("bogus")
-	if unknown, ok := errors.AsType[UnknownScopeError](err); !ok || unknown.Name != "bogus" {
-		t.Fatalf("ParseScope() error = %v, want UnknownScopeError for %q", err, "bogus")
+	if unknown, ok := errors.AsType[unknownScopeError](err); !ok || unknown.Name != "bogus" {
+		t.Fatalf("ParseScope() error = %v, want unknownScopeError for %q", err, "bogus")
 	}
 	if strings.Contains(err.Error(), "--") {
 		t.Fatalf("error %q names a CLI flag, want it flag-agnostic", err)
@@ -63,10 +63,10 @@ func TestScopeNames(t *testing.T) {
 	t.Parallel()
 
 	want := []string{"full", "commit", "changed"}
-	if got := ScopeNames(); !slices.Equal(got, want) {
-		t.Fatalf("ScopeNames() = %v, want %v", got, want)
+	if got := scopeNames(); !slices.Equal(got, want) {
+		t.Fatalf("scopeNames() = %v, want %v", got, want)
 	}
-	for _, name := range ScopeNames() {
+	for _, name := range scopeNames() {
 		if _, err := ParseScope(name); err != nil {
 			t.Errorf("ParseScope(%q) error = %v, want every listed name to parse", name, err)
 		}

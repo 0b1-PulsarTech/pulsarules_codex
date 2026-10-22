@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
@@ -106,14 +105,10 @@ func (cmd *Command) Run(
 
 func parseScope(raw string) (governance.Scope, error) {
 	scope, err := governance.ParseScope(raw)
-	if unknown, ok := errors.AsType[governance.UnknownScopeError](err); ok {
-		return scope, fmt.Errorf(
-			"invalid --scope %q (want %s)",
-			unknown.Name,
-			strings.Join(governance.ScopeNames(), "|"),
-		)
+	if err != nil {
+		return scope, fmt.Errorf("invalid --scope %w", err)
 	}
-	return scope, err
+	return scope, nil
 }
 
 func reportGovernance(out io.Writer, report findings.Report) error {
