@@ -14,6 +14,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 func lintInRepo(t *testing.T, configYAML, message string) error {
@@ -94,7 +95,7 @@ func TestRunCommitLint_EmojiWindowFallsBack(t *testing.T) {
 			history := append([]string{recent}, testCase.between...)
 			err := lintAfterHistory(t, testCase.config, append(history, newest), repeat)
 			if got := errors.Is(err, command.ErrFindings); got != testCase.wantErr {
-				t.Fatalf("runCommitLint() error = %v, want findings %v", err, testCase.wantErr)
+				t.Fatalf("RunCommitLint() error = %v, want findings %v", err, testCase.wantErr)
 			}
 		})
 	}
@@ -127,13 +128,63 @@ func TestRunCommitLint_ProjectConfig(t *testing.T) {
 			err := lintInRepo(t, testCase.config, testCase.message)
 			if !testCase.wantErr {
 				if err != nil {
-					t.Fatalf("runCommitLint() error = %v, want nil", err)
+					t.Fatalf("RunCommitLint() error = %v, want nil", err)
 				}
 				return
 			}
 			if !errors.Is(err, command.ErrFindings) {
-				t.Fatalf("runCommitLint() error = %v, want command.ErrFindings (exit code 1)", err)
+				t.Fatalf("RunCommitLint() error = %v, want command.ErrFindings (exit code 1)", err)
 			}
 		})
+	}
+}
+
+func TestRunCommitLint_ReturnsErrFindings(t *testing.T) {
+	t.Parallel()
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+
+	const messageTrippingEmojiTypeAndInitialRules = "bad commit message"
+	err := RunCommitLint(inj, &version.Options{CommitMsg: messageTrippingEmojiTypeAndInitialRules})
+
+	if !errors.Is(err, command.ErrFindings) {
+		t.Fatalf("error = %v, want command.ErrFindings", err)
+	}
+}
+
+func TestRunCommitLint_PropagatesRepositoryError(t *testing.T) {
+	t.Parallel()
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	wantErr := errors.New("boom: injector wiring failed")
+	remy.RegisterConstructorErr(
+		inj, remy.Factory[*vcs.Repository],
+		func() (*vcs.Repository, error) { return nil, wantErr },
+	)
+
+	err := RunCommitLint(inj, &version.Options{CommitMsg: "valid enough message"})
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("RunCommitLint() error = %v, want wrapping %v", err, wantErr)
+	}
+}
+
+func TestRunCommitLint_NoRepository(t *testing.T) {
+	t.Parallel()
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: t.TempDir()}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+
+	const invalidCommitMessage = "bad commit message"
+	err := RunCommitLint(
+		inj,
+		&version.Options{CommitMsg: invalidCommitMessage},
+	)
+	if !errors.Is(err, command.ErrFindings) {
+		t.Fatalf("error = %v, want command.ErrFindings from analysis findings", err)
 	}
 }

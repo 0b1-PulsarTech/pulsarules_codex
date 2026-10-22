@@ -254,7 +254,7 @@ func TestRunClean_RepositoryResolution(t *testing.T) {
 
 			err := RunClean(inj, &version.Options{ProjectDir: t.TempDir()})
 			if !errors.Is(err, testCase.wantErr) {
-				t.Fatalf("runClean() error = %v, want %v", err, testCase.wantErr)
+				t.Fatalf("RunClean() error = %v, want %v", err, testCase.wantErr)
 			}
 		})
 	}

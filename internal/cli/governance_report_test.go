@@ -8,7 +8,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 )
 
@@ -67,7 +66,7 @@ func TestReportGovernance(t *testing.T) {
 	}
 }
 
-func TestSuppressionWordingIsTheSameOnBothSurfaces(t *testing.T) {
+func TestReportGovernance_SuppressionPhrase(t *testing.T) {
 	t.Parallel()
 
 	report := findings.Report{
@@ -80,11 +79,9 @@ func TestSuppressionWordingIsTheSameOnBothSurfaces(t *testing.T) {
 	if err := governance.ReportGovernance(&out, report); err != nil {
 		t.Fatalf("reportGovernance: %v", err)
 	}
-	block, _ := hook.GovernanceBlock(report)
 
 	const phrase = "7 suppressed in generated files"
-	if !strings.HasSuffix(out.String(), ", "+phrase+"\n") ||
-		!strings.HasSuffix(block, "  "+phrase+"\n") {
-		t.Fatalf("cli %q and hook %q must carry the same phrase %q", out.String(), block, phrase)
+	if !strings.HasSuffix(out.String(), ", "+phrase+"\n") {
+		t.Fatalf("cli %q must end with the phrase %q", out.String(), phrase)
 	}
 }

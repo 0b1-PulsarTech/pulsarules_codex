@@ -1,4 +1,4 @@
-package cli
+package evals
 
 import (
 	"errors"
@@ -48,7 +48,7 @@ func evalsOptions(t *testing.T, testCase evalsCase) *version.Options {
 	return opts
 }
 
-func TestRunEvals_ReachesGradeThroughTheDispatcher(t *testing.T) {
+func TestRunEvals_Grading(t *testing.T) {
 	t.Parallel()
 
 	testCases := []evalsCase{
@@ -83,7 +83,7 @@ func TestRunEvals_ReachesGradeThroughTheDispatcher(t *testing.T) {
 			t.Parallel()
 
 			opts := evalsOptions(t, testCase)
-			err := Run(remy.NewInjector(remy.Config{DuckTypeElements: true}), opts)
+			err := RunEvals(remy.NewInjector(remy.Config{DuckTypeElements: true}), opts)
 			if testCase.wantErrIs != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErrIs) {
 					t.Fatalf("error = %v, want it to mention %q", err, testCase.wantErrIs)

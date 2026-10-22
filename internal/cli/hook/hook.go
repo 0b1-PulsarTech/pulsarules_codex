@@ -28,17 +28,17 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 	// Upgrade path: revisit if a no-op ever hides a failure operators need paged on.
 	idx, err := remy.Get[*knowledge.Index](inj)
 	if err != nil {
-		PrintHookError(os.Stderr, "get knowledge index", err)
+		printHookError(os.Stderr, "get knowledge index", err)
 		return nil
 	}
 	assets, err := remy.Get[templates.Set](inj)
 	if err != nil {
-		PrintHookError(os.Stderr, "get templates", err)
+		printHookError(os.Stderr, "get templates", err)
 		return nil
 	}
 	logger, err := remy.Get[*slog.Logger](inj)
 	if err != nil {
-		PrintHookError(os.Stderr, "build logger", err)
+		printHookError(os.Stderr, "build logger", err)
 		return nil
 	}
 	if closer, closerErr := remy.Get[io.Closer](inj); closerErr == nil {
@@ -49,7 +49,7 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 
 	// Only the stop checklist lints with it, so no other hook mode needs the catalog.
 	catalog := func() (*emoji.Catalog, error) { return remy.Get[*emoji.Catalog](inj) }
-	disp := NewHookDispatcher(hook.Deps{
+	disp := newHookDispatcher(hook.Deps{
 		Templates:  assets,
 		Logger:     logger,
 		Index:      idx,
@@ -64,28 +64,28 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 	return nil
 }
 
-func NewHookDispatcher(
+func newHookDispatcher(
 	deps hook.Deps,
 	catalog func() (*emoji.Catalog, error),
 ) *hook.Dispatcher {
 	deps.Governance = func(root string, status vcs.Status) (string, int) {
 		resolved, err := catalog()
 		if err != nil {
-			PrintHookError(os.Stderr, "get emoji catalog", err)
+			printHookError(os.Stderr, "get emoji catalog", err)
 			return "", 0
 		}
-		return GovernChanges(root, status, deps.Index, resolved)
+		return governChanges(root, status, deps.Index, resolved)
 	}
 	return hook.NewDispatcher(deps)
 }
 
-func PrintHookError(out io.Writer, label string, err error) {
+func printHookError(out io.Writer, label string, err error) {
 	_, _ = fmt.Fprintln(out, "hook: "+label+":", printable.Line(err.Error()))
 }
 
 const governanceHeader = "Governance checks:"
 
-func GovernChanges(
+func governChanges(
 	root string,
 	status vcs.Status,
 	index *knowledge.Index,
@@ -106,10 +106,10 @@ func GovernChanges(
 		Files:  governance.FileSetChanged,
 	})
 	result.Findings = slices.Concat(configFindings, result.Findings)
-	return GovernanceBlock(result)
+	return governanceBlock(result)
 }
 
-func GovernanceBlock(report findings.Report) (block string, count int) {
+func governanceBlock(report findings.Report) (block string, count int) {
 	text := report.Text(findings.Hook(), governanceHeader)
 	if text == "" {
 		return "", 0

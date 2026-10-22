@@ -39,59 +39,6 @@ func TestRun_UnknownCommand(t *testing.T) {
 	}
 }
 
-func TestRunCommitLint_ReturnsErrFindings(t *testing.T) {
-	t.Parallel()
-
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
-
-	const messageTrippingEmojiTypeAndInitialRules = "bad commit message"
-	err := commitlint.RunCommitLint(
-		inj,
-		&version.Options{CommitMsg: messageTrippingEmojiTypeAndInitialRules},
-	)
-
-	if !errors.Is(err, command.ErrFindings) {
-		t.Fatalf("error = %v, want command.ErrFindings", err)
-	}
-}
-
-func TestRunCommitLint_PropagatesRepositoryError(t *testing.T) {
-	t.Parallel()
-
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	wantErr := errors.New("boom: injector wiring failed")
-	remy.RegisterConstructorErr(
-		inj, remy.Factory[*vcs.Repository],
-		func() (*vcs.Repository, error) { return nil, wantErr },
-	)
-
-	err := commitlint.RunCommitLint(inj, &version.Options{CommitMsg: "valid enough message"})
-	if !errors.Is(err, wantErr) {
-		t.Fatalf("runCommitLint() error = %v, want wrapping %v", err, wantErr)
-	}
-}
-
-func TestRunCommitLint_NoRepository(t *testing.T) {
-	t.Parallel()
-
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: t.TempDir()}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
-
-	const invalidCommitMessage = "bad commit message"
-	err := commitlint.RunCommitLint(
-		inj,
-		&version.Options{CommitMsg: invalidCommitMessage},
-	)
-	if !errors.Is(err, command.ErrFindings) {
-		t.Fatalf("error = %v, want command.ErrFindings from analysis findings", err)
-	}
-}
-
 func TestRun_PrefixesInstallAndUninstallErrors(t *testing.T) {
 	t.Parallel()
 
@@ -352,7 +299,10 @@ func TestRun_GovernanceReportsFindings(t *testing.T) {
 func bindWithoutCatalog(t *testing.T, inj remy.Injector, dir string) {
 	t.Helper()
 
-	initGitRepo(t, dir)
+	if out, err := exec.CommandContext(t.Context(), "git", "-C", dir, "init").
+		CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
 	repo, err := vcs.Open(dir)
 	if err != nil {
 		t.Fatalf("vcs.Open: %v", err)
