@@ -29,7 +29,7 @@ type coversCase struct {
 	want       bool
 }
 
-func TestCoversFunc(t *testing.T) {
+func TestCovers(t *testing.T) {
 	t.Parallel()
 
 	cases := append(runnableCases(), helperCases()...)
@@ -40,7 +40,7 @@ func TestCoversFunc(t *testing.T) {
 			file, fn := lastFunc(t, testCase.source)
 			fc := pass.FileChange{IsTest: testCase.isTestFile}
 			if got := Covers(fc, file, fn); got != testCase.want {
-				t.Fatalf("CoversFunc = %v, want %v", got, testCase.want)
+				t.Fatalf("Covers = %v, want %v", got, testCase.want)
 			}
 		})
 	}
