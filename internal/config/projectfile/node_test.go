@@ -41,16 +41,16 @@ func TestDecodeRejectsDirectives(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := decodeFile([]byte(testCase.content))
+			_, err := decodeFixture([]byte(testCase.content))
 			if testCase.wantLine == 0 {
 				if err != nil {
-					t.Fatalf("decodeFile() error = %v, want nil", err)
+					t.Fatalf("decodeFixture() error = %v, want nil", err)
 				}
 				return
 			}
 			want := fmt.Sprintf(rejected, testCase.wantLine)
 			if err == nil || err.Error() != want {
-				t.Fatalf("decodeFile() error = %v, want %q", err, want)
+				t.Fatalf("decodeFixture() error = %v, want %q", err, want)
 			}
 		})
 	}
@@ -79,15 +79,15 @@ func TestDecodeRejectsNonUTF8(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := decodeFile([]byte(testCase.content))
+			_, err := decodeFixture([]byte(testCase.content))
 			if testCase.isAccept {
 				if err != nil {
-					t.Fatalf("decodeFile() error = %v, want nil", err)
+					t.Fatalf("decodeFixture() error = %v, want nil", err)
 				}
 				return
 			}
 			if err == nil || err.Error() != want {
-				t.Fatalf("decodeFile() error = %v, want %q", err, want)
+				t.Fatalf("decodeFixture() error = %v, want %q", err, want)
 			}
 		})
 	}
@@ -109,9 +109,9 @@ func TestDecodeAcceptsRealNullsAndMerges(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			file, err := decodeFile([]byte(testCase.content))
+			file, err := decodeFixture([]byte(testCase.content))
 			if err != nil || file.Preset != testCase.preset {
-				t.Fatalf("decodeFile() = %+v, %v, want preset %q", file, err, testCase.preset)
+				t.Fatalf("decodeFixture() = %+v, %v, want preset %q", file, err, testCase.preset)
 			}
 		})
 	}

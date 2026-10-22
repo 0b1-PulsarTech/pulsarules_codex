@@ -5,55 +5,51 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 
 	"gopkg.in/yaml.v3"
 )
 
-func (parsed decoded) result() (*File, error) {
-	if err := parsed.problems.Err(); err != nil {
-		return nil, err
-	}
-	return parsed.file, nil
+type Document[Target any] struct {
+	Value    *Target
+	Problems *Problems
+	Root     *Field
 }
 
-type decoded struct {
-	file     *File
-	problems *Problems
-	top      *Field
-}
-
-func decode(path string, content []byte) (decoded, error) {
+func Decode[Target any](path string, content []byte) (Document[Target], error) {
 	if len(content) > MaxFileBytes {
-		return decoded{}, fmt.Errorf("%s: config is larger than %d KiB", path, MaxFileBytes>>10)
+		return Document[Target]{}, fmt.Errorf(
+			"%s: config is larger than %d KiB", path, MaxFileBytes>>10,
+		)
 	}
 	if err := rejectBadText(path, content); err != nil {
-		return decoded{}, err
+		return Document[Target]{}, err
 	}
 	root, err := readDocument(path, content)
 	if err != nil {
-		return decoded{}, err
+		return Document[Target]{}, err
 	}
 	if err = checkExpansion(path, root); err != nil {
-		return decoded{}, err
+		return Document[Target]{}, err
 	}
 	value, top := root.Content[0], Root()
-	parsed := decoded{problems: NewProblems(path), top: top}
-	walkSchema(parsed.problems, value, top)
+	parsed := Document[Target]{Problems: NewProblems(path), Root: top}
+	walkSchema(parsed.Problems, value, top, reflect.TypeFor[Target]())
 	if value = deref(value); value.Kind != yaml.MappingNode && !isNull(value) {
 		return parsed, nil
 	}
-	file := &File{Path: path}
-	err = root.Decode(file)
+	target := new(Target)
+	err = root.Decode(target)
 	if err == nil {
-		parsed.file = file
+		parsed.Value = target
 		return parsed, nil
 	}
-	if parsed.problems.total == 0 {
-		return decoded{}, leftover(path, root, err)
+	if parsed.Problems.total == 0 {
+		return Document[Target]{}, leftover[Target](path, root, err)
 	}
 	// The walk already reported the same mismatches in terms of the file, not Go types.
 	if _, isType := errors.AsType[*yaml.TypeError](err); isType {
-		parsed.file = file
+		parsed.Value = target
 	}
 	return parsed, nil
 }

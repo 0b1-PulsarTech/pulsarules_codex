@@ -254,7 +254,7 @@ func distinctNodes(node *yaml.Node) int {
 
 func requireOneVisitPerNode(t *testing.T, content string) {
 	t.Helper()
-	root, err := readDocument(Name, []byte(content))
+	root, err := readDocument(fixtureName, []byte(content))
 	if err != nil {
 		return
 	}
@@ -275,17 +275,17 @@ func TestCheckExpansion(t *testing.T) {
 	for _, testCase := range allCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := decodeFile([]byte(testCase.content))
+			_, err := decodeFixture([]byte(testCase.content))
 			requireOneVisitPerNode(t, testCase.content)
-			assertPlainMessage(t, err)
+			assertPlainFixture(t, err)
 			if testCase.want == "" {
 				if err != nil {
-					t.Fatalf("decodeFile() error = %v, want nil", err)
+					t.Fatalf("decodeFixture() error = %v, want nil", err)
 				}
 				return
 			}
 			if err == nil || err.Error() != testCase.want {
-				t.Fatalf("decodeFile() error = %v, want %q", err, testCase.want)
+				t.Fatalf("decodeFixture() error = %v, want %q", err, testCase.want)
 			}
 		})
 	}

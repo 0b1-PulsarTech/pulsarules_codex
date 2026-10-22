@@ -64,12 +64,16 @@ type DelegatedEntry struct {
 }
 
 func Parse(path string, content []byte, rules Rules) (*File, error) {
-	parsed, err := decode(path, content)
+	doc, err := Decode[File](path, content)
 	if err != nil {
 		return nil, err
 	}
-	if parsed.file != nil {
-		parsed.file.check(rules, parsed.top, parsed.problems)
+	if doc.Value != nil {
+		doc.Value.Path = path
+		doc.Value.check(rules, doc.Root, doc.Problems)
 	}
-	return parsed.result()
+	if err = doc.Problems.Err(); err != nil {
+		return nil, err
+	}
+	return doc.Value, nil
 }

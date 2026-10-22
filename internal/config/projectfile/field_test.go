@@ -96,18 +96,30 @@ func TestFieldPathInterns(t *testing.T) {
 
 func parseWork(t *testing.T, content string) (walked, problems, nodes int) {
 	t.Helper()
-	parsed, err := decode(Name, []byte(content))
+	doc, err := Decode[fixtureFile](fixtureName, []byte(content))
 	if err != nil {
-		t.Fatalf("decode() = %v", err)
+		t.Fatalf("Decode() = %v", err)
 	}
-	if parsed.file != nil {
-		parsed.file.check(testRules(), parsed.top, parsed.problems)
+	reportAnalyzers(doc.Problems, doc.Root.Key("analyzers"), doc.Value.Analyzers)
+	for idx, override := range doc.Value.Overrides {
+		reportAnalyzers(
+			doc.Problems, doc.Root.Key("overrides").Item(idx).Key("analyzers"), override.Analyzers,
+		)
 	}
-	root, err := readDocument(Name, []byte(content))
+	root, err := readDocument(fixtureName, []byte(content))
 	if err != nil {
 		t.Fatalf("readDocument() = %v", err)
 	}
-	return parsed.problems.walked, parsed.problems.total, distinctNodes(root)
+	return doc.Problems.walked, doc.Problems.total, distinctNodes(root)
+}
+
+func reportAnalyzers(problems *Problems, at *Field, entries map[string]fixtureAnalyzer) {
+	for name, entry := range entries {
+		problems.Report(at.Key(name), "unknown analyzer")
+		for param := range entry.Params {
+			problems.Report(at.Key(name).Key("params").Key(param), "unknown param")
+		}
+	}
 }
 
 func overridesOf(count int, entry func() string) string {
@@ -161,43 +173,6 @@ func linearCases() []linearCase {
 			head := "version: 1\nanalyzers:\n  file-size:\n    params: {"
 			return head + strings.Join(keys, ", ") + "}\n"
 		}},
-	}
-}
-
-func pathKeyCases() []parseCase {
-	const head = ".pulsarules.yaml: analyzers.file-size.params."
-	params := func(body string) string {
-		return "version: 1\nanalyzers:\n  file-size:\n    params: {" + body + "}\n"
-	}
-	return []parseCase{
-		{
-			"a params key made of brackets",
-			params(`"[[[": 1`),
-			[]string{head + "[[[: unknown param"},
-		},
-		{
-			"a dotted params key",
-			params(`"a.b": 1`),
-			[]string{head + "a.b: unknown param"},
-		},
-		{
-			"a dotted key beside a skipped parent",
-			"version: 1\nanalyzers:\n  file-size: [x]\n  a.b: {}\n  file-size.params: {}\n",
-			[]string{
-				".pulsarules.yaml: line 3: analyzers.file-size: want a mapping",
-				".pulsarules.yaml: analyzers.a.b: unknown analyzer",
-				".pulsarules.yaml: analyzers.file-size.params: unknown analyzer",
-			},
-		},
-		{
-			"both odd keys beside each other",
-			params(`"[": 1, "a.b": 2, "a[0]": 3`),
-			[]string{
-				head + "[: unknown param",
-				head + "a.b: unknown param",
-				head + "a[0]: unknown param",
-			},
-		},
 	}
 }
 

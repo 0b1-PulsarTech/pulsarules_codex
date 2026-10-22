@@ -44,13 +44,13 @@ func TestDecodeErrors(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := decodeFile([]byte(testCase.content))
+			_, err := decodeFixture([]byte(testCase.content))
 			if err == nil || err.Error() != testCase.want {
-				t.Fatalf("decodeFile() error = %v, want %q", err, testCase.want)
+				t.Fatalf("decodeFixture() error = %v, want %q", err, testCase.want)
 			}
-			assertPlainMessage(t, err)
+			assertPlainFixture(t, err)
 			if strings.Contains(err.Error(), ".yaml: yaml:") {
-				t.Errorf("decodeFile() error %q keeps the yaml: prefix", err)
+				t.Errorf("decodeFixture() error %q keeps the yaml: prefix", err)
 			}
 		})
 	}
@@ -71,9 +71,9 @@ func TestDecodeTrailingEmptyDocuments(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			file, err := decodeFile([]byte(testCase.content))
+			file, err := decodeFixture([]byte(testCase.content))
 			if err != nil || file.Version != 1 {
-				t.Fatalf("decodeFile() = %+v, %v, want version 1", file, err)
+				t.Fatalf("decodeFixture() = %+v, %v, want version 1", file, err)
 			}
 		})
 	}

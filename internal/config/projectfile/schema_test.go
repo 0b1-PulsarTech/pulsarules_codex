@@ -1,7 +1,6 @@
 package projectfile
 
 import (
-	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -297,12 +296,12 @@ func mergeCases() []schemaCase {
 	}
 }
 
-func assertPlainMessage(t *testing.T, err error) {
+func assertPlainFixture(t *testing.T, err error) {
 	t.Helper()
 	if err == nil {
 		return
 	}
-	for _, goText := range []string{decodeTypePrefix(), "interface", "map["} {
+	for _, goText := range []string{decodeTypePrefix[fixtureFile](), "interface", "map["} {
 		if strings.Contains(err.Error(), goText) {
 			t.Errorf("error %q names a Go type (%q)", err, goText)
 		}
@@ -329,47 +328,15 @@ func TestSchemaWalk(t *testing.T) {
 	) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := decodeFile([]byte(testCase.content))
-			assertPlainMessage(t, err)
+			_, err := decodeFixture([]byte(testCase.content))
+			assertPlainFixture(t, err)
 			got := ""
 			if err != nil {
 				got = err.Error()
 			}
 			if want := strings.Join(testCase.want, "; "); got != want {
-				t.Fatalf("decodeFile() error = %q, want %q", got, want)
+				t.Fatalf("decodeFixture() error = %q, want %q", got, want)
 			}
 		})
-	}
-}
-
-func schemaStructs(typ reflect.Type, seen map[reflect.Type]bool) {
-	for typ.Kind() == reflect.Pointer || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
-		typ = typ.Elem()
-	}
-	if typ.Kind() != reflect.Struct || seen[typ] {
-		return
-	}
-	seen[typ] = true
-	for field := range typ.Fields() {
-		schemaStructs(field.Type, seen)
-	}
-}
-
-func TestSchemaFieldsHaveExplicitTags(t *testing.T) {
-	t.Parallel()
-
-	seen := map[reflect.Type]bool{}
-	schemaStructs(reflect.TypeFor[File](), seen)
-	if len(seen) < 4 {
-		t.Fatalf("visited %d struct types, want the whole schema", len(seen))
-	}
-	for typ := range seen {
-		for field := range typ.Fields() {
-			tag, hasTag := field.Tag.Lookup("yaml")
-			name, options, _ := strings.Cut(tag, ",")
-			if !hasTag || name == "" || strings.Contains(options, "inline") {
-				t.Errorf("%s.%s needs an explicit, non-inline yaml tag", typ.Name(), field.Name)
-			}
-		}
 	}
 }

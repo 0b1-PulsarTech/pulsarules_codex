@@ -64,13 +64,14 @@ func clipParseText(text string) string {
 	return prefix + ClipValue(strings.TrimPrefix(text, prefix))
 }
 
-func leftover(path string, root *yaml.Node, err error) error {
+func leftover[Target any](path string, root *yaml.Node, err error) error {
 	text := plainText(err)
 	if strings.Contains(text, "excessive aliasing") {
 		line := firstAliasLine(root)
 		return fmt.Errorf("%s: line %d: aliases expand into too many nodes", path, line)
 	}
-	for _, leaked := range []string{"cannot", "!!", "yaml:", decodeTypePrefix(), "[]", "map["} {
+	needles := []string{"cannot", "!!", "yaml:", decodeTypePrefix[Target](), "[]", "map["}
+	for _, leaked := range needles {
 		if strings.Contains(text, leaked) {
 			return fmt.Errorf("%s: %sinvalid value", path, linePrefix(text))
 		}
@@ -78,9 +79,9 @@ func leftover(path string, root *yaml.Node, err error) error {
 	return fmt.Errorf("%s: %s", path, text)
 }
 
-func decodeTypePrefix() string {
-	// The package name the decoder would print before the target type, such as "config.".
-	pkg, _, _ := strings.Cut(reflect.TypeFor[File]().String(), ".")
+func decodeTypePrefix[Target any]() string {
+	// The package name the decoder would print before the target type, such as "projectfile.".
+	pkg, _, _ := strings.Cut(reflect.TypeFor[Target]().String(), ".")
 	return pkg + "."
 }
 

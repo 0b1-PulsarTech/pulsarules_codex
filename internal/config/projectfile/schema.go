@@ -16,10 +16,10 @@ type schemaWalker struct {
 	problems *Problems
 }
 
-func walkSchema(problems *Problems, root *yaml.Node, top *Field) {
+func walkSchema(problems *Problems, root *yaml.Node, top *Field, target reflect.Type) {
 	walker := schemaWalker{problems: problems}
 	if !isNull(deref(root)) {
-		walker.walk(root, reflect.TypeFor[File](), top)
+		walker.walk(root, target, top)
 	}
 }
 

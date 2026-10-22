@@ -11,14 +11,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func decoderTextCases() []parseCase {
+func decoderTextCases() []fixtureCase {
 	const head = ".pulsarules.yaml: line "
 	notInt := []string{head + "1: version: want an integer"}
 	invalid := []string{head + "4: analyzers.big-comment.params.max_lines: invalid value"}
 	params := func(value string) string {
 		return "version: 1\nanalyzers:\n  big-comment:\n    params: {max_lines: " + value + "}\n"
 	}
-	return []parseCase{
+	return []fixtureCase{
 		{"int tag on a bool", "version: !!int true\n", notInt},
 		{"int tag on text", "version: !!int abc\n", notInt},
 		{
@@ -44,9 +44,9 @@ func decoderTextCases() []parseCase {
 	}
 }
 
-func decoderStructureCases() []parseCase {
+func decoderStructureCases() []fixtureCase {
 	const head = ".pulsarules.yaml: line "
-	return []parseCase{
+	return []fixtureCase{
 		{
 			"binary top-level key",
 			"version: 1\n? !!binary \"@@\"\n: 1\n",
@@ -85,9 +85,9 @@ func decoderStructureCases() []parseCase {
 	}
 }
 
-func nullTagCases() []parseCase {
+func nullTagCases() []fixtureCase {
 	const head = ".pulsarules.yaml: line "
-	return []parseCase{
+	return []fixtureCase{
 		{
 			"null tag on an integer",
 			"version: !!null 5\n",
@@ -122,9 +122,9 @@ func nullTagCases() []parseCase {
 	}
 }
 
-func nullTagShapeCases() []parseCase {
+func nullTagShapeCases() []fixtureCase {
 	const head = ".pulsarules.yaml: line "
-	return []parseCase{
+	return []fixtureCase{
 		{
 			"null tag on a mapping node",
 			"version: 1\nanalyzers:\n  file-size: !!null\n    enabled: false\n",
@@ -143,10 +143,10 @@ func nullTagShapeCases() []parseCase {
 	}
 }
 
-func mergeTagCases() []parseCase {
+func mergeTagCases() []fixtureCase {
 	const head = ".pulsarules.yaml: line "
 	const merge = ": want a mapping or a list of mappings"
-	return []parseCase{
+	return []fixtureCase{
 		{
 			"merge tag on another key holding a mapping",
 			"version: 1\nanalyzers: &m {}\n!!merge tests: *m\n",
@@ -201,14 +201,14 @@ func TestDecodeHidesDecoderText(t *testing.T) {
 	for _, testCase := range allCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := decodeFile([]byte(testCase.content))
+			_, err := decodeFixture([]byte(testCase.content))
 			if err == nil || err.Error() != strings.Join(testCase.want, "; ") {
-				t.Fatalf("decodeFile() error = %v, want %q", err, testCase.want)
+				t.Fatalf("decodeFixture() error = %v, want %q", err, testCase.want)
 			}
-			text := strings.ReplaceAll(err.Error(), Name, "")
+			text := strings.ReplaceAll(err.Error(), fixtureName, "")
 			for _, leaked := range []string{"cannot", "!!", "yaml:"} {
 				if strings.Contains(text, leaked) {
-					t.Errorf("decodeFile() error %q leaks %q", err, leaked)
+					t.Errorf("decodeFixture() error %q leaks %q", err, leaked)
 				}
 			}
 		})
@@ -222,7 +222,7 @@ type leftoverCase struct {
 }
 
 func leftoverCases() []leftoverCase {
-	typeName := reflect.TypeFor[File]().String()
+	typeName := reflect.TypeFor[fixtureFile]().String()
 	return []leftoverCase{
 		{"plain text stays", errors.New("yaml: something odd"), ".pulsarules.yaml: something odd"},
 		{
@@ -274,7 +274,7 @@ func TestLeftover(t *testing.T) {
 	for _, testCase := range leftoverCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := leftover(Name, &yaml.Node{}, testCase.err)
+			got := leftover[fixtureFile](fixtureName, &yaml.Node{}, testCase.err)
 			if got.Error() != testCase.want {
 				t.Fatalf("leftover() = %q, want %q", got, testCase.want)
 			}

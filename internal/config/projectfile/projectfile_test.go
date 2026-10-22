@@ -23,11 +23,15 @@ delegated:
 `
 
 func decodeFile(content []byte) (*File, error) {
-	parsed, err := decode(Name, content)
+	doc, err := Decode[File](Name, content)
 	if err != nil {
 		return nil, err
 	}
-	return parsed.result()
+	if err = doc.Problems.Err(); err != nil {
+		return nil, err
+	}
+	doc.Value.Path = Name
+	return doc.Value, nil
 }
 
 func TestDecodeFile(t *testing.T) {
@@ -273,5 +277,87 @@ func TestParseCapsReportedProblems(t *testing.T) {
 				t.Errorf("last part = %q, want %q", parts[len(parts)-1], testCase.wantTail)
 			}
 		})
+	}
+}
+
+func pathKeyCases() []parseCase {
+	const head = ".pulsarules.yaml: analyzers.file-size.params."
+	params := func(body string) string {
+		return "version: 1\nanalyzers:\n  file-size:\n    params: {" + body + "}\n"
+	}
+	return []parseCase{
+		{
+			"a params key made of brackets",
+			params(`"[[[": 1`),
+			[]string{head + "[[[: unknown param"},
+		},
+		{
+			"a dotted params key",
+			params(`"a.b": 1`),
+			[]string{head + "a.b: unknown param"},
+		},
+		{
+			"a dotted key beside a skipped parent",
+			"version: 1\nanalyzers:\n  file-size: [x]\n  a.b: {}\n  file-size.params: {}\n",
+			[]string{
+				".pulsarules.yaml: line 3: analyzers.file-size: want a mapping",
+				".pulsarules.yaml: analyzers.a.b: unknown analyzer",
+				".pulsarules.yaml: analyzers.file-size.params: unknown analyzer",
+			},
+		},
+		{
+			"both odd keys beside each other",
+			params(`"[": 1, "a.b": 2, "a[0]": 3`),
+			[]string{
+				head + "[: unknown param",
+				head + "a.b: unknown param",
+				head + "a[0]: unknown param",
+			},
+		},
+	}
+}
+
+func assertPlainMessage(t *testing.T, err error) {
+	t.Helper()
+	if err == nil {
+		return
+	}
+	pkg, _, _ := strings.Cut(reflect.TypeFor[File]().String(), ".")
+	for _, goText := range []string{pkg + ".", "interface", "map["} {
+		if strings.Contains(err.Error(), goText) {
+			t.Errorf("error %q names a Go type (%q)", err, goText)
+		}
+	}
+}
+
+func schemaStructs(typ reflect.Type, seen map[reflect.Type]bool) {
+	for typ.Kind() == reflect.Pointer || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
+		typ = typ.Elem()
+	}
+	if typ.Kind() != reflect.Struct || seen[typ] {
+		return
+	}
+	seen[typ] = true
+	for field := range typ.Fields() {
+		schemaStructs(field.Type, seen)
+	}
+}
+
+func TestSchemaFieldsHaveExplicitTags(t *testing.T) {
+	t.Parallel()
+
+	seen := map[reflect.Type]bool{}
+	schemaStructs(reflect.TypeFor[File](), seen)
+	if len(seen) < 4 {
+		t.Fatalf("visited %d struct types, want the whole schema", len(seen))
+	}
+	for typ := range seen {
+		for field := range typ.Fields() {
+			tag, hasTag := field.Tag.Lookup("yaml")
+			name, options, _ := strings.Cut(tag, ",")
+			if !hasTag || name == "" || strings.Contains(options, "inline") {
+				t.Errorf("%s.%s needs an explicit, non-inline yaml tag", typ.Name(), field.Name)
+			}
+		}
 	}
 }
