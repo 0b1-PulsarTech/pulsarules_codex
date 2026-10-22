@@ -3,6 +3,8 @@ package cli
 import (
 	"errors"
 	"flag"
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
@@ -28,13 +30,13 @@ func TestParse_WithoutARunner(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			call, err := Parse(testCase.args, flags.Environment{})
+			call, err := Parse(testCase.args, flags.Environment{}, io.Discard)
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
-			if call.Name != testCase.want || call.Runner != nil {
+			if call.Name != testCase.want || call.runner != nil {
 				t.Errorf("Parse() = %q with runner %v, want %q with none",
-					call.Name, call.Runner, testCase.want)
+					call.Name, call.runner, testCase.want)
 			}
 		})
 	}
@@ -58,7 +60,7 @@ func TestParse_Failures(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := Parse(testCase.args, flags.Environment{})
+			_, err := Parse(testCase.args, flags.Environment{}, io.Discard)
 			if err == nil {
 				t.Fatal("Parse() error = nil, want a failure")
 			}
@@ -103,16 +105,16 @@ func TestParse_CommonFlags(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			call, err := Parse(testCase.args, testCase.env)
+			call, err := Parse(testCase.args, testCase.env, io.Discard)
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
-			if call.Name != "generate" || call.Runner == nil || call.Env != testCase.env {
+			if call.Name != "generate" || call.runner == nil || call.env != testCase.env {
 				t.Fatalf("Parse() = %+v, want the generate runner and the caller's env", call)
 			}
-			if call.Root != testCase.wantRoot || call.LogLevel != testCase.wantLogLevel {
+			if call.root != testCase.wantRoot || call.logLevel != testCase.wantLogLevel {
 				t.Errorf("root %q log level %q, want %q and %q",
-					call.Root, call.LogLevel, testCase.wantRoot, testCase.wantLogLevel)
+					call.root, call.logLevel, testCase.wantRoot, testCase.wantLogLevel)
 			}
 		})
 	}
@@ -124,11 +126,45 @@ func TestParse_KeepsPositionalArguments(t *testing.T) {
 	call, err := Parse(
 		[]string{"generate", "--out", "x", "rest", "--out", "y"},
 		flags.Environment{},
+		io.Discard,
 	)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if len(call.Args) != 3 || call.Args[0] != "rest" {
-		t.Errorf("Args = %q, want the arguments after the first positional", call.Args)
+	if len(call.args) != 3 || call.args[0] != "rest" {
+		t.Errorf("Args = %q, want the arguments after the first positional", call.args)
+	}
+}
+
+type failingWriter struct{ err error }
+
+func (writer failingWriter) Write([]byte) (int, error) { return 0, writer.err }
+
+func TestParse_HelpWritesTheUsage(t *testing.T) {
+	t.Parallel()
+
+	for _, candidate := range table() {
+		t.Run(candidate.name, func(t *testing.T) {
+			t.Parallel()
+
+			var out strings.Builder
+			_, err := Parse([]string{candidate.name, "-h"}, flags.Environment{}, &out)
+			if !errors.Is(err, flag.ErrHelp) {
+				t.Fatalf("Parse() error = %v, want flag.ErrHelp", err)
+			}
+			if want := wantUsage(t); out.String() != want {
+				t.Errorf("usage = %q, want the full usage text", out.String())
+			}
+		})
+	}
+}
+
+func TestParse_UnprintableUsageIsAnError(t *testing.T) {
+	t.Parallel()
+
+	wantErr := errors.New("closed pipe")
+	_, err := Parse([]string{"list", "-h"}, flags.Environment{}, failingWriter{err: wantErr})
+	if !errors.Is(err, wantErr) || errors.Is(err, flag.ErrHelp) {
+		t.Errorf("Parse() error = %v, want %v and not flag.ErrHelp", err, wantErr)
 	}
 }

@@ -12,7 +12,7 @@ import (
 )
 
 func (call Invocation) Run(inj remy.Injector) error {
-	return call.Runner.Run(inj, call.Args)
+	return call.runner.Run(inj, call.args)
 }
 
 func (call Invocation) HandleBootstrapErr(err error) int {
@@ -30,13 +30,13 @@ func ReportError(out io.Writer, err error) {
 func (call Invocation) BootstrapOptions() bootstrap.Options {
 	// The bootstrap package never imports cli, so the translation lives here.
 	projectDir := "."
-	if anchored, ok := call.Runner.(anchored); ok {
+	if anchored, ok := call.runner.(anchored); ok {
 		projectDir = anchored.ProjectDir()
 	}
 	return bootstrap.Options{
-		Root:       call.Root,
+		Root:       call.root,
 		ProjectDir: projectDir,
-		LogLevel:   call.LogLevel,
-		LogPath:    call.Env.LogPath,
+		LogLevel:   call.logLevel,
+		LogPath:    call.env.LogPath,
 	}
 }

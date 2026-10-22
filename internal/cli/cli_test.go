@@ -25,7 +25,7 @@ import (
 func TestRun_UnknownCommand(t *testing.T) {
 	t.Parallel()
 
-	_, err := Parse([]string{"frobnicate"}, flags.Environment{})
+	_, err := Parse([]string{"frobnicate"}, flags.Environment{}, io.Discard)
 	if err == nil {
 		t.Fatal("expected an error for an unknown command")
 	}
@@ -68,7 +68,7 @@ func TestRun_PrefixesInstallAndUninstallErrors(t *testing.T) {
 			if idx := slices.Index(args, "--project"); idx >= 0 {
 				args[idx+1] = t.TempDir()
 			}
-			call, err := Parse(args, flags.Environment{})
+			call, err := Parse(args, flags.Environment{}, io.Discard)
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
@@ -99,7 +99,7 @@ func TestHandleBootstrapErr(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			call, err := Parse(testCase.args, flags.Environment{})
+			call, err := Parse(testCase.args, flags.Environment{}, io.Discard)
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
@@ -159,7 +159,11 @@ func TestBootstrapOptions_ProjectDir(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			call, err := Parse(testCase.args, flags.Environment{ProjectDir: "/from-env"})
+			call, err := Parse(
+				testCase.args,
+				flags.Environment{ProjectDir: "/from-env"},
+				io.Discard,
+			)
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
@@ -177,6 +181,7 @@ func TestBootstrapOptions_ReadsTheEnvironmentOnce(t *testing.T) {
 	call, err := Parse(
 		[]string{"hook", "--root", "/root", "stop"},
 		flags.Environment{LogPath: logPath},
+		io.Discard,
 	)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
@@ -185,7 +190,7 @@ func TestBootstrapOptions_ReadsTheEnvironmentOnce(t *testing.T) {
 	if got.LogPath != logPath || got.Root != "/root" {
 		t.Errorf("BootstrapOptions() = %+v, want LogPath %q and Root /root", got, logPath)
 	}
-	unset, err := Parse([]string{"hook"}, flags.Environment{})
+	unset, err := Parse([]string{"hook"}, flags.Environment{}, io.Discard)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
@@ -258,7 +263,7 @@ func TestRun_GovernanceReportsFindings(t *testing.T) {
 			if testCase.scope != "" {
 				args = append(args, "--scope", testCase.scope)
 			}
-			call, err := Parse(args, flags.Environment{})
+			call, err := Parse(args, flags.Environment{}, io.Discard)
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
@@ -300,7 +305,11 @@ func TestCatalogFailureFailsTheCommand(t *testing.T) {
 		{
 			name: "commit-lint",
 			run: func(inj remy.Injector) error {
-				call, err := Parse([]string{"commitlint", "--msg", "feat: x"}, flags.Environment{})
+				call, err := Parse(
+					[]string{"commitlint", "--msg", "feat: x"},
+					flags.Environment{},
+					io.Discard,
+				)
 				if err != nil {
 					return err
 				}
@@ -310,7 +319,11 @@ func TestCatalogFailureFailsTheCommand(t *testing.T) {
 		{
 			name: "governance",
 			run: func(inj remy.Injector) error {
-				call, err := Parse([]string{"governance", "--project", "."}, flags.Environment{})
+				call, err := Parse(
+					[]string{"governance", "--project", "."},
+					flags.Environment{},
+					io.Discard,
+				)
 				if err != nil {
 					return err
 				}

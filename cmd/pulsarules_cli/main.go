@@ -19,7 +19,7 @@ func main() {
 	if tssyntax.RunChild(os.Args, os.Exit) {
 		return
 	}
-	call, err := cli.Parse(os.Args[1:], flags.ReadEnvironment())
+	call, err := cli.Parse(os.Args[1:], flags.ReadEnvironment(), os.Stdout)
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(0)
@@ -28,7 +28,9 @@ func main() {
 	}
 
 	if call.Name == "" || cli.IsHelp(call.Name) {
-		_ = cli.Usage()
+		if err = cli.Usage(os.Stdout); err != nil {
+			die(err)
+		}
 		return
 	}
 	if version.IsVersion(call.Name) {

@@ -2,10 +2,8 @@ package cli
 
 import (
 	_ "embed"
-	"flag"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
@@ -15,11 +13,7 @@ import (
 //go:embed usage.txt
 var usageProse string
 
-func Usage() error {
-	return writeUsage(os.Stdout)
-}
-
-func writeUsage(out io.Writer) error {
+func Usage(out io.Writer) error {
 	synopsis, err := synopsisLines()
 	if err != nil {
 		return err
@@ -39,11 +33,9 @@ func writeUsage(out io.Writer) error {
 func synopsisLines() ([]string, error) {
 	lines := make([]string, 0, len(table())+1)
 	for _, candidate := range table() {
-		runner := candidate.build(flags.Environment{})
-		flagSet := flag.NewFlagSet(candidate.name, flag.ContinueOnError)
 		var root, logLevel string
-		flags.BindCommon(flagSet, &root, &logLevel, flags.Environment{})
-		runner.Bind(flagSet)
+		env := flags.Environment{}
+		flagSet := newFlagSet(candidate.name, candidate.build(env), env, &root, &logLevel)
 		terms, err := command.Synopsis(flagSet, candidate.terms)
 		if err != nil {
 			return nil, fmt.Errorf("synopsis of %s: %w", candidate.name, err)
