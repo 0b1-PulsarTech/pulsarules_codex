@@ -124,17 +124,33 @@ func TestPrivateRulesWithoutBase(t *testing.T) {
 func TestPrivateRulesLeaveTheSharedIDsAlone(t *testing.T) {
 	t.Parallel()
 
-	shared := make([]string, 1, 8)
-	shared[0] = "file-size"
-	rules := projectfile.Rules{AnalyzerIDs: shared}
-	base := &projectfile.File{Delegated: []projectfile.DelegatedEntry{{ID: "x"}}}
+	testCases := []struct {
+		name      string
+		delegated []string
+	}{
+		{"one delegated id", []string{"x"}},
+		{"two delegated ids", []string{"x", "y"}},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 
-	first := privateRules(rules, base).AnalyzerIDs
-	other := &projectfile.File{Delegated: []projectfile.DelegatedEntry{{ID: "y"}}}
-	privateRules(rules, other)
-	if first[1] != "x" || shared[:2][1] != "" {
-		t.Fatalf("ids = %v, shared spare slot = %q, want the loader rules untouched",
-			first, shared[:2][1])
+			shared := make([]string, 1, 8)
+			shared[0] = "file-size"
+			base := &projectfile.File{}
+			for _, id := range testCase.delegated {
+				base.Delegated = append(base.Delegated, projectfile.DelegatedEntry{ID: id})
+			}
+
+			got := privateRules(projectfile.Rules{AnalyzerIDs: shared}, base).AnalyzerIDs
+			want := slices.Concat([]string{"file-size"}, testCase.delegated)
+			if !slices.Equal(got, want) {
+				t.Fatalf("ids = %v, want %v", got, want)
+			}
+			if spare := shared[:len(want)]; slices.Contains(spare[1:], "x") {
+				t.Fatalf("shared spare slots = %v, want the loader rules untouched", spare)
+			}
+		})
 	}
 }
 
