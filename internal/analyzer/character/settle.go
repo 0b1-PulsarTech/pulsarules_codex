@@ -1,6 +1,8 @@
 package character
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+)
 
 type hintedFinding struct {
 	finding finding.Finding

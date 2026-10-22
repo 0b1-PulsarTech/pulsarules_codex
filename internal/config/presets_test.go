@@ -1,16 +1,12 @@
-package projectfile
+package config
 
-import (
-	"testing"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
-)
+import "testing"
 
 func TestApplyPreset_RecommendedDefaults(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.Defaults()
-	cfg.Preset = config.PresetRecommended
+	cfg := Defaults()
+	cfg.Preset = PresetRecommended
 	cfg.ApplyPreset()
 
 	if isEnabled(cfg, "complexity") != true {
@@ -21,8 +17,8 @@ func TestApplyPreset_RecommendedDefaults(t *testing.T) {
 func TestApplyPreset_Minimal(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.Defaults()
-	cfg.Preset = config.PresetMinimal
+	cfg := Defaults()
+	cfg.Preset = PresetMinimal
 	cfg.ApplyPreset()
 
 	if isEnabled(cfg, "complexity") {
@@ -54,8 +50,8 @@ func TestApplyPreset_Minimal(t *testing.T) {
 func TestApplyPreset_Strict(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.Defaults()
-	cfg.Preset = config.PresetStrict
+	cfg := Defaults()
+	cfg.Preset = PresetStrict
 	cfg.ApplyPreset()
 
 	if !isEnabled(cfg, "file-size") {
@@ -69,7 +65,7 @@ func TestApplyPreset_Strict(t *testing.T) {
 func TestApplyPreset_UnknownIsNoOp(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.Defaults()
+	cfg := Defaults()
 	cfg.Preset = "unknown"
 	cfg.ApplyPreset()
 
@@ -81,8 +77,8 @@ func TestApplyPreset_UnknownIsNoOp(t *testing.T) {
 func TestApplyPreset_StrictOverridesMaxLinesParam(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.Defaults()
-	cfg.Preset = config.PresetStrict
+	cfg := Defaults()
+	cfg.Preset = PresetStrict
 	cfg.ApplyPreset()
 
 	maxLines := cfg.Analyzers["file-size"].Params["max_lines"]
@@ -97,16 +93,16 @@ func TestApplyPreset_StrictOverridesMaxLinesParam(t *testing.T) {
 func TestValidPreset(t *testing.T) {
 	t.Parallel()
 
-	if !config.ValidPreset(config.PresetRecommended) {
+	if !ValidPreset(PresetRecommended) {
 		t.Error("recommended should be valid")
 	}
-	if !config.ValidPreset(config.PresetStrict) {
+	if !ValidPreset(PresetStrict) {
 		t.Error("strict should be valid")
 	}
-	if !config.ValidPreset(config.PresetMinimal) {
+	if !ValidPreset(PresetMinimal) {
 		t.Error("minimal should be valid")
 	}
-	if config.ValidPreset("unknown") {
+	if ValidPreset("unknown") {
 		t.Error("unknown should not be valid")
 	}
 }
@@ -116,11 +112,11 @@ func TestPresets(t *testing.T) {
 
 	const wantPresetCount = 3
 
-	list := config.Presets()
+	list := Presets()
 	if len(list) != wantPresetCount {
 		t.Fatalf("expected %d presets, got %d: %v", wantPresetCount, len(list), list)
 	}
-	if list[0] != config.PresetRecommended {
+	if list[0] != PresetRecommended {
 		t.Errorf("first preset should be recommended, got %q", list[0])
 	}
 }
@@ -143,8 +139,8 @@ func TestApplyPreset_MinimalDisablesNewAnalyzers(t *testing.T) {
 		t.Run(testCase, func(t *testing.T) {
 			t.Parallel()
 
-			cfg := config.Defaults()
-			cfg.Preset = config.PresetMinimal
+			cfg := Defaults()
+			cfg.Preset = PresetMinimal
 			cfg.ApplyPreset()
 
 			if isEnabled(cfg, testCase) {
@@ -157,8 +153,8 @@ func TestApplyPreset_MinimalDisablesNewAnalyzers(t *testing.T) {
 func TestApplyPreset_MinimalSingleLetters(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.Defaults()
-	cfg.Preset = config.PresetMinimal
+	cfg := Defaults()
+	cfg.Preset = PresetMinimal
 	cfg.ApplyPreset()
 
 	got := cfg.Analyzers["single-letter-name"]
@@ -177,11 +173,11 @@ func TestPresetTable(t *testing.T) {
 		wantNilMap bool
 	}{
 		{
-			name: "recommended lists no override", preset: config.PresetRecommended,
+			name: "recommended lists no override", preset: PresetRecommended,
 			wantValid: true, wantNilMap: true,
 		},
-		{name: "strict lists overrides", preset: config.PresetStrict, wantValid: true},
-		{name: "minimal lists overrides", preset: config.PresetMinimal, wantValid: true},
+		{name: "strict lists overrides", preset: PresetStrict, wantValid: true},
+		{name: "minimal lists overrides", preset: PresetMinimal, wantValid: true},
 		{name: "empty is not a preset", preset: ""},
 		{name: "case matters", preset: "Strict"},
 	}
@@ -189,10 +185,10 @@ func TestPresetTable(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := config.ValidPreset(testCase.preset); got != testCase.wantValid {
+			if got := ValidPreset(testCase.preset); got != testCase.wantValid {
 				t.Errorf("ValidPreset(%q) = %v, want %v", testCase.preset, got, testCase.wantValid)
 			}
-			cfg := &config.GovernanceConfig{Preset: testCase.preset}
+			cfg := &GovernanceConfig{Preset: testCase.preset}
 			cfg.ApplyPreset()
 			if (cfg.Analyzers == nil) != (testCase.wantNilMap || !testCase.wantValid) {
 				t.Errorf("Analyzers = %v after ApplyPreset(%q)", cfg.Analyzers, testCase.preset)
@@ -208,8 +204,8 @@ func TestPresets_ReadNamesWithoutBuildingOverrides(t *testing.T) {
 		name string
 		call func()
 	}{
-		{"Presets", func() { _ = config.Presets() }},
-		{"ValidPreset", func() { _ = config.ValidPreset(config.PresetStrict) }},
+		{"Presets", func() { _ = Presets() }},
+		{"ValidPreset", func() { _ = ValidPreset(PresetStrict) }},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -247,10 +243,7 @@ func TestUnknownPreset(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := config.UnknownPreset(
-				testCase.subject,
-				testCase.preset,
-			); got != testCase.want {
+			if got := UnknownPreset(testCase.subject, testCase.preset); got != testCase.want {
 				t.Fatalf("UnknownPreset() = %q, want %q", got, testCase.want)
 			}
 		})

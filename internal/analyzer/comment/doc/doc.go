@@ -27,7 +27,11 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	})
 }
 
-func checkFile(fc pass.FileChange, file *syntax.File, reporter finding.Reporter) []finding.Finding {
+func checkFile(
+	fc pass.FileChange,
+	file *syntax.File,
+	reporter finding.Reporter,
+) []finding.Finding {
 	var findings []finding.Finding
 	for _, site := range file.DocSites {
 		if site.Exempt {

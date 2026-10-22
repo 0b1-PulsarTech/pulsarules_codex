@@ -83,7 +83,11 @@ func (analyzer *TypographicAnalyzer) Analyze(ctx *pass.Context) []finding.Findin
 	})
 }
 
-func checkTypographic(fc pass.FileChange, src string, reporter finding.Reporter) []finding.Finding {
+func checkTypographic(
+	fc pass.FileChange,
+	src string,
+	reporter finding.Reporter,
+) []finding.Finding {
 	typographic := func(class invisible.Class) bool { return class == invisible.ClassTypographic }
 	return settle(hintMarks(fc, src, typographic, func(
 		found invisible.Mark, literals language.Literals, code markdown.Code,

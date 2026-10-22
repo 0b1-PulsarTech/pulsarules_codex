@@ -39,7 +39,11 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	})
 }
 
-func checkFile(fc pass.FileChange, file *syntax.File, reporter finding.Reporter) []finding.Finding {
+func checkFile(
+	fc pass.FileChange,
+	file *syntax.File,
+	reporter finding.Reporter,
+) []finding.Finding {
 	if len(file.ImportGroups) == 0 || len(file.Imports) == 0 {
 		return nil
 	}

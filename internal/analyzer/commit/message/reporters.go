@@ -1,6 +1,8 @@
 package message
 
-import "github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+)
 
 type rule int
 
