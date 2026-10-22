@@ -8,8 +8,6 @@ type Options struct {
 	LogLevel string
 	Env      flags.Environment
 
-	Out string
-
 	Global      bool
 	Project     string
 	All         bool
@@ -49,10 +47,4 @@ type Options struct {
 
 	Scenario string
 	Artifact string
-}
-
-func (opts *Options) applyDefaults() {
-	if opts.Command == "package" && opts.Out == "" {
-		opts.Out = defaultOut("build", "standards-skills.zip")
-	}
 }

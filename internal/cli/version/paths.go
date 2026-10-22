@@ -52,7 +52,3 @@ func IsHelp(command string) bool {
 	}
 	return false
 }
-
-func defaultOut(parts ...string) string {
-	return filepath.Join(append([]string{"."}, parts...)...)
-}

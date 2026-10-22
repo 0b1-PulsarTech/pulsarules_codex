@@ -16,7 +16,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/list"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/packaging"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/uninstall"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/validate"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
@@ -31,7 +30,6 @@ func commands() map[string]handler {
 		"uninstall":  prefixed("uninstall", uninstall.Run),
 		"list":       list.RunList,
 		"validate":   validate.RunValidate,
-		"package":    packaging.RunPackage,
 		"hook":       hook.RunHook,
 		"commitlint": commitlint.RunCommitLint,
 		"governance": governance.RunGovernance,

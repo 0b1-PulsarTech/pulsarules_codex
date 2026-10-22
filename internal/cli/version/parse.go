@@ -31,7 +31,6 @@ func ParseArgs(args []string, env flags.Environment) (*Options, error) {
 	}
 
 	parsePositionalArgs(opts, fs)
-	opts.applyDefaults()
 	return opts, nil
 }
 
@@ -41,7 +40,6 @@ func commandBinders() map[string]flagBinder {
 	return map[string]flagBinder{
 		"install":    bindInstallFlags,
 		"uninstall":  bindUninstallFlags,
-		"package":    bindPackageFlags,
 		"list":       bindNoFlags,
 		"validate":   bindNoFlags,
 		"hook":       bindNoFlags,
@@ -62,15 +60,6 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 }
 
 func bindNoFlags(*flag.FlagSet, *Options) {}
-
-func bindPackageFlags(fs *flag.FlagSet, opts *Options) {
-	fs.StringVar(
-		&opts.Out,
-		"out",
-		"",
-		"output zip path (defaults to ./build/standards-skills.zip)",
-	)
-}
 
 func bindCommitLintFlags(fs *flag.FlagSet, opts *Options) {
 	fs.StringVar(&opts.CommitMsg, "msg", "", "commit message to validate")
