@@ -17,15 +17,15 @@ const (
 
 type preset struct {
 	name      string
-	analyzers map[string]pass.AnalyzerConfig
+	analyzers func() map[string]pass.AnalyzerConfig
 }
 
 func presetTable() []preset {
 	// Only overrides relative to the default are listed; absent analyzers stay enabled.
 	return []preset{
 		{name: PresetRecommended},
-		{name: PresetStrict, analyzers: strictAnalyzers()},
-		{name: PresetMinimal, analyzers: minimalAnalyzers()},
+		{name: PresetStrict, analyzers: strictAnalyzers},
+		{name: PresetMinimal, analyzers: minimalAnalyzers},
 	}
 }
 
@@ -84,15 +84,15 @@ func strictAnalyzers() map[string]pass.AnalyzerConfig {
 }
 
 func (govCfg *GovernanceConfig) ApplyPreset() {
+	// Unknown presets are left alone; callers validate the name before this.
 	for _, listed := range presetTable() {
-		// Unknown presets are left alone; callers validate the name before this.
 		if listed.name != govCfg.Preset || listed.analyzers == nil {
 			continue
 		}
 		if govCfg.Analyzers == nil {
 			govCfg.Analyzers = make(map[string]pass.AnalyzerConfig)
 		}
-		maps.Copy(govCfg.Analyzers, listed.analyzers)
+		maps.Copy(govCfg.Analyzers, listed.analyzers())
 	}
 }
 

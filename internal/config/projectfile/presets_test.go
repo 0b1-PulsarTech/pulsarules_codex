@@ -197,3 +197,23 @@ func TestPresetTable(t *testing.T) {
 		})
 	}
 }
+
+//nolint:paralleltest // testing.AllocsPerRun panics inside a parallel test.
+func TestPresets_ReadNamesWithoutBuildingOverrides(t *testing.T) {
+	const namesOnly = 1
+	testCases := []struct {
+		name string
+		call func()
+	}{
+		{"Presets", func() { _ = config.Presets() }},
+		{"ValidPreset", func() { _ = config.ValidPreset(config.PresetStrict) }},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if allocs := testing.AllocsPerRun(10, testCase.call); allocs > namesOnly {
+				t.Fatalf("%s allocates %v times, want at most %d (the name slice)",
+					testCase.name, allocs, namesOnly)
+			}
+		})
+	}
+}
