@@ -22,16 +22,16 @@ type importFacts struct {
 	out   []syntax.Import
 }
 
-func (facts *importFacts) collect(statements []*ast.Node) {
+func (imports *importFacts) collect(statements []*ast.Node) {
 	for _, stmt := range statements {
 		spec := importSpecifier(stmt)
 		if spec == nil {
 			continue
 		}
-		facts.out = append(facts.out, syntax.Import{
-			Literal: facts.sourceOf(spec),
-			Line:    facts.lineAt(stmt.Pos()),
-			Group:   facts.importGroup(spec),
+		imports.out = append(imports.out, syntax.Import{
+			Literal: imports.sourceOf(spec),
+			Line:    imports.lineAt(stmt.Pos()),
+			Group:   imports.importGroup(spec),
 		})
 	}
 }
@@ -57,7 +57,7 @@ func importGroupNames() []string {
 	return names
 }
 
-func (facts *importFacts) importGroup(spec *ast.Node) int {
+func (imports *importFacts) importGroup(spec *ast.Node) int {
 	if spec.Kind != ast.KindStringLiteral {
 		return groupExternal
 	}
@@ -67,7 +67,7 @@ func (facts *importFacts) importGroup(spec *ast.Node) int {
 		return groupBuiltin
 	case strings.HasPrefix(path, "."), strings.HasPrefix(path, "/"):
 		return groupLocal
-	case isAliasSpelling(path), facts.matchesLocal(path):
+	case isAliasSpelling(path), imports.matchesLocal(path):
 		return groupLocal
 	}
 	return groupExternal
@@ -78,8 +78,8 @@ func isAliasSpelling(path string) bool {
 		strings.HasPrefix(path, "~/") || path == "$lib" || strings.HasPrefix(path, "$lib/")
 }
 
-func (facts *importFacts) matchesLocal(path string) bool {
-	return slices.ContainsFunc(facts.local, func(pattern string) bool {
+func (imports *importFacts) matchesLocal(path string) bool {
+	return slices.ContainsFunc(imports.local, func(pattern string) bool {
 		_, ok := pathalias.Match(pattern, path)
 		return ok
 	})

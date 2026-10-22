@@ -16,11 +16,11 @@ import (
 func collectOf(t *testing.T, text string, options Options) syntax.File {
 	t.Helper()
 
-	facts, err := Collect(tsparse.Parse(text, core.ScriptKindTS), text, options)
+	file, err := Collect(tsparse.Parse(text, core.ScriptKindTS), text, options)
 	if err != nil {
 		t.Fatalf("collect: %v", err)
 	}
-	return facts
+	return file
 }
 
 func parseOf(t *testing.T, text string) (*ast.Node, source) {
@@ -163,12 +163,12 @@ func TestCollect(t *testing.T) {
 			t.Parallel()
 
 			root := tsparse.Parse(testCase.text, core.ScriptKindTS)
-			facts, err := Collect(root, testCase.text, Options{})
+			file, err := Collect(root, testCase.text, Options{})
 			if !errors.Is(err, testCase.wantErr) {
 				t.Fatalf("error %v, want %v", err, testCase.wantErr)
 			}
-			if len(facts.Functions) != testCase.wantFns {
-				t.Fatalf("%d functions, want %d", len(facts.Functions), testCase.wantFns)
+			if len(file.Functions) != testCase.wantFns {
+				t.Fatalf("%d functions, want %d", len(file.Functions), testCase.wantFns)
 			}
 		})
 	}
@@ -178,19 +178,19 @@ func TestCollectCommonJSExportsAreCountedOnce(t *testing.T) {
 	t.Parallel()
 
 	text := "module.exports = { f: function (a) {} };\nexports.g = (b) => { return b; };\n"
-	facts, err := Collect(tsparse.Parse(text, core.ScriptKindJS), text, Options{})
+	file, err := Collect(tsparse.Parse(text, core.ScriptKindJS), text, Options{})
 	if err != nil {
 		t.Fatalf("collect: %v", err)
 	}
-	names := make([]string, 0, len(facts.Functions))
-	for _, fn := range facts.Functions {
+	names := make([]string, 0, len(file.Functions))
+	for _, fn := range file.Functions {
 		names = append(names, fn.Name)
 	}
 	if want := []string{"f", "g"}; !slices.Equal(names, want) {
 		t.Fatalf("functions %v, want %v", names, want)
 	}
-	if len(facts.Names) != 2 {
-		t.Fatalf("names %+v, want the two parameters once", facts.Names)
+	if len(file.Names) != 2 {
+		t.Fatalf("names %+v, want the two parameters once", file.Names)
 	}
 }
 
@@ -204,28 +204,28 @@ func TestCollectWiresEveryFact(t *testing.T) {
 		got  func(syntax.File) int
 		want int
 	}{
-		{"functions", nested, func(facts syntax.File) int { return len(facts.Functions) }, 1},
+		{"functions", nested, func(file syntax.File) int { return len(file.Functions) }, 1},
 		{
 			"complexity",
 			nested,
-			func(facts syntax.File) int { return facts.Functions[0].Complexity },
+			func(file syntax.File) int { return file.Functions[0].Complexity },
 			2,
 		},
-		{"blocks", nested, func(facts syntax.File) int { return len(facts.Blocks) }, 1},
-		{"names", nested, func(facts syntax.File) int { return len(facts.Names) }, 2},
+		{"blocks", nested, func(file syntax.File) int { return len(file.Blocks) }, 1},
+		{"names", nested, func(file syntax.File) int { return len(file.Names) }, 2},
 		{
 			"imports",
 			"import x from 'pkg';\n",
-			func(facts syntax.File) int { return len(facts.Imports) },
+			func(file syntax.File) int { return len(file.Imports) },
 			1,
 		},
 		{
 			"import groups", "import x from 'pkg';\n",
-			func(facts syntax.File) int { return len(facts.ImportGroups) }, 3,
+			func(file syntax.File) int { return len(file.ImportGroups) }, 3,
 		},
 		{
 			"doc sites", "/** a */\nfunction g() {}\n",
-			func(facts syntax.File) int { return len(facts.DocSites) }, 1,
+			func(file syntax.File) int { return len(file.DocSites) }, 1,
 		},
 	}
 	for _, testCase := range testCases {

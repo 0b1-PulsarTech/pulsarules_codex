@@ -26,22 +26,22 @@ func exportedLocals(statements []*ast.Node) map[string]bool {
 	return locals
 }
 
-func (facts *nameFacts) addExported(name *ast.Node, template syntax.Name) {
-	before := len(facts.out)
-	facts.addName(name, template)
-	if len(facts.out) > before {
-		added := &facts.out[before]
-		added.Exported = facts.exported(name, added.Name)
+func (names *nameFacts) addExported(name *ast.Node, template syntax.Name) {
+	before := len(names.out)
+	names.addName(name, template)
+	if len(names.out) > before {
+		added := &names.out[before]
+		added.Exported = names.exported(name, added.Name)
 	}
 }
 
-func (facts *nameFacts) exported(name *ast.Node, text string) bool {
+func (names *nameFacts) exported(name *ast.Node, text string) bool {
 	declaration := declarationOf(name)
 	if declaration == nil || declaration.Parent == nil ||
 		declaration.Parent.Kind != ast.KindSourceFile {
 		return false
 	}
-	return ast.HasSyntacticModifier(declaration, ast.ModifierFlagsExport) || facts.locals[text]
+	return ast.HasSyntacticModifier(declaration, ast.ModifierFlagsExport) || names.locals[text]
 }
 
 func declarationOf(name *ast.Node) *ast.Node {

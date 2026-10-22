@@ -40,7 +40,7 @@ func Collect(root *ast.SourceFile, text string, options Options) (syntax.File, e
 	if err := newWalker(functions, complexityFacts{functions}, names).run(node); err != nil {
 		return syntax.File{}, err
 	}
-	facts := syntax.File{
+	file := syntax.File{
 		Functions: functions.out,
 		Blocks:    functions.blocks,
 		Names:     names.out,
@@ -48,9 +48,9 @@ func Collect(root *ast.SourceFile, text string, options Options) (syntax.File, e
 		DocSites:  docs.out,
 	}
 	if len(imports.out) > 0 {
-		facts.ImportGroups = importGroupNames()
+		file.ImportGroups = importGroupNames()
 	}
-	return facts, nil
+	return file, nil
 }
 
 func newWalker(functions *functionFacts, visitors ...nodeVisitor) *walker {

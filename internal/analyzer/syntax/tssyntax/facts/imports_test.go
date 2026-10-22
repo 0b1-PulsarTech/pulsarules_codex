@@ -115,12 +115,12 @@ func TestImports(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			facts := collectOf(t, testCase.text, Options{Local: testCase.local})
-			if !slices.Equal(facts.Imports, testCase.want) {
-				t.Fatalf("imports\n got %+v\nwant %+v", facts.Imports, testCase.want)
+			file := collectOf(t, testCase.text, Options{Local: testCase.local})
+			if !slices.Equal(file.Imports, testCase.want) {
+				t.Fatalf("imports\n got %+v\nwant %+v", file.Imports, testCase.want)
 			}
-			if !slices.Equal(facts.ImportGroups, testCase.wantGroups) {
-				t.Fatalf("groups %v, want %v", facts.ImportGroups, testCase.wantGroups)
+			if !slices.Equal(file.ImportGroups, testCase.wantGroups) {
+				t.Fatalf("groups %v, want %v", file.ImportGroups, testCase.wantGroups)
 			}
 		})
 	}

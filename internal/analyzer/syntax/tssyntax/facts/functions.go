@@ -25,54 +25,54 @@ func isFunction(kind ast.Kind) bool {
 	return false
 }
 
-func (facts *functionFacts) enter(node *ast.Node) bool {
+func (functions *functionFacts) enter(node *ast.Node) bool {
 	if !isFunction(node.Kind) {
 		return true
 	}
 	body := node.Body()
 	if body == nil {
-		return !facts.isOverload(node)
+		return !functions.isOverload(node)
 	}
-	facts.frames = append(facts.frames, facts.record(node, body))
+	functions.frames = append(functions.frames, functions.record(node, body))
 	return true
 }
 
-func (facts *functionFacts) leave(node *ast.Node) {
+func (functions *functionFacts) leave(node *ast.Node) {
 	if isFunction(node.Kind) && node.Body() != nil {
-		facts.frames = facts.frames[:len(facts.frames)-1]
+		functions.frames = functions.frames[:len(functions.frames)-1]
 	}
 }
 
-func (facts *functionFacts) record(node, body *ast.Node) int {
-	who := facts.identify(node)
-	container := facts.isTest && who.kind == syntax.FuncClosure && isTestCallback(node)
-	nested := who.kind == syntax.FuncClosure && !who.bound && len(facts.frames) > 0
+func (functions *functionFacts) record(node, body *ast.Node) int {
+	who := functions.identify(node)
+	container := functions.isTest && who.kind == syntax.FuncClosure && isTestCallback(node)
+	nested := who.kind == syntax.FuncClosure && !who.bound && len(functions.frames) > 0
 	fn := syntax.Function{
 		Name:          who.name,
 		Kind:          who.kind,
-		Line:          facts.declarationLine(node),
-		BodyStart:     facts.lineAt(body.Pos()),
-		BodyEnd:       facts.lines.Of(max(body.End()-1, body.Pos())),
+		Line:          functions.declarationLine(node),
+		BodyStart:     functions.lineAt(body.Pos()),
+		BodyEnd:       functions.lines.Of(max(body.End()-1, body.Pos())),
 		Params:        countParams(node),
 		Complexity:    1,
 		TestContainer: container,
 		Nested:        nested,
 	}
 	if body.Kind == ast.KindBlock && (!nested || container) {
-		facts.addBlocks(body)
+		functions.addBlocks(body)
 	}
-	facts.out = append(facts.out, fn)
-	return len(facts.out) - 1
+	functions.out = append(functions.out, fn)
+	return len(functions.out) - 1
 }
 
-func (facts *functionFacts) declarationLine(node *ast.Node) int {
+func (functions *functionFacts) declarationLine(node *ast.Node) int {
 	if name := node.Name(); name != nil && ast.HasDecorators(node) {
-		return facts.lineAt(name.Pos())
+		return functions.lineAt(name.Pos())
 	}
-	return facts.lineAt(node.Pos())
+	return functions.lineAt(node.Pos())
 }
 
-func (facts *functionFacts) isOverload(node *ast.Node) bool {
+func (functions *functionFacts) isOverload(node *ast.Node) bool {
 	switch node.Kind {
 	case ast.KindFunctionDeclaration, ast.KindMethodDeclaration, ast.KindConstructor:
 	default:
@@ -91,9 +91,9 @@ func (facts *functionFacts) isOverload(node *ast.Node) bool {
 	if index < 0 {
 		return false
 	}
-	own := facts.nameOr(node.Name(), "")
+	own := functions.nameOr(node.Name(), "")
 	for _, next := range siblings[index+1:] {
-		if next.Kind != node.Kind || facts.nameOr(next.Name(), "") != own {
+		if next.Kind != node.Kind || functions.nameOr(next.Name(), "") != own {
 			return false
 		}
 		if next.Body() != nil {

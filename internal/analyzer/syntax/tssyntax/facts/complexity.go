@@ -8,12 +8,12 @@ import (
 
 type complexityFacts struct{ functions *functionFacts }
 
-func (facts complexityFacts) visit(node *ast.Node) {
+func (complexity complexityFacts) visit(node *ast.Node) {
 	if !branches(node) {
 		return
 	}
-	for _, frame := range slices.Backward(facts.functions.frames) {
-		fn := &facts.functions.out[frame]
+	for _, frame := range slices.Backward(complexity.functions.frames) {
+		fn := &complexity.functions.out[frame]
 		fn.Complexity++
 		if !fn.Nested || fn.TestContainer {
 			return
