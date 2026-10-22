@@ -19,7 +19,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
-const helperEnv = "TSPROC_HELPER"
+const helperEnv = "SANDBOX_HELPER"
 
 func TestMain(m *testing.M) {
 	const helperFields = 3
