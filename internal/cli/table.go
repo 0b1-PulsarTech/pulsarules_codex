@@ -28,10 +28,6 @@ func table() []entry {
 			build: func(flags.Environment) command.Runner { return &generate.Command{} },
 		},
 		{
-			name:  "package",
-			build: func(flags.Environment) command.Runner { return &packaging.Command{} },
-		},
-		{
 			name:  "validate",
 			build: func(flags.Environment) command.Runner { return validate.Command{} },
 		},
@@ -40,12 +36,16 @@ func table() []entry {
 			build: func(flags.Environment) command.Runner { return list.Command{} },
 		},
 		{
-			name:  "evals",
-			build: func(flags.Environment) command.Runner { return &evals.Command{} },
+			name:  "install",
+			build: func(env flags.Environment) command.Runner { return install.New(env) },
 		},
 		{
-			name:  "clean",
-			build: func(flags.Environment) command.Runner { return &clean.Command{} },
+			name:  "uninstall",
+			build: func(env flags.Environment) command.Runner { return uninstall.New(env) },
+		},
+		{
+			name:  "package",
+			build: func(flags.Environment) command.Runner { return &packaging.Command{} },
 		},
 		{
 			name:  "commitlint",
@@ -56,12 +56,12 @@ func table() []entry {
 			build: func(env flags.Environment) command.Runner { return governance.New(env) },
 		},
 		{
-			name:  "install",
-			build: func(env flags.Environment) command.Runner { return install.New(env) },
+			name:  "clean",
+			build: func(flags.Environment) command.Runner { return &clean.Command{} },
 		},
 		{
-			name:  "uninstall",
-			build: func(env flags.Environment) command.Runner { return uninstall.New(env) },
+			name:  "evals",
+			build: func(flags.Environment) command.Runner { return &evals.Command{} },
 		},
 		{
 			name:  "hook",
