@@ -312,36 +312,3 @@ func workDir(t *testing.T) string {
 	}
 	return dir
 }
-
-func TestParseArgs_LogLevelDefaultsFromTheEnvironment(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name string
-		env  string
-		args []string
-		want string
-	}{
-		{name: "unset env and no flag", args: []string{"clean"}, want: ""},
-		{name: "env sets the default", env: "debug", args: []string{"clean"}, want: "debug"},
-		{
-			name: "flag beats env",
-			env:  "debug",
-			args: []string{"clean", "--log-level", "error"},
-			want: "error",
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			opts, err := ParseArgs(testCase.args, flags.Environment{LogLevel: testCase.env})
-			if err != nil {
-				t.Fatalf("ParseArgs: %v", err)
-			}
-			if opts.LogLevel != testCase.want {
-				t.Errorf("LogLevel = %q, want %q", opts.LogLevel, testCase.want)
-			}
-		})
-	}
-}

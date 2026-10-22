@@ -4,14 +4,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible/cleaner"
@@ -26,23 +21,6 @@ const (
 	report mode = iota
 	rewrite
 )
-
-func RunClean(inj remy.Injector, opts *version.Options) error {
-	root := opts.ProjectDir
-	if root == "" {
-		root = "."
-	}
-	// Only --write mutates; the dangerous path is the one a caller has to ask for.
-	how := report
-	if opts.Write {
-		how = rewrite
-	}
-	repo, err := command.OptionalRepository(inj)
-	if err != nil {
-		return err
-	}
-	return sweep(os.Stdout, root, how, repo)
-}
 
 func sweep(out io.Writer, dir string, how mode, repo discovery.Lister) error {
 	root, scope, err := scopeWithin(dir, repo)

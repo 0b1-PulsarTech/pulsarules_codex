@@ -40,6 +40,4 @@ type Options struct {
 	CommitFile string
 
 	ProjectDir string
-
-	Write bool
 }

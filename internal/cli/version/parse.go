@@ -42,7 +42,6 @@ func commandBinders() map[string]flagBinder {
 		"uninstall":  bindUninstallFlags,
 		"hook":       bindNoFlags,
 		"commitlint": bindCommitLintFlags,
-		"clean":      bindCleanFlags,
 		"governance": bindGovernanceFlags,
 	}
 }
@@ -62,11 +61,6 @@ func bindCommitLintFlags(fs *flag.FlagSet, opts *Options) {
 	fs.StringVar(&opts.CommitMsg, "msg", "", "commit message to validate")
 	fs.StringVar(&opts.CommitFile, "file", "", "path to a COMMIT_EDITMSG file")
 	fs.StringVar(&opts.ProjectDir, "project", "", "project dir for git history lookup")
-}
-
-func bindCleanFlags(fs *flag.FlagSet, opts *Options) {
-	fs.StringVar(&opts.ProjectDir, "project", "", "project dir to clean")
-	fs.BoolVar(&opts.Write, "write", false, "rewrite files instead of only reporting")
 }
 
 func parsePositionalArgs(opts *Options, fs *flag.FlagSet) {

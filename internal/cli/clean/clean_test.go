@@ -12,9 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -225,36 +222,6 @@ func TestSweep_WalksTheGatesGitFileSet(t *testing.T) {
 
 			if got := strings.Contains(out.String(), testCase.path); got != testCase.want {
 				t.Errorf("reported = %v, want %v:\n%s", got, testCase.want, out.String())
-			}
-		})
-	}
-}
-
-func TestRunClean_RepositoryResolution(t *testing.T) {
-	t.Parallel()
-
-	wiringErr := errors.New("boom: injector wiring failed")
-	testCases := []struct {
-		name    string
-		repoErr error
-		wantErr error
-	}{
-		{"wiring failure is returned", wiringErr, wiringErr},
-		{"no repository falls back to the walk", vcs.ErrNoRepository, nil},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-			remy.RegisterConstructorErr(
-				inj, remy.Factory[*vcs.Repository],
-				func() (*vcs.Repository, error) { return nil, testCase.repoErr },
-			)
-
-			err := RunClean(inj, &version.Options{ProjectDir: t.TempDir()})
-			if !errors.Is(err, testCase.wantErr) {
-				t.Fatalf("RunClean() error = %v, want %v", err, testCase.wantErr)
 			}
 		})
 	}

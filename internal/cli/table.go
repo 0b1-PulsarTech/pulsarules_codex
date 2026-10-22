@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/clean"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/evals"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
@@ -36,6 +37,10 @@ func table() []entry {
 		{
 			name:  "evals",
 			build: func(flags.Environment) command.Runner { return &evals.Command{} },
+		},
+		{
+			name:  "clean",
+			build: func(flags.Environment) command.Runner { return &clean.Command{} },
 		},
 	}
 }
