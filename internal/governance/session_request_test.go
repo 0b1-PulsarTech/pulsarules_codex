@@ -48,7 +48,7 @@ func TestNewSession_InvalidTestGlobsSeedEveryRun(t *testing.T) {
 	}
 }
 
-func TestNewSession_PolicyIsFixedAtConstruction(t *testing.T) {
+func TestNewSession_ClassifierIsFixedAtConstruction(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.Defaults()

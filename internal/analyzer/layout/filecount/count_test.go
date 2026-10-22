@@ -32,7 +32,7 @@ func TestSummarizeTieBreaksByName(t *testing.T) {
 	}
 }
 
-type policyCase struct {
+type classifierCase struct {
 	name    string
 	files   map[string]string
 	changed []string
@@ -48,11 +48,11 @@ func numberedTS(dir string, total int) map[string]string {
 	return files
 }
 
-func policyCases() []policyCase {
+func classifierCases() []classifierCase {
 	tsFlagged := []string{
 		"web/src/f00.ts:1:package web/src has 11 non-test source files, max 10",
 	}
-	return []policyCase{
+	return []classifierCase{
 		{
 			name: "ts files under a test dir are not counted",
 			files: merged(
@@ -83,11 +83,11 @@ func policyCases() []policyCase {
 	}
 }
 
-func TestAnalyzeTestPolicy(t *testing.T) {
+func TestAnalyzeTestClassifier(t *testing.T) {
 	t.Parallel()
 
 	tsParams := map[string]any{"extensions": []string{".ts"}}
-	for _, testCase := range policyCases() {
+	for _, testCase := range classifierCases() {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := buildCtx(t, testCase.files, testCase.changed, tsParams)

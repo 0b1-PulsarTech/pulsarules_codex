@@ -178,7 +178,7 @@ func TestSession_TypeScriptChildParser(t *testing.T) {
 
 			dir := t.TempDir()
 			writeFileAtDir(t, dir, testCase.path, testCase.source)
-			findings, _ := analyzeTestPolicyRepo(t, dir, policyRun{fileSet: FileSetAll})
+			findings, _ := analyzeTestClassifierRepo(t, dir, classifierRun{fileSet: FileSetAll})
 			var got []string
 			for _, finding := range findings {
 				wanted := finding.AnalyzerID == testCase.wantID ||

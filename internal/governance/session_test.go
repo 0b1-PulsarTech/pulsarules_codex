@@ -313,7 +313,7 @@ func TestSession_PackageLevelVarState(t *testing.T) {
 	}
 }
 
-func writeTestPolicyRepo(t *testing.T) string {
+func writeTestClassifierRepo(t *testing.T) string {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -324,14 +324,14 @@ func writeTestPolicyRepo(t *testing.T) string {
 	return dir
 }
 
-type policyRun struct {
+type classifierRun struct {
 	globs   []string
 	fileSet FileSet
 	status  *vcs.Status
 }
 
-func analyzeTestPolicyRepo(
-	t *testing.T, dir string, run policyRun,
+func analyzeTestClassifierRepo(
+	t *testing.T, dir string, run classifierRun,
 ) ([]finding.Finding, []pass.FileChange) {
 	t.Helper()
 
@@ -395,10 +395,10 @@ func TestSession_TestGlobsReachEveryTestConsumer(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			run := policyRun{
+			run := classifierRun{
 				globs: testCase.globs, fileSet: testCase.fileSet, status: testCase.status,
 			}
-			findings, changed := analyzeTestPolicyRepo(t, writeTestPolicyRepo(t), run)
+			findings, changed := analyzeTestClassifierRepo(t, writeTestClassifierRepo(t), run)
 			gotTest := slices.ContainsFunc(changed, func(file pass.FileChange) bool {
 				return file.Path == "src/big.ts" && file.IsTest
 			})
@@ -423,8 +423,8 @@ func TestSession_InvalidTestGlob(t *testing.T) {
 
 	dir := t.TempDir()
 	writeFileAtDir(t, dir, "web/test/a.mjs", "export {};\n")
-	findings, changed := analyzeTestPolicyRepo(
-		t, dir, policyRun{globs: []string{"a/[b"}, fileSet: FileSetAll},
+	findings, changed := analyzeTestClassifierRepo(
+		t, dir, classifierRun{globs: []string{"a/[b"}, fileSet: FileSetAll},
 	)
 
 	var configErrors []finding.Finding
