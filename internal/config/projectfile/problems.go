@@ -3,6 +3,7 @@ package projectfile
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -59,12 +60,18 @@ func leftover(path string, root *yaml.Node, err error) error {
 		line := firstAliasLine(root)
 		return fmt.Errorf("%s: line %d: aliases expand into too many nodes", path, line)
 	}
-	for _, leaked := range []string{"cannot", "!!", "yaml:", "config.", "[]", "map["} {
+	for _, leaked := range []string{"cannot", "!!", "yaml:", decodeTypePrefix(), "[]", "map["} {
 		if strings.Contains(text, leaked) {
 			return fmt.Errorf("%s: %sinvalid value", path, linePrefix(text))
 		}
 	}
 	return fmt.Errorf("%s: %s", path, text)
+}
+
+func decodeTypePrefix() string {
+	// The package name the decoder would print before the target type, such as "config.".
+	pkg, _, _ := strings.Cut(reflect.TypeFor[File]().String(), ".")
+	return pkg + "."
 }
 
 func linePrefix(text string) string {

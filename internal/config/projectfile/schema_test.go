@@ -302,7 +302,7 @@ func assertPlainMessage(t *testing.T, err error) {
 	if err == nil {
 		return
 	}
-	for _, goText := range []string{"config.", "interface", "map["} {
+	for _, goText := range []string{decodeTypePrefix(), "interface", "map["} {
 		if strings.Contains(err.Error(), goText) {
 			t.Errorf("error %q names a Go type (%q)", err, goText)
 		}

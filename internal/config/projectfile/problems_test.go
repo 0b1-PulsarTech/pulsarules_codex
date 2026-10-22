@@ -3,6 +3,7 @@ package projectfile
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -221,6 +222,7 @@ type leftoverCase struct {
 }
 
 func leftoverCases() []leftoverCase {
+	typeName := reflect.TypeFor[File]().String()
 	return []leftoverCase{
 		{"plain text stays", errors.New("yaml: something odd"), ".pulsarules.yaml: something odd"},
 		{
@@ -235,7 +237,7 @@ func leftoverCases() []leftoverCase {
 		},
 		{
 			"a Go type name",
-			errors.New("yaml: line 2: field x not found in type config.ProjectFile"),
+			errors.New("yaml: line 2: field x not found in type " + typeName),
 			".pulsarules.yaml: line 2: invalid value",
 		},
 		{
