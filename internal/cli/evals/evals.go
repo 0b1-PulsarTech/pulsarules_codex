@@ -19,8 +19,8 @@ type Command struct {
 }
 
 func (cmd *Command) Bind(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.artifact, "artifact", "", "path to the produced artifact to grade")
-	fs.StringVar(&cmd.scenario, "scenario", "", "grade only this scenario id")
+	fs.StringVar(&cmd.artifact, "artifact", "", "path to the produced `FILE` to grade")
+	fs.StringVar(&cmd.scenario, "scenario", "", "grade only this scenario `ID`")
 }
 
 func (cmd *Command) Run(_ remy.Injector, _ []string) error {
@@ -88,4 +88,8 @@ func reportEvals(out io.Writer, scenarios []evals.Scenario, artifact string) err
 		return command.ErrFindings
 	}
 	return nil
+}
+
+func (cmd *Command) Terms() []command.Term {
+	return []command.Term{command.Req("artifact"), command.Opt("scenario")}
 }

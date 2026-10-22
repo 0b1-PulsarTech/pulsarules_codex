@@ -15,7 +15,7 @@ type Command struct {
 }
 
 func (cmd *Command) Bind(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.project, "project", "", "project dir to clean")
+	fs.StringVar(&cmd.project, "project", "", "project `DIR` to clean")
 	fs.BoolVar(&cmd.write, "write", false, "rewrite files instead of only reporting")
 }
 
@@ -37,4 +37,8 @@ func (cmd *Command) Run(inj remy.Injector, _ []string) error {
 		return err
 	}
 	return sweep(os.Stdout, cmd.ProjectDir(), how, repo)
+}
+
+func (cmd *Command) Terms() []command.Term {
+	return []command.Term{command.Opt("project"), command.Opt("write")}
 }

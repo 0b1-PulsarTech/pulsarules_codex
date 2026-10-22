@@ -23,14 +23,14 @@ type Tuning struct {
 }
 
 func (tuning *Tuning) Bind(fs *flag.FlagSet, purpose Purpose) {
-	severityHelp := "how hard a typographic-marker finding lands (error|warning|info)"
-	extraTypesHelp := "comma-separated branch types allowed beyond the Conventional Commit " +
+	severityHelp := "how hard a typographic-marker finding lands (`error|warning|info`)"
+	extraTypesHelp := "comma-separated branch types (`a,b`) allowed beyond the Conventional Commit " +
 		"and gitflow types"
 	if purpose == Bake {
 		severityHelp = "bake into the git hooks how hard a typographic-marker finding lands " +
-			"(error|warning|info); empty keeps the analyzer default"
+			"(`error|warning|info`); empty keeps the analyzer default"
 		extraTypesHelp = "bake into the pre-push hook extra branch types a project allows " +
-			"beyond the Conventional Commit and gitflow types (e.g. spike,experiment)"
+			"beyond the Conventional Commit and gitflow types (`a,b`, e.g. spike,experiment)"
 	}
 	fs.StringVar(&tuning.TypographicSeverity, "typographic-severity", "", severityHelp)
 	fs.StringVar(&tuning.BranchExtraTypes, "branch-extra-types", "", extraTypesHelp)

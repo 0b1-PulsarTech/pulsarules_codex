@@ -10,6 +10,7 @@ import (
 type (
 	Runner interface {
 		Bind(fs *flag.FlagSet)
+		Terms() []Term
 		Run(inj remy.Injector, args []string) error
 	}
 

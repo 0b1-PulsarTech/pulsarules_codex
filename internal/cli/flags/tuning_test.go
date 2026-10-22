@@ -129,8 +129,8 @@ func TestTuningBind_HelpTextFollowsThePurpose(t *testing.T) {
 		{
 			name:     "analyze",
 			purpose:  Analyze,
-			severity: "how hard a typographic-marker finding lands (error|warning|info)",
-			extra:    "comma-separated branch types allowed beyond the Conventional Commit",
+			severity: "how hard a typographic-marker finding lands (`error|warning|info`)",
+			extra:    "comma-separated branch types (`a,b`) allowed beyond the Conventional Commit",
 		},
 		{
 			name:     "bake",

@@ -7,6 +7,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/docs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -21,7 +22,7 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 		&cmd.out,
 		"out",
 		"",
-		"output zip path (defaults to ./build/standards-skills.zip)",
+		"output zip `FILE` (defaults to ./build/standards-skills.zip)",
 	)
 }
 
@@ -47,4 +48,8 @@ func (cmd *Command) Run(inj remy.Injector, _ []string) error {
 	}
 	fmt.Printf("packaged: %s\n", out)
 	return nil
+}
+
+func (cmd *Command) Terms() []command.Term {
+	return []command.Term{command.Opt("root"), command.Opt("out")}
 }

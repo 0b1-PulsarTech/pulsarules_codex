@@ -3,6 +3,7 @@ package install
 import (
 	"flag"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
@@ -48,17 +49,17 @@ func (cmd *Command) bindSelection(fs *flag.FlagSet) {
 		false,
 		"install for the user: ~/.claude, or $CLAUDE_CONFIG_DIR when set",
 	)
-	fs.StringVar(&cmd.project, "project", "", "install to PATH/.claude/skills")
+	fs.StringVar(&cmd.project, "project", "", "install to `PATH`/.claude/skills")
 	fs.BoolVar(&cmd.all, "all", false, "install every skill")
 	fs.Var(
 		flags.NewCommaList(&cmd.skills),
 		"skills",
-		"comma-separated skill ids to install (plus mandatory + their deps)",
+		"comma-separated skill ids to install, as `a,b,c` (plus mandatory + their deps)",
 	)
 	fs.Var(
 		flags.NewRepeatable(&cmd.target),
 		"target",
-		"install target (repeatable): claude | opencode | agents | cursor (default claude); "+
+		"install target (repeatable): `claude|opencode|agents|cursor ...` (default claude); "+
 			"only claude supports --global",
 	)
 	fs.BoolVar(
@@ -92,13 +93,13 @@ func (cmd *Command) bindWiring(fs *flag.FlagSet) {
 		&cmd.hooksScope,
 		"hooks-scope",
 		"project",
-		"hook settings file: project (settings.json) | local (settings.local.json)",
+		"hook settings file: `project|local` (settings.json | settings.local.json)",
 	)
 	fs.StringVar(
 		&cmd.layout,
 		"layout",
 		"",
-		"customization profile id to apply (e.g. monorepo | inner-modules)",
+		"customization `PROFILE` id to apply (e.g. monorepo | inner-modules)",
 	)
 	fs.BoolVar(
 		&cmd.interactive,
@@ -109,7 +110,7 @@ func (cmd *Command) bindWiring(fs *flag.FlagSet) {
 	fs.Var(
 		flags.NewCommaList(&cmd.languages),
 		"languages",
-		"comma-separated override of the project's language set (e.g. go,dart); "+
+		"comma-separated override of the project's language set (e.g. `a,b`); "+
 			"persisted, taking precedence over both a prior config and autodetection",
 	)
 	// Git-hook flags are install-time policy baked into the scripts, not render choices.
@@ -121,7 +122,7 @@ func (cmd *Command) bindGitHooks(fs *flag.FlagSet) {
 	fs.Var(
 		flags.NewCommaList(&cmd.gitHooks),
 		"git-hooks",
-		"comma-separated git hooks to install (commit-msg,pre-commit,pre-push)",
+		"comma-separated git hooks to install: `commit-msg,pre-commit` (or pre-push)",
 	)
 	fs.BoolVar(
 		&cmd.noGitHooks,
@@ -130,4 +131,24 @@ func (cmd *Command) bindGitHooks(fs *flag.FlagSet) {
 		"skip git hooks installation entirely",
 	)
 	cmd.tuning.Bind(fs, flags.Bake)
+}
+
+func (cmd *Command) Terms() []command.Term {
+	return []command.Term{
+		command.Opt("root"),
+		command.Req("global", "project"),
+		command.Opt("target"),
+		command.Req("all", "skills", "router-only"),
+		command.Opt("no-hooks"),
+		command.Opt("no-mcp"),
+		command.Opt("print-hooks"),
+		command.Opt("hooks-scope"),
+		command.Opt("layout"),
+		command.Opt("interactive"),
+		command.Opt("git-hooks"),
+		command.Opt("no-git-hooks"),
+		command.Opt("languages"),
+		command.Opt("typographic-severity"),
+		command.Opt("branch-extra-types"),
+	}
 }

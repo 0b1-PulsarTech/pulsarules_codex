@@ -10,6 +10,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
@@ -141,4 +142,8 @@ func governanceBlock(report findings.Report) (block string, count int) {
 		text += "  " + note + "\n"
 	}
 	return "\n" + text, len(report.Findings)
+}
+
+func (cmd *Command) Terms() []command.Term {
+	return []command.Term{command.Lit("<mode>")}
 }

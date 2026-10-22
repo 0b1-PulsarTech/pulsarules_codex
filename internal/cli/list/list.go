@@ -12,6 +12,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -95,4 +96,8 @@ func joinOrDash(items []string) string {
 		return "-"
 	}
 	return strings.Join(items, ", ")
+}
+
+func (Command) Terms() []command.Term {
+	return []command.Term{command.Opt("root"), command.Lit("[skills|rules|patterns|workflows]")}
 }

@@ -3,29 +3,30 @@ package governance
 import (
 	"flag"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
 func (cmd *Command) Bind(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.project, "project", "", "project dir to analyze")
+	fs.StringVar(&cmd.project, "project", "", "project `DIR` to analyze")
 	fs.StringVar(
 		&cmd.preset,
 		"preset",
 		"",
-		"analyzer preset (recommended|strict|minimal); wins over the project config file",
+		"analyzer preset (`recommended|strict|minimal`); wins over the project config file",
 	)
 	fs.StringVar(
 		&cmd.config,
 		"config",
 		"",
-		"path to the project config file (default: <project>/.pulsarules.yaml if present)",
+		"project config file `PATH` (default: <project>/.pulsarules.yaml if present)",
 	)
-	fs.StringVar(&cmd.scope, "scope", "full", "analysis scope (full|commit|changed)")
+	fs.StringVar(&cmd.scope, "scope", "full", "analysis scope (`full|commit|changed`)")
 	fs.StringVar(
 		&cmd.golangciConfig,
 		"golangci-config",
 		"",
-		"path to .golangci.yml (overrides auto-discovery)",
+		".golangci.yml `PATH` (overrides auto-discovery)",
 	)
 	cmd.tuning.Bind(fs, flags.Analyze)
 	fs.BoolVar(
@@ -40,4 +41,19 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 		false,
 		"report findings in generated files too (suppressed by default)",
 	)
+}
+
+func (cmd *Command) Terms() []command.Term {
+	return []command.Term{
+		command.Opt("project"),
+		command.Opt("root"),
+		command.Opt("preset"),
+		command.Opt("scope"),
+		command.Opt("config"),
+		command.Opt("golangci-config"),
+		command.Opt("all-files"),
+		command.Opt("include-generated"),
+		command.Opt("typographic-severity"),
+		command.Opt("branch-extra-types"),
+	}
 }

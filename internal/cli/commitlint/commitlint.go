@@ -26,9 +26,9 @@ type Command struct {
 }
 
 func (cmd *Command) Bind(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.msg, "msg", "", "commit message to validate")
-	fs.StringVar(&cmd.file, "file", "", "path to a COMMIT_EDITMSG file")
-	fs.StringVar(&cmd.project, "project", "", "project dir for git history lookup")
+	fs.StringVar(&cmd.msg, "msg", "", "commit message `MSG` to validate")
+	fs.StringVar(&cmd.file, "file", "", "path to a COMMIT_EDITMSG `FILE`")
+	fs.StringVar(&cmd.project, "project", "", "project `DIR` for git history lookup")
 }
 
 func (cmd *Command) ProjectDir() string {
@@ -96,4 +96,8 @@ func (cmd *Command) Run(inj remy.Injector, _ []string) error {
 		return command.ErrFindings
 	}
 	return nil
+}
+
+func (cmd *Command) Terms() []command.Term {
+	return []command.Term{command.Opt("msg", "file"), command.Opt("project")}
 }

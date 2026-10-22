@@ -3,6 +3,7 @@ package uninstall
 import (
 	"flag"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
@@ -24,19 +25,19 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 		false,
 		"uninstall for the user: ~/.claude, or $CLAUDE_CONFIG_DIR when set",
 	)
-	fs.StringVar(&cmd.project, "project", "", "uninstall from PATH/.claude/skills")
+	fs.StringVar(&cmd.project, "project", "", "uninstall from `PATH`/.claude/skills")
 	fs.Var(
 		flags.NewRepeatable(&cmd.target),
 		"target",
-		"uninstall target (repeatable): claude | opencode | agents | cursor "+
+		"uninstall target (repeatable): `claude|opencode|agents|cursor ...` "+
 			"(default: every target detected on disk)",
 	)
 	fs.StringVar(
 		&cmd.hooksScope,
 		"hooks-scope",
 		"",
-		"hook settings file to narrow to: project (settings.json) | local "+
-			"(settings.local.json) (default: unwire both, since uninstall cannot "+
+		"hook settings file to narrow to: `project|local` (settings.json | "+
+			"settings.local.json) (default: unwire both, since uninstall cannot "+
 			"recover which scope install used)",
 	)
 	fs.BoolVar(
@@ -45,4 +46,13 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 		false,
 		"keep the rendered skill/workflow docs; the hook wiring is still removed",
 	)
+}
+
+func (cmd *Command) Terms() []command.Term {
+	return []command.Term{
+		command.Req("global", "project"),
+		command.Opt("target"),
+		command.Opt("hooks-scope"),
+		command.Opt("keep-skills"),
+	}
 }
