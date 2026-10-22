@@ -49,12 +49,12 @@ func TestAnalyze(t *testing.T) {
 			if len(findings) != len(testCase.want) {
 				t.Fatalf("findings = %+v, want ids %v", findings, testCase.want)
 			}
-			for idx, finding := range findings {
-				if finding.AnalyzerID != testCase.want[idx] {
+			for idx, hit := range findings {
+				if hit.AnalyzerID != testCase.want[idx] {
 					t.Errorf(
 						"finding %d = %q, want %q",
 						idx,
-						finding.AnalyzerID,
+						hit.AnalyzerID,
 						testCase.want[idx],
 					)
 				}
@@ -262,12 +262,12 @@ func engineSources(t *testing.T, root string) source.Provider {
 
 func describe(findings []finding.Finding) []string {
 	lines := make([]string, 0, len(findings))
-	for _, finding := range findings {
-		where := finding.File
-		if strings.HasSuffix(finding.AnalyzerID, "/config") {
-			where = finding.Message
+	for _, hit := range findings {
+		where := hit.File
+		if strings.HasSuffix(hit.AnalyzerID, "/config") {
+			where = hit.Message
 		}
-		lines = append(lines, finding.AnalyzerID+" "+where)
+		lines = append(lines, hit.AnalyzerID+" "+where)
 	}
 	return lines
 }

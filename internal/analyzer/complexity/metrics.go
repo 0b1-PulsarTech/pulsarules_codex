@@ -37,14 +37,14 @@ func checkFlagArguments(
 			if isValueArgName(id.Name) {
 				continue
 			}
-			finding := reporter.At(
+			hit := reporter.At(
 				fc.Path,
 				fset.Position(id.NamePos).Line,
 				fmt.Sprintf("flag argument %q in %s", id.Name, fn.Name.Name),
 				"split into two functions or use a typed enum",
 			)
-			finding.RuleID = flagArgumentsRule
-			findings = append(findings, finding)
+			hit.RuleID = flagArgumentsRule
+			findings = append(findings, hit)
 		}
 	}
 	return findings

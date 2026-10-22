@@ -42,13 +42,13 @@ func frontmatterFindings(
 		if !isProvenanceKey(key) {
 			continue
 		}
-		finding := reporter.At(
+		hit := reporter.At(
 			fc.Path, offset+2,
 			fmt.Sprintf("frontmatter key %q names a generating machine", key),
 			"delete the key; provenance metadata does not belong in a source document",
 		)
-		finding.RuleID = sourceFilesRule
-		findings = append(findings, finding)
+		hit.RuleID = sourceFilesRule
+		findings = append(findings, hit)
 	}
 	return findings
 }

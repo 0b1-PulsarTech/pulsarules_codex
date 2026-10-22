@@ -10,9 +10,9 @@ func hasAnalyzer(findings []finding.Finding, id string) bool {
 }
 
 func findingByID(findings []finding.Finding, id string) (finding.Finding, bool) {
-	for _, finding := range findings {
-		if finding.AnalyzerID == id {
-			return finding, true
+	for _, hit := range findings {
+		if hit.AnalyzerID == id {
+			return hit, true
 		}
 	}
 	return finding.Finding{}, false

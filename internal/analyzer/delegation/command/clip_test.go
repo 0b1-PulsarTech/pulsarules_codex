@@ -14,21 +14,21 @@ import (
 
 const wantFloor = 4000
 
-func renderedLine(finding finding.Finding) string {
-	line := "  [warning] " + printable.Line(finding.AnalyzerID) + ": " +
-		printable.Line(finding.Message)
-	if finding.File != "" {
-		place := printable.Path(finding.File)
-		if finding.Line > 0 {
-			place += ":" + strconv.Itoa(finding.Line)
+func renderedLine(hit finding.Finding) string {
+	line := "  [warning] " + printable.Line(hit.AnalyzerID) + ": " +
+		printable.Line(hit.Message)
+	if hit.File != "" {
+		place := printable.Path(hit.File)
+		if hit.Line > 0 {
+			place += ":" + strconv.Itoa(hit.Line)
 		}
 		line += " (" + place + ")"
 	}
 	return line
 }
 
-func renderedArrow(finding finding.Finding) string {
-	return "    \u2192 " + printable.Line(finding.Suggestion)
+func renderedArrow(hit finding.Finding) string {
+	return "    \u2192 " + printable.Line(hit.Suggestion)
 }
 
 type lineCase struct {
@@ -234,17 +234,17 @@ func TestRenderedLineBounds(t *testing.T) {
 
 func checkFields(t *testing.T, testCase lineCase) {
 	t.Helper()
-	finding := testCase.finding
-	if finding.AnalyzerID != testCase.wantID || finding.File != testCase.wantFile {
-		t.Errorf("id %q file %q", finding.AnalyzerID, finding.File)
+	hit := testCase.finding
+	if hit.AnalyzerID != testCase.wantID || hit.File != testCase.wantFile {
+		t.Errorf("id %q file %q", hit.AnalyzerID, hit.File)
 	}
-	if finding.File == "" && finding.Line != 0 {
-		t.Errorf("a dropped location kept line %d", finding.Line)
+	if hit.File == "" && hit.Line != 0 {
+		t.Errorf("a dropped location kept line %d", hit.Line)
 	}
-	if !strings.HasSuffix(finding.Message, testCase.wantMessage) {
-		t.Errorf("Message = %.100q...%.80q", finding.Message, testCase.wantMessage)
+	if !strings.HasSuffix(hit.Message, testCase.wantMessage) {
+		t.Errorf("Message = %.100q...%.80q", hit.Message, testCase.wantMessage)
 	}
-	for _, text := range []string{finding.Message, finding.Suggestion} {
+	for _, text := range []string{hit.Message, hit.Suggestion} {
 		if !utf8.ValidString(text) || testCase.clipped && printable.Line(text) != text {
 			t.Errorf("text changes under a second escape (%d bytes)", len(text))
 		}

@@ -45,7 +45,7 @@ func (reporter Reporter) New(message string) Finding {
 }
 
 func (reporter Reporter) NewWithSuggestion(message, suggestion string) Finding {
-	finding := reporter.New(message)
-	finding.Suggestion = suggestion
-	return finding
+	hit := reporter.New(message)
+	hit.Suggestion = suggestion
+	return hit
 }

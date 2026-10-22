@@ -191,8 +191,8 @@ func TestRunEntryNeedsListedFilesUnderDir(t *testing.T) {
 				t.Errorf("command ran = %v, want %v", ran, testCase.want == "")
 			}
 			messages := make([]string, 0, len(findings))
-			for _, finding := range findings {
-				messages = append(messages, finding.AnalyzerID+": "+finding.Message)
+			for _, hit := range findings {
+				messages = append(messages, hit.AnalyzerID+": "+hit.Message)
 			}
 			want := []string{entryID + "/config: " + testCase.want}
 			if testCase.want == "" {
@@ -368,8 +368,8 @@ func TestRunEntryListing(t *testing.T) {
 
 			files := make([]string, 0, len(findings))
 			ids := make([]string, 0, len(findings))
-			for _, finding := range findings {
-				files, ids = append(files, finding.File), append(ids, finding.AnalyzerID)
+			for _, hit := range findings {
+				files, ids = append(files, hit.File), append(ids, hit.AnalyzerID)
 			}
 			wantIDs := []string{}
 			if testCase.wantID != "" {
@@ -442,8 +442,8 @@ func TestRunEntryReportsEveryLink(t *testing.T) {
 			findings := NewAnalyzer(nil).runEntry(root, listed, entry)
 
 			got := make([]reportedFile, 0, len(findings))
-			for _, finding := range findings {
-				got = append(got, reportedFile{finding.Severity, finding.File})
+			for _, hit := range findings {
+				got = append(got, reportedFile{hit.Severity, hit.File})
 			}
 			if !slices.Equal(got, testCase.want) {
 				t.Errorf("findings = %v, want %v", got, testCase.want)

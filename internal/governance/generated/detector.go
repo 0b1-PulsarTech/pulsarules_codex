@@ -47,14 +47,14 @@ func (detector *Detector) Mark(files []pass.FileChange) {
 func (detector *Detector) Split(findings []finding.Finding) ([]finding.Finding, int) {
 	kept := make([]finding.Finding, 0, len(findings))
 	suppressed := 0
-	for _, finding := range findings {
+	for _, hit := range findings {
 		// A finding with no file (a commit-message rule) belongs to no file and is never
 		// suppressed; a generated file's are, because the next codegen run undoes any edit.
-		if finding.File != "" && detector.isGenerated(finding.File) {
+		if hit.File != "" && detector.isGenerated(hit.File) {
 			suppressed++
 			continue
 		}
-		kept = append(kept, finding)
+		kept = append(kept, hit)
 	}
 	return kept, suppressed
 }

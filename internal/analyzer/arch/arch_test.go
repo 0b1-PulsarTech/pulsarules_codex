@@ -47,13 +47,13 @@ func TestPackageBoundary_Violation(t *testing.T) {
 				"filtered every import out of the graph",
 		)
 	}
-	for _, finding := range findings {
-		if finding.AnalyzerID != "arch-boundary" {
-			t.Errorf("finding has AnalyzerID %q, want %q", finding.AnalyzerID, "arch-boundary")
+	for _, hit := range findings {
+		if hit.AnalyzerID != "arch-boundary" {
+			t.Errorf("finding has AnalyzerID %q, want %q", hit.AnalyzerID, "arch-boundary")
 		}
-		if finding.File != "domain/user.go" || finding.Line != 3 {
+		if hit.File != "domain/user.go" || hit.Line != 3 {
 			t.Errorf("finding anchored at %s:%d, want the import spec at domain/user.go:3",
-				finding.File, finding.Line)
+				hit.File, hit.Line)
 		}
 	}
 }
@@ -73,9 +73,9 @@ func TestImportCycle_DetectsCycle(t *testing.T) {
 				"filtered every import out of the graph",
 		)
 	}
-	for _, finding := range findings {
-		if finding.AnalyzerID != "import-cycle" {
-			t.Errorf("finding has AnalyzerID %q, want %q", finding.AnalyzerID, "import-cycle")
+	for _, hit := range findings {
+		if hit.AnalyzerID != "import-cycle" {
+			t.Errorf("finding has AnalyzerID %q, want %q", hit.AnalyzerID, "import-cycle")
 		}
 	}
 }

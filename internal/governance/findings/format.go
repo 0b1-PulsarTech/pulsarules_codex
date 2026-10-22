@@ -34,14 +34,14 @@ func (report Report) Text(form Layout, header string) string {
 		out.WriteString(header)
 		out.WriteByte('\n')
 	}
-	for _, finding := range report.Findings {
-		writeFinding(&out, finding, form)
+	for _, hit := range report.Findings {
+		writeFinding(&out, hit, form)
 	}
 	return out.String()
 }
 
-func writeFinding(out *strings.Builder, finding finding.Finding, form Layout) {
-	label := finding.Severity.String()
+func writeFinding(out *strings.Builder, hit finding.Finding, form Layout) {
+	label := hit.Severity.String()
 	if form.upper {
 		label = strings.ToUpper(label)
 	}
@@ -50,32 +50,32 @@ func writeFinding(out *strings.Builder, finding finding.Finding, form Layout) {
 		"%s[%s] %s: %s",
 		form.indent,
 		label,
-		printable.Line(finding.AnalyzerID),
-		printable.Line(finding.Message),
+		printable.Line(hit.AnalyzerID),
+		printable.Line(hit.Message),
 	)
-	if loc := location(finding); loc != "" {
+	if loc := location(hit); loc != "" {
 		out.WriteString(" (" + loc + ")")
 	}
 	out.WriteByte('\n')
 
-	if finding.Suggestion != "" {
-		out.WriteString(form.arrow + "\u2192 " + printable.Line(finding.Suggestion) + "\n")
+	if hit.Suggestion != "" {
+		out.WriteString(form.arrow + "\u2192 " + printable.Line(hit.Suggestion) + "\n")
 	}
 	if form.withRule {
 		// The full summary is a ~400 char paragraph that drowns the finding.
-		if summary := strings.TrimSpace(finding.RuleSummary); summary != "" {
+		if summary := strings.TrimSpace(hit.RuleSummary); summary != "" {
 			rule := printable.Line(knowledge.FirstSentence(summary))
 			out.WriteString(form.arrow + "rule: " + rule + "\n")
 		}
 	}
 }
 
-func location(finding finding.Finding) string {
-	if finding.File == "" {
+func location(hit finding.Finding) string {
+	if hit.File == "" {
 		return ""
 	}
-	if finding.Line > 0 {
-		return fmt.Sprintf("%s:%d", printable.Path(finding.File), finding.Line)
+	if hit.Line > 0 {
+		return fmt.Sprintf("%s:%d", printable.Path(hit.File), hit.Line)
 	}
-	return printable.Path(finding.File)
+	return printable.Path(hit.File)
 }

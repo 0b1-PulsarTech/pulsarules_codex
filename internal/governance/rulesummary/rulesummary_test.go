@@ -40,18 +40,18 @@ func TestAttach_Summaries(t *testing.T) {
 
 	check := func(t *testing.T, findingIdx int, wantRuleID string, wantSummary bool) {
 		t.Helper()
-		finding := findings[findingIdx]
-		if finding.RuleID != wantRuleID {
-			t.Errorf("finding %d: got RuleID=%q, want %q", findingIdx, finding.RuleID, wantRuleID)
+		hit := findings[findingIdx]
+		if hit.RuleID != wantRuleID {
+			t.Errorf("finding %d: got RuleID=%q, want %q", findingIdx, hit.RuleID, wantRuleID)
 		}
-		hasSummary := finding.RuleSummary != ""
+		hasSummary := hit.RuleSummary != ""
 		if hasSummary != wantSummary {
 			t.Errorf(
 				"finding %d: hasSummary=%v, want %v (summary length %d)",
 				findingIdx,
 				hasSummary,
 				wantSummary,
-				len(finding.RuleSummary),
+				len(hit.RuleSummary),
 			)
 		}
 	}

@@ -63,9 +63,9 @@ func TestCheckCandidate(t *testing.T) {
 			if len(got) != len(testCase.want) {
 				t.Fatalf("findings = %+v, want %+v", got, testCase.want)
 			}
-			for idx, finding := range got {
-				if finding != testCase.want[idx] {
-					t.Fatalf("finding[%d] = %+v, want %+v", idx, finding, testCase.want[idx])
+			for idx, hit := range got {
+				if hit != testCase.want[idx] {
+					t.Fatalf("finding[%d] = %+v, want %+v", idx, hit, testCase.want[idx])
 				}
 			}
 		})

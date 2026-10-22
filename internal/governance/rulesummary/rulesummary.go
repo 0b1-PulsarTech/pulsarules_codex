@@ -17,15 +17,15 @@ func Attach(
 		}
 		rules := newResolver(index, defaults)
 		for idx := range findings {
-			finding := &findings[idx]
-			if finding.RuleSummary != "" {
+			hit := &findings[idx]
+			if hit.RuleSummary != "" {
 				continue
 			}
-			if finding.RuleID == "" {
-				finding.RuleID = rules.resolve(finding.AnalyzerID, finding.File)
+			if hit.RuleID == "" {
+				hit.RuleID = rules.resolve(hit.AnalyzerID, hit.File)
 			}
-			if finding.RuleID != "" {
-				finding.RuleSummary = index.Summary(knowledge.KindRule, finding.RuleID)
+			if hit.RuleID != "" {
+				hit.RuleSummary = index.Summary(knowledge.KindRule, hit.RuleID)
 			}
 		}
 		return findings

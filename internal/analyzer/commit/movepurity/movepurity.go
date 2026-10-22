@@ -39,8 +39,8 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	}
 	var findings []finding.Finding
 	for _, rename := range ctx.StagedRenames {
-		if finding, ok := renameFinding(moves, analyzer.reporter, rename, minSimilarity); ok {
-			findings = append(findings, finding)
+		if hit, ok := renameFinding(moves, analyzer.reporter, rename, minSimilarity); ok {
+			findings = append(findings, hit)
 		}
 	}
 	edits, unlinks := unrelatedStagedEdits(moves, ctx.ChangedFiles, ctx.StagedRenames)

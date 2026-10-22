@@ -56,8 +56,8 @@ func changedGo(paths ...string) []FileChange {
 
 func findingFiles(findings []finding.Finding) []string {
 	files := make([]string, 0, len(findings))
-	for _, finding := range findings {
-		files = append(files, finding.File)
+	for _, hit := range findings {
+		files = append(files, hit.File)
 	}
 	return files
 }

@@ -96,9 +96,9 @@ func skipFixture(t *testing.T) string {
 func reportedFiles(session *Session) map[string]bool {
 	seen := map[string]bool{}
 	report := session.Analyze(Request{Scope: ScopeChanged, Files: FileSetAll})
-	for _, finding := range report.Findings {
-		if finding.AnalyzerID == "typographic-markers" {
-			seen[finding.File] = true
+	for _, hit := range report.Findings {
+		if hit.AnalyzerID == "typographic-markers" {
+			seen[hit.File] = true
 		}
 	}
 	return seen
@@ -219,8 +219,8 @@ func TestSession_SkipDirs_GitMode(t *testing.T) {
 	).Analyze(Request{Scope: ScopeChanged}).
 		Findings
 	seen := map[string]bool{}
-	for _, finding := range findings {
-		seen[finding.File] = true
+	for _, hit := range findings {
+		seen[hit.File] = true
 	}
 	if !seen["target/x.go"] {
 		t.Errorf("expected target/x.go to be analyzed in git mode, findings=%+v", findings)
@@ -244,9 +244,9 @@ func (repo countingRepo) ListFiles() ([]string, error) {
 
 func typographicFiles(findings []finding.Finding) map[string]bool {
 	seen := map[string]bool{}
-	for _, finding := range findings {
-		if finding.AnalyzerID == "typographic-markers" {
-			seen[finding.File] = true
+	for _, hit := range findings {
+		if hit.AnalyzerID == "typographic-markers" {
+			seen[hit.File] = true
 		}
 	}
 	return seen
@@ -377,8 +377,8 @@ func TestSession_FileSetChanged_Siblings(t *testing.T) {
 			session := NewSession(testCase.repo(dir), nil, testCatalog(t), nil)
 			found := false
 			report := session.Analyze(Request{Scope: ScopeChanged, Status: status})
-			for _, finding := range report.Findings {
-				found = found || finding.AnalyzerID == "package-file-count"
+			for _, hit := range report.Findings {
+				found = found || hit.AnalyzerID == "package-file-count"
 			}
 			if found != testCase.wantCount {
 				t.Fatalf("package-file-count reported = %v, want %v", found, testCase.wantCount)

@@ -61,14 +61,14 @@ type site struct {
 
 func DropSingleUseDuplicates(findings []finding.Finding) []finding.Finding {
 	reported := make(map[site]bool)
-	for _, finding := range findings {
-		if finding.AnalyzerID == singleuse.ID {
-			reported[site{finding.File, finding.Line, finding.Symbol}] = true
+	for _, hit := range findings {
+		if hit.AnalyzerID == singleuse.ID {
+			reported[site{hit.File, hit.Line, hit.Symbol}] = true
 		}
 	}
-	return slices.DeleteFunc(findings, func(finding finding.Finding) bool {
-		return finding.AnalyzerID == ID &&
-			reported[site{finding.File, finding.Line, finding.Symbol}]
+	return slices.DeleteFunc(findings, func(hit finding.Finding) bool {
+		return hit.AnalyzerID == ID &&
+			reported[site{hit.File, hit.Line, hit.Symbol}]
 	})
 }
 

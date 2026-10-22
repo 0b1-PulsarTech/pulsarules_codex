@@ -180,11 +180,11 @@ func TestSession_TypeScriptChildParser(t *testing.T) {
 			writeFileAtDir(t, dir, testCase.path, testCase.source)
 			findings, _ := analyzeTestClassifierRepo(t, dir, classifierRun{fileSet: FileSetAll})
 			var got []string
-			for _, finding := range findings {
-				wanted := finding.AnalyzerID == testCase.wantID ||
-					strings.HasSuffix(finding.AnalyzerID, "/unparsed")
-				if finding.File == testCase.path && wanted {
-					got = append(got, finding.AnalyzerID)
+			for _, hit := range findings {
+				wanted := hit.AnalyzerID == testCase.wantID ||
+					strings.HasSuffix(hit.AnalyzerID, "/unparsed")
+				if hit.File == testCase.path && wanted {
+					got = append(got, hit.AnalyzerID)
 				}
 			}
 			if !slices.Equal(got, []string{testCase.wantID}) {

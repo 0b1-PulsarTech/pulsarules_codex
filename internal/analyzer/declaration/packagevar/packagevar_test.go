@@ -38,8 +38,8 @@ func buildCtx(t *testing.T, files, unchanged map[string]string) *pass.Context {
 
 func located(findings []finding.Finding) []string {
 	out := make([]string, 0, len(findings))
-	for _, finding := range findings {
-		out = append(out, fmt.Sprintf("%s:%d:%s", finding.File, finding.Line, finding.Message))
+	for _, hit := range findings {
+		out = append(out, fmt.Sprintf("%s:%d:%s", hit.File, hit.Line, hit.Message))
 	}
 	slices.Sort(out)
 	return out

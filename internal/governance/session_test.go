@@ -59,11 +59,11 @@ func TestSession_WithCommitMsg(t *testing.T) {
 	findings := sess.Analyze(Request{Scope: ScopeFull, CommitMsg: "bad commit message"}).Findings
 
 	found := false
-	for _, finding := range findings {
-		if finding.AnalyzerID == "commit-emoji-required" ||
-			finding.AnalyzerID == "commit-type-required" {
+	for _, hit := range findings {
+		if hit.AnalyzerID == "commit-emoji-required" ||
+			hit.AnalyzerID == "commit-type-required" {
 			found = true
-			if finding.RuleSummary == "" {
+			if hit.RuleSummary == "" {
 				t.Error("expected RuleSummary to be populated for commit finding")
 			}
 		}
@@ -128,14 +128,14 @@ func TestSession_ScopeChanged(t *testing.T) {
 	findings := sess.Analyze(Request{Scope: ScopeChanged}).Findings
 
 	foundStatic := false
-	for _, finding := range findings {
-		if finding.AnalyzerID == "golangci-lint" {
+	for _, hit := range findings {
+		if hit.AnalyzerID == "golangci-lint" {
 			t.Fatalf(
 				"ScopeChanged must not invoke external-tool delegation, got analyzer %q",
-				finding.AnalyzerID,
+				hit.AnalyzerID,
 			)
 		}
-		if finding.AnalyzerID == "typographic-markers" {
+		if hit.AnalyzerID == "typographic-markers" {
 			foundStatic = true
 		}
 	}
@@ -166,11 +166,11 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 
 	changedFindings := NewSession(repo, nil, testCatalog(t), cfg).
 		Analyze(Request{Scope: ScopeChanged}).Findings
-	for _, finding := range changedFindings {
-		if finding.AnalyzerID == "typographic-markers" {
+	for _, hit := range changedFindings {
+		if hit.AnalyzerID == "typographic-markers" {
 			t.Fatalf(
 				"FileSetChanged on a clean tree must not see committed defects, got %+v",
-				finding,
+				hit,
 			)
 		}
 	}
@@ -178,8 +178,8 @@ func TestSession_FileSetAll_CommittedDefect(t *testing.T) {
 	allFindings := NewSession(repo, nil, testCatalog(t), cfg).
 		Analyze(Request{Scope: ScopeChanged, Files: FileSetAll}).Findings
 	foundAll := false
-	for _, finding := range allFindings {
-		if finding.AnalyzerID == "typographic-markers" && finding.File == "violation.go" {
+	for _, hit := range allFindings {
+		if hit.AnalyzerID == "typographic-markers" && hit.File == "violation.go" {
 			foundAll = true
 		}
 	}
@@ -210,8 +210,8 @@ func TestSession_ScopeCommit_StaticSources(t *testing.T) {
 	sess := NewSession(repo, nil, testCatalog(t), nil)
 	findings := sess.Analyze(Request{Scope: ScopeCommit}).Findings
 
-	for _, finding := range findings {
-		if finding.AnalyzerID == "typographic-markers" {
+	for _, hit := range findings {
+		if hit.AnalyzerID == "typographic-markers" {
 			return
 		}
 	}
@@ -292,9 +292,9 @@ func TestSession_PackageLevelVarState(t *testing.T) {
 				Analyze(Request{Scope: ScopeChanged, Files: FileSetAll})
 
 			linesByAnalyzer := make(map[string][]int)
-			for _, finding := range result.Findings {
-				linesByAnalyzer[finding.AnalyzerID] = append(
-					linesByAnalyzer[finding.AnalyzerID], finding.Line,
+			for _, hit := range result.Findings {
+				linesByAnalyzer[hit.AnalyzerID] = append(
+					linesByAnalyzer[hit.AnalyzerID], hit.Line,
 				)
 			}
 			got := linesByAnalyzer["single-use-declaration"]
@@ -403,10 +403,10 @@ func TestSession_TestGlobsReachEveryTestConsumer(t *testing.T) {
 				return file.Path == "src/big.ts" && file.IsTest
 			})
 			gotSize, gotCount := false, false
-			for _, finding := range findings {
+			for _, hit := range findings {
 				gotSize = gotSize ||
-					finding.AnalyzerID == "file-size" && finding.File == "src/big.ts"
-				gotCount = gotCount || finding.AnalyzerID == "package-file-count"
+					hit.AnalyzerID == "file-size" && hit.File == "src/big.ts"
+				gotCount = gotCount || hit.AnalyzerID == "package-file-count"
 			}
 			if gotTest != testCase.wantTest || gotSize != testCase.wantFileSize ||
 				gotCount != testCase.wantCount {
@@ -428,9 +428,9 @@ func TestSession_InvalidTestGlob(t *testing.T) {
 	)
 
 	var configErrors []finding.Finding
-	for _, finding := range findings {
-		if finding.AnalyzerID == "config" {
-			configErrors = append(configErrors, finding)
+	for _, hit := range findings {
+		if hit.AnalyzerID == "config" {
+			configErrors = append(configErrors, hit)
 		}
 	}
 	if len(configErrors) != 1 {

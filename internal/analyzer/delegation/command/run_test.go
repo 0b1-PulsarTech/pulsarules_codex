@@ -375,11 +375,11 @@ func runRunCases(t *testing.T, testCases []runCase) {
 			ids := make([]string, len(findings))
 			files := make([]string, len(findings))
 			severities := make([]finding.Severity, len(findings))
-			for idx, finding := range findings {
-				ids[idx], files[idx] = finding.AnalyzerID, finding.File
-				severities[idx] = finding.Severity
-				if !strings.HasPrefix(finding.AnalyzerID, entryID+"/") {
-					t.Errorf("finding %q lacks the %s/ prefix", finding.AnalyzerID, entryID)
+			for idx, hit := range findings {
+				ids[idx], files[idx] = hit.AnalyzerID, hit.File
+				severities[idx] = hit.Severity
+				if !strings.HasPrefix(hit.AnalyzerID, entryID+"/") {
+					t.Errorf("finding %q lacks the %s/ prefix", hit.AnalyzerID, entryID)
 				}
 			}
 			if !slices.Equal(ids, testCase.wantIDs) {

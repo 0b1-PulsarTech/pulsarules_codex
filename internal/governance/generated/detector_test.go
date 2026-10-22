@@ -217,8 +217,8 @@ func TestDetector_Split(t *testing.T) {
 				t.Fatalf("suppressed = %d, want %d", suppressed, testCase.wantSuppressed)
 			}
 			var files []string
-			for _, finding := range kept {
-				files = append(files, finding.File)
+			for _, hit := range kept {
+				files = append(files, hit.File)
 			}
 			if !reflect.DeepEqual(files, testCase.wantKept) {
 				t.Fatalf("kept files = %v, want %v", files, testCase.wantKept)

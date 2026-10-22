@@ -72,9 +72,9 @@ func (scan fileScan) nameFindings(vs *ast.ValueSpec) []finding.Finding {
 		if isBlank {
 			suggestion = blankSuggestion(vs)
 		}
-		finding := scan.reporter.At(scan.path, line, "package-level var "+name.Name, suggestion)
-		finding.Symbol = name.Name
-		findings = append(findings, finding)
+		hit := scan.reporter.At(scan.path, line, "package-level var "+name.Name, suggestion)
+		hit.Symbol = name.Name
+		findings = append(findings, hit)
 	}
 	return findings
 }

@@ -33,10 +33,10 @@ func TestFrontmatterFindings(t *testing.T) {
 			if len(findings) != len(testCase.wantLines) {
 				t.Fatalf("findings = %+v, want lines %v", findings, testCase.wantLines)
 			}
-			for index, finding := range findings {
-				if finding.Line != testCase.wantLines[index] || finding.RuleID != "source-files" {
+			for index, hit := range findings {
+				if hit.Line != testCase.wantLines[index] || hit.RuleID != "source-files" {
 					t.Errorf("finding = %+v, want line %d rule source-files",
-						finding, testCase.wantLines[index])
+						hit, testCase.wantLines[index])
 				}
 			}
 		})

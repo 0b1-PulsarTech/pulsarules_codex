@@ -174,8 +174,8 @@ func TestPipelineTransformsRunInOrderAfterEveryAnalyzer(t *testing.T) {
 	findings := pipe.run(&pass.Context{}, nil)
 
 	got := make([]string, len(findings))
-	for index, finding := range findings {
-		got[index] = finding.AnalyzerID + ":" + finding.Message
+	for index, hit := range findings {
+		got[index] = hit.AnalyzerID + ":" + hit.Message
 	}
 	want := []string{"a1:", "a2:", "first:2 seen", "second:3 seen"}
 	if !slices.Equal(got, want) {
@@ -195,8 +195,8 @@ func TestPipelineSeedComesFirstAndIsTransformed(t *testing.T) {
 	findings := pipe.run(&pass.Context{}, []finding.Finding{{AnalyzerID: "seed"}})
 
 	got := make([]string, len(findings))
-	for index, finding := range findings {
-		got[index] = finding.AnalyzerID
+	for index, hit := range findings {
+		got[index] = hit.AnalyzerID
 	}
 	if !slices.Equal(got, []string{"seed", "a1", "seen"}) || findings[2].Line != 2 {
 		t.Fatalf("findings = %+v, want seed, a1, then the transform seeing both", findings)
@@ -331,8 +331,8 @@ func TestOrderFindings(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			var got []string
-			for _, finding := range orderFindings(slices.Clone(testCase.input)) {
-				got = append(got, finding.AnalyzerID)
+			for _, hit := range orderFindings(slices.Clone(testCase.input)) {
+				got = append(got, hit.AnalyzerID)
 			}
 			if !slices.Equal(got, testCase.want) {
 				t.Fatalf("order = %v, want %v", got, testCase.want)

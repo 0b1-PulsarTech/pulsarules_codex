@@ -44,12 +44,12 @@ func TestCheckFlagArguments(t *testing.T) {
 			if len(findings) != len(testCase.want) {
 				t.Fatalf("got %d findings, want %d", len(findings), len(testCase.want))
 			}
-			for index, finding := range findings {
-				if finding.Message != testCase.want[index] {
-					t.Errorf("message = %q, want %q", finding.Message, testCase.want[index])
+			for index, hit := range findings {
+				if hit.Message != testCase.want[index] {
+					t.Errorf("message = %q, want %q", hit.Message, testCase.want[index])
 				}
-				if finding.RuleID != "flag-arguments" {
-					t.Errorf("RuleID = %q, want flag-arguments", finding.RuleID)
+				if hit.RuleID != "flag-arguments" {
+					t.Errorf("RuleID = %q, want flag-arguments", hit.RuleID)
 				}
 			}
 		})

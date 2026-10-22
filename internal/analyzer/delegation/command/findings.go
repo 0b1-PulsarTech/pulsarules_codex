@@ -74,12 +74,12 @@ func (rep reports) diagnostic(item diagnostic, rel string) finding.Finding {
 		rel, line, room = "", 0, 0
 	}
 	room = lineRoom(rep.id+"/"+code) - room - len(suffix)
-	finding := rep.named(code, item.severity).At(
+	hit := rep.named(code, item.severity).At(
 		rel, line, printable.Head(item.message, room)+suffix,
 		printable.Head(item.suggestion, maxLineBytes-arrowFrameBytes),
 	)
-	finding.RuleID = rep.rule
-	return finding
+	hit.RuleID = rep.rule
+	return hit
 }
 
 func validCode(code string) bool {

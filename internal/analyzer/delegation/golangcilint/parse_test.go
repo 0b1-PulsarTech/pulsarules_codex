@@ -167,14 +167,14 @@ func TestParseOutput_Results(t *testing.T) {
 				t.Fatalf("got %d findings, want %d: %+v",
 					len(got), len(testCase.wantMessages), got)
 			}
-			for idx, finding := range got {
-				if !strings.HasPrefix(finding.Message, testCase.wantMessages[idx]) {
+			for idx, hit := range got {
+				if !strings.HasPrefix(hit.Message, testCase.wantMessages[idx]) {
 					t.Errorf("message[%d] = %q, want prefix %q",
-						idx, finding.Message, testCase.wantMessages[idx])
+						idx, hit.Message, testCase.wantMessages[idx])
 				}
-				if finding.Severity != testCase.wantSeverity[idx] {
+				if hit.Severity != testCase.wantSeverity[idx] {
 					t.Errorf("severity[%d] = %v, want %v",
-						idx, finding.Severity, testCase.wantSeverity[idx])
+						idx, hit.Severity, testCase.wantSeverity[idx])
 				}
 			}
 		})

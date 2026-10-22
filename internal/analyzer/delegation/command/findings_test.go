@@ -110,10 +110,10 @@ func TestReportsSubIDs(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			finding := testCase.finding
-			if finding.AnalyzerID != testCase.wantID || finding.Severity != testCase.wantSev ||
-				finding.RuleID != testCase.wantRule {
-				t.Errorf("finding = %+v", finding)
+			hit := testCase.finding
+			if hit.AnalyzerID != testCase.wantID || hit.Severity != testCase.wantSev ||
+				hit.RuleID != testCase.wantRule {
+				t.Errorf("finding = %+v", hit)
 			}
 		})
 	}
@@ -154,11 +154,11 @@ func TestReportsDiagnosticCodes(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			finding := reports{id: "tool"}.diagnostic(
+			hit := reports{id: "tool"}.diagnostic(
 				diagnostic{code: testCase.code, message: "m"}, "f",
 			)
-			if finding.AnalyzerID != testCase.wantID || finding.Message != testCase.wantMessage {
-				t.Errorf("id %q message %q", finding.AnalyzerID, finding.Message)
+			if hit.AnalyzerID != testCase.wantID || hit.Message != testCase.wantMessage {
+				t.Errorf("id %q message %q", hit.AnalyzerID, hit.Message)
 			}
 		})
 	}

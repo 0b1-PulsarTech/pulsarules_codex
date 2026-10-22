@@ -62,7 +62,7 @@ func (reps fileReporters) forFunc(
 				return
 			}
 			reported[name] = true
-			finding := reps.reuse.At(
+			hit := reps.reuse.At(
 				fc.Path,
 				fset.Position(pos).Line,
 				fmt.Sprintf("%q is reassigned by := in the block that declares it", name),
@@ -74,8 +74,8 @@ func (reps fileReporters) forFunc(
 			)
 			// The fix a reuse finding asks for, a var declaration above the call, is the
 			// named-returns rule's territory.
-			finding.RuleID = "named-returns"
-			*findings = append(*findings, finding)
+			hit.RuleID = "named-returns"
+			*findings = append(*findings, hit)
 		},
 	}
 }

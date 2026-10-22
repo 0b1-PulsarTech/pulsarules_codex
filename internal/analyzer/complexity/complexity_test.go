@@ -166,8 +166,8 @@ func fourLineFixture(t *testing.T) (*astcache.Cache, string) {
 }
 
 func hasFuncLinesFinding(findings []finding.Finding) bool {
-	for _, finding := range findings {
-		if strings.Contains(finding.Message, "is 4 lines, max 1") {
+	for _, hit := range findings {
+		if strings.Contains(hit.Message, "is 4 lines, max 1") {
 			return true
 		}
 	}
@@ -375,8 +375,8 @@ func TestCheckFile_SummaryFromAnyLanguage(t *testing.T) {
 			fc := pass.FileChange{Path: "a.dart", IsTest: testCase.test}
 			got := th.checkFile(fc, &syntax.File{Functions: []syntax.Function{testCase.fn}})
 			messages := make([]string, 0, len(got))
-			for _, finding := range got {
-				messages = append(messages, finding.Message)
+			for _, hit := range got {
+				messages = append(messages, hit.Message)
 			}
 			if !slices.Equal(messages, testCase.want) {
 				t.Fatalf("messages = %q, want %q", messages, testCase.want)
