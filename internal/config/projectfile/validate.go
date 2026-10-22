@@ -18,7 +18,7 @@ type validator struct {
 }
 
 func (file *File) Validate(rules Rules) error {
-	problems := &Problems{path: file.Path}
+	problems := NewProblems(file.Path)
 	file.check(rules, Root(), problems)
 	return problems.Err()
 }
@@ -56,9 +56,7 @@ func (file *File) check(rules Rules, root *Field, problems *Problems) {
 }
 
 func (val *validator) fail(at *Field, format string, args ...any) {
-	if !at.covered(&val.problems.walked) {
-		val.problems.add(0, at, format, args...)
-	}
+	val.problems.Report(at, format, args...)
 }
 
 func (val *validator) checkHeader(file *File) {

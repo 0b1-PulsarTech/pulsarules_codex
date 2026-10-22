@@ -37,7 +37,7 @@ func decode(path string, content []byte) (decoded, error) {
 		return decoded{}, err
 	}
 	value, top := root.Content[0], Root()
-	parsed := decoded{problems: &Problems{path: path}, top: top}
+	parsed := decoded{problems: NewProblems(path), top: top}
 	walkSchema(parsed.problems, value, top)
 	if value = deref(value); value.Kind != yaml.MappingNode && !isNull(value) {
 		return parsed, nil

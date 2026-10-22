@@ -20,6 +20,14 @@ type Problems struct {
 	walked int
 }
 
+func NewProblems(path string) *Problems { return &Problems{path: path} }
+
+func (col *Problems) Report(at *Field, format string, args ...any) {
+	if !at.covered(&col.walked) {
+		col.add(0, at, format, args...)
+	}
+}
+
 func (col *Problems) add(line int, at *Field, format string, args ...any) {
 	col.total++
 	if len(col.stored) >= MaxReported || col.bytes >= MaxReportedBytes {

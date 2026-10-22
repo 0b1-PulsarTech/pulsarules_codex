@@ -336,7 +336,7 @@ func TestCollectorCapsStoredProblems(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			col := &Problems{path: "p.yaml"}
+			col := NewProblems("p.yaml")
 			for idx := range testCase.count {
 				col.add(idx+1, Root().Key("a"), "bad %d", idx)
 			}
@@ -366,7 +366,7 @@ func TestCollectorFormatsOnlyStoredProblems(t *testing.T) {
 	t.Parallel()
 
 	calls := 0
-	col := &Problems{path: "p.yaml"}
+	col := NewProblems("p.yaml")
 	for range MaxReported + 500 {
 		col.add(1, Root(), "bad %v", loudValue{calls: &calls})
 	}
@@ -378,7 +378,7 @@ func TestCollectorFormatsOnlyStoredProblems(t *testing.T) {
 func TestCollectorTextShape(t *testing.T) {
 	t.Parallel()
 
-	col := &Problems{path: "p.yaml"}
+	col := NewProblems("p.yaml")
 	col.add(7, Root().Key("a").Item(1), "bad")
 	col.add(0, Root().Key("b"), "no line")
 	col.add(3, Root(), "root")
@@ -388,11 +388,40 @@ func TestCollectorTextShape(t *testing.T) {
 	}
 }
 
+func TestProblemsReport(t *testing.T) {
+	t.Parallel()
+
+	root := Root()
+	root.Key("a").Item(1).mark()
+	testCases := []struct {
+		name string
+		at   *Field
+		want []string
+	}{
+		{"an unmarked field", root.Key("b"), []string{"p.yaml: b: bad"}},
+		{"a marked field", root.Key("a").Item(1), nil},
+		{"under a marked field", root.Key("a").Item(1).Key("c"), nil},
+		{"beside a marked field", root.Key("a").Item(2), []string{"p.yaml: a[2]: bad"}},
+		{"the list of a marked item", root.Key("a"), nil},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			col := NewProblems("p.yaml")
+			col.Report(testCase.at, "bad")
+			if !slices.Equal(col.stored, testCase.want) {
+				t.Fatalf("stored = %q, want %q", col.stored, testCase.want)
+			}
+		})
+	}
+}
+
 func TestCollectorCapsBytes(t *testing.T) {
 	t.Parallel()
 
 	const count = 100
-	col := &Problems{path: ".pulsarules.yaml"}
+	col := NewProblems(".pulsarules.yaml")
 	for range count {
 		col.add(1, Root().Key("a"), "%s", strings.Repeat("m", 300))
 	}

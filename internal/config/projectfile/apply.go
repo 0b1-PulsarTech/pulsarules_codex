@@ -33,7 +33,7 @@ func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 }
 
 func (file *File) CheckOverrides(govCfg *config.GovernanceConfig) error {
-	problems := &Problems{path: file.Path}
+	problems := NewProblems(file.Path)
 	listed := Root().Key("overrides")
 	for idx, override := range file.Overrides {
 		for _, id := range slices.Sorted(maps.Keys(override.Analyzers)) {
@@ -44,7 +44,7 @@ func (file *File) CheckOverrides(govCfg *config.GovernanceConfig) error {
 				continue
 			}
 			field := listed.Item(idx).Key("analyzers").Key(id).Key("enabled")
-			problems.add(0, field, "%s is disabled for the whole project; "+
+			problems.Report(field, "%s is disabled for the whole project; "+
 				"an override can only narrow it", ClipValue(base))
 		}
 	}
