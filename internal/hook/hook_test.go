@@ -191,16 +191,16 @@ func TestDispatchSubagentStart_MissingContract(t *testing.T) {
 func TestDispatchContract_SessionAndSubagent(t *testing.T) {
 	t.Parallel()
 
-	_, templates, err := knowledge.Load("")
+	_, assets, err := knowledge.Load("")
 	if err != nil {
 		t.Fatalf("load embedded knowledge: %v", err)
 	}
 
-	wantSession, err := contract.Session(templates)
+	wantSession, err := contract.Session(assets)
 	if err != nil {
 		t.Fatalf("contract.Session: %v", err)
 	}
-	wantSubagent, err := contract.Subagent(templates)
+	wantSubagent, err := contract.Subagent(assets)
 	if err != nil {
 		t.Fatalf("contract.Subagent: %v", err)
 	}
@@ -216,7 +216,7 @@ func TestDispatchContract_SessionAndSubagent(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			disp, out := dispatchCapture(Deps{Templates: templates})
+			disp, out := dispatchCapture(Deps{Templates: assets})
 			_ = disp.Dispatch(testCase.mode, newSessionPayload(t))
 			got := extractContext(t, out.String())
 			if got != testCase.want {
