@@ -34,8 +34,8 @@ func formatVersion(build *debug.BuildInfo) string {
 		return fallbackVersion
 	}
 	revision := buildRevision(build)
-	version := build.Main.Version
-	if version == "" || version == "(devel)" {
+	release := build.Main.Version
+	if release == "" || release == "(devel)" {
 		// A go run build has no vcs.revision, so it reports the cut release.
 		if revision == "" {
 			return fallbackVersion
@@ -43,10 +43,10 @@ func formatVersion(build *debug.BuildInfo) string {
 		return "devel+" + revision
 	}
 	// A pseudo-version already ends in the revision it was derived from.
-	if revision == "" || strings.Contains(version, revision) {
-		return version
+	if revision == "" || strings.Contains(release, revision) {
+		return release
 	}
-	return version + "+" + revision
+	return release + "+" + revision
 }
 
 func buildRevision(build *debug.BuildInfo) string {
