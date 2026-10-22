@@ -102,7 +102,7 @@ func TestEmbedFiles(t *testing.T) {
 		"pkg/a.txt", "pkg/b.go", "pkg/static/x.js", "pkg/static/.keep", "pkg/static/sub/z.js",
 		"pkg/static/_gen/g.js", "pkg/big/deep/one", "pkg/big/deep/two", "other/o.txt", "pkg/lone",
 		"pkg/mod/go.mod", "pkg/mod/m.txt", "pkg/static/inner/go.mod", "pkg/static/inner/i.js",
-		"pkg/static/inner/deep/d.js",
+		"pkg/static/inner/deep/d.js", "pkg/lib/xgo.mod", "pkg/lib/l.js",
 	}
 	testCases := []struct {
 		name     string
@@ -135,6 +135,12 @@ func TestEmbedFiles(t *testing.T) {
 		{"root with no files is not a file", []string{"gone"}, "gone", nil},
 		{"file where a pattern wants a directory", []string{"lone/x"}, "pkg", nil},
 		{"directory pattern skips a nested module", []string{"mod"}, "pkg", nil},
+		{
+			"a file only named like go.mod does not nest",
+			[]string{"lib"},
+			"pkg",
+			[]string{"lib/l.js", "lib/xgo.mod"},
+		},
 		{
 			"the root's own go.mod does not nest",
 			[]string{"go.mod", "m.txt"},

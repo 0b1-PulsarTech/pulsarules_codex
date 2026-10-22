@@ -246,9 +246,7 @@ func TestEmbedSet_NotCovered(t *testing.T) {
 	whole = withFile(whole, "internal/util/static/sub/go.mod", "internal/routing/static/sub/go.mod")
 	whole = withFile(whole, "internal/util/static/sub/z.js", "internal/routing/static/sub/z.js")
 	testCases := []renameCase{
-		accepted(
-			moved,
-		),
+		accepted(moved),
 		accepted(nested),
 		accepted(movesToRootRow()),
 		accepted(left),
