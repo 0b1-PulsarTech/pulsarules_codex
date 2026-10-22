@@ -14,6 +14,7 @@ type fakeRepo struct {
 	head        map[string]string
 	staged      map[string]string
 	stagedModes map[string]string
+	failHeadDir string
 }
 
 var _ gitReader = fakeRepo{}
@@ -51,6 +52,9 @@ func (repo fakeRepo) Entry(side vcs.Side, path string) (mode, id string, err err
 
 func (repo fakeRepo) Dir(side vcs.Side, dir string) ([]string, error) {
 	tree := repo.tree(side)
+	if side == vcs.Head && dir == repo.failHeadDir {
+		return nil, errMissing
+	}
 	if side == vcs.Head {
 		return childrenOf(tree, dir), nil
 	}
@@ -138,6 +142,11 @@ func embedRow(name, directive string, comoved []pass.Rename) renameCase {
 
 func accepted(row renameCase) renameCase {
 	row.want = true
+	return row
+}
+
+func failingHeadDir(row renameCase, dir string) renameCase {
+	row.failHeadDir = dir
 	return row
 }
 

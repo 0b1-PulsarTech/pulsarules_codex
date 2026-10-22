@@ -388,6 +388,7 @@ func TestEmbedRelocation(t *testing.T) {
 		)),
 		withFile(dir("hidden file left behind warns", static), "internal/util/static/.keep", ""),
 		withFile(dir("new directory already existed", static), existing, existing),
+		failingHeadDir(dir("new directory listing fails", static), "internal/routing/static"),
 		withFile(dir("file moved in from elsewhere", static), "internal/other/z.js", newZ),
 		embedRow("one of several patterns left behind", embedPublic+" static/x.js", public),
 		embedRow("unterminated quote", "//go:embed \"public.txt", public),

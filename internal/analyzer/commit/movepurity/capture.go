@@ -93,7 +93,7 @@ func (moves *moveContext) pathFollows(oldPath, newPath string) bool {
 }
 
 func (moves *moveContext) arrivesAlone(oldPath, newPath string) bool {
-	if existing, err := moves.head.dir(newPath); err == nil && len(existing) > 0 {
+	if existing, err := moves.head.dir(newPath); err != nil || len(existing) > 0 {
 		return false
 	}
 	return !slices.ContainsFunc(moves.renames, func(rename pass.Rename) bool {

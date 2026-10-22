@@ -12,6 +12,7 @@ type renameCase struct {
 	head        map[string]string
 	staged      map[string]string
 	modes       map[string]string
+	failHeadDir string
 	renames     []pass.Rename
 	want        bool
 	wantVerdict verdict
@@ -25,6 +26,7 @@ func runRenameCases(t *testing.T, testCases []renameCase) {
 
 			repo := newFakeRepo(testCase.head, testCase.staged)
 			repo.stagedModes = testCase.modes
+			repo.failHeadDir = testCase.failHeadDir
 			moves := newMoveContext(repo, testCase.renames)
 			if got := moves.renameVerdict(
 				testCase.renames[0],
