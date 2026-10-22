@@ -102,9 +102,9 @@ func TestSweep_Write(t *testing.T) {
 			if err != nil {
 				t.Fatalf("read: %v", err)
 			}
-			clean := !strings.ContainsRune(string(body), '\u200B')
-			if clean != testCase.wantClean {
-				t.Errorf("%q clean = %v, want %v", testCase.rel, clean, testCase.wantClean)
+			intact := !strings.ContainsRune(string(body), '\u200B')
+			if intact != testCase.wantClean {
+				t.Errorf("%q clean = %v, want %v", testCase.rel, intact, testCase.wantClean)
 			}
 		})
 	}
