@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestFieldPathCovered(t *testing.T) {
+func TestFieldCovered(t *testing.T) {
 	t.Parallel()
 
 	root := Root()
@@ -42,7 +42,7 @@ func TestFieldPathCovered(t *testing.T) {
 	}
 }
 
-func TestFieldPathCoveredWhenEmpty(t *testing.T) {
+func TestFieldCoveredWhenEmpty(t *testing.T) {
 	t.Parallel()
 
 	if Root().Key("tests").covered(new(int)) {
@@ -50,7 +50,7 @@ func TestFieldPathCoveredWhenEmpty(t *testing.T) {
 	}
 }
 
-func TestFieldPathString(t *testing.T) {
+func TestFieldString(t *testing.T) {
 	t.Parallel()
 
 	root := Root()
@@ -81,7 +81,7 @@ func TestFieldPathString(t *testing.T) {
 	}
 }
 
-func TestFieldPathInterns(t *testing.T) {
+func TestFieldInterns(t *testing.T) {
 	t.Parallel()
 
 	root := Root()
@@ -132,7 +132,7 @@ type linearCase struct {
 	content func(items int) string
 }
 
-func TestParseStaysLinearInProblems(t *testing.T) {
+func TestReportStaysLinearInProblems(t *testing.T) {
 	t.Parallel()
 
 	const stepsPerNode = 4
@@ -198,7 +198,7 @@ func TestClipValue(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			if got := ClipValue(testCase.value); got != testCase.want {
-				t.Fatalf("clipValue() = %q, want %q", got, testCase.want)
+				t.Fatalf("ClipValue() = %q, want %q", got, testCase.want)
 			}
 		})
 	}

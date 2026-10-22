@@ -8,15 +8,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
-const (
-	MaxGlobBytes      = 256
-	MaxGlobStars      = 4
-	MaxTotalGlobs     = 256
-	MaxTotalGlobBytes = 4096
-	MaxWildcardWork   = 256
-	MaxStarTextBytes  = 2048
-)
-
 func (val *validator) checkGlobs(at *strictyaml.Field, globs []string) []string {
 	passed := make([]string, 0, len(globs))
 	for idx, pattern := range globs {
@@ -38,20 +29,30 @@ func (val *validator) checkGlobs(at *strictyaml.Field, globs []string) []string 
 }
 
 func globFault(pattern string) string {
+	const (
+		maxGlobBytes = 256
+		maxGlobStars = 4
+	)
 	switch {
-	case len(pattern) > MaxGlobBytes:
-		return fmt.Sprintf("glob longer than %d bytes", MaxGlobBytes)
+	case len(pattern) > maxGlobBytes:
+		return fmt.Sprintf("glob longer than %d bytes", maxGlobBytes)
 	case glob.HasBrace(pattern):
 		return "brace alternatives are not supported; list each glob"
-	case glob.StarCount(pattern) > MaxGlobStars:
+	case glob.StarCount(pattern) > maxGlobStars:
 		return fmt.Sprintf(
-			"glob has more than %d * (** and lone * segments are free)", MaxGlobStars,
+			"glob has more than %d * (** and lone * segments are free)", maxGlobStars,
 		)
 	}
 	return ""
 }
 
 func (val *validator) checkGlobBudget(globs []string) bool {
+	const (
+		maxTotalGlobs     = 256
+		maxTotalGlobBytes = 4096
+		maxWildcardWork   = 256
+		maxStarTextBytes  = 2048
+	)
 	size, wildcards, tails := 0, 0, 0
 	for _, pattern := range globs {
 		size += len(pattern)
@@ -60,15 +61,15 @@ func (val *validator) checkGlobBudget(globs []string) bool {
 	}
 	at := val.root.Key("overrides and tests")
 	switch {
-	case len(globs) > MaxTotalGlobs:
-		val.fail(at, "more than %d globs in total", MaxTotalGlobs)
-	case size > MaxTotalGlobBytes:
-		val.fail(at, "globs exceed %d bytes in total", MaxTotalGlobBytes)
-	case wildcards > MaxWildcardWork:
-		val.fail(at, "wildcard classes and ? exceed %d in total", MaxWildcardWork)
-	case tails > MaxStarTextBytes:
+	case len(globs) > maxTotalGlobs:
+		val.fail(at, "more than %d globs in total", maxTotalGlobs)
+	case size > maxTotalGlobBytes:
+		val.fail(at, "globs exceed %d bytes in total", maxTotalGlobBytes)
+	case wildcards > maxWildcardWork:
+		val.fail(at, "wildcard classes and ? exceed %d in total", maxWildcardWork)
+	case tails > maxStarTextBytes:
 		val.fail(at, "text after the first * of each segment exceeds %d bytes in total",
-			MaxStarTextBytes)
+			maxStarTextBytes)
 	default:
 		return true
 	}

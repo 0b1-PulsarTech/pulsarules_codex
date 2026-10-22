@@ -92,10 +92,10 @@ func (at *Field) covered(walked *int) bool {
 }
 
 func ClipValue(value string) string {
-	if len(value) <= MaxClipBytes {
+	if len(value) <= maxClipBytes {
 		return value
 	}
-	cut := MaxClipBytes
+	cut := maxClipBytes
 	for cut > 0 && !utf8.RuneStart(value[cut]) {
 		cut--
 	}

@@ -1,7 +1,6 @@
 package printable
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -122,45 +121,62 @@ func TestTailStartVisitsOnlyTheTail(t *testing.T) {
 	}
 }
 
-func fitHead(text string, limit int) string {
-	kept, whole := Fit(text, limit)
-	return fmt.Sprint(kept, " ", whole)
-}
-
 func TestShorten(t *testing.T) {
 	t.Parallel()
 
 	const bs, acc, ctl = `\`, "\u00e9", "\x01"
 	testCases := []struct {
 		name  string
-		clip  func(string, int) string
 		text  string
 		limit int
 		want  string
 	}{
-		{"head fits", Shorten, `a\x01`, 5, `a\x01`},
-		{"head keeps whole runes", Shorten, acc + acc + acc, 6, acc + acc + acc},
-		{"head cut", Shorten, "abcdefg", 6, "abc..."},
-		{"head escapes the kept part", Shorten, "a" + ctl + ctl + ctl, 12, `a\x01\x01...`},
-		{"head never splits a rune", Shorten, "ab" + acc + acc + "x", 6, "ab..."},
-		{"head literal backslash", Shorten, "ab" + bs + "xyzw", 6, "ab..."},
-		{"head cut escape start", Shorten, "ab" + bs + "xyzwv", 7, "ab..."},
-		{"head cut unicode start", Shorten, "ab" + bs + "u00zwvv", 9, "ab..."},
-		{"head backslash pairs", Shorten, "a" + bs + bs + bs + "xyzwvv", 8, "a..."},
-		{"head cut supplementary escape", Shorten, "ab" + bs + "U000e0001zz", 10, "ab..."},
-		{"head cut short unicode escape", Shorten, "ab" + bs + "u00e9zzz", 10, "ab..."},
-		{"head complete escape text", Shorten, "a" + bs + "x41yzvv", 8, "a" + bs + "x41..."},
-		{"head invalid bytes", Shorten, "a\xff\xff\xff", 8, `a\xff...`},
-		{"head backslash then rune", Shorten, "x" + bs + acc + "abcd", 4, "x..."},
-		{"fit stops before the limit", fitHead, "ab" + ctl + "cd", 6, "ab" + ctl + " false"},
-		{"fit keeps all", fitHead, "ab", 2, "ab true"},
+		{"head fits", `a\x01`, 5, `a\x01`},
+		{"head keeps whole runes", acc + acc + acc, 6, acc + acc + acc},
+		{"head cut", "abcdefg", 6, "abc..."},
+		{"head escapes the kept part", "a" + ctl + ctl + ctl, 12, `a\x01\x01...`},
+		{"head never splits a rune", "ab" + acc + acc + "x", 6, "ab..."},
+		{"head literal backslash", "ab" + bs + "xyzw", 6, "ab..."},
+		{"head cut escape start", "ab" + bs + "xyzwv", 7, "ab..."},
+		{"head cut unicode start", "ab" + bs + "u00zwvv", 9, "ab..."},
+		{"head backslash pairs", "a" + bs + bs + bs + "xyzwvv", 8, "a..."},
+		{"head cut supplementary escape", "ab" + bs + "U000e0001zz", 10, "ab..."},
+		{"head cut short unicode escape", "ab" + bs + "u00e9zzz", 10, "ab..."},
+		{"head complete escape text", "a" + bs + "x41yzvv", 8, "a" + bs + "x41..."},
+		{"head invalid bytes", "a\xff\xff\xff", 8, `a\xff...`},
+		{"head backslash then rune", "x" + bs + acc + "abcd", 4, "x..."},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := testCase.clip(testCase.text, testCase.limit); got != testCase.want {
+			if got := Shorten(testCase.text, testCase.limit); got != testCase.want {
 				t.Fatalf("got %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestFit(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		text  string
+		limit int
+		kept  string
+		whole bool
+	}{
+		{"stops before the limit", "ab\x01cd", 6, "ab\x01", false},
+		{"keeps all", "ab", 2, "ab", true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			kept, whole := Fit(testCase.text, testCase.limit)
+			if kept != testCase.kept || whole != testCase.whole {
+				t.Fatalf("Fit() = %q, %v, want %q, %v", kept, whole, testCase.kept, testCase.whole)
 			}
 		})
 	}

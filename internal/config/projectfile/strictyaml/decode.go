@@ -12,14 +12,14 @@ import (
 
 const (
 	MaxFileBytes     = 256 << 10
-	MaxScalarBytes   = 1024
-	MaxDepth         = 64
-	MaxExpandedNodes = 100_000
+	maxScalarBytes   = 1024
+	maxDepth         = 64
+	maxExpandedNodes = 100_000
 	MaxMapKeys       = 256
 	MaxSeqItems      = 1024
-	MaxReported      = 20
-	MaxReportedBytes = 3072
-	MaxClipBytes     = 80
+	maxReported      = 20
+	maxReportedBytes = 3072
+	maxClipBytes     = 80
 )
 
 type Document[Target any] struct {

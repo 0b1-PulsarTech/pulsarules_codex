@@ -22,18 +22,18 @@ type Problems struct {
 
 func NewProblems(path string) *Problems { return &Problems{path: path} }
 
-func (col *Problems) Report(at *Field, format string, args ...any) {
-	if !at.covered(&col.walked) {
-		col.add(0, at, format, args...)
+func (problems *Problems) Report(at *Field, format string, args ...any) {
+	if !at.covered(&problems.walked) {
+		problems.add(0, at, format, args...)
 	}
 }
 
-func (col *Problems) add(line int, at *Field, format string, args ...any) {
-	col.total++
-	if len(col.stored) >= MaxReported || col.bytes >= MaxReportedBytes {
+func (problems *Problems) add(line int, at *Field, format string, args ...any) {
+	problems.total++
+	if len(problems.stored) >= maxReported || problems.bytes >= maxReportedBytes {
 		return
 	}
-	text := col.path + ": "
+	text := problems.path + ": "
 	if line > 0 {
 		text += "line " + strconv.Itoa(line) + ": "
 	}
@@ -41,13 +41,13 @@ func (col *Problems) add(line int, at *Field, format string, args ...any) {
 		text += clipPath(field) + ": "
 	}
 	text += fmt.Sprintf(format, args...)
-	col.bytes += len(text)
-	col.stored = append(col.stored, text)
+	problems.bytes += len(text)
+	problems.stored = append(problems.stored, text)
 }
 
-func (col *Problems) Err() error {
-	texts := col.stored
-	switch extra := col.total - len(col.stored); {
+func (problems *Problems) Err() error {
+	texts := problems.stored
+	switch extra := problems.total - len(problems.stored); {
 	case extra == 1:
 		texts = append(texts, "... and 1 more problem")
 	case extra > 1:
