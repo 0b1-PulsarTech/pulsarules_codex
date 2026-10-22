@@ -119,7 +119,7 @@ func TestInstallDocs_RenderFailureLeavesPriorFiles(t *testing.T) {
 	}
 }
 
-func TestInstallDocs_WriteDocFailure(t *testing.T) {
+func TestInstallDocs_WriteFailure(t *testing.T) {
 	t.Parallel()
 
 	dest := t.TempDir()
@@ -146,7 +146,7 @@ func TestInstallDocs_WriteDocFailure(t *testing.T) {
 	}
 }
 
-func TestInstall_WriteDocFailureLeavesPriorFiles(t *testing.T) {
+func TestInstall_WriteFailureLeavesPriorFiles(t *testing.T) {
 	t.Parallel()
 
 	idx, rnd := loadFixture(t)
@@ -179,7 +179,7 @@ func TestInstall_WriteDocFailureLeavesPriorFiles(t *testing.T) {
 	}
 }
 
-func TestInstallWorkflows_WriteDocFailure(t *testing.T) {
+func TestInstallWorkflows_WriteFailure(t *testing.T) {
 	t.Parallel()
 
 	idx, rnd := loadFixture(t)

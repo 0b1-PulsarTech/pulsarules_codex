@@ -64,7 +64,7 @@ func TestInstallSkillsAndWorkflows_Backups(t *testing.T) {
 	}
 }
 
-func TestRemoveDocs_ReportsRestoredAndOrphaned(t *testing.T) {
+func TestRemoveSkillsAndWorkflows_ReportsRestoredAndOrphaned(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -85,7 +85,7 @@ func TestRemoveDocs_ReportsRestoredAndOrphaned(t *testing.T) {
 			seedFile(t, docPath, "# my own notes, no marker\n")
 			body := "# body\n" + ownedfile.Marker + "\n"
 			if _, err := docs.Write(dir, testCase.docName, body); err != nil {
-				t.Fatalf("WriteDoc: %v", err)
+				t.Fatalf("Write: %v", err)
 			}
 			seedFile(t, docPath+ownedfile.BackupSuffix+".2", "older\n")
 
@@ -184,7 +184,7 @@ func TestRemoveKind_KindWording(t *testing.T) {
 			dir := filepath.Join(dest, "security")
 			body := "# body\n" + ownedfile.Marker + "\n"
 			if _, err := docs.Write(dir, testCase.kind.docName, body); err != nil {
-				t.Fatalf("WriteDoc: %v", err)
+				t.Fatalf("Write: %v", err)
 			}
 
 			var report Report

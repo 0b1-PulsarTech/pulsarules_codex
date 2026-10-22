@@ -35,7 +35,7 @@ func TestWriteFile(t *testing.T) {
 	}
 }
 
-func TestWriteDoc_BacksUpForeignDir(t *testing.T) {
+func TestWrite_BacksUpForeignDir(t *testing.T) {
 	t.Parallel()
 
 	dest := t.TempDir()
@@ -51,7 +51,7 @@ func TestWriteDoc_BacksUpForeignDir(t *testing.T) {
 
 	backedUp, err := Write(dir, "SKILL.md", "# rendered body\n"+ownedfile.Marker+"\n")
 	if err != nil {
-		t.Fatalf("WriteDoc: %v", err)
+		t.Fatalf("Write: %v", err)
 	}
 	backupPath := docPath + ownedfile.BackupSuffix
 	wantMsg := ownedfile.BackupMessage(docPath, backupPath)
@@ -74,20 +74,20 @@ func TestWriteDoc_BacksUpForeignDir(t *testing.T) {
 	}
 }
 
-func TestWriteDoc_OwnDirOverwrittenWithoutBackup(t *testing.T) {
+func TestWrite_OwnDirOverwrittenWithoutBackup(t *testing.T) {
 	t.Parallel()
 
 	dest := t.TempDir()
 	dir := filepath.Join(dest, "go-style")
 	body := "# go-style\n" + ownedfile.Marker + "\nfirst render\n"
 	if _, err := Write(dir, "SKILL.md", body); err != nil {
-		t.Fatalf("first WriteDoc: %v", err)
+		t.Fatalf("first Write: %v", err)
 	}
 
 	updated := "# go-style\n" + ownedfile.Marker + "\nsecond render\n"
 	backedUp, err := Write(dir, "SKILL.md", updated)
 	if err != nil {
-		t.Fatalf("second WriteDoc: %v", err)
+		t.Fatalf("second Write: %v", err)
 	}
 	if len(backedUp) != 0 {
 		t.Errorf("backedUp = %v, want none (the dir was already ours)", backedUp)
@@ -106,7 +106,7 @@ func TestWriteDoc_OwnDirOverwrittenWithoutBackup(t *testing.T) {
 	}
 }
 
-func TestWriteDoc_NextNumberedSlot(t *testing.T) {
+func TestWrite_NextNumberedSlot(t *testing.T) {
 	t.Parallel()
 
 	dir := filepath.Join(t.TempDir(), "security")
@@ -119,7 +119,7 @@ func TestWriteDoc_NextNumberedSlot(t *testing.T) {
 
 	backedUp, err := Write(dir, "SKILL.md", "# rendered body\n"+ownedfile.Marker+"\n")
 	if err != nil {
-		t.Fatalf("WriteDoc: %v", err)
+		t.Fatalf("Write: %v", err)
 	}
 	newBackup := docPath + ownedfile.BackupSuffix + ".1"
 	assertIDs(t, "backedUp", backedUp, ownedfile.BackupMessage(docPath, newBackup))
@@ -127,7 +127,7 @@ func TestWriteDoc_NextNumberedSlot(t *testing.T) {
 	assertContent(t, newBackup, current)
 }
 
-func TestWriteDoc_PreMarkerDoc(t *testing.T) {
+func TestWrite_PreMarkerDoc(t *testing.T) {
 	t.Parallel()
 
 	dest := t.TempDir()
@@ -148,7 +148,7 @@ func TestWriteDoc_PreMarkerDoc(t *testing.T) {
 
 	backedUp, err := Write(dir, "SKILL.md", "# go-style\n"+ownedfile.Marker+"\n")
 	if err != nil {
-		t.Fatalf("WriteDoc: %v", err)
+		t.Fatalf("Write: %v", err)
 	}
 	wantDocMsg := ownedfile.BackupMessage(docPath, docPath+ownedfile.BackupSuffix)
 	wantGitignoreMsg := ownedfile.BackupMessage(gitignorePath, gitignorePath+ownedfile.BackupSuffix)
@@ -167,7 +167,7 @@ func TestWriteDoc_PreMarkerDoc(t *testing.T) {
 	}
 }
 
-func TestWriteDoc_GitignoreFailure(t *testing.T) {
+func TestWrite_GitignoreFailure(t *testing.T) {
 	t.Parallel()
 
 	target := filepath.Join(t.TempDir(), "skill")
@@ -198,12 +198,12 @@ func TestWriteDoc_GitignoreFailure(t *testing.T) {
 	}
 }
 
-func TestWriteDoc_KeepsUserGitignoreLines(t *testing.T) {
+func TestWrite_KeepsUserGitignoreLines(t *testing.T) {
 	t.Parallel()
 
 	dir := filepath.Join(t.TempDir(), "go-style")
 	body := "# go-style\n" + ownedfile.Marker + "\n"
-	mustWriteDoc(t, dir, body)
+	mustWrite(t, dir, body)
 	ignorePath := filepath.Join(dir, ".gitignore")
 	rendered, err := os.ReadFile(ignorePath) //nolint:gosec // test fixture.
 	if err != nil {
@@ -216,7 +216,7 @@ func TestWriteDoc_KeepsUserGitignoreLines(t *testing.T) {
 
 	backedUp, err := Write(dir, "SKILL.md", body)
 	if err != nil {
-		t.Fatalf("second WriteDoc: %v", err)
+		t.Fatalf("second Write: %v", err)
 	}
 	if len(backedUp) != 0 {
 		t.Errorf("backedUp = %v, want none", backedUp)

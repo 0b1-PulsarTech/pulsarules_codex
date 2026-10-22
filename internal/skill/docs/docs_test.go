@@ -35,10 +35,10 @@ func seedFile(tb testing.TB, filePath, content string) {
 	}
 }
 
-func mustWriteDoc(tb testing.TB, dir, body string) {
+func mustWrite(tb testing.TB, dir, body string) {
 	tb.Helper()
 	if _, err := Write(dir, "SKILL.md", body); err != nil {
-		tb.Fatalf("WriteDoc: %v", err)
+		tb.Fatalf("Write: %v", err)
 	}
 }
 

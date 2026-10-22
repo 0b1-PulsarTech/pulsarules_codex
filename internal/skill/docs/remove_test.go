@@ -100,7 +100,7 @@ func seedRemoveCase(t *testing.T, root string, testCase removeCase) {
 		seedFile(t, filepath.Join(root, filepath.FromSlash(rel)), body)
 	}
 	for _, id := range testCase.docs {
-		mustWriteDoc(t, filepath.Join(root, id), "body\n"+ownedfile.Marker+"\n")
+		mustWrite(t, filepath.Join(root, id), "body\n"+ownedfile.Marker+"\n")
 	}
 	for rel, body := range testCase.lateFiles {
 		seedFile(t, filepath.Join(root, filepath.FromSlash(rel)), body)
@@ -113,7 +113,7 @@ func seedRemoveCase(t *testing.T, root string, testCase removeCase) {
 	}
 }
 
-func TestRemoveDocs(t *testing.T) {
+func TestRemove(t *testing.T) {
 	t.Parallel()
 
 	testCases := removeCases()
@@ -128,7 +128,7 @@ func TestRemoveDocs(t *testing.T) {
 			for range max(testCase.runs, 1) {
 				var err error
 				if result, err = Remove(dest, "SKILL.md"); err != nil {
-					t.Fatalf("RemoveDocs: %v", err)
+					t.Fatalf("Remove: %v", err)
 				}
 			}
 			assertIDs(t, "removed", result.Removed, testCase.wantRemoved...)
@@ -160,14 +160,14 @@ func assertRemoveOutcome(t *testing.T, root string, testCase removeCase, result 
 	}
 }
 
-func TestRemoveDocs_LeavesUserGitignoreAndSkipsRestore(t *testing.T) {
+func TestRemove_LeavesUserGitignoreAndSkipsRestore(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
 	dir := filepath.Join(root, "security")
 	ignorePath := filepath.Join(dir, ".gitignore")
 	seedFile(t, ignorePath, "keep-me\n")
-	mustWriteDoc(t, dir, "body\n"+ownedfile.Marker+"\n")
+	mustWrite(t, dir, "body\n"+ownedfile.Marker+"\n")
 	backupPath := ignorePath + ownedfile.BackupSuffix
 	assertContent(t, backupPath, "keep-me\n")
 	rendered, err := os.ReadFile(ignorePath) //nolint:gosec // test fixture.
@@ -180,7 +180,7 @@ func TestRemoveDocs_LeavesUserGitignoreAndSkipsRestore(t *testing.T) {
 
 	result, err := Remove(root, "SKILL.md")
 	if err != nil {
-		t.Fatalf("RemoveDocs: %v", err)
+		t.Fatalf("Remove: %v", err)
 	}
 	if len(result.Restored) != 0 {
 		t.Errorf("restored = %v, want none while a user gitignore stands", result.Restored)
