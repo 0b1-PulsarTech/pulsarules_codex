@@ -12,7 +12,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/overrides"
 )
 
-func TestApplyProject(t *testing.T) {
+func TestApplyTo(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -50,7 +50,7 @@ func TestApplyProject(t *testing.T) {
 			cfg.Preset = testCase.preset
 			cfg.ApplyPreset()
 			if err = file.ApplyTo(cfg); err != nil {
-				t.Fatalf("ApplyProject() error = %v", err)
+				t.Fatalf("ApplyTo() error = %v", err)
 			}
 			testCase.check(t, cfg)
 		})
@@ -126,7 +126,7 @@ func checkKeepsEnabled(t *testing.T, cfg *config.GovernanceConfig) {
 	}
 }
 
-func TestApplyProjectRejectsWideningOverride(t *testing.T) {
+func TestApplyToRejectsWideningOverride(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -165,19 +165,19 @@ func TestApplyProjectRejectsWideningOverride(t *testing.T) {
 			err = file.ApplyTo(config.Defaults())
 			if testCase.want == "" {
 				if err != nil {
-					t.Fatalf("ApplyProject() error = %v, want nil", err)
+					t.Fatalf("ApplyTo() error = %v, want nil", err)
 				}
 				return
 			}
 			assertPlainMessage(t, err)
 			if err == nil || !strings.Contains(err.Error(), testCase.want) {
-				t.Fatalf("ApplyProject() error = %v, want containing %q", err, testCase.want)
+				t.Fatalf("ApplyTo() error = %v, want containing %q", err, testCase.want)
 			}
 		})
 	}
 }
 
-func TestApplyProjectBoundsWideningMessage(t *testing.T) {
+func TestApplyToBoundsWideningMessage(t *testing.T) {
 	t.Parallel()
 
 	const copies = 400
@@ -191,7 +191,7 @@ func TestApplyProjectBoundsWideningMessage(t *testing.T) {
 	}
 	err = file.ApplyTo(config.Defaults())
 	if err == nil {
-		t.Fatal("ApplyProject() error = nil, want the widening overrides rejected")
+		t.Fatal("ApplyTo() error = nil, want the widening overrides rejected")
 	}
 	assertPlainMessage(t, err)
 	message := err.Error()
@@ -205,7 +205,7 @@ func TestApplyProjectBoundsWideningMessage(t *testing.T) {
 	}
 }
 
-func TestApplyProjectClipsALongDelegatedID(t *testing.T) {
+func TestApplyToClipsALongDelegatedID(t *testing.T) {
 	t.Parallel()
 
 	long := strings.Repeat("x", 300)
@@ -218,7 +218,7 @@ func TestApplyProjectClipsALongDelegatedID(t *testing.T) {
 	err = file.ApplyTo(config.Defaults())
 	want := strings.Repeat("x", 80) + "... is disabled for the whole project"
 	if err == nil || !strings.Contains(err.Error(), want) {
-		t.Fatalf("ApplyProject() error = %v, want containing %q", err, want)
+		t.Fatalf("ApplyTo() error = %v, want containing %q", err, want)
 	}
 }
 

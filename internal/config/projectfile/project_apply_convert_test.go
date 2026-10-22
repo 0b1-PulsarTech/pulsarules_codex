@@ -28,14 +28,14 @@ func fullProjectFile(enabled, disabled *bool) *File {
 	}
 }
 
-func TestApplyProjectConvertsEveryField(t *testing.T) {
+func TestApplyToConvertsEveryField(t *testing.T) {
 	t.Parallel()
 
 	enabled, disabled := true, false
 	file := fullProjectFile(&enabled, &disabled)
 	cfg := config.Defaults()
 	if err := file.ApplyTo(cfg); err != nil {
-		t.Fatalf("ApplyProject() error = %v", err)
+		t.Fatalf("ApplyTo() error = %v", err)
 	}
 	file.Delegated[0].Run[0] = "mutated"
 	file.Tests[0] = "mutated"

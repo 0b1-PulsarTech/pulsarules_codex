@@ -47,7 +47,7 @@ func TestValidateFileSizeParams(t *testing.T) {
 	})
 }
 
-func TestApplyProject_CarriesOverrideParams(t *testing.T) {
+func TestApplyTo_CarriesOverrideParams(t *testing.T) {
 	t.Parallel()
 
 	file, err := decodeFile([]byte("version: 1\n" +
@@ -58,7 +58,7 @@ func TestApplyProject_CarriesOverrideParams(t *testing.T) {
 	}
 	cfg := config.Defaults()
 	if err = file.ApplyTo(cfg); err != nil {
-		t.Fatalf("ApplyProject() error = %v", err)
+		t.Fatalf("ApplyTo() error = %v", err)
 	}
 	got := cfg.Overrides[0].Analyzers["file-size"].Params
 	want := map[string]any{"max_lines": 150}
