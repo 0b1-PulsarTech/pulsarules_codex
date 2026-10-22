@@ -25,17 +25,17 @@ func NewDetector(provider source.Provider) *Detector {
 }
 
 func (detector *Detector) isGenerated(path string) bool {
-	if generated, ok := detector.known[path]; ok {
-		return generated
+	if marked, ok := detector.known[path]; ok {
+		return marked
 	}
-	generated := detector.inAtlasDir(path)
-	if !generated && detector.provider != nil {
+	marked := detector.inAtlasDir(path)
+	if !marked && detector.provider != nil {
 		if src, found := detector.provider.Read(path); found {
-			generated = lexer.IsGeneratedSource(src)
+			marked = lexer.IsGeneratedSource(src)
 		}
 	}
-	detector.known[path] = generated
-	return generated
+	detector.known[path] = marked
+	return marked
 }
 
 func (detector *Detector) Mark(files []pass.FileChange) {
@@ -64,10 +64,10 @@ func (detector *Detector) inAtlasDir(path string) bool {
 		return false
 	}
 	dir := filepath.ToSlash(filepath.Dir(path))
-	generated, ok := detector.atlasDirs[dir]
+	hasSum, ok := detector.atlasDirs[dir]
 	if !ok {
-		_, generated = detector.provider.Read(filepath.ToSlash(filepath.Join(dir, "atlas.sum")))
-		detector.atlasDirs[dir] = generated
+		_, hasSum = detector.provider.Read(filepath.ToSlash(filepath.Join(dir, "atlas.sum")))
+		detector.atlasDirs[dir] = hasSum
 	}
-	return generated
+	return hasSum
 }
