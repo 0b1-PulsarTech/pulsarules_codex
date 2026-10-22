@@ -22,7 +22,7 @@ func TestNew_ResolvesEveryService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	eager := []struct {
+	testCases := []struct {
 		name string
 		set  bool
 	}{
@@ -35,7 +35,7 @@ func TestNew_ResolvesEveryService(t *testing.T) {
 		{"open logger", svc.OpenLogger != nil},
 		{"load catalog", svc.LoadCatalog != nil},
 	}
-	for _, testCase := range eager {
+	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 

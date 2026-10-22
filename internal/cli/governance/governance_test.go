@@ -34,15 +34,8 @@ func TestRunGovernance_EnvProjectDirSatisfiesTheRequirement(t *testing.T) {
 	t.Parallel()
 
 	opts := &Command{env: flags.Environment{ProjectDir: t.TempDir()}}
-	if err := opts.Run(
-		unopenableRepository(),
-		nil,
-		nil,
-		nil,
-	); errors.Is(
-		err,
-		errProjectDirRequired,
-	) {
+	err := opts.Run(unopenableRepository(), nil, nil, nil)
+	if errors.Is(err, errProjectDirRequired) {
 		t.Errorf("err = %v, want the env project dir to count", err)
 	}
 }

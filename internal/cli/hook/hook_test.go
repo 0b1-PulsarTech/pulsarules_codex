@@ -144,7 +144,7 @@ func TestHookStop_CatalogFailureSkipsGovernance(t *testing.T) {
 //nolint:paralleltest // captureStderr swaps os.Stderr.
 func TestCommand_Run_OtherModesDoNotNeedTheCatalog(t *testing.T) {
 	var resolved bool
-	needs := hookServices(t)
+	needs := hookCollaborators(t)
 	needs.LoadCatalog = func() (*emoji.Catalog, error) {
 		resolved = true
 		return nil, errors.New("emoji catalog must not be resolved here")
@@ -188,7 +188,7 @@ func TestCommand_Run_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			needs := hookServices(t)
+			needs := hookCollaborators(t)
 			stdin, err := os.CreateTemp(t.TempDir(), "stdin")
 			if err != nil {
 				t.Fatalf("create stdin: %v", err)
@@ -216,7 +216,7 @@ func TestCommand_Run_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
 	}
 }
 
-func hookServices(t *testing.T) Collaborators {
+func hookCollaborators(t *testing.T) Collaborators {
 	t.Helper()
 
 	index, assets, err := knowledge.Load("")
@@ -242,11 +242,11 @@ func (rec closeRecorder) Close() error {
 	return nil
 }
 
-//nolint:paralleltest // captureStream swaps os.Stdout and os.Stderr.
+//nolint:paralleltest // t.Setenv and the os.Stdout/os.Stderr swaps bar t.Parallel.
 func TestCommand_Run_NeverFailsOnALoggerFailure(t *testing.T) {
 	t.Setenv("TMPDIR", t.TempDir())
 
-	needs := hookServices(t)
+	needs := hookCollaborators(t)
 	needs.OpenLogger = func() (*slog.Logger, io.Closer, error) {
 		return nil, nil, errors.New("build logger: boom")
 	}
@@ -271,7 +271,7 @@ func TestCommand_Run_NeverFailsOnALoggerFailure(t *testing.T) {
 //nolint:paralleltest // captureStderr swaps os.Stderr.
 func TestCommand_Run_ClosesTheLogger(t *testing.T) {
 	var closed bool
-	needs := hookServices(t)
+	needs := hookCollaborators(t)
 	needs.OpenLogger = func() (*slog.Logger, io.Closer, error) {
 		return slog.New(slog.DiscardHandler), closeRecorder{closed: &closed}, nil
 	}
