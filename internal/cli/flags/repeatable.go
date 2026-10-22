@@ -1,6 +1,9 @@
 package flags
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 type Repeatable struct {
 	target *[]string
@@ -16,7 +19,10 @@ func (values *Repeatable) String() string {
 }
 
 func (values *Repeatable) Set(raw string) error {
-	// Each occurrence stays exactly as typed, so validation sees "a,b" and " a " as given.
-	*values.target = append(*values.target, raw)
+	if !slices.Contains(*values.target, raw) {
+		// Kept exactly as typed, so validation sees "a,b" and " a " as given; only an exact
+		// repeat is dropped.
+		*values.target = append(*values.target, raw)
+	}
 	return nil
 }

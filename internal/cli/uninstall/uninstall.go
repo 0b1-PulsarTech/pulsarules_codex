@@ -124,7 +124,7 @@ func removeLanguageConfig(absBase string) error {
 }
 
 func resolveTargets(cmd *Command, reg *host.Registry, base string) ([]string, error) {
-	explicit := cmd.explicitTargets()
+	explicit := cmd.target
 	if len(explicit) == 0 && cmd.global {
 		// Only claude has a global layout; detection under the home directory
 		// would also match a user's own AGENTS.md or .opencode.

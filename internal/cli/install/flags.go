@@ -4,7 +4,6 @@ import (
 	"flag"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 )
 
 type Command struct {
@@ -34,7 +33,7 @@ func (cmd *Command) targets() []string {
 		const defaultTarget = "claude"
 		return []string{defaultTarget}
 	}
-	return ordered.Dedupe(cmd.target)
+	return cmd.target
 }
 
 func (cmd *Command) Bind(fs *flag.FlagSet) {

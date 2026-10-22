@@ -35,6 +35,16 @@ func TestRepeatableSet(t *testing.T) {
 			values: []string{"claude", "", "cursor"},
 			want:   []string{"claude", "", "cursor"},
 		},
+		{
+			name:   "an exact repeat keeps the first place",
+			values: []string{"opencode", "claude", "opencode", ""},
+			want:   []string{"opencode", "claude", ""},
+		},
+		{
+			name:   "a padded value is not a repeat",
+			values: []string{"claude", " claude"},
+			want:   []string{"claude", " claude"},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

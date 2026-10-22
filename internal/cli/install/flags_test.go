@@ -148,7 +148,7 @@ func TestTargets(t *testing.T) {
 	}{
 		{name: "none defaults to claude", want: []string{"claude"}},
 		{
-			name: "duplicates collapse", target: []string{"cursor", "claude", "cursor"},
+			name: "given targets win", target: []string{"cursor", "claude"},
 			want: []string{"cursor", "claude"},
 		},
 	}
@@ -161,5 +161,22 @@ func TestTargets(t *testing.T) {
 				t.Errorf("targets() = %v, want %v", got, testCase.want)
 			}
 		})
+	}
+}
+
+func TestBind_TargetDropsExactRepeats(t *testing.T) {
+	t.Parallel()
+
+	got := bindInstall(
+		t,
+		"--target",
+		"cursor",
+		"--target",
+		"claude",
+		"--target",
+		"cursor",
+	).targets()
+	if want := []string{"cursor", "claude"}; !slices.Equal(got, want) {
+		t.Errorf("targets() = %v, want %v", got, want)
 	}
 }

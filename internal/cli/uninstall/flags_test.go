@@ -78,30 +78,19 @@ func TestBind_TargetKeepsEveryOccurrenceRaw(t *testing.T) {
 	}
 }
 
-func TestExplicitTargets(t *testing.T) {
+func TestBind_TargetDropsExactRepeats(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct {
-		name   string
-		target []string
-		want   []string
-	}{
-		{name: "none passed", want: nil},
-		{name: "single target", target: []string{"opencode"}, want: []string{"opencode"}},
-		{
-			name:   "duplicate deduped preserving order",
-			target: []string{"opencode", "claude", "opencode"},
-			want:   []string{"opencode", "claude"},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			cmd := &Command{target: testCase.target}
-			if got := cmd.explicitTargets(); !slices.Equal(got, testCase.want) {
-				t.Errorf("explicitTargets() = %v, want %v", got, testCase.want)
-			}
-		})
+	got := bindUninstall(
+		t,
+		"--target",
+		"opencode",
+		"--target",
+		"claude",
+		"--target",
+		"opencode",
+	).target
+	if want := []string{"opencode", "claude"}; !slices.Equal(got, want) {
+		t.Errorf("target = %v, want %v", got, want)
 	}
 }

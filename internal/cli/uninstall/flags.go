@@ -4,7 +4,6 @@ import (
 	"flag"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 )
 
 type Command struct {
@@ -14,10 +13,6 @@ type Command struct {
 	target     []string
 	hooksScope string
 	keepSkills bool
-}
-
-func (cmd *Command) explicitTargets() []string {
-	return ordered.Dedupe(cmd.target)
 }
 
 func New(env flags.Environment) *Command { return &Command{env: env} }
