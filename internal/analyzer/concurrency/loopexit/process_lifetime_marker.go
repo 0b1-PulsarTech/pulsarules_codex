@@ -33,11 +33,11 @@ func findProcessLifetimeMarker(
 }
 
 func matchProcessLifetimeMarker(text string) (string, bool) {
-	token, ok := lexer.PulsarulesMarker(text)
+	marker, ok := lexer.PulsarulesMarker(text)
 	if !ok {
 		return "", false
 	}
-	reason, ok := strings.CutPrefix(token, "process-lifetime")
+	reason, ok := strings.CutPrefix(marker, "process-lifetime")
 	if !ok {
 		return "", false
 	}
