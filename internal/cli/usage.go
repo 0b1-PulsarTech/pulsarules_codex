@@ -44,7 +44,7 @@ func synopsisLines() ([]string, error) {
 		var root, logLevel string
 		flags.BindCommon(flagSet, &root, &logLevel, flags.Environment{})
 		runner.Bind(flagSet)
-		terms, err := command.Synopsis(flagSet, runner.Terms())
+		terms, err := command.Synopsis(flagSet, candidate.terms)
 		if err != nil {
 			return nil, fmt.Errorf("synopsis of %s: %w", candidate.name, err)
 		}

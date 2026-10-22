@@ -89,7 +89,3 @@ func reportEvals(out io.Writer, scenarios []evals.Scenario, artifact string) err
 	}
 	return nil
 }
-
-func (cmd *Command) Terms() []command.Term {
-	return []command.Term{command.Req("artifact"), command.Opt("scenario")}
-}

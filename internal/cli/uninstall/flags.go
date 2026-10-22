@@ -3,7 +3,6 @@ package uninstall
 import (
 	"flag"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
@@ -46,13 +45,4 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 		false,
 		"keep the rendered skill/workflow docs; the hook wiring is still removed",
 	)
-}
-
-func (cmd *Command) Terms() []command.Term {
-	return []command.Term{
-		command.Req("global", "project"),
-		command.Opt("target"),
-		command.Opt("hooks-scope"),
-		command.Opt("keep-skills"),
-	}
 }

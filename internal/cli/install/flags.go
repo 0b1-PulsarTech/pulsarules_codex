@@ -3,7 +3,6 @@ package install
 import (
 	"flag"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
@@ -131,24 +130,4 @@ func (cmd *Command) bindGitHooks(fs *flag.FlagSet) {
 		"skip git hooks installation entirely",
 	)
 	cmd.tuning.Bind(fs)
-}
-
-func (cmd *Command) Terms() []command.Term {
-	return []command.Term{
-		command.Opt("root"),
-		command.Req("global", "project"),
-		command.Opt("target"),
-		command.Req("all", "skills", "router-only"),
-		command.Opt("no-hooks"),
-		command.Opt("no-mcp"),
-		command.Opt("print-hooks"),
-		command.Opt("hooks-scope"),
-		command.Opt("layout"),
-		command.Opt("interactive"),
-		command.Opt("git-hooks"),
-		command.Opt("no-git-hooks"),
-		command.Opt("languages"),
-		command.Opt("typographic-severity"),
-		command.Opt("branch-extra-types"),
-	}
 }

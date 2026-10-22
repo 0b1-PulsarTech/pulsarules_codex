@@ -3,8 +3,8 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"io"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 )
@@ -14,8 +14,10 @@ type Invocation struct {
 	Root     string
 	LogLevel string
 	Env      flags.Environment
-	Runner   command.Runner
-	Args     []string
+	Runner   runner
+
+	bootstrapFailed func(out io.Writer, err error) int
+	Args            []string
 }
 
 func Parse(args []string, env flags.Environment) (Invocation, error) {
@@ -35,7 +37,12 @@ func Parse(args []string, env flags.Environment) (Invocation, error) {
 }
 
 func parseEntry(candidate entry, flagArgs []string, env flags.Environment) (Invocation, error) {
-	call := Invocation{Name: candidate.name, Env: env, Runner: candidate.build(env)}
+	call := Invocation{
+		Name:            candidate.name,
+		Env:             env,
+		Runner:          candidate.build(env),
+		bootstrapFailed: candidate.bootstrapFailed,
+	}
 	fs := flag.NewFlagSet(candidate.name, flag.ContinueOnError)
 	fs.Usage = func() { _ = Usage() }
 	flags.BindCommon(fs, &call.Root, &call.LogLevel, env)

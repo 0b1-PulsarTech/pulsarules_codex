@@ -10,7 +10,6 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
@@ -34,7 +33,7 @@ func New(env flags.Environment) *Command {
 
 func (*Command) Bind(*flag.FlagSet) {}
 
-func (*Command) BootstrapFailed(out io.Writer, err error) int {
+func BootstrapFailed(out io.Writer, err error) int {
 	_, _ = fmt.Fprintln(out, "pulsarules_cli: hook:", printable.Line(err.Error()))
 	// A hook invocation must never block the caller's turn.
 	return 0
@@ -142,8 +141,4 @@ func governanceBlock(report findings.Report) (block string, count int) {
 		text += "  " + note + "\n"
 	}
 	return "\n" + text, len(report.Findings)
-}
-
-func (cmd *Command) Terms() []command.Term {
-	return []command.Term{command.Lit("<mode>")}
 }

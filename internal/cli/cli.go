@@ -8,7 +8,6 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
@@ -17,8 +16,8 @@ func (call Invocation) Run(inj remy.Injector) error {
 }
 
 func (call Invocation) HandleBootstrapErr(err error) int {
-	if forgiving, ok := call.Runner.(command.Forgiving); ok {
-		return forgiving.BootstrapFailed(os.Stderr, err)
+	if call.bootstrapFailed != nil {
+		return call.bootstrapFailed(os.Stderr, err)
 	}
 	ReportError(os.Stderr, err)
 	return 1
@@ -31,7 +30,7 @@ func ReportError(out io.Writer, err error) {
 func (call Invocation) BootstrapOptions() bootstrap.Options {
 	// The bootstrap package never imports cli, so the translation lives here.
 	projectDir := "."
-	if anchored, ok := call.Runner.(command.Anchored); ok {
+	if anchored, ok := call.Runner.(anchored); ok {
 		projectDir = anchored.ProjectDir()
 	}
 	return bootstrap.Options{

@@ -445,7 +445,7 @@ func TestCommand_BootstrapFailed(t *testing.T) {
 
 	forged := fmt.Errorf("open %s: %w", "a\n[ERROR] forged", os.ErrNotExist)
 	var out strings.Builder
-	if got := New(flags.Environment{}).BootstrapFailed(&out, forged); got != 0 {
+	if got := BootstrapFailed(&out, forged); got != 0 {
 		t.Errorf("BootstrapFailed() = %d, want 0 so a hook never blocks the turn", got)
 	}
 	text := strings.TrimSuffix(out.String(), "\n")

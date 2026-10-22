@@ -2,8 +2,6 @@ package governance
 
 import (
 	"flag"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 )
 
 func (cmd *Command) Bind(fs *flag.FlagSet) {
@@ -40,19 +38,4 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 		false,
 		"report findings in generated files too (suppressed by default)",
 	)
-}
-
-func (cmd *Command) Terms() []command.Term {
-	return []command.Term{
-		command.Opt("project"),
-		command.Opt("root"),
-		command.Opt("preset"),
-		command.Opt("scope"),
-		command.Opt("config"),
-		command.Opt("golangci-config"),
-		command.Opt("all-files"),
-		command.Opt("include-generated"),
-		command.Opt("typographic-severity"),
-		command.Opt("branch-extra-types"),
-	}
 }

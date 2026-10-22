@@ -90,7 +90,3 @@ func (cmd *Command) Run(inj remy.Injector, _ []string) error {
 	}
 	return nil
 }
-
-func (cmd *Command) Terms() []command.Term {
-	return []command.Term{command.Opt("msg", "file"), command.Opt("project")}
-}

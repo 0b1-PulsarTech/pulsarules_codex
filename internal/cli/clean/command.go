@@ -31,7 +31,3 @@ func (cmd *Command) Run(inj remy.Injector, _ []string) error {
 	}
 	return sweep(os.Stdout, cmd.ProjectDir(), how, repo)
 }
-
-func (cmd *Command) Terms() []command.Term {
-	return []command.Term{command.Opt("project"), command.Opt("write")}
-}

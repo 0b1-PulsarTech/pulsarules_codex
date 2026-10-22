@@ -7,7 +7,6 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/docs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -44,8 +43,4 @@ func (cmd *Command) Run(inj remy.Injector, _ []string) error {
 	}
 	fmt.Printf("generated %d skills into %s\n", len(written), filepath.Join(out, "skills"))
 	return nil
-}
-
-func (cmd *Command) Terms() []command.Term {
-	return []command.Term{command.Opt("root"), command.Opt("out")}
 }
