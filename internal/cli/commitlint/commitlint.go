@@ -20,22 +20,15 @@ import (
 )
 
 type Command struct {
-	msg     string
-	file    string
-	project string
+	command.Project
+	msg  string
+	file string
 }
 
 func (cmd *Command) Bind(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.msg, "msg", "", "commit message `MSG` to validate")
 	fs.StringVar(&cmd.file, "file", "", "path to a COMMIT_EDITMSG `FILE`")
-	fs.StringVar(&cmd.project, "project", "", "project `DIR` for git history lookup")
-}
-
-func (cmd *Command) ProjectDir() string {
-	if cmd.project == "" {
-		return "."
-	}
-	return cmd.project
+	cmd.BindProject(fs, "project `DIR` for git history lookup")
 }
 
 func (cmd *Command) Run(inj remy.Injector, _ []string) error {

@@ -199,7 +199,7 @@ func TestCommand_Bind(t *testing.T) {
 		{
 			name: "every flag",
 			args: []string{"--msg", "m", "--file", "f", "--project", "p"},
-			want: Command{msg: "m", file: "f", project: "p"},
+			want: Command{msg: "m", file: "f"},
 			dir:  "p",
 		},
 	}
@@ -213,7 +213,8 @@ func TestCommand_Bind(t *testing.T) {
 			if err := fs.Parse(testCase.args); err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
-			if cmd != testCase.want || cmd.ProjectDir() != testCase.dir {
+			if cmd.msg != testCase.want.msg || cmd.file != testCase.want.file ||
+				cmd.ProjectDir() != testCase.dir {
 				t.Errorf("Command = %+v dir %q, want %+v and %q",
 					cmd, cmd.ProjectDir(), testCase.want, testCase.dir)
 			}

@@ -10,20 +10,13 @@ import (
 )
 
 type Command struct {
-	project string
-	write   bool
+	command.Project
+	write bool
 }
 
 func (cmd *Command) Bind(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.project, "project", "", "project `DIR` to clean")
+	cmd.BindProject(fs, "project `DIR` to clean")
 	fs.BoolVar(&cmd.write, "write", false, "rewrite files instead of only reporting")
-}
-
-func (cmd *Command) ProjectDir() string {
-	if cmd.project == "" {
-		return "."
-	}
-	return cmd.project
 }
 
 func (cmd *Command) Run(inj remy.Injector, _ []string) error {

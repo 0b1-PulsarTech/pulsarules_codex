@@ -36,7 +36,7 @@ func TestCommand_RepositoryResolution(t *testing.T) {
 				func() (*vcs.Repository, error) { return nil, testCase.repoErr },
 			)
 
-			err := (&Command{project: t.TempDir()}).Run(inj, nil)
+			err := boundCommand(t, "--project", t.TempDir()).Run(inj, nil)
 			if !errors.Is(err, testCase.wantErr) {
 				t.Fatalf("Run() error = %v, want %v", err, testCase.wantErr)
 			}
@@ -106,10 +106,11 @@ func TestCommand_Run_OnlyWriteRewrites(t *testing.T) {
 			)
 
 			out := captureStdout(t, func() {
-				if err := (&Command{project: dir, write: testCase.write}).Run(
-					inj,
-					nil,
-				); err != nil {
+				args := []string{"--project", dir}
+				if testCase.write {
+					args = append(args, "--write")
+				}
+				if err := boundCommand(t, args...).Run(inj, nil); err != nil {
 					t.Errorf("Run() = %v, want nil", err)
 				}
 			})
@@ -126,6 +127,18 @@ func TestCommand_Run_OnlyWriteRewrites(t *testing.T) {
 			}
 		})
 	}
+}
+
+func boundCommand(t *testing.T, args ...string) *Command {
+	t.Helper()
+
+	cmd := &Command{}
+	fs := flag.NewFlagSet("clean", flag.ContinueOnError)
+	cmd.Bind(fs)
+	if err := fs.Parse(args); err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	return cmd
 }
 
 func captureStdout(t *testing.T, body func()) string {
