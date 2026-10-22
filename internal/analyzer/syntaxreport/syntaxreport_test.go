@@ -58,7 +58,7 @@ func buildContext(provider stubProvider, paths []string, generated string) *pass
 	return ctx
 }
 
-type digest struct {
+type row struct {
 	ID       string
 	Severity finding.Severity
 	File     string
@@ -66,10 +66,10 @@ type digest struct {
 	Message  string
 }
 
-func summarise(findings []finding.Finding) []digest {
-	got := make([]digest, 0, len(findings))
+func summarise(findings []finding.Finding) []row {
+	got := make([]row, 0, len(findings))
 	for _, item := range findings {
-		got = append(got, digest{
+		got = append(got, row{
 			ID: item.AnalyzerID, Severity: item.Severity, File: item.File,
 			Line: item.Line, Message: item.Message,
 		})
@@ -84,7 +84,7 @@ type analyzeCase struct {
 	paths     []string
 	generated string
 	noCache   bool
-	want      []digest
+	want      []row
 }
 
 func unparsedCases() []analyzeCase {
@@ -96,7 +96,7 @@ func unparsedCases() []analyzeCase {
 				"a.go": "parse a.go: a.go:7:3: expected ';'",
 			}},
 			paths: []string{"a.go", "b.go"},
-			want: []digest{{
+			want: []row{{
 				ID: "go-syntax/unparsed", Severity: warn, File: "a.go", Line: 7,
 				Message: "a.go was not analysed: parse a.go: a.go:7:3: expected ';'",
 			}},
@@ -105,7 +105,7 @@ func unparsedCases() []analyzeCase {
 			name: "dart file with a line in the reason", language: language.Dart,
 			provider: stubProvider{parseErrors: map[string]string{"a.dart": "line 12: bad token"}},
 			paths:    []string{"a.dart"},
-			want: []digest{{
+			want: []row{{
 				ID: "dart-syntax/unparsed", Severity: warn, File: "a.dart",
 				Line: 12, Message: "a.dart was not analysed: line 12: bad token",
 			}},
@@ -116,7 +116,7 @@ func unparsedCases() []analyzeCase {
 				"a.ts": "skipped: parse exceeded the 10s time limit",
 			}},
 			paths: []string{"a.ts"},
-			want: []digest{{
+			want: []row{{
 				ID: "typescript-syntax/unparsed", Severity: warn, File: "a.ts",
 				Message: "a.ts was not analysed: skipped: parse exceeded the 10s time limit",
 			}},
@@ -125,7 +125,7 @@ func unparsedCases() []analyzeCase {
 			name: "javascript file", language: language.JavaScript,
 			provider: stubProvider{parseErrors: map[string]string{"a.mjs": "line x: bad"}},
 			paths:    []string{"a.mjs"},
-			want: []digest{{
+			want: []row{{
 				ID: "javascript-syntax/unparsed", Severity: warn, File: "a.mjs",
 				Message: "a.mjs was not analysed: line x: bad",
 			}},
@@ -134,7 +134,7 @@ func unparsedCases() []analyzeCase {
 			name: "svelte file", language: language.Svelte,
 			provider: stubProvider{parseErrors: map[string]string{"a.svelte": "line 3: bad"}},
 			paths:    []string{"a.svelte"},
-			want: []digest{{
+			want: []row{{
 				ID: "svelte-syntax/unparsed", Severity: warn, File: "a.svelte",
 				Line: 3, Message: "a.svelte was not analysed: line 3: bad",
 			}},
@@ -173,7 +173,7 @@ func unavailableCases() []analyzeCase {
 			name: "unavailable language reports one info", language: language.Dart,
 			provider: stubProvider{fail: errors.New("locate dart:\n  no dart on PATH")},
 			paths:    []string{"a.dart", "b.dart"},
-			want: []digest{{
+			want: []row{{
 				ID: "dart-syntax/unavailable", Severity: finding.SeverityInfo,
 				Message: "2 dart files not analysed: locate dart: no dart on PATH",
 			}},
@@ -182,7 +182,7 @@ func unavailableCases() []analyzeCase {
 			name: "long reason is clipped", language: language.Dart,
 			provider: stubProvider{fail: errors.New(strings.Repeat("\u00e9", 300))},
 			paths:    []string{"a.dart"},
-			want: []digest{{
+			want: []row{{
 				ID: "dart-syntax/unavailable", Severity: finding.SeverityInfo,
 				Message: "1 dart files not analysed: " + strings.Repeat("\u00e9", 120),
 			}},
