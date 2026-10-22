@@ -1,4 +1,4 @@
-package cli
+package governance
 
 import (
 	"errors"
@@ -12,7 +12,6 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
@@ -23,9 +22,9 @@ func TestRunGovernance_RequiresProjectDir(t *testing.T) {
 	t.Parallel()
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	err := governance.RunGovernance(inj, &version.Options{})
-	if !errors.Is(err, governance.ErrProjectDirRequired) {
-		t.Errorf("err = %v, want %v", err, governance.ErrProjectDirRequired)
+	err := RunGovernance(inj, &version.Options{})
+	if !errors.Is(err, errProjectDirRequired) {
+		t.Errorf("err = %v, want %v", err, errProjectDirRequired)
 	}
 }
 
@@ -34,13 +33,7 @@ func TestRunGovernance_EnvProjectDirSatisfiesTheRequirement(t *testing.T) {
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
 	opts := &version.Options{Env: flags.Environment{ProjectDir: t.TempDir()}}
-	if err := governance.RunGovernance(
-		inj,
-		opts,
-	); errors.Is(
-		err,
-		governance.ErrProjectDirRequired,
-	) {
+	if err := RunGovernance(inj, opts); errors.Is(err, errProjectDirRequired) {
 		t.Errorf("err = %v, want the env project dir to count", err)
 	}
 }
@@ -81,7 +74,7 @@ func TestGovernanceConfig(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := governance.GovernanceConfig(testCase.opts, "")
+			cfg, err := governanceConfig(testCase.opts, "")
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -99,7 +92,7 @@ func TestGovernanceConfig(t *testing.T) {
 func TestGovernanceConfig_InvalidPreset(t *testing.T) {
 	t.Parallel()
 
-	_, err := governance.GovernanceConfig(&version.Options{Preset: "stict"}, "")
+	_, err := governanceConfig(&version.Options{Preset: "stict"}, "")
 	if err == nil {
 		t.Fatal("governanceConfig: expected an error for an unknown preset")
 	}
@@ -130,7 +123,7 @@ func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := governance.GovernanceConfig(testCase.opts, "")
+			cfg, err := governanceConfig(testCase.opts, "")
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -144,7 +137,7 @@ func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 func TestGovernanceConfig_StrictLowersFileSize(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := governance.GovernanceConfig(&version.Options{Preset: config.PresetStrict}, "")
+	cfg, err := governanceConfig(&version.Options{Preset: config.PresetStrict}, "")
 	if err != nil {
 		t.Fatalf("governanceConfig: %v", err)
 	}
@@ -180,7 +173,7 @@ func TestGovernanceConfig_BranchExtraTypes(t *testing.T) {
 			t.Parallel()
 
 			opts := &version.Options{Tuning: flags.Tuning{BranchExtraTypes: testCase.spec}}
-			cfg, err := governance.GovernanceConfig(opts, "")
+			cfg, err := governanceConfig(opts, "")
 			if testCase.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
 					t.Fatalf("err = %v, want one naming %q", err, testCase.wantErr)
@@ -266,7 +259,7 @@ func TestGovernanceConfig_ProjectFilePrecedence(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			cfg, err := governance.GovernanceConfig(testCase.opts, root)
+			cfg, err := governanceConfig(testCase.opts, root)
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -301,7 +294,7 @@ func TestGovernanceConfig_ProjectFileErrors(t *testing.T) {
 			t.Parallel()
 
 			root := writeProjectConfig(t, testCase.content)
-			_, err := governance.GovernanceConfig(&version.Options{}, root)
+			_, err := governanceConfig(&version.Options{}, root)
 			if err == nil || !strings.Contains(err.Error(), testCase.want) {
 				t.Fatalf("governanceConfig error = %v, want containing %q", err, testCase.want)
 			}
@@ -316,7 +309,7 @@ func TestGovernanceConfig_ExplicitConfigPath(t *testing.T) {
 	dir := writeProjectConfig(t, content)
 	explicit := filepath.Join(dir, projectfile.Name)
 
-	cfg, err := governance.GovernanceConfig(&version.Options{Config: explicit}, "")
+	cfg, err := governanceConfig(&version.Options{Config: explicit}, "")
 	if err != nil {
 		t.Fatalf("governanceConfig: %v", err)
 	}
@@ -324,7 +317,7 @@ func TestGovernanceConfig_ExplicitConfigPath(t *testing.T) {
 		t.Errorf("max_lines = %v, want 2", got)
 	}
 	missing := &version.Options{Config: filepath.Join(dir, "nope.yaml")}
-	if _, err = governance.GovernanceConfig(missing, dir); err == nil {
+	if _, err = governanceConfig(missing, dir); err == nil {
 		t.Error("governanceConfig with a missing --config: expected an error")
 	}
 }
@@ -332,7 +325,7 @@ func TestGovernanceConfig_ExplicitConfigPath(t *testing.T) {
 func TestGovernanceConfig_NoProjectFileIsUnchanged(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := governance.GovernanceConfig(&version.Options{}, t.TempDir())
+	cfg, err := governanceConfig(&version.Options{}, t.TempDir())
 	if err != nil {
 		t.Fatalf("governanceConfig: %v", err)
 	}
@@ -371,7 +364,7 @@ func TestGovernanceConfig_PresetFlag(t *testing.T) {
 			if err := os.WriteFile(path, []byte(private), disk.File); err != nil {
 				t.Fatalf("write private config: %v", err)
 			}
-			cfg, err := governance.GovernanceConfig(&version.Options{Preset: testCase.preset}, root)
+			cfg, err := governanceConfig(&version.Options{Preset: testCase.preset}, root)
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}

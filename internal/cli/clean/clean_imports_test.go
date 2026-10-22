@@ -1,4 +1,4 @@
-package cli
+package clean
 
 import (
 	"go/parser"
@@ -11,7 +11,7 @@ func TestClean_DoesNotImportTheAnalysisOrchestrator(t *testing.T) {
 	t.Parallel()
 
 	const orchestrator = "github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
-	parsed, err := parser.ParseFile(token.NewFileSet(), "clean/clean.go", nil, parser.ImportsOnly)
+	parsed, err := parser.ParseFile(token.NewFileSet(), "clean.go", nil, parser.ImportsOnly)
 	if err != nil {
 		t.Fatalf("parse clean.go: %v", err)
 	}

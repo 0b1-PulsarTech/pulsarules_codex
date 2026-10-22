@@ -58,7 +58,7 @@ func TestSweep_ReportOnlyWritesNothing(t *testing.T) {
 	}
 
 	var out strings.Builder
-	if sweepErr := Sweep(&out, root, Report, nil); sweepErr != nil {
+	if sweepErr := sweep(&out, root, report, nil); sweepErr != nil {
 		t.Fatalf("sweep: %v", sweepErr)
 	}
 	after, err := os.ReadFile(filepath.Join(root, "notes.md"))
@@ -78,7 +78,7 @@ func TestSweep_Write(t *testing.T) {
 
 	root := seedTree(t)
 	var out strings.Builder
-	if err := Sweep(&out, root, rewrite, nil); err != nil {
+	if err := sweep(&out, root, rewrite, nil); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	const held = "held.go:3 left zero width space " +
@@ -130,10 +130,10 @@ func TestSweep_IsIdempotent(t *testing.T) {
 
 	root := seedTree(t)
 	var first, second strings.Builder
-	if err := Sweep(&first, root, rewrite, nil); err != nil {
+	if err := sweep(&first, root, rewrite, nil); err != nil {
 		t.Fatalf("first sweep: %v", err)
 	}
-	if err := Sweep(&second, root, rewrite, nil); err != nil {
+	if err := sweep(&second, root, rewrite, nil); err != nil {
 		t.Fatalf("second sweep: %v", err)
 	}
 	if !strings.Contains(second.String(), "removed 0 carrier(s)") {
@@ -149,7 +149,7 @@ func TestSweep_QuotesForgedPath(t *testing.T) {
 		name string
 		how  mode
 	}{
-		{"report", Report},
+		{"report", report},
 		{"rewrite", rewrite},
 	}
 	for _, testCase := range testCases {
@@ -162,7 +162,7 @@ func TestSweep_QuotesForgedPath(t *testing.T) {
 				t.Skipf("filesystem refuses the name: %v", err)
 			}
 			var out strings.Builder
-			if err := Sweep(&out, root, testCase.how, nil); err != nil {
+			if err := sweep(&out, root, testCase.how, nil); err != nil {
 				t.Fatalf("sweep: %v", err)
 			}
 			for line := range strings.SplitSeq(out.String(), "\n") {
@@ -207,7 +207,7 @@ func TestSweep_WalksTheGatesGitFileSet(t *testing.T) {
 	}
 
 	var out strings.Builder
-	if sweepErr := Sweep(&out, root, Report, openRepo(t, root)); sweepErr != nil {
+	if sweepErr := sweep(&out, root, report, openRepo(t, root)); sweepErr != nil {
 		t.Fatalf("sweep: %v", sweepErr)
 	}
 	testCases := []struct {
@@ -293,10 +293,10 @@ func TestSweep_StaysInsideTheNamedDirectory(t *testing.T) {
 		how      mode
 		reported []string
 	}{
-		{"report in sub", "sub", Report, []string{"sub/inner.md"}},
+		{"report in sub", "sub", report, []string{"sub/inner.md"}},
 		{"write in sub", "sub", rewrite, []string{"sub/inner.md"}},
-		{"report in build", "build", Report, []string{"build/tracked.md"}},
-		{"report at the repo root", ".", Report, all},
+		{"report in build", "build", report, []string{"build/tracked.md"}},
+		{"report at the repo root", ".", report, all},
 		{"write at the repo root", ".", rewrite, all},
 	}
 	for _, testCase := range testCases {
@@ -306,7 +306,7 @@ func TestSweep_StaysInsideTheNamedDirectory(t *testing.T) {
 			root := seedScopedRepo(t)
 			var out strings.Builder
 			project := filepath.Join(root, testCase.project)
-			if err := Sweep(&out, project, testCase.how, openRepo(t, root)); err != nil {
+			if err := sweep(&out, project, testCase.how, openRepo(t, root)); err != nil {
 				t.Fatalf("sweep: %v", err)
 			}
 			for _, rel := range all {
@@ -336,7 +336,7 @@ func TestSweep_SymlinkOutsideNotFollowed(t *testing.T) {
 		t.Skipf("symlink: %v", err)
 	}
 	var out strings.Builder
-	if err := Sweep(&out, filepath.Join(root, "sub"), rewrite, openRepo(t, root)); err != nil {
+	if err := sweep(&out, filepath.Join(root, "sub"), rewrite, openRepo(t, root)); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	top, err := os.ReadFile(filepath.Join(root, "top.md"))
@@ -364,7 +364,7 @@ func TestSweep_DirOutsideRepo(t *testing.T) {
 	if writeErr := os.WriteFile(body, []byte("a\u200Bb\n"), 0o600); writeErr != nil {
 		t.Fatalf("seed: %v", writeErr)
 	}
-	if sweepErr := Sweep(io.Discard, outside, rewrite, src); sweepErr == nil {
+	if sweepErr := sweep(io.Discard, outside, rewrite, src); sweepErr == nil {
 		t.Fatal("sweep outside the repository returned nil")
 	}
 	got, readErr := os.ReadFile(body)
@@ -386,7 +386,7 @@ func TestSweep_SaysWhySkippedFilesAreLeft(t *testing.T) {
 		how  mode
 		want string
 	}{
-		{"report mode", Report, "0 marker(s) found; 2 more " + tail},
+		{"report mode", report, "0 marker(s) found; 2 more " + tail},
 		{"write mode", rewrite, "2 marker(s) left for a human; 2 of them " + tail},
 	}
 	for _, testCase := range testCases {
@@ -399,7 +399,7 @@ func TestSweep_SaysWhySkippedFilesAreLeft(t *testing.T) {
 				t.Fatalf("seed: %v", err)
 			}
 			var out strings.Builder
-			if err := Sweep(&out, root, testCase.how, nil); err != nil {
+			if err := sweep(&out, root, testCase.how, nil); err != nil {
 				t.Fatalf("sweep: %v", err)
 			}
 			const note = "eof.go: skipped (does not lex: unterminated comment or literal): " +
@@ -428,7 +428,7 @@ func TestSweep_WarnsThroughTheDefaultLogger(t *testing.T) {
 	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
 	t.Cleanup(func() { slog.SetDefault(previous); log.SetOutput(output); log.SetFlags(flags) })
 	src := unlistableRepo{openRepo(t, seedScopedRepo(t))}
-	if err := Sweep(io.Discard, src.Root(), Report, src); err != nil {
+	if err := sweep(io.Discard, src.Root(), report, src); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	if !strings.Contains(logs.String(), "walking the filesystem instead") {

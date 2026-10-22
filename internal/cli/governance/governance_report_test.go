@@ -1,4 +1,4 @@
-package cli
+package governance
 
 import (
 	"errors"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 )
 
@@ -57,7 +56,7 @@ func TestReportGovernance(t *testing.T) {
 			t.Parallel()
 
 			var out strings.Builder
-			err := governance.ReportGovernance(&out, testCase.report)
+			err := reportGovernance(&out, testCase.report)
 			if !errors.Is(err, testCase.wantErr) || out.String() != testCase.want {
 				t.Fatalf("reportGovernance() = %q, %v, want %q, %v",
 					out.String(), err, testCase.want, testCase.wantErr)
@@ -76,7 +75,7 @@ func TestReportGovernance_SuppressionPhrase(t *testing.T) {
 		Suppressed: 7,
 	}
 	var out strings.Builder
-	if err := governance.ReportGovernance(&out, report); err != nil {
+	if err := reportGovernance(&out, report); err != nil {
 		t.Fatalf("reportGovernance: %v", err)
 	}
 
