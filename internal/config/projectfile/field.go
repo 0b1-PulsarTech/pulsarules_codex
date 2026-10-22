@@ -93,69 +93,6 @@ func (at *Field) covered(walked *int) bool {
 	return false
 }
 
-func hasBrace(glob string) bool {
-	// A brace inside a [...] class is a literal member, so only those outside one count.
-	inClass := false
-	for idx := 0; idx < len(glob); idx++ {
-		switch char := glob[idx]; {
-		case char == '\\':
-			idx++
-		case inClass:
-			inClass = char != ']'
-		case char == '[':
-			inClass = true
-		case char == '{' || char == '}':
-			return true
-		}
-	}
-	return false
-}
-
-func starCount(glob string) int {
-	count := 0
-	for part := range strings.SplitSeq(glob, "/") {
-		if part != "**" && part != "*" {
-			count += strings.Count(part, "*")
-		}
-	}
-	return count
-}
-
-func wildcardWork(glob string) int {
-	// Each ? and each byte of a [...] class (brackets included) costs path.Match a re-scan.
-	work, inClass := 0, false
-	for idx := 0; idx < len(glob); idx++ {
-		char := glob[idx]
-		switch {
-		case char == '\\':
-			idx++
-			if inClass {
-				work += 2
-			}
-		case inClass:
-			work++
-			inClass = char != ']'
-		case char == '[':
-			work++
-			inClass = true
-		case char == '?':
-			work++
-		}
-	}
-	return work
-}
-
-func starTail(glob string) int {
-	// path.Match re-scans the rest of a segment from every start position of a *.
-	tail := 0
-	for part := range strings.SplitSeq(glob, "/") {
-		if star := strings.IndexByte(part, '*'); star >= 0 {
-			tail += len(part) - star - strings.Count(part[star:], "*")
-		}
-	}
-	return tail
-}
-
 func clipValue(value string) string {
 	if len(value) <= maxClipBytes {
 		return value

@@ -8,6 +8,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
 func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
@@ -111,8 +112,8 @@ func (val *validator) checkGlobBudget(globs []string) bool {
 	size, wildcards, tails := 0, 0, 0
 	for _, pattern := range globs {
 		size += len(pattern)
-		wildcards += wildcardWork(pattern)
-		tails += starTail(pattern)
+		wildcards += glob.WildcardWork(pattern)
+		tails += glob.StarTail(pattern)
 	}
 	at := val.root.key("overrides and tests")
 	switch {

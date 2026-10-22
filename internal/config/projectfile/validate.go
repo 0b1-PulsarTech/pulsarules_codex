@@ -169,9 +169,9 @@ func globFault(pattern string) string {
 	switch {
 	case len(pattern) > MaxGlobBytes:
 		return fmt.Sprintf("glob longer than %d bytes", MaxGlobBytes)
-	case hasBrace(pattern):
+	case glob.HasBrace(pattern):
 		return "brace alternatives are not supported; list each glob"
-	case starCount(pattern) > MaxGlobStars:
+	case glob.StarCount(pattern) > MaxGlobStars:
 		return fmt.Sprintf(
 			"glob has more than %d * (** and lone * segments are free)", MaxGlobStars,
 		)
