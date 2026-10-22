@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path"
 	"slices"
-	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
@@ -104,16 +103,6 @@ func (moves *moveContext) dirKeepsLoad(dir string) bool {
 		parsed, err := moves.staged.parse(file)
 		return err != nil || (parsed.Loads && !parsed.IsIgnored)
 	})
-}
-
-func (moves *moveContext) embedsFollow(patterns []string, dirs dirPair) bool {
-	for _, pattern := range patterns {
-		if strings.ContainsAny(pattern, "*?[\\") || strings.HasPrefix(pattern, "all:") ||
-			!moves.pathFollows(path.Join(dirs.oldDir, pattern), path.Join(dirs.newDir, pattern)) {
-			return false
-		}
-	}
-	return true
 }
 
 func (moves *moveContext) takesOverName(newFile gosrc.File, edit fileEdit) bool {

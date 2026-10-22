@@ -1,12 +1,12 @@
 package movepurity
 
 import (
+	"maps"
 	"path"
 	"slices"
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type declScope struct {
@@ -78,28 +78,36 @@ func (moves *moveContext) isComovedFrom(newPath, oldDir string) bool {
 	return false
 }
 
-func (moves *moveContext) pathFollows(oldPath, newPath string) bool {
-	if moves.movedTo[oldPath] == newPath {
+func (moves *moveContext) embedsFollow(patterns []string, dirs dirPair) bool {
+	if len(patterns) == 0 {
 		return true
 	}
-	// An unmoved file or a missing directory lists nothing; an empty set must not pass vacuously.
-	children, err := moves.head.dir(oldPath)
-	if err != nil || len(children) == 0 || !moves.arrivesAlone(oldPath, newPath) {
-		return false
-	}
-	return !slices.ContainsFunc(children, func(child string) bool {
-		return !moves.pathFollows(child, path.Join(newPath, path.Base(child)))
-	})
+	// An empty set cannot be told from a pattern the go tool rejects, so it never passes.
+	before, oldErr := gosrc.EmbedFiles(patterns, dirs.oldDir, moves.head.dir)
+	after, newErr := moves.stagedEmbedFiles(patterns, dirs.newDir)
+	return oldErr == nil && newErr == nil && len(before) > 0 && maps.Equal(before, after)
 }
 
-func (moves *moveContext) arrivesAlone(oldPath, newPath string) bool {
-	if existing, err := moves.head.dir(newPath); err != nil || len(existing) > 0 {
-		return false
+func (moves *moveContext) stagedEmbedFiles(patterns []string, dir string) (map[string]bool, error) {
+	files, err := gosrc.EmbedFiles(patterns, dir, moves.head.dir)
+	if err != nil {
+		return nil, err
 	}
-	return !slices.ContainsFunc(moves.renames, func(rename pass.Rename) bool {
-		rel, isUnder := strings.CutPrefix(rename.NewPath, newPath+"/")
-		return isUnder && rename.OldPath != path.Join(oldPath, rel)
+	// A moves-only commit leaves the staged tree equal to HEAD plus its renames.
+	maps.DeleteFunc(files, func(rel string, _ bool) bool {
+		_, isGone := moves.movedTo[path.Join(dir, rel)]
+		return isGone
 	})
+	for _, rename := range moves.renames {
+		rel, isUnder := rename.NewPath, true
+		if dir != "." {
+			rel, isUnder = strings.CutPrefix(rename.NewPath, dir+"/")
+		}
+		if isUnder && gosrc.EmbedCovers(patterns, rel) {
+			files[rel] = true
+		}
+	}
+	return files, nil
 }
 
 func (moves *moveContext) embedCoverDir(snap *snapshot, file string) string {
