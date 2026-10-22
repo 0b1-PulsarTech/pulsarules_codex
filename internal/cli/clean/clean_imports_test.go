@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestClean_DoesNotImportTheAnalysisOrchestrator(t *testing.T) {
+func TestClean_DoesNotImportTheGovernanceOrchestrator(t *testing.T) {
 	t.Parallel()
 
 	const orchestrator = "github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
