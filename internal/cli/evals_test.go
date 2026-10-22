@@ -9,6 +9,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/evals"
 )
@@ -89,8 +90,8 @@ func TestRunEvals_ReachesGradeThroughTheDispatcher(t *testing.T) {
 				}
 				return
 			}
-			if testCase.wantExit && !errors.Is(err, ErrFindings) {
-				t.Fatalf("error = %v, want ErrFindings for a failed assertion", err)
+			if testCase.wantExit && !errors.Is(err, command.ErrFindings) {
+				t.Fatalf("error = %v, want command.ErrFindings for a failed assertion", err)
 			}
 		})
 	}

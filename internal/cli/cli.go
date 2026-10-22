@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,7 +8,11 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/clean"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/commitlint"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/evals"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/generate"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/list"
@@ -20,13 +23,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
-// The command printed its findings before returning this; main exits 1 without reprinting.
-var ErrFindings = errors.New("findings reported")
+type handler func(inj remy.Injector, opts *version.Options) error
 
-type command func(inj remy.Injector, opts *version.Options) error
-
-func commands() map[string]command {
-	return map[string]command{
+func commands() map[string]handler {
+	return map[string]handler{
 		"generate":   generate.RunGenerate,
 		"install":    prefixed("install", install.Run),
 		"uninstall":  prefixed("uninstall", uninstall.Run),
@@ -34,14 +34,14 @@ func commands() map[string]command {
 		"validate":   validate.RunValidate,
 		"package":    packaging.RunPackage,
 		"hook":       hook.RunHook,
-		"commitlint": runCommitLint,
-		"governance": runGovernance,
-		"clean":      runClean,
-		"evals":      runEvals,
+		"commitlint": commitlint.RunCommitLint,
+		"governance": governance.RunGovernance,
+		"clean":      clean.RunClean,
+		"evals":      evals.RunEvals,
 	}
 }
 
-func prefixed(name string, run command) command {
+func prefixed(name string, run handler) handler {
 	return func(inj remy.Injector, opts *version.Options) error {
 		if runErr := run(inj, opts); runErr != nil {
 			return fmt.Errorf("%s: %w", name, runErr)

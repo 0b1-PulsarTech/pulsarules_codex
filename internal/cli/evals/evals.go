@@ -1,4 +1,4 @@
-package cli
+package evals
 
 import (
 	"errors"
@@ -8,11 +8,12 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/evals"
 )
 
-func runEvals(_ remy.Injector, opts *version.Options) error {
+func RunEvals(_ remy.Injector, opts *version.Options) error {
 	if opts.Artifact == "" {
 		return errors.New("evals: --artifact is required (the code or transcript to grade)")
 	}
@@ -74,7 +75,7 @@ func reportEvals(out io.Writer, scenarios []evals.Scenario, artifact string) err
 		"\n%d/%d machine assertions passed across %d scenario(s); %d need a human judge\n",
 		totalPassed, totalGraded, len(scenarios), totalJudge)
 	if totalGraded > 0 && totalPassed < totalGraded {
-		return ErrFindings
+		return command.ErrFindings
 	}
 	return nil
 }

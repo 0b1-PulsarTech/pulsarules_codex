@@ -1,4 +1,4 @@
-package cli
+package commitlint
 
 import (
 	"errors"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
@@ -18,7 +19,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func runCommitLint(inj remy.Injector, opts *version.Options) error {
+func RunCommitLint(inj remy.Injector, opts *version.Options) error {
 	msg := opts.CommitMsg
 	if msg == "" && opts.CommitFile != "" {
 		// CommitFile is a CLI flag value the operator supplies intentionally.
@@ -35,7 +36,7 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 	// Without a repository there is no git history, so the emoji-repetition
 	// window silently passes; any other resolution failure (e.g. a DI
 	// wiring bug) must still surface as an error.
-	repo, err := optionalRepository(inj)
+	repo, err := command.OptionalRepository(inj)
 	if err != nil {
 		return err
 	}
@@ -73,21 +74,7 @@ func runCommitLint(inj remy.Injector, opts *version.Options) error {
 	_, _ = fmt.Fprint(os.Stderr, result.Text(findings.CLI(), ""))
 
 	if result.HasErrors() {
-		return ErrFindings
+		return command.ErrFindings
 	}
 	return nil
-}
-
-//nolint:ireturn // returns the consumer port, nil when there is no repository
-func optionalRepository(inj remy.Injector) (governance.Repository, error) {
-	opened, err := remy.Get[*vcs.Repository](inj)
-	if err != nil && !errors.Is(err, vcs.ErrNoRepository) {
-		return nil, fmt.Errorf("open repository: %w", err)
-	}
-	// The one place an absent repository becomes a true nil interface: a nil
-	// *vcs.Repository stored in the port would not compare equal to nil.
-	if opened == nil {
-		return nil, nil //nolint:nilnil // an absent repository is a valid, explicit nil
-	}
-	return opened, nil
 }

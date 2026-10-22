@@ -1,4 +1,4 @@
-package cli
+package clean
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/discovery"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
@@ -22,28 +23,28 @@ import (
 type mode uint8
 
 const (
-	report mode = iota
+	Report mode = iota
 	rewrite
 )
 
-func runClean(inj remy.Injector, opts *version.Options) error {
+func RunClean(inj remy.Injector, opts *version.Options) error {
 	root := opts.ProjectDir
 	if root == "" {
 		root = "."
 	}
 	// Only --write mutates; the dangerous path is the one a caller has to ask for.
-	how := report
+	how := Report
 	if opts.Write {
 		how = rewrite
 	}
-	repo, err := optionalRepository(inj)
+	repo, err := command.OptionalRepository(inj)
 	if err != nil {
 		return err
 	}
-	return sweep(os.Stdout, root, how, repo)
+	return Sweep(os.Stdout, root, how, repo)
 }
 
-func sweep(out io.Writer, dir string, how mode, repo discovery.Lister) error {
+func Sweep(out io.Writer, dir string, how mode, repo discovery.Lister) error {
 	root, scope, err := scopeWithin(dir, repo)
 	if err != nil {
 		return err
@@ -151,7 +152,7 @@ func printReport(out io.Writer, found cleaner.Report, how mode) {
 		verb = "left"
 	}
 	for _, left := range found.Remaining {
-		note := advice(left.Class, filepath.Ext(found.Path), found.EscapeAdvice(left))
+		note := Advice(left.Class, filepath.Ext(found.Path), found.EscapeAdvice(left))
 		if held := found.HeldNote(left); held != "" {
 			note = held
 		}
@@ -159,7 +160,7 @@ func printReport(out io.Writer, found cleaner.Report, how mode) {
 	}
 }
 
-func advice(class invisible.Class, ext, escape string) string {
+func Advice(class invisible.Class, ext, escape string) string {
 	caveat := "; inside a string literal it is data: " + escape
 	removable := "removable outside a string literal; inside one, " + escape
 	if markdown.IsMarkdown(ext) {

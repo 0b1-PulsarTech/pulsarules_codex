@@ -1,4 +1,4 @@
-package cli
+package governance
 
 import (
 	"errors"
@@ -10,6 +10,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
@@ -21,7 +22,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-var errProjectDirRequired = errors.New(
+var ErrProjectDirRequired = errors.New(
 	"governance requires --project DIR or PULSARULES_PROJECT_DIR",
 )
 
@@ -37,7 +38,7 @@ func loadGovernance(inj remy.Injector, opts *version.Options) (governanceRun, er
 	if err != nil {
 		return governanceRun{}, fmt.Errorf("open repository: %w", err)
 	}
-	cfg, err := governanceConfig(opts, repo.Root())
+	cfg, err := GovernanceConfig(opts, repo.Root())
 	if err != nil {
 		return governanceRun{}, err
 	}
@@ -53,9 +54,9 @@ func loadGovernance(inj remy.Injector, opts *version.Options) (governanceRun, er
 	return governanceRun{repo: repo, cfg: cfg, idx: idx, catalog: catalog}, nil
 }
 
-func runGovernance(inj remy.Injector, opts *version.Options) error {
+func RunGovernance(inj remy.Injector, opts *version.Options) error {
 	if opts.ProjectDir == "" && opts.Env.ProjectDir == "" {
-		return errProjectDirRequired
+		return ErrProjectDirRequired
 	}
 	scope, err := governance.ParseScope(opts.Scope)
 	if err != nil {
@@ -74,10 +75,10 @@ func runGovernance(inj remy.Injector, opts *version.Options) error {
 
 	sess := governance.NewSession(run.repo, run.idx, run.catalog, run.cfg)
 	result := sess.Analyze(governance.Request{Scope: scope, Files: files})
-	return reportGovernance(os.Stderr, result)
+	return ReportGovernance(os.Stderr, result)
 }
 
-func reportGovernance(out io.Writer, report findings.Report) error {
+func ReportGovernance(out io.Writer, report findings.Report) error {
 	if len(report.Findings) == 0 {
 		_, _ = fmt.Fprintf(out, "governance: %s\n", report.Summary())
 		return nil
@@ -87,7 +88,7 @@ func reportGovernance(out io.Writer, report findings.Report) error {
 	_, _ = fmt.Fprintf(out, "\n%s\n", report.Summary())
 
 	if report.HasErrors() {
-		return ErrFindings
+		return command.ErrFindings
 	}
 	return nil
 }
@@ -108,7 +109,7 @@ func projectConfig(opts *version.Options, root string) (*config.GovernanceConfig
 	return loader.Build(file, opts.Preset)
 }
 
-func governanceConfig(opts *version.Options, root string) (*config.GovernanceConfig, error) {
+func GovernanceConfig(opts *version.Options, root string) (*config.GovernanceConfig, error) {
 	cfg, err := projectConfig(opts, root)
 	if err != nil {
 		return nil, err

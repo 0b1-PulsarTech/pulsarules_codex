@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/clean"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible"
 )
@@ -58,7 +59,7 @@ func TestAdvice(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			if got := advice(testCase.class, testCase.ext, phrase); got != testCase.want {
+			if got := clean.Advice(testCase.class, testCase.ext, phrase); got != testCase.want {
 				t.Errorf("advice(%v) = %q, want %q", testCase.class, got, testCase.want)
 			}
 		})
@@ -125,7 +126,7 @@ func TestSweep_EscapePhraseIsTheSharedOne(t *testing.T) {
 				t.Fatalf("write: %v", err)
 			}
 			var out strings.Builder
-			if err := sweep(&out, root, report, nil); err != nil {
+			if err := clean.Sweep(&out, root, clean.Report, nil); err != nil {
 				t.Fatalf("sweep: %v", err)
 			}
 			if !strings.Contains(out.String(), testCase.want) {

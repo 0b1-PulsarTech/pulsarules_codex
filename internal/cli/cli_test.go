@@ -16,7 +16,10 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/commitlint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -31,8 +34,8 @@ func TestRun_UnknownCommand(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error for an unknown command")
 	}
-	if errors.Is(err, ErrFindings) {
-		t.Fatalf("unknown command should not be ErrFindings, got %v", err)
+	if errors.Is(err, command.ErrFindings) {
+		t.Fatalf("unknown command should not be command.ErrFindings, got %v", err)
 	}
 }
 
@@ -45,10 +48,13 @@ func TestRunCommitLint_ReturnsErrFindings(t *testing.T) {
 	}
 
 	const messageTrippingEmojiTypeAndInitialRules = "bad commit message"
-	err := runCommitLint(inj, &version.Options{CommitMsg: messageTrippingEmojiTypeAndInitialRules})
+	err := commitlint.RunCommitLint(
+		inj,
+		&version.Options{CommitMsg: messageTrippingEmojiTypeAndInitialRules},
+	)
 
-	if !errors.Is(err, ErrFindings) {
-		t.Fatalf("error = %v, want ErrFindings", err)
+	if !errors.Is(err, command.ErrFindings) {
+		t.Fatalf("error = %v, want command.ErrFindings", err)
 	}
 }
 
@@ -62,7 +68,7 @@ func TestRunCommitLint_PropagatesRepositoryError(t *testing.T) {
 		func() (*vcs.Repository, error) { return nil, wantErr },
 	)
 
-	err := runCommitLint(inj, &version.Options{CommitMsg: "valid enough message"})
+	err := commitlint.RunCommitLint(inj, &version.Options{CommitMsg: "valid enough message"})
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("runCommitLint() error = %v, want wrapping %v", err, wantErr)
 	}
@@ -77,12 +83,12 @@ func TestRunCommitLint_NoRepository(t *testing.T) {
 	}
 
 	const invalidCommitMessage = "bad commit message"
-	err := runCommitLint(
+	err := commitlint.RunCommitLint(
 		inj,
 		&version.Options{CommitMsg: invalidCommitMessage},
 	)
-	if !errors.Is(err, ErrFindings) {
-		t.Fatalf("error = %v, want ErrFindings from analysis findings", err)
+	if !errors.Is(err, command.ErrFindings) {
+		t.Fatalf("error = %v, want command.ErrFindings from analysis findings", err)
 	}
 }
 
@@ -303,7 +309,7 @@ func outcome(err error) string {
 	if err == nil {
 		return "ok"
 	}
-	if errors.Is(err, ErrFindings) {
+	if errors.Is(err, command.ErrFindings) {
 		return "exit 1"
 	}
 	return err.Error()
@@ -371,13 +377,13 @@ func TestCatalogFailureFailsTheCommand(t *testing.T) {
 		{
 			name: "commit-lint",
 			run: func(inj remy.Injector) error {
-				return runCommitLint(inj, &version.Options{CommitMsg: "feat: x"})
+				return commitlint.RunCommitLint(inj, &version.Options{CommitMsg: "feat: x"})
 			},
 		},
 		{
 			name: "governance",
 			run: func(inj remy.Injector) error {
-				return runGovernance(inj, &version.Options{ProjectDir: "."})
+				return governance.RunGovernance(inj, &version.Options{ProjectDir: "."})
 			},
 		},
 	}

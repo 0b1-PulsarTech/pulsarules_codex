@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 )
@@ -48,7 +50,7 @@ func TestReportGovernance(t *testing.T) {
 			name:    "an error fails",
 			report:  findings.Report{Findings: []finding.Finding{failure}},
 			want:    "[ERROR] commit-lint: bad\n\n1 error(s), 0 warning(s), 0 info(s)\n",
-			wantErr: ErrFindings,
+			wantErr: command.ErrFindings,
 		},
 	}
 	for _, testCase := range testCases {
@@ -56,7 +58,7 @@ func TestReportGovernance(t *testing.T) {
 			t.Parallel()
 
 			var out strings.Builder
-			err := reportGovernance(&out, testCase.report)
+			err := governance.ReportGovernance(&out, testCase.report)
 			if !errors.Is(err, testCase.wantErr) || out.String() != testCase.want {
 				t.Fatalf("reportGovernance() = %q, %v, want %q, %v",
 					out.String(), err, testCase.want, testCase.wantErr)
@@ -75,7 +77,7 @@ func TestSuppressionWordingIsTheSameOnBothSurfaces(t *testing.T) {
 		Suppressed: 7,
 	}
 	var out strings.Builder
-	if err := reportGovernance(&out, report); err != nil {
+	if err := governance.ReportGovernance(&out, report); err != nil {
 		t.Fatalf("reportGovernance: %v", err)
 	}
 	block, _ := hook.GovernanceBlock(report)

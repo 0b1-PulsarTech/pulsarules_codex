@@ -10,6 +10,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 )
 
@@ -45,7 +46,7 @@ func main() {
 }
 
 func die(err error) {
-	if errors.Is(err, cli.ErrFindings) {
+	if errors.Is(err, command.ErrFindings) {
 		os.Exit(1)
 	}
 	cli.ReportError(os.Stderr, err)
