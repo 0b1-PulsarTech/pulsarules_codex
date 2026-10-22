@@ -16,8 +16,8 @@ func Apply(findings []finding.Finding, owner string, rules []pass.Override) []fi
 
 func applyRules(findings []finding.Finding, owner string, rules []pass.Override) []finding.Finding {
 	kept := make([]finding.Finding, 0, len(findings))
-	for _, finding := range findings {
-		if resolved, keep := resolve(finding, owner, rules); keep {
+	for _, hit := range findings {
+		if resolved, keep := resolve(hit, owner, rules); keep {
 			kept = append(kept, resolved)
 		}
 	}

@@ -83,12 +83,12 @@ func TestValidateEmoji_ProhibitedReplacement(t *testing.T) {
 	t.Parallel()
 
 	findings := checkFor(t, commitmsg.Parse(":test_tube: test: Add cases"), nil).validate()
-	finding, found := findingByID(findings, "commit-emoji-prohibited")
+	hit, found := findingByID(findings, "commit-emoji-prohibited")
 	if !found {
 		t.Fatalf("expected a prohibited finding, got %+v", findings)
 	}
-	if !strings.Contains(finding.Message, ":tea:") {
-		t.Fatalf("message %q does not name the replacement", finding.Message)
+	if !strings.Contains(hit.Message, ":tea:") {
+		t.Fatalf("message %q does not name the replacement", hit.Message)
 	}
 }
 
@@ -207,13 +207,13 @@ func TestValidateEmojiSuggestionsAvoidTheWindow(t *testing.T) {
 	history := subjects("wrench", "tea", "bug", "gear", "package")
 	findings := checkFor(t, commitmsg.Parse(":wrench: feat: Add routing"), history).validate()
 
-	finding, found := findingByID(findings, "commit-emoji-repeat")
+	hit, found := findingByID(findings, "commit-emoji-repeat")
 	if !found {
 		t.Fatalf("expected a repeat finding, got %+v", findings)
 	}
 	for _, windowed := range []string{"wrench", "tea", "bug", "gear", "package"} {
-		if strings.Contains(finding.Suggestion, ":"+windowed+":") {
-			t.Fatalf("suggestion %q offers windowed emoji %q", finding.Suggestion, windowed)
+		if strings.Contains(hit.Suggestion, ":"+windowed+":") {
+			t.Fatalf("suggestion %q offers windowed emoji %q", hit.Suggestion, windowed)
 		}
 	}
 }

@@ -251,8 +251,8 @@ func TestValidateSpecialCommitRules(t *testing.T) {
 			msg := commitmsg.Parse(testCase.input)
 			findings := validate(msg, defaultRuleConfig(), defaultRuleReporters())
 			var gotIDs []string
-			for _, finding := range findings {
-				gotIDs = append(gotIDs, finding.AnalyzerID)
+			for _, hit := range findings {
+				gotIDs = append(gotIDs, hit.AnalyzerID)
 			}
 			if !slices.Equal(gotIDs, testCase.want) {
 				t.Errorf("validate(%q) = %v, want %v", testCase.input, gotIDs, testCase.want)
