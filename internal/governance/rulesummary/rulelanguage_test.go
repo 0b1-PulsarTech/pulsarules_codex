@@ -38,8 +38,8 @@ func TestMapTargetsExist(t *testing.T) {
 		testCases = append(testCases, targetCase{"default " + analyzerID, ruleID})
 	}
 	for _, analyzerID := range sortedKeys(languageRules()) {
-		for language, ruleID := range languageRules()[analyzerID] {
-			name := "language " + analyzerID + " " + string(language)
+		for lang, ruleID := range languageRules()[analyzerID] {
+			name := "language " + analyzerID + " " + string(lang)
 			testCases = append(testCases, targetCase{name, ruleID})
 		}
 	}

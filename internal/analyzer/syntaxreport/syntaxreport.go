@@ -21,8 +21,8 @@ func Languages() []language.ID {
 	}
 }
 
-func NewAnalyzer(language language.ID) *Analyzer {
-	return &Analyzer{language: language}
+func NewAnalyzer(lang language.ID) *Analyzer {
+	return &Analyzer{language: lang}
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
