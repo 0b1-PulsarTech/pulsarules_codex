@@ -53,7 +53,7 @@ func TestIsEmptyRepoError(t *testing.T) {
 	}{
 		{"empty repo stderr", emptyRepoErr, true},
 		{"a different git failure", otherErr, false},
-		{"a non-execx error", errors.New("boom"), false},
+		{"a non-process error", errors.New("boom"), false},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestRunGitWithin_Timeout(t *testing.T) {
 		t.Fatal("runGitWithin: expected an error for an expired timeout")
 	}
 	if _, ok := errors.AsType[*process.Error](err); !ok {
-		t.Fatalf("err = %T, want *execx.Error", err)
+		t.Fatalf("err = %T, want *process.Error", err)
 	}
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err = %v, want context.DeadlineExceeded", err)

@@ -60,7 +60,7 @@ func (analyzer *Analyzer) run(projectDir string, args []string) (process.Result,
 		Timeout: analyzer.timeout,
 	})
 	if err != nil {
-		// %w keeps *execx.Error (and the *exec.ExitError it wraps) reachable through
+		// %w keeps *process.Error (and the *exec.ExitError it wraps) reachable through
 		// command.Classify.
 		return result, fmt.Errorf("run golangci-lint: %w", err)
 	}

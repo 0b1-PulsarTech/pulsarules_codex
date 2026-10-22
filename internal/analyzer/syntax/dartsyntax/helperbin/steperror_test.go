@@ -54,7 +54,7 @@ func TestStepError(t *testing.T) {
 		want   string
 	}{
 		{
-			name: "execx error unwraps to its cause",
+			name: "process error unwraps to its cause",
 			err: &process.Error{
 				Name: "dart", Args: []string{"x"}, Stderr: "bad", Err: errors.New("boom"),
 			},
