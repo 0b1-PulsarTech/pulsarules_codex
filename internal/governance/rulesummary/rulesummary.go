@@ -11,7 +11,7 @@ func Attach(
 	index *knowledge.Index, defaults map[string]string,
 ) func([]finding.Finding) []finding.Finding {
 	return func(findings []finding.Finding) []finding.Finding {
-		// A nil index is accepted and skips injection.
+		// A nil index is accepted and leaves the findings untouched.
 		if index == nil {
 			return findings
 		}

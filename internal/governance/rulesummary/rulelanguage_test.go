@@ -239,7 +239,7 @@ func TestResolve(t *testing.T) {
 	}
 }
 
-func TestInjectKeepsPresetRule(t *testing.T) {
+func TestAttachKeepsPresetRule(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {

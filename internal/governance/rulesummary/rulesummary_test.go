@@ -7,7 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func TestInjectRuleSummaries(t *testing.T) {
+func TestAttach_Summaries(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
@@ -64,7 +64,7 @@ func TestInjectRuleSummaries(t *testing.T) {
 	check(t, 5, "dependency-rule", true)
 }
 
-func TestInjectRuleSummaries_NilIndex(t *testing.T) {
+func TestAttach_NilIndex(t *testing.T) {
 	t.Parallel()
 
 	findings := []finding.Finding{
@@ -78,7 +78,7 @@ func TestInjectRuleSummaries_NilIndex(t *testing.T) {
 	}
 }
 
-func TestInjectRuleSummaries_PreexistingRuleID(t *testing.T) {
+func TestAttach_PreexistingRuleID(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
@@ -105,7 +105,7 @@ func TestInjectRuleSummaries_PreexistingRuleID(t *testing.T) {
 	}
 }
 
-func TestInjectRuleSummaries_AlreadyHasSummary(t *testing.T) {
+func TestAttach_AlreadyHasSummary(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
