@@ -16,7 +16,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -60,7 +59,7 @@ func (cmd *Command) loadGovernance(svc bootstrap.Services) (governanceRun, error
 	if err != nil {
 		return governanceRun{}, fmt.Errorf("open repository: %w", err)
 	}
-	cfg, err := cmd.governanceConfig(repo.Root())
+	cfg, err := cmd.governanceConfig(svc.Loader, repo.Root())
 	if err != nil {
 		return governanceRun{}, err
 	}
@@ -123,22 +122,26 @@ func reportGovernance(out io.Writer, report findings.Report) error {
 	return nil
 }
 
-func (cmd *Command) projectConfig(root string) (*config.GovernanceConfig, error) {
+func (cmd *Command) projectConfig(
+	loaderItem *loader.Loader,
+	root string,
+) (*config.GovernanceConfig, error) {
 	// ApplyPreset silently ignores an unknown name, so reject it here.
 	if cmd.preset != "" && !config.ValidPreset(cmd.preset) {
 		return nil, errors.New(config.UnknownPreset("invalid --preset", cmd.preset))
 	}
-	file, err := loader.NewLoader(registry.ConfigRules()).Load(
-		root, cmd.config, cmd.preset,
-	)
+	file, err := loaderItem.Load(root, cmd.config, cmd.preset)
 	if err != nil {
 		return nil, err
 	}
 	return loader.Build(file, cmd.preset)
 }
 
-func (cmd *Command) governanceConfig(root string) (*config.GovernanceConfig, error) {
-	cfg, err := cmd.projectConfig(root)
+func (cmd *Command) governanceConfig(
+	loader *loader.Loader,
+	root string,
+) (*config.GovernanceConfig, error) {
+	cfg, err := cmd.projectConfig(loader, root)
 	if err != nil {
 		return nil, err
 	}

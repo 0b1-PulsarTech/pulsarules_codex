@@ -11,6 +11,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
@@ -234,5 +235,43 @@ func TestCommand_Run_CatalogFailure(t *testing.T) {
 	err := (&Command{msg: "feat: x"}).Run(svc, nil)
 	if err == nil || !strings.Contains(err.Error(), "get emoji catalog") {
 		t.Fatalf("Run() error = %v, want one naming %q", err, "get emoji catalog")
+	}
+}
+
+func TestCommand_Run_UsesTheServicesLoader(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		loader  *loader.Loader
+		wantErr error
+	}{
+		{"registry rules reject the analyzer", nil, command.ErrFindings},
+		{
+			"a loader built for any analyzer accepts it",
+			loader.NewLoader(projectfile.Rules{AnyAnalyzer: true}), nil,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			runGit(t, dir, "init", "-q")
+			yaml := "version: 1\nanalyzers: {not-an-analyzer: {enabled: false}}\n"
+			path := filepath.Join(dir, projectfile.Name)
+			if err := os.WriteFile(path, []byte(yaml), disk.File); err != nil {
+				t.Fatalf("write config: %v", err)
+			}
+			svc := servicesIn(t, dir)
+			if testCase.loader != nil {
+				svc.Loader = testCase.loader
+			}
+
+			err := (&Command{msg: ":tea: docs(cli): Document the config flag"}).Run(svc, nil)
+			if !errors.Is(err, testCase.wantErr) {
+				t.Fatalf("Run() error = %v, want %v", err, testCase.wantErr)
+			}
+		})
 	}
 }

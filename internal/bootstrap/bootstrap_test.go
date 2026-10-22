@@ -18,6 +18,7 @@ func TestNew_ResolvesEveryService(t *testing.T) {
 		{"knowledge index", svc.Index != nil},
 		{"templates", svc.Templates.FS != nil},
 		{"renderer", svc.Renderer != nil},
+		{"config loader", svc.Loader != nil},
 		{"target registry", svc.Targets != nil},
 		{"open repository", svc.OpenRepository != nil},
 		{"open logger", svc.OpenLogger != nil},

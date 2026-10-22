@@ -7,7 +7,9 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -24,6 +26,7 @@ type Services struct {
 	Index     *knowledge.Index
 	Templates templates.Set
 	Renderer  *render.Renderer
+	Loader    *loader.Loader
 	Targets   *host.Registry
 	// Each of these can fail, so it stays lazy and the command that asks decides if it is fatal.
 	OpenRepository func() (*vcs.Repository, error)
@@ -46,6 +49,7 @@ func resolve(inj remy.Injector) (Services, error) {
 	if svc.Targets, err = lookup[*host.Registry](inj, "target registry"); err != nil {
 		return Services{}, err
 	}
+	svc.Loader = loader.NewLoader(registry.ConfigRules())
 	svc.OpenRepository = deferred[*vcs.Repository](inj)
 	svc.OpenLogger = deferred[Logging](inj)
 	svc.LoadCatalog = deferred[*emoji.Catalog](inj)

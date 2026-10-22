@@ -9,10 +9,8 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -58,7 +56,7 @@ func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("get emoji catalog: %w", err)
 	}
-	cfg, configFindings := loader.NewLoader(registry.ConfigRules()).ForRoot(root)
+	cfg, configFindings := svc.Loader.ForRoot(root)
 	sess := governance.NewSession(repo, svc.Index, catalog, cfg)
 	// An explicit empty status keeps this a pure message linter. A nil
 	// status would have discovery read the worktree, and content findings from

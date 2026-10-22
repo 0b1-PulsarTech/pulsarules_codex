@@ -31,7 +31,7 @@ func TestGovernanceConfig_TypographicSeverity(t *testing.T) {
 			opts := &Command{
 				tuning: flags.Tuning{TypographicSeverity: testCase.severity},
 			}
-			cfg, err := opts.governanceConfig("")
+			cfg, err := opts.governanceConfig(testLoader(), "")
 			if testCase.wantErr {
 				if err == nil {
 					t.Fatalf("governanceConfig(%q) err = nil, want an error", testCase.severity)

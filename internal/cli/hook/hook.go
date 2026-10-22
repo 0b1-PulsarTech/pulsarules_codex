@@ -8,6 +8,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
@@ -50,7 +51,7 @@ func (cmd *Command) Run(svc bootstrap.Services, args []string) error {
 		Out:        os.Stdout,
 		ProjectDir: cmd.env.ProjectDir,
 		SkillsDir:  cmd.env.SkillsDir,
-	}, svc.LoadCatalog)
+	}, svc.LoadCatalog, svc.Loader)
 
 	var mode string
 	if len(args) > 0 {
@@ -65,8 +66,9 @@ func (cmd *Command) Run(svc bootstrap.Services, args []string) error {
 func newHookDispatcher(
 	deps hook.Deps,
 	catalog func() (*emoji.Catalog, error),
+	loader *loader.Loader,
 ) *hook.Dispatcher {
-	deps.Governance = governanceCheck(deps.Index, catalog)
+	deps.Governance = governor{index: deps.Index, loader: loader}.check(catalog)
 	return hook.NewDispatcher(deps)
 }
 

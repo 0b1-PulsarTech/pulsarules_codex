@@ -89,6 +89,9 @@ func TestApplyPreset_StrictOverridesMaxLinesParam(t *testing.T) {
 	if maxLines != 180 {
 		t.Errorf("expected max_lines=180 in strict preset, got %v", maxLines)
 	}
+	if got := cfg.Analyzers["complexity"].Params["max_complexity"]; got != 10 {
+		t.Errorf("strict max_complexity = %v, want 10", got)
+	}
 }
 
 func TestValidPreset(t *testing.T) {

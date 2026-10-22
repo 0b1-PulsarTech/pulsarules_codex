@@ -63,6 +63,7 @@ func TestHookStop_RealGovernance(t *testing.T) {
 	disp := newHookDispatcher(
 		hook.Deps{Templates: templates.New(assets), Index: index, Out: &out, ProjectDir: dir},
 		func() (*emoji.Catalog, error) { return testEmojiCatalog(t), nil },
+		testLoader(),
 	)
 
 	_ = disp.Dispatch("stop", []byte(`{"session_id":"real-governance"}`))
@@ -126,6 +127,7 @@ func TestHookStop_CatalogFailureSkipsGovernance(t *testing.T) {
 	disp := newHookDispatcher(
 		hook.Deps{Templates: templates.New(assets), Index: index, Out: &out, ProjectDir: dir},
 		func() (*emoji.Catalog, error) { return nil, errors.New("catalog unavailable") },
+		testLoader(),
 	)
 
 	stderr := captureStderr(t, func() {
@@ -142,7 +144,12 @@ func TestHookStop_CatalogFailureSkipsGovernance(t *testing.T) {
 
 //nolint:paralleltest // captureStderr swaps os.Stderr.
 func TestCommand_Run_OtherModesDoNotNeedTheCatalog(t *testing.T) {
+	var resolved bool
 	svc := hookServices(t)
+	svc.LoadCatalog = func() (*emoji.Catalog, error) {
+		resolved = true
+		return nil, errors.New("emoji catalog must not be resolved here")
+	}
 	stderr := captureStderr(t, func() {
 		if err := New(
 			flags.Environment{ProjectDir: t.TempDir()},
@@ -151,8 +158,8 @@ func TestCommand_Run_OtherModesDoNotNeedTheCatalog(t *testing.T) {
 		}
 	})
 
-	if strings.Contains(stderr, "emoji catalog") {
-		t.Errorf("pre-search resolved the emoji catalog: %q", stderr)
+	if resolved || strings.Contains(stderr, "emoji catalog") {
+		t.Errorf("pre-search resolved the emoji catalog (%v): %q", resolved, stderr)
 	}
 }
 
@@ -220,14 +227,12 @@ func hookServices(t *testing.T) bootstrap.Services {
 	return bootstrap.Services{
 		Index:     index,
 		Templates: templates.New(assets),
+		Loader:    testLoader(),
 		OpenLogger: func() (bootstrap.Logging, error) {
 			return bootstrap.Logging{
 				Logger: slog.New(slog.DiscardHandler),
 				Closer: io.NopCloser(nil),
 			}, nil
-		},
-		LoadCatalog: func() (*emoji.Catalog, error) {
-			return nil, errors.New("emoji catalog must not be resolved here")
 		},
 	}
 }

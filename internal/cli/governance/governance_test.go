@@ -12,10 +12,12 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -74,7 +76,7 @@ func TestGovernanceConfig(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := testCase.opts.governanceConfig("")
+			cfg, err := testCase.opts.governanceConfig(testLoader(), "")
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -93,7 +95,7 @@ func TestGovernanceConfig_InvalidPreset(t *testing.T) {
 	t.Parallel()
 
 	const want = `invalid --preset "stict" (want recommended|strict|minimal)`
-	_, err := (&Command{preset: "stict"}).governanceConfig("")
+	_, err := (&Command{preset: "stict"}).governanceConfig(testLoader(), "")
 	if err == nil || err.Error() != want {
 		t.Fatalf("governanceConfig error = %v, want %q", err, want)
 	}
@@ -108,17 +110,13 @@ func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 		want bool
 	}{
 		{name: "suppressed by default", opts: &Command{}, want: false},
-		{
-			name: "flag turns the filter off",
-			opts: &Command{includeGenerated: true},
-			want: true,
-		},
+		{name: "flag turns the filter off", opts: &Command{includeGenerated: true}, want: true},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := testCase.opts.governanceConfig("")
+			cfg, err := testCase.opts.governanceConfig(testLoader(), "")
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -126,21 +124,6 @@ func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 				t.Errorf("IncludeGenerated = %v, want %v", got, testCase.want)
 			}
 		})
-	}
-}
-
-func TestGovernanceConfig_StrictLowersFileSize(t *testing.T) {
-	t.Parallel()
-
-	cfg, err := (&Command{preset: config.PresetStrict}).governanceConfig("")
-	if err != nil {
-		t.Fatalf("governanceConfig: %v", err)
-	}
-	if got := cfg.Analyzers["file-size"].Params["max_lines"]; got != 180 {
-		t.Errorf("strict max_lines = %v, want 180", got)
-	}
-	if got := cfg.Analyzers["complexity"].Params["max_complexity"]; got != 10 {
-		t.Errorf("strict max_complexity = %v, want 10", got)
 	}
 }
 
@@ -158,7 +141,8 @@ func TestGovernanceConfig_BranchExtraTypes(t *testing.T) {
 	}{
 		{name: "unset leaves the params alone", wantSet: nil},
 		{
-			name: "a list reaches the analyzer", spec: "spike,experiment",
+			name:    "a list reaches the analyzer",
+			spec:    "spike,experiment",
 			wantSet: "spike,experiment",
 		},
 		{name: "uppercase names the flag and the form", spec: "Release", wantErr: wantMessage},
@@ -168,7 +152,7 @@ func TestGovernanceConfig_BranchExtraTypes(t *testing.T) {
 			t.Parallel()
 
 			opts := &Command{tuning: flags.Tuning{BranchExtraTypes: testCase.spec}}
-			cfg, err := opts.governanceConfig("")
+			cfg, err := opts.governanceConfig(testLoader(), "")
 			if testCase.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
 					t.Fatalf("err = %v, want one naming %q", err, testCase.wantErr)
@@ -254,7 +238,7 @@ func TestGovernanceConfig_ProjectFilePrecedence(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			cfg, err := testCase.opts.governanceConfig(root)
+			cfg, err := testCase.opts.governanceConfig(testLoader(), root)
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -289,7 +273,7 @@ func TestGovernanceConfig_ProjectFileErrors(t *testing.T) {
 			t.Parallel()
 
 			root := writeProjectConfig(t, testCase.content)
-			_, err := (&Command{}).governanceConfig(root)
+			_, err := (&Command{}).governanceConfig(testLoader(), root)
 			if err == nil || !strings.Contains(err.Error(), testCase.want) {
 				t.Fatalf("governanceConfig error = %v, want containing %q", err, testCase.want)
 			}
@@ -304,7 +288,7 @@ func TestGovernanceConfig_ExplicitConfigPath(t *testing.T) {
 	dir := writeProjectConfig(t, content)
 	explicit := filepath.Join(dir, projectfile.Name)
 
-	cfg, err := (&Command{config: explicit}).governanceConfig("")
+	cfg, err := (&Command{config: explicit}).governanceConfig(testLoader(), "")
 	if err != nil {
 		t.Fatalf("governanceConfig: %v", err)
 	}
@@ -312,7 +296,7 @@ func TestGovernanceConfig_ExplicitConfigPath(t *testing.T) {
 		t.Errorf("max_lines = %v, want 2", got)
 	}
 	missing := &Command{config: filepath.Join(dir, "nope.yaml")}
-	if _, err = missing.governanceConfig(dir); err == nil {
+	if _, err = missing.governanceConfig(testLoader(), dir); err == nil {
 		t.Error("governanceConfig with a missing --config: expected an error")
 	}
 }
@@ -320,7 +304,7 @@ func TestGovernanceConfig_ExplicitConfigPath(t *testing.T) {
 func TestGovernanceConfig_NoProjectFileIsUnchanged(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := (&Command{}).governanceConfig(t.TempDir())
+	cfg, err := (&Command{}).governanceConfig(testLoader(), t.TempDir())
 	if err != nil {
 		t.Fatalf("governanceConfig: %v", err)
 	}
@@ -359,7 +343,7 @@ func TestGovernanceConfig_PresetFlag(t *testing.T) {
 			if err := os.WriteFile(path, []byte(private), disk.File); err != nil {
 				t.Fatalf("write private config: %v", err)
 			}
-			cfg, err := (&Command{preset: testCase.preset}).governanceConfig(root)
+			cfg, err := (&Command{preset: testCase.preset}).governanceConfig(testLoader(), root)
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -367,45 +351,6 @@ func TestGovernanceConfig_PresetFlag(t *testing.T) {
 				t.Fatalf("overrides = %+v, want %d", cfg.Overrides, testCase.wantOverrides)
 			}
 		})
-	}
-}
-
-func TestRunGovernance_CatalogFailure(t *testing.T) {
-	t.Parallel()
-
-	dir := t.TempDir()
-	if out, err := exec.CommandContext(t.Context(), "git", "-C", dir, "init", "-q").
-		CombinedOutput(); err != nil {
-		t.Fatalf("git init: %v\n%s", err, out)
-	}
-	repo, err := vcs.Open(dir)
-	if err != nil {
-		t.Fatalf("vcs.Open: %v", err)
-	}
-	svc := bootstrap.Services{
-		Index:          &knowledge.Index{},
-		OpenRepository: func() (*vcs.Repository, error) { return repo, nil },
-		LoadCatalog:    func() (*emoji.Catalog, error) { return nil, errors.New("boom") },
-	}
-
-	err = (&Command{project: dir}).Run(svc, nil)
-	if err == nil || err.Error() != "get emoji catalog: boom" {
-		t.Fatalf("Run() error = %v, want %q", err, "get emoji catalog: boom")
-	}
-}
-
-func TestRunGovernance_RepositoryFailure(t *testing.T) {
-	t.Parallel()
-
-	err := (&Command{project: t.TempDir()}).Run(unopenableRepository(), nil)
-	if err == nil || err.Error() != "open repository: boom" {
-		t.Fatalf("Run() error = %v, want %q", err, "open repository: boom")
-	}
-}
-
-func unopenableRepository() bootstrap.Services {
-	return bootstrap.Services{
-		OpenRepository: func() (*vcs.Repository, error) { return nil, errors.New("boom") },
 	}
 }
 
@@ -439,4 +384,77 @@ func TestParseScope(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunGovernance_CatalogFailure(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if out, err := exec.CommandContext(t.Context(), "git", "-C", dir, "init", "-q").
+		CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+	repo, err := vcs.Open(dir)
+	if err != nil {
+		t.Fatalf("vcs.Open: %v", err)
+	}
+	svc := bootstrap.Services{
+		Index:          &knowledge.Index{},
+		Loader:         testLoader(),
+		OpenRepository: func() (*vcs.Repository, error) { return repo, nil },
+		LoadCatalog:    func() (*emoji.Catalog, error) { return nil, errors.New("boom") },
+	}
+
+	err = (&Command{project: dir}).Run(svc, nil)
+	if err == nil || err.Error() != "get emoji catalog: boom" {
+		t.Fatalf("Run() error = %v, want %q", err, "get emoji catalog: boom")
+	}
+}
+
+func TestRunGovernance_RepositoryFailure(t *testing.T) {
+	t.Parallel()
+
+	err := (&Command{project: t.TempDir()}).Run(unopenableRepository(), nil)
+	if err == nil || err.Error() != "open repository: boom" {
+		t.Fatalf("Run() error = %v, want %q", err, "open repository: boom")
+	}
+}
+
+func testLoader() *loader.Loader {
+	return loader.NewLoader(registry.ConfigRules())
+}
+
+func unopenableRepository() bootstrap.Services {
+	return bootstrap.Services{
+		OpenRepository: func() (*vcs.Repository, error) { return nil, errors.New("boom") },
+	}
+}
+
+func TestGovernanceConfig_UsesTheGivenLoader(t *testing.T) {
+	t.Parallel()
+
+	const unlistedAnalyzer = "version: 1\nanalyzers: {not-an-analyzer: {enabled: false}}\n"
+	testCases := []struct {
+		name    string
+		loader  *loader.Loader
+		wantErr bool
+	}{
+		{"registry rules reject it", testLoader(), true},
+		{"a loader built for any analyzer accepts it", anyAnalyzerLoader(), false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := writeProjectConfig(t, unlistedAnalyzer)
+			_, err := (&Command{}).governanceConfig(testCase.loader, root)
+			if (err != nil) != testCase.wantErr {
+				t.Fatalf("governanceConfig error = %v, want error %v", err, testCase.wantErr)
+			}
+		})
+	}
+}
+
+func anyAnalyzerLoader() *loader.Loader {
+	return loader.NewLoader(projectfile.Rules{AnyAnalyzer: true})
 }

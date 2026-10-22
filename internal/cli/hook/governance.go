@@ -8,14 +8,17 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func governanceCheck(
-	index *knowledge.Index,
+type governor struct {
+	index  *knowledge.Index
+	loader *loader.Loader
+}
+
+func (gov governor) check(
 	catalog func() (*emoji.Catalog, error),
 ) func(root string, status vcs.Status) (string, int) {
 	return func(root string, status vcs.Status) (string, int) {
@@ -24,16 +27,15 @@ func governanceCheck(
 			printHookError(os.Stderr, "get emoji catalog", err)
 			return "", 0
 		}
-		return governChanges(root, status, index, resolved)
+		return gov.changes(root, status, resolved)
 	}
 }
 
 const governanceHeader = "Governance checks:"
 
-func governChanges(
+func (gov governor) changes(
 	root string,
 	status vcs.Status,
-	index *knowledge.Index,
 	catalog *emoji.Catalog,
 ) (string, int) {
 	repo, err := vcs.Open(root)
@@ -43,8 +45,8 @@ func governChanges(
 		) + "\n", 1
 	}
 	// The empty commit message is deliberate: only the git commit-msg hook validates one.
-	cfg, configFindings := loader.NewLoader(registry.ConfigRules()).ForRoot(repo.Root())
-	sess := governance.NewSession(repo, index, catalog, cfg)
+	cfg, configFindings := gov.loader.ForRoot(repo.Root())
+	sess := governance.NewSession(repo, gov.index, catalog, cfg)
 	result := sess.Analyze(governance.Request{
 		Scope:  governance.ScopeChanged,
 		Status: &status,

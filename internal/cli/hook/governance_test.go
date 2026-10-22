@@ -7,8 +7,11 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -29,7 +32,7 @@ func TestGovernChanges_EmptyRepo(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	got, count := governChanges(dir, status, nil, testEmojiCatalog(t))
+	got, count := governor{loader: testLoader()}.changes(dir, status, testEmojiCatalog(t))
 	if got != "" {
 		t.Errorf("block = %q, want empty for an empty repo", got)
 	}
@@ -41,9 +44,15 @@ func TestGovernChanges_EmptyRepo(t *testing.T) {
 func TestGovernChanges_NotARepository(t *testing.T) {
 	t.Parallel()
 
-	block, count := governChanges(t.TempDir(), vcs.Status{}, nil, testEmojiCatalog(t))
+	block, count := governor{
+		loader: testLoader(),
+	}.changes(
+		t.TempDir(),
+		vcs.Status{},
+		testEmojiCatalog(t),
+	)
 	if count != 1 || !strings.Contains(block, "open repository:") {
-		t.Fatalf("governChanges() = %q, %d, want the open-repository error", block, count)
+		t.Fatalf("changes() = %q, %d, want the open-repository error", block, count)
 	}
 }
 
@@ -68,7 +77,7 @@ func TestGovernChanges_SuppressionBlock(t *testing.T) {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
 
-	block, count := governChanges(dir, status, nil, testEmojiCatalog(t))
+	block, count := governor{loader: testLoader()}.changes(dir, status, testEmojiCatalog(t))
 	if count != 1 {
 		t.Fatalf("count = %d, want 1 (the generated file's finding is suppressed)", count)
 	}
@@ -94,7 +103,7 @@ func runDirtyCheck(t *testing.T, configYAML string) (string, int) {
 	if err != nil {
 		t.Fatalf("WorktreeStatus: %v", err)
 	}
-	return governChanges(dir, status, nil, testEmojiCatalog(t))
+	return governor{loader: testLoader()}.changes(dir, status, testEmojiCatalog(t))
 }
 
 type projectConfigCase struct {
@@ -220,7 +229,7 @@ func TestGovernanceBlock_SuppressionPhrase(t *testing.T) {
 
 //nolint:paralleltest // captureStderr swaps os.Stderr.
 func TestGovernanceCheck_CatalogFailureYieldsNothing(t *testing.T) {
-	check := governanceCheck(nil, func() (*emoji.Catalog, error) {
+	check := governor{loader: testLoader()}.check(func() (*emoji.Catalog, error) {
 		return nil, errors.New("catalog unavailable")
 	})
 	var (
@@ -234,5 +243,40 @@ func TestGovernanceCheck_CatalogFailureYieldsNothing(t *testing.T) {
 	}
 	if !strings.Contains(stderr, "hook: get emoji catalog: catalog unavailable") {
 		t.Errorf("stderr = %q, want the catalog failure", stderr)
+	}
+}
+
+func testLoader() *loader.Loader {
+	return loader.NewLoader(registry.ConfigRules())
+}
+
+func TestGovernor_Changes_UsesItsLoader(t *testing.T) {
+	t.Parallel()
+
+	const unlistedAnalyzer = "version: 1\nanalyzers: {not-an-analyzer: {enabled: false}}\n"
+	testCases := []struct {
+		name        string
+		loader      *loader.Loader
+		wantFinding bool
+	}{
+		{"registry rules reject it", testLoader(), true},
+		{"a loader built for any analyzer accepts it", loader.NewLoader(
+			projectfile.Rules{AnyAnalyzer: true}), false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			initGitRepo(t, dir)
+			writeHookFile(t, dir, ".pulsarules.yaml", unlistedAnalyzer)
+			block, _ := governor{loader: testCase.loader}.changes(
+				dir, vcs.Status{}, testEmojiCatalog(t),
+			)
+			if got := strings.Contains(block, "unknown analyzer"); got != testCase.wantFinding {
+				t.Fatalf("block = %q, unknown-analyzer finding = %v, want %v",
+					block, got, testCase.wantFinding)
+			}
+		})
 	}
 }
