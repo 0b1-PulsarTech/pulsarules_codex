@@ -150,28 +150,28 @@ func delegatedIDs(entries []DelegatedEntry) map[string]bool {
 
 func (val *validator) checkGlobs(at *Field, globs []string) []string {
 	passed := make([]string, 0, len(globs))
-	for idx, globItem := range globs {
-		if fault := globFault(globItem); fault != "" {
+	for idx, pattern := range globs {
+		if fault := globFault(pattern); fault != "" {
 			val.fail(at.item(idx), "%s", fault)
 			continue
 		}
-		if _, err := glob.Compile(globItem); err != nil {
-			reason := strings.TrimPrefix(err.Error(), fmt.Sprintf("compile glob %q: ", globItem))
-			val.fail(at.item(idx), "compile glob %q: %s", clipValue(globItem), clipValue(reason))
+		if _, err := glob.Compile(pattern); err != nil {
+			reason := strings.TrimPrefix(err.Error(), fmt.Sprintf("compile glob %q: ", pattern))
+			val.fail(at.item(idx), "compile glob %q: %s", clipValue(pattern), clipValue(reason))
 			continue
 		}
-		passed = append(passed, globItem)
+		passed = append(passed, pattern)
 	}
 	return passed
 }
 
-func globFault(glob string) string {
+func globFault(pattern string) string {
 	switch {
-	case len(glob) > MaxGlobBytes:
+	case len(pattern) > MaxGlobBytes:
 		return fmt.Sprintf("glob longer than %d bytes", MaxGlobBytes)
-	case hasBrace(glob):
+	case hasBrace(pattern):
 		return "brace alternatives are not supported; list each glob"
-	case starCount(glob) > MaxGlobStars:
+	case starCount(pattern) > MaxGlobStars:
 		return fmt.Sprintf(
 			"glob has more than %d * (** and lone * segments are free)", MaxGlobStars,
 		)
