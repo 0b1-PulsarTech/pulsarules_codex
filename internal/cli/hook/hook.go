@@ -76,9 +76,9 @@ func (cmd *Command) Run(needs Collaborators, args []string) error {
 func newHookDispatcher(
 	deps hook.Deps,
 	catalog func() (*emoji.Catalog, error),
-	loader func() *loader.Layered,
+	newLayered func() *loader.Layered,
 ) *hook.Dispatcher {
-	deps.Governance = governor{index: deps.Index, loader: loader}.check(catalog)
+	deps.Governance = governor{index: deps.Index, loader: newLayered}.check(catalog)
 	return hook.NewDispatcher(deps)
 }
 

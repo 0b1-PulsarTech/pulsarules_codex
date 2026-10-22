@@ -56,13 +56,13 @@ func (cmd *Command) loadGovernance(
 	openRepository func() (*vcs.Repository, error),
 	index *knowledge.Index,
 	loadCatalog func() (*emoji.Catalog, error),
-	loader func() *loader.Layered,
+	newLayered func() *loader.Layered,
 ) (governanceRun, error) {
 	repo, err := openRepository()
 	if err != nil {
 		return governanceRun{}, fmt.Errorf("open repository: %w", err)
 	}
-	cfg, err := cmd.governanceConfig(loader(), repo.Root())
+	cfg, err := cmd.governanceConfig(newLayered(), repo.Root())
 	if err != nil {
 		return governanceRun{}, err
 	}
@@ -78,7 +78,7 @@ func (cmd *Command) Run(
 	openRepository func() (*vcs.Repository, error),
 	index *knowledge.Index,
 	loadCatalog func() (*emoji.Catalog, error),
-	loader func() *loader.Layered,
+	newLayered func() *loader.Layered,
 ) error {
 	if cmd.ProjectDir() == "" {
 		return errProjectDirRequired
@@ -88,7 +88,7 @@ func (cmd *Command) Run(
 		return err
 	}
 
-	run, err := cmd.loadGovernance(openRepository, index, loadCatalog, loader)
+	run, err := cmd.loadGovernance(openRepository, index, loadCatalog, newLayered)
 	if err != nil {
 		return err
 	}
@@ -142,10 +142,10 @@ func (cmd *Command) projectConfig(
 }
 
 func (cmd *Command) governanceConfig(
-	loader *loader.Layered,
+	layered *loader.Layered,
 	root string,
 ) (*config.GovernanceConfig, error) {
-	cfg, err := cmd.projectConfig(loader, root)
+	cfg, err := cmd.projectConfig(layered, root)
 	if err != nil {
 		return nil, err
 	}

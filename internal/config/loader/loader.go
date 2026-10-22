@@ -20,19 +20,19 @@ func New(rules projectfile.Rules) *Layered {
 	return &Layered{rules: rules}
 }
 
-func (loader *Layered) Load(root, explicit, presetFlag string) (*projectfile.File, error) {
-	file, err := loader.load(root, explicit, presetFlag)
+func (layered *Layered) Load(root, explicit, presetFlag string) (*projectfile.File, error) {
+	file, err := layered.load(root, explicit, presetFlag)
 	return file, capReport(err, file)
 }
 
-func (loader *Layered) load(root, explicit, presetFlag string) (*projectfile.File, error) {
+func (layered *Layered) load(root, explicit, presetFlag string) (*projectfile.File, error) {
 	if explicit != "" {
-		return loadFile(explicit, explicit, loader.rules)
+		return loadFile(explicit, explicit, layered.rules)
 	}
 	if root == "" {
 		return nil, nil
 	}
-	return loader.loadLayers(root, vcs.CommonDir, presetFlag)
+	return layered.loadLayers(root, vcs.CommonDir, presetFlag)
 }
 
 func loadFile(path, display string, rules projectfile.Rules) (*projectfile.File, error) {
@@ -78,8 +78,8 @@ func withPreset(file *projectfile.File, presetFlag string) *config.GovernanceCon
 	return cfg
 }
 
-func (loader *Layered) ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
-	file, err := loader.Load(root, "", "")
+func (layered *Layered) ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
+	file, err := layered.Load(root, "", "")
 	if err == nil {
 		var cfg *config.GovernanceConfig
 		if cfg, err = Build(file, ""); err == nil {

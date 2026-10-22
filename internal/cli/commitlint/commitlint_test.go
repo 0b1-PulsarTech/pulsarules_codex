@@ -48,7 +48,7 @@ func registryLoader() func() *loader.Layered {
 	return func() *loader.Layered { return loader.New(registry.ConfigRules()) }
 }
 
-func lintIn(t *testing.T, dir, message string, loader func() *loader.Layered) error {
+func lintIn(t *testing.T, dir, message string, newLayered func() *loader.Layered) error {
 	t.Helper()
 
 	index, _, err := knowledge.Load("")
@@ -56,7 +56,7 @@ func lintIn(t *testing.T, dir, message string, loader func() *loader.Layered) er
 		t.Fatalf("load knowledge: %v", err)
 	}
 	open := func() (*vcs.Repository, error) { return vcs.Open(dir) }
-	return (&Command{msg: message}).Run(open, index, emoji.NewCatalog, loader)
+	return (&Command{msg: message}).Run(open, index, emoji.NewCatalog, newLayered)
 }
 
 func runGit(t *testing.T, dir string, args ...string) {

@@ -32,7 +32,7 @@ func (cmd *Command) Run(
 	openRepository func() (*vcs.Repository, error),
 	index *knowledge.Index,
 	loadCatalog func() (*emoji.Catalog, error),
-	loader func() *loader.Layered,
+	newLayered func() *loader.Layered,
 ) error {
 	msg := cmd.msg
 	if msg == "" && cmd.file != "" {
@@ -63,7 +63,7 @@ func (cmd *Command) Run(
 	if err != nil {
 		return fmt.Errorf("get emoji catalog: %w", err)
 	}
-	cfg, configFindings := loader().ForRoot(root)
+	cfg, configFindings := newLayered().ForRoot(root)
 	sess := governance.NewSession(repo, index, catalog, cfg)
 	// An explicit empty status keeps this a pure message linter. A nil
 	// status would have discovery read the worktree, and content findings from

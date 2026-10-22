@@ -19,12 +19,12 @@ type layers struct {
 	rules         projectfile.Rules
 }
 
-func (loader *Layered) loadLayers(
+func (layered *Layered) loadLayers(
 	root string, resolve commonDirResolver, presetFlag string,
 ) (*projectfile.File, error) {
 	base, baseErr := loadOptional(filepath.Join(root, projectfile.Name),
-		projectfile.Name, loader.rules)
-	rules := privateRules(loader.rules, base)
+		projectfile.Name, layered.rules)
+	rules := privateRules(layered.rules, base)
 	// A failed base hides its delegated ids, so the private ids cannot be judged yet.
 	rules.AnyAnalyzer = baseErr != nil
 	private, privateErr := loadPrivate(root, resolve, rules)
@@ -40,7 +40,7 @@ func (loader *Layered) loadLayers(
 	case base == nil:
 		return private, nil
 	}
-	stack := layers{base: base, private: private, preset: presetFlag, rules: loader.rules}
+	stack := layers{base: base, private: private, preset: presetFlag, rules: layered.rules}
 	return stack.combine()
 }
 

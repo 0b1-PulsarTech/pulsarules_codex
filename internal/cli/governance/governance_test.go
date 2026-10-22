@@ -400,9 +400,9 @@ func TestRunGovernance_CatalogFailure(t *testing.T) {
 	}
 	open := func() (*vcs.Repository, error) { return repo, nil }
 	catalog := func() (*emoji.Catalog, error) { return nil, errors.New("boom") }
-	loader := func() *loader.Layered { return testLoader() }
+	newLayered := func() *loader.Layered { return testLoader() }
 
-	err = (&Command{project: dir}).Run(open, &knowledge.Index{}, catalog, loader)
+	err = (&Command{project: dir}).Run(open, &knowledge.Index{}, catalog, newLayered)
 	if err == nil || err.Error() != "get emoji catalog: boom" {
 		t.Fatalf("Run() error = %v, want %q", err, "get emoji catalog: boom")
 	}
