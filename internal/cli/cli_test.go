@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,9 +16,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
-	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
-	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 )
 
 func TestRun_UnknownCommand(t *testing.T) {
@@ -153,6 +150,16 @@ func TestBootstrapOptions_ProjectDir(t *testing.T) {
 			args: []string{"uninstall", "--project", "/repo"},
 			want: "/repo",
 		},
+		{
+			name: "governance falls back on the environment",
+			args: []string{"governance"},
+			want: "/from-env",
+		},
+		{
+			name: "governance prefers its flag",
+			args: []string{"governance", "--project", "/repo"},
+			want: "/repo",
+		},
 		{name: "every other command uses the working directory", args: []string{"list"}, want: "."},
 	}
 	for _, testCase := range testCases {
@@ -274,73 +281,81 @@ func TestRun_GovernanceReportsFindings(t *testing.T) {
 	}
 }
 
-func bindWithoutCatalog(t *testing.T, inj remy.Injector, dir string) {
-	t.Helper()
+//nolint:paralleltest // t.Setenv and the os.Stdin/os.Stdout swaps bar t.Parallel.
+func TestParse_HookReceivesTheEnvironment(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
 
-	if out, err := exec.CommandContext(t.Context(), "git", "-C", dir, "init").
-		CombinedOutput(); err != nil {
-		t.Fatalf("git init: %v\n%s", err, out)
-	}
-	repo, err := vcs.Open(dir)
-	if err != nil {
-		t.Fatalf("vcs.Open: %v", err)
-	}
-	index, assets, err := knowledge.Load("")
-	if err != nil {
-		t.Fatalf("load knowledge: %v", err)
-	}
-	remy.RegisterInstance(inj, repo)
-	remy.RegisterInstance(inj, index)
-	remy.RegisterInstance(inj, templates.New(assets))
-	remy.RegisterInstance(inj, slog.New(slog.DiscardHandler))
-}
-
-func TestCatalogFailureFailsTheCommand(t *testing.T) {
-	t.Parallel()
+	project, skills := t.TempDir(), t.TempDir()
+	writeFile(t, filepath.Join(project, "go.mod"), "module x\n")
+	writeFile(t, filepath.Join(skills, "gopls-navigation", "SKILL.md"), "x")
+	payload := `{"session_id":"s","tool_name":"Grep","tool_input":{"pattern":"a.go"}}`
 
 	testCases := []struct {
 		name string
-		run  func(inj remy.Injector) error
+		env  flags.Environment
+		want bool
 	}{
-		{
-			name: "commit-lint",
-			run: func(inj remy.Injector) error {
-				call, err := Parse(
-					[]string{"commitlint", "--msg", "feat: x"},
-					flags.Environment{},
-					io.Discard,
-				)
-				if err != nil {
-					return err
-				}
-				return call.Run(inj)
-			},
-		},
-		{
-			name: "governance",
-			run: func(inj remy.Injector) error {
-				call, err := Parse(
-					[]string{"governance", "--project", "."},
-					flags.Environment{},
-					io.Discard,
-				)
-				if err != nil {
-					return err
-				}
-				return call.Run(inj)
-			},
-		},
+		{"both given", flags.Environment{ProjectDir: project, SkillsDir: skills}, true},
+		{"no skills dir", flags.Environment{ProjectDir: project}, false},
+		{"no project dir", flags.Environment{SkillsDir: skills}, false},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
 			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-			bindWithoutCatalog(t, inj, t.TempDir())
-			err := testCase.run(inj)
-			if err == nil || !strings.Contains(err.Error(), "get emoji catalog") {
-				t.Fatalf("err = %v, want one naming %q", err, "get emoji catalog")
+			if err := bootstrap.DoInjections(
+				inj,
+				bootstrap.Options{ProjectDir: project},
+			); err != nil {
+				t.Fatalf("DoInjections: %v", err)
+			}
+			call, err := Parse([]string{"hook", "pre-search"}, testCase.env, io.Discard)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+
+			out := runWithStdin(t, payload, func() {
+				if err = call.Run(inj); err != nil {
+					t.Errorf("Run() = %v, want nil", err)
+				}
+			})
+			if got := out != ""; got != testCase.want {
+				t.Errorf("pre-search emitted = %v, want %v:\n%s", got, testCase.want, out)
 			}
 		})
 	}
+}
+
+func writeFile(t *testing.T, path, content string) {
+	t.Helper()
+
+	if err := os.MkdirAll(filepath.Dir(path), disk.DirPrivate); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func runWithStdin(t *testing.T, stdin string, body func()) string {
+	t.Helper()
+
+	stdinFile, stdoutFile := filepath.Join(t.TempDir(), "in"), filepath.Join(t.TempDir(), "out")
+	writeFile(t, stdinFile, stdin)
+	input, err := os.Open(stdinFile)
+	if err != nil {
+		t.Fatalf("open stdin: %v", err)
+	}
+	output, err := os.Create(stdoutFile)
+	if err != nil {
+		t.Fatalf("create stdout: %v", err)
+	}
+	savedIn, savedOut := os.Stdin, os.Stdout
+	os.Stdin, os.Stdout = input, output
+	defer func() { os.Stdin, os.Stdout = savedIn, savedOut }()
+	body()
+	captured, err := os.ReadFile(stdoutFile)
+	if err != nil {
+		t.Fatalf("read stdout: %v", err)
+	}
+	return string(captured)
 }

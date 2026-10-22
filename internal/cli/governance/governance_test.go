@@ -15,6 +15,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func TestRunGovernance_RequiresProjectDir(t *testing.T) {
@@ -371,5 +373,27 @@ func TestGovernanceConfig_PresetFlag(t *testing.T) {
 				t.Fatalf("overrides = %+v, want %d", cfg.Overrides, testCase.wantOverrides)
 			}
 		})
+	}
+}
+
+func TestRunGovernance_CatalogFailure(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if out, err := exec.CommandContext(t.Context(), "git", "-C", dir, "init", "-q").
+		CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+	repo, err := vcs.Open(dir)
+	if err != nil {
+		t.Fatalf("vcs.Open: %v", err)
+	}
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	remy.RegisterInstance(inj, repo)
+	remy.RegisterInstance(inj, &knowledge.Index{})
+
+	err = (&Command{project: dir}).Run(inj, nil)
+	if err == nil || !strings.Contains(err.Error(), "get emoji catalog") {
+		t.Fatalf("Run() error = %v, want one naming %q", err, "get emoji catalog")
 	}
 }

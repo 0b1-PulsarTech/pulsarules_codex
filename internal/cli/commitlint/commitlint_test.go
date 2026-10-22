@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/wrapped-owls/goremy-di/remy"
@@ -15,6 +16,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func lintInRepo(t *testing.T, configYAML, message string) error {
@@ -219,5 +221,21 @@ func TestCommand_Bind(t *testing.T) {
 					cmd, cmd.ProjectDir(), testCase.want, testCase.dir)
 			}
 		})
+	}
+}
+
+func TestCommand_Run_CatalogFailure(t *testing.T) {
+	t.Parallel()
+
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	remy.RegisterConstructorErr(
+		inj, remy.Factory[*vcs.Repository],
+		func() (*vcs.Repository, error) { return nil, vcs.ErrNoRepository },
+	)
+	remy.RegisterInstance(inj, &knowledge.Index{})
+
+	err := (&Command{msg: "feat: x"}).Run(inj, nil)
+	if err == nil || !strings.Contains(err.Error(), "get emoji catalog") {
+		t.Fatalf("Run() error = %v, want one naming %q", err, "get emoji catalog")
 	}
 }
