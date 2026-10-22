@@ -34,7 +34,7 @@ func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 }
 
 func (file *File) CheckOverrides(govCfg *config.GovernanceConfig) error {
-	problems := &Problems{path: file.Path}
+	problems := &collector{path: file.Path}
 	listed := newRoot().key("overrides")
 	for idx, override := range file.Overrides {
 		for _, id := range slices.Sorted(maps.Keys(override.Analyzers)) {
@@ -95,7 +95,7 @@ func (val *validator) checkOverrides(entries []OverrideEntry) {
 	}
 }
 
-func (val *validator) checkOverride(field *Field, override OverrideEntry) {
+func (val *validator) checkOverride(field *fieldPath, override OverrideEntry) {
 	if len(override.Files) == 0 {
 		val.fail(field.key("files"), "at least one glob is required")
 	}
@@ -132,7 +132,7 @@ func (val *validator) checkGlobBudget(globs []string) bool {
 	return false
 }
 
-func (val *validator) checkOverrideParams(field *Field, id string, params map[string]any) {
+func (val *validator) checkOverrideParams(field *fieldPath, id string, params map[string]any) {
 	if params == nil {
 		return
 	}
@@ -148,14 +148,14 @@ func (val *validator) checkOverrideParams(field *Field, id string, params map[st
 	}
 }
 
-func (val *validator) checkAnalyzerParams(field *Field, id string, params map[string]any) {
+func (val *validator) checkAnalyzerParams(field *fieldPath, id string, params map[string]any) {
 	val.checkParams(field, id, params)
 	if id == filesize.ID {
 		val.checkLimitParams(field, params)
 	}
 }
 
-func (val *validator) checkLimitParams(field *Field, params map[string]any) {
+func (val *validator) checkLimitParams(field *fieldPath, params map[string]any) {
 	soft := val.limitParam(field, params, filesize.ParamMaxLines, 1)
 	hard := val.limitParam(field, params, filesize.ParamErrorLines, 0)
 	if soft > 0 && hard > 0 && hard <= soft {
@@ -164,7 +164,7 @@ func (val *validator) checkLimitParams(field *Field, params map[string]any) {
 	}
 }
 
-func (val *validator) limitParam(at *Field, params map[string]any, key string, floor int) int {
+func (val *validator) limitParam(at *fieldPath, params map[string]any, key string, floor int) int {
 	raw, set := params[key]
 	if !set {
 		return 0

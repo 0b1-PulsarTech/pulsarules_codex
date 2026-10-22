@@ -97,5 +97,3 @@ func ShortenPath(name string, limit int) string {
 }
 
 func quotedWidth(unit string) int { return len(strconv.Quote(unit)) - len(`""`) }
-
-const Ellipsis = "..."

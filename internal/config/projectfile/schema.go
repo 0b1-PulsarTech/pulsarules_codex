@@ -13,22 +13,22 @@ type pair struct {
 }
 
 type schemaWalker struct {
-	problems *Problems
+	problems *collector
 }
 
-func walkSchema(problems *Problems, root *yaml.Node, top *Field) {
+func walkSchema(problems *collector, root *yaml.Node, top *fieldPath) {
 	walker := schemaWalker{problems: problems}
 	if !isNull(deref(root)) {
 		walker.walk(root, reflect.TypeFor[File](), top)
 	}
 }
 
-func (walker *schemaWalker) report(line int, at *Field, format string, args ...any) {
+func (walker *schemaWalker) report(line int, at *fieldPath, format string, args ...any) {
 	at.mark()
 	walker.problems.add(line, at, format, args...)
 }
 
-func (walker *schemaWalker) walk(node *yaml.Node, typ reflect.Type, at *Field) {
+func (walker *schemaWalker) walk(node *yaml.Node, typ reflect.Type, at *fieldPath) {
 	line := node.Line
 	node = deref(node)
 	for typ.Kind() == reflect.Pointer {
@@ -47,7 +47,7 @@ func (walker *schemaWalker) walk(node *yaml.Node, typ reflect.Type, at *Field) {
 	}
 }
 
-func (walker *schemaWalker) walkValue(node *yaml.Node, typ reflect.Type, at *Field) bool {
+func (walker *schemaWalker) walkValue(node *yaml.Node, typ reflect.Type, at *fieldPath) bool {
 	switch typ.Kind() {
 	case reflect.Struct:
 		walker.walkStruct(node, typ, at)
@@ -66,7 +66,7 @@ func (walker *schemaWalker) walkValue(node *yaml.Node, typ reflect.Type, at *Fie
 	return true
 }
 
-func (walker *schemaWalker) walkMap(node *yaml.Node, typ reflect.Type, at *Field) {
+func (walker *schemaWalker) walkMap(node *yaml.Node, typ reflect.Type, at *fieldPath) {
 	for _, entry := range walker.pairs(node, at) {
 		field := at.key(keyName(entry.key))
 		key := deref(entry.key)
@@ -82,7 +82,7 @@ func (walker *schemaWalker) walkMap(node *yaml.Node, typ reflect.Type, at *Field
 	}
 }
 
-func (walker *schemaWalker) walkStruct(node *yaml.Node, typ reflect.Type, at *Field) {
+func (walker *schemaWalker) walkStruct(node *yaml.Node, typ reflect.Type, at *fieldPath) {
 	fields := yamlFields(typ)
 	for _, entry := range walker.pairs(node, at) {
 		field := at.key(keyName(entry.key))
@@ -101,12 +101,12 @@ func (walker *schemaWalker) walkStruct(node *yaml.Node, typ reflect.Type, at *Fi
 	}
 }
 
-func (walker *schemaWalker) pairs(node *yaml.Node, at *Field) []pair {
+func (walker *schemaWalker) pairs(node *yaml.Node, at *fieldPath) []pair {
 	return walker.collect(node, at, map[*yaml.Node]bool{node: true})
 }
 
 func (walker *schemaWalker) collect(
-	node *yaml.Node, at *Field, merged map[*yaml.Node]bool,
+	node *yaml.Node, at *fieldPath, merged map[*yaml.Node]bool,
 ) []pair {
 	var entries []pair
 	firstLine := map[string]int{}
@@ -131,7 +131,7 @@ func (walker *schemaWalker) collect(
 }
 
 func (walker *schemaWalker) inherit(
-	key, value *yaml.Node, at *Field, merged map[*yaml.Node]bool,
+	key, value *yaml.Node, at *fieldPath, merged map[*yaml.Node]bool,
 ) []pair {
 	targets, ok := mergeTargets(value)
 	if !ok {

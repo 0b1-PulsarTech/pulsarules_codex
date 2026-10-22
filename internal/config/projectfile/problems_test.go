@@ -329,14 +329,14 @@ func TestCollectorCapsStoredProblems(t *testing.T) {
 	}{
 		{"none", 0, 0, 0, ""},
 		{"under the cap", 3, 3, 3, ""},
-		{"exactly the cap", maxReported, maxReported, maxReported, ""},
-		{"one over", maxReported + 1, maxReported, maxReported + 1, "... and 1 more problem"},
-		{"many over", 5000, maxReported, maxReported + 1, "... and 4980 more problems"},
+		{"exactly the cap", MaxReported, MaxReported, MaxReported, ""},
+		{"one over", MaxReported + 1, MaxReported, MaxReported + 1, "... and 1 more problem"},
+		{"many over", 5000, MaxReported, MaxReported + 1, "... and 4980 more problems"},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			col := &Problems{path: "p.yaml"}
+			col := &collector{path: "p.yaml"}
 			for idx := range testCase.count {
 				col.add(idx+1, newRoot().key("a"), "bad %d", idx)
 			}
@@ -366,19 +366,19 @@ func TestCollectorFormatsOnlyStoredProblems(t *testing.T) {
 	t.Parallel()
 
 	calls := 0
-	col := &Problems{path: "p.yaml"}
-	for range maxReported + 500 {
+	col := &collector{path: "p.yaml"}
+	for range MaxReported + 500 {
 		col.add(1, newRoot(), "bad %v", loudValue{calls: &calls})
 	}
-	if calls != maxReported {
-		t.Fatalf("formatted %d problems, want only the %d stored", calls, maxReported)
+	if calls != MaxReported {
+		t.Fatalf("formatted %d problems, want only the %d stored", calls, MaxReported)
 	}
 }
 
 func TestCollectorTextShape(t *testing.T) {
 	t.Parallel()
 
-	col := &Problems{path: "p.yaml"}
+	col := &collector{path: "p.yaml"}
 	col.add(7, newRoot().key("a").item(1), "bad")
 	col.add(0, newRoot().key("b"), "no line")
 	col.add(3, newRoot(), "root")
@@ -392,12 +392,12 @@ func TestCollectorCapsBytes(t *testing.T) {
 	t.Parallel()
 
 	const count = 100
-	col := &Problems{path: ".pulsarules.yaml"}
+	col := &collector{path: ".pulsarules.yaml"}
 	for range count {
 		col.add(1, newRoot().key("a"), "%s", strings.Repeat("m", 300))
 	}
-	if col.total != count || len(col.stored) >= maxReported || col.bytes >= maxReportedBytes+400 {
-		t.Fatalf("stored %d of %d, want fewer than %d", len(col.stored), col.total, maxReported)
+	if col.total != count || len(col.stored) >= MaxReported || col.bytes >= MaxReportedBytes+400 {
+		t.Fatalf("stored %d of %d, want fewer than %d", len(col.stored), col.total, MaxReported)
 	}
 	err := col.err()
 	if err == nil || len(err.Error()) >= 4096 {

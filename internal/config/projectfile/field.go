@@ -5,8 +5,6 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 type segment struct {
@@ -15,43 +13,43 @@ type segment struct {
 	indexed bool
 }
 
-type Field struct {
-	parent *Field
+type fieldPath struct {
+	parent *fieldPath
 	seg    segment
-	kids   map[segment]*Field
+	kids   map[segment]*fieldPath
 	marked bool
 	under  bool
 }
 
-func newRoot() *Field {
+func newRoot() *fieldPath {
 	// Interned: equal fields are one node, and a "." or "[" in a key never splits a segment.
-	return &Field{}
+	return &fieldPath{}
 }
 
-func (at *Field) key(name string) *Field {
+func (at *fieldPath) key(name string) *fieldPath {
 	if name == "" {
 		name = "<empty key>"
 	}
 	return at.child(segment{name: name})
 }
 
-func (at *Field) item(idx int) *Field {
+func (at *fieldPath) item(idx int) *fieldPath {
 	return at.child(segment{index: idx, indexed: true})
 }
 
-func (at *Field) child(seg segment) *Field {
+func (at *fieldPath) child(seg segment) *fieldPath {
 	if next, found := at.kids[seg]; found {
 		return next
 	}
 	if at.kids == nil {
-		at.kids = map[segment]*Field{}
+		at.kids = map[segment]*fieldPath{}
 	}
-	next := &Field{parent: at, seg: seg}
+	next := &fieldPath{parent: at, seg: seg}
 	at.kids[seg] = next
 	return next
 }
 
-func (at *Field) String() string {
+func (at *fieldPath) String() string {
 	var chain []segment
 	for node := at; node.parent != nil; node = node.parent {
 		chain = append(chain, node.seg)
@@ -70,7 +68,7 @@ func (at *Field) String() string {
 	return out.String()
 }
 
-func (at *Field) mark() {
+func (at *fieldPath) mark() {
 	at.marked = true
 	for node := at; node.parent != nil; node = node.parent {
 		if node.seg.indexed {
@@ -79,7 +77,7 @@ func (at *Field) mark() {
 	}
 }
 
-func (at *Field) covered(walked *int) bool {
+func (at *fieldPath) covered(walked *int) bool {
 	// Covered by an equal or enclosing problem, or when it holds an item with a problem.
 	if at.marked || at.under {
 		return true
@@ -94,12 +92,12 @@ func (at *Field) covered(walked *int) bool {
 }
 
 func clipValue(value string) string {
-	if len(value) <= maxClipBytes {
+	if len(value) <= MaxClipBytes {
 		return value
 	}
-	cut := maxClipBytes
+	cut := MaxClipBytes
 	for cut > 0 && !utf8.RuneStart(value[cut]) {
 		cut--
 	}
-	return value[:cut] + printable.Ellipsis
+	return value[:cut] + ellipsis
 }

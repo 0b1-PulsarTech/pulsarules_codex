@@ -15,7 +15,7 @@ func TestFieldPathCovered(t *testing.T) {
 	root.key("a[0]").key("p.q").mark()
 	testCases := []struct {
 		name string
-		at   *Field
+		at   *fieldPath
 		want bool
 	}{
 		{"the same field", root.key("analyzers").key("x"), true},
@@ -56,7 +56,7 @@ func TestFieldPathString(t *testing.T) {
 	root := newRoot()
 	testCases := []struct {
 		name string
-		at   *Field
+		at   *fieldPath
 		want string
 	}{
 		{"the root", root, ""},
@@ -96,7 +96,7 @@ func TestFieldPathInterns(t *testing.T) {
 
 func parseWork(t *testing.T, content string) (walked, problems, nodes int) {
 	t.Helper()
-	parsed, err := Decode(Name, []byte(content))
+	parsed, err := decode(Name, []byte(content))
 	if err != nil {
 		t.Fatalf("decode() = %v", err)
 	}

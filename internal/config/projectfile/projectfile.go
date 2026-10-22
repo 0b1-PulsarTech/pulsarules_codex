@@ -16,9 +16,9 @@ const (
 
 const (
 	MaxFileBytes      = 256 << 10
-	maxScalarBytes    = 1024
-	maxDepth          = 64
-	maxExpandedNodes  = 100_000
+	MaxScalarBytes    = 1024
+	MaxDepth          = 64
+	MaxExpandedNodes  = 100_000
 	MaxMapKeys        = 256
 	MaxSeqItems       = 1024
 	MaxGlobBytes      = 256
@@ -27,9 +27,9 @@ const (
 	MaxTotalGlobBytes = 4096
 	MaxWildcardWork   = 256
 	MaxStarTextBytes  = 2048
-	maxReported       = 20
-	maxReportedBytes  = 3072
-	maxClipBytes      = 80
+	MaxReported       = 20
+	MaxReportedBytes  = 3072
+	MaxClipBytes      = 80
 )
 
 type Rules struct {
@@ -73,7 +73,7 @@ type DelegatedEntry struct {
 }
 
 func Parse(path string, content []byte, rules Rules) (*File, error) {
-	parsed, err := Decode(path, content)
+	parsed, err := decode(path, content)
 	if err != nil {
 		return nil, err
 	}
@@ -83,35 +83,35 @@ func Parse(path string, content []byte, rules Rules) (*File, error) {
 	return parsed.result()
 }
 
-func (parsed Document) result() (*File, error) {
+func (parsed decoded) result() (*File, error) {
 	if err := parsed.problems.err(); err != nil {
 		return nil, err
 	}
 	return parsed.file, nil
 }
 
-type Document struct {
+type decoded struct {
 	file     *File
-	problems *Problems
-	top      *Field
+	problems *collector
+	top      *fieldPath
 }
 
-func Decode(path string, content []byte) (Document, error) {
+func decode(path string, content []byte) (decoded, error) {
 	if len(content) > MaxFileBytes {
-		return Document{}, fmt.Errorf("%s: config is larger than %d KiB", path, MaxFileBytes>>10)
+		return decoded{}, fmt.Errorf("%s: config is larger than %d KiB", path, MaxFileBytes>>10)
 	}
 	if err := rejectBadText(path, content); err != nil {
-		return Document{}, err
+		return decoded{}, err
 	}
 	root, err := readDocument(path, content)
 	if err != nil {
-		return Document{}, err
+		return decoded{}, err
 	}
 	if err = checkExpansion(path, root); err != nil {
-		return Document{}, err
+		return decoded{}, err
 	}
 	value, top := root.Content[0], newRoot()
-	parsed := Document{problems: &Problems{path: path}, top: top}
+	parsed := decoded{problems: &collector{path: path}, top: top}
 	walkSchema(parsed.problems, value, top)
 	if value = deref(value); value.Kind != yaml.MappingNode && !isNull(value) {
 		return parsed, nil
@@ -123,7 +123,7 @@ func Decode(path string, content []byte) (Document, error) {
 		return parsed, nil
 	}
 	if parsed.problems.total == 0 {
-		return Document{}, leftover(path, root, err)
+		return decoded{}, leftover(path, root, err)
 	}
 	// The walk already reported the same mismatches in terms of the file, not Go types.
 	if _, isType := errors.AsType[*yaml.TypeError](err); isType {

@@ -23,7 +23,7 @@ delegated:
 `
 
 func decodeFile(content []byte) (*File, error) {
-	parsed, err := Decode(Name, content)
+	parsed, err := decode(Name, content)
 	if err != nil {
 		return nil, err
 	}

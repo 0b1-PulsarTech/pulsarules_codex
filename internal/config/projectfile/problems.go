@@ -10,7 +10,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Problems struct {
+const ellipsis = "..."
+
+type collector struct {
 	path   string
 	stored []string
 	bytes  int
@@ -18,9 +20,9 @@ type Problems struct {
 	walked int
 }
 
-func (col *Problems) add(line int, at *Field, format string, args ...any) {
+func (col *collector) add(line int, at *fieldPath, format string, args ...any) {
 	col.total++
-	if len(col.stored) >= maxReported || col.bytes >= maxReportedBytes {
+	if len(col.stored) >= MaxReported || col.bytes >= MaxReportedBytes {
 		return
 	}
 	text := col.path + ": "
@@ -35,7 +37,7 @@ func (col *Problems) add(line int, at *Field, format string, args ...any) {
 	col.stored = append(col.stored, text)
 }
 
-func (col *Problems) err() error {
+func (col *collector) err() error {
 	texts := col.stored
 	switch extra := col.total - len(col.stored); {
 	case extra == 1:

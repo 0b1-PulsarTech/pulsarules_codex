@@ -21,7 +21,7 @@ type expander struct {
 
 type overflow struct {
 	line   int
-	path   *Field
+	path   *fieldPath
 	reason string
 }
 
@@ -40,7 +40,7 @@ func checkExpansion(path string, root *yaml.Node) error {
 	return fmt.Errorf("%s: line %d: %s", path, over.line, message)
 }
 
-func (walker *expander) size(node *yaml.Node, at *Field, above int) (extent, *overflow) {
+func (walker *expander) size(node *yaml.Node, at *fieldPath, above int) (extent, *overflow) {
 	if node.Kind == yaml.AliasNode && node.Alias != nil {
 		span, over := walker.size(node.Alias, at, above)
 		if over != nil {
@@ -49,7 +49,7 @@ func (walker *expander) size(node *yaml.Node, at *Field, above int) (extent, *ov
 		return span, over
 	}
 	if span, done := walker.extents[node]; done {
-		if above+span.height > maxDepth {
+		if above+span.height > MaxDepth {
 			return span, depthOverflow(node, at)
 		}
 		return span, nil
@@ -58,20 +58,20 @@ func (walker *expander) size(node *yaml.Node, at *Field, above int) (extent, *ov
 		reason := "alias refers to its own anchor"
 		return extent{}, &overflow{line: node.Line, path: at, reason: reason}
 	}
-	if node.Kind == yaml.ScalarNode && len(node.Value) > maxScalarBytes {
+	if node.Kind == yaml.ScalarNode && len(node.Value) > MaxScalarBytes {
 		return extent{}, longOverflow(node, at)
 	}
 	return walker.sizeChildren(node, at, above)
 }
 
 func (walker *expander) sizeChildren(
-	node *yaml.Node, at *Field, above int,
+	node *yaml.Node, at *fieldPath, above int,
 ) (extent, *overflow) {
 	walker.visits++
 	span, nested := extent{count: 1}, above
 	if node.Kind == yaml.MappingNode || node.Kind == yaml.SequenceNode {
 		span.height, nested = 1, above+1
-		if nested > maxDepth {
+		if nested > MaxDepth {
 			return extent{}, depthOverflow(node, at)
 		}
 	}
@@ -87,7 +87,7 @@ func (walker *expander) sizeChildren(
 			return extent{}, over
 		}
 		span.height = max(span.height, sub.height+nested-above)
-		if span.count += sub.count; span.count > maxExpandedNodes {
+		if span.count += sub.count; span.count > MaxExpandedNodes {
 			return extent{}, nodesOverflow(child, next)
 		}
 	}
@@ -95,7 +95,7 @@ func (walker *expander) sizeChildren(
 	return span, nil
 }
 
-func breadth(node *yaml.Node, at *Field) *overflow {
+func breadth(node *yaml.Node, at *fieldPath) *overflow {
 	switch node.Kind {
 	case yaml.MappingNode:
 		if len(node.Content)/2 > MaxMapKeys {
@@ -112,7 +112,7 @@ func breadth(node *yaml.Node, at *Field) *overflow {
 	return nil
 }
 
-func duplicateKey(node *yaml.Node, at *Field) *overflow {
+func duplicateKey(node *yaml.Node, at *fieldPath) *overflow {
 	type rawKey struct {
 		kind  yaml.Kind
 		value string
@@ -131,22 +131,22 @@ func duplicateKey(node *yaml.Node, at *Field) *overflow {
 	return nil
 }
 
-func depthOverflow(node *yaml.Node, at *Field) *overflow {
-	reason := fmt.Sprintf("nested deeper than %d levels", maxDepth)
+func depthOverflow(node *yaml.Node, at *fieldPath) *overflow {
+	reason := fmt.Sprintf("nested deeper than %d levels", MaxDepth)
 	return &overflow{line: node.Line, path: at, reason: reason}
 }
 
-func longOverflow(node *yaml.Node, at *Field) *overflow {
-	reason := fmt.Sprintf("value longer than %d bytes", maxScalarBytes)
+func longOverflow(node *yaml.Node, at *fieldPath) *overflow {
+	reason := fmt.Sprintf("value longer than %d bytes", MaxScalarBytes)
 	return &overflow{line: node.Line, path: at, reason: reason}
 }
 
-func nodesOverflow(node *yaml.Node, at *Field) *overflow {
-	reason := fmt.Sprintf("document expands past %d nodes", maxExpandedNodes)
+func nodesOverflow(node *yaml.Node, at *fieldPath) *overflow {
+	reason := fmt.Sprintf("document expands past %d nodes", MaxExpandedNodes)
 	return &overflow{line: node.Line, path: at, reason: reason}
 }
 
-func childPath(node *yaml.Node, idx int, path *Field) *Field {
+func childPath(node *yaml.Node, idx int, path *fieldPath) *fieldPath {
 	switch node.Kind {
 	case yaml.SequenceNode:
 		return path.item(idx)
@@ -161,10 +161,10 @@ func childPath(node *yaml.Node, idx int, path *Field) *Field {
 
 func clipPath(path string) string {
 	// Keeps the last MaxClipBytes of escaped text, and the ellipsis comes on top of that.
-	if shown := printable.Line(path); len(shown) <= maxClipBytes {
+	if shown := printable.Line(path); len(shown) <= MaxClipBytes {
 		return shown
 	}
-	return printable.Ellipsis + printable.Tail(path, maxClipBytes)
+	return ellipsis + printable.Tail(path, MaxClipBytes)
 }
 
 func firstAliasLine(node *yaml.Node) int {

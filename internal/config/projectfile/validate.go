@@ -15,17 +15,17 @@ import (
 type validator struct {
 	rules     Rules
 	delegated map[string]bool
-	root      *Field
-	problems  *Problems
+	root      *fieldPath
+	problems  *collector
 }
 
 func (file *File) Validate(rules Rules) error {
-	problems := &Problems{path: file.Path}
+	problems := &collector{path: file.Path}
 	file.check(rules, newRoot(), problems)
 	return problems.err()
 }
 
-func (file *File) check(rules Rules, root *Field, problems *Problems) {
+func (file *File) check(rules Rules, root *fieldPath, problems *collector) {
 	val := &validator{
 		rules: rules, delegated: delegatedIDs(file.Delegated), root: root, problems: problems,
 	}
@@ -54,7 +54,7 @@ func (file *File) check(rules Rules, root *Field, problems *Problems) {
 	val.checkDelegated(file.Delegated)
 }
 
-func (val *validator) fail(at *Field, format string, args ...any) {
+func (val *validator) fail(at *fieldPath, format string, args ...any) {
 	if !at.covered(&val.problems.walked) {
 		val.problems.add(0, at, format, args...)
 	}
@@ -74,27 +74,27 @@ func (val *validator) checkHeader(file *File) {
 	}
 }
 
-func (val *validator) checkAnalyzer(field *Field, id string) {
+func (val *validator) checkAnalyzer(field *fieldPath, id string) {
 	known := val.rules.AnyAnalyzer || slices.Contains(val.rules.AnalyzerIDs, id)
 	if !known && !val.delegated[id] {
 		val.fail(field, "unknown analyzer")
 	}
 }
 
-func (val *validator) checkOverrideAnalyzer(field *Field, id string) {
+func (val *validator) checkOverrideAnalyzer(field *fieldPath, id string) {
 	// A sub-ID such as golangci-lint/errcheck names one linter of a delegated analyzer.
 	base, _, _ := strings.Cut(id, "/")
 	val.checkAnalyzer(field, base)
 }
 
-func (val *validator) checkSeverity(field *Field, severity string) {
+func (val *validator) checkSeverity(field *fieldPath, severity string) {
 	if err := finding.ValidateSeverityName(severity); err != nil {
 		val.fail(field, "invalid severity %q (want %s)",
 			clipValue(severity), strings.Join(finding.SeverityNames(), "|"))
 	}
 }
 
-func (val *validator) checkParams(field *Field, id string, params map[string]any) {
+func (val *validator) checkParams(field *fieldPath, id string, params map[string]any) {
 	declared := val.rules.Params[id]
 	for _, key := range slices.Sorted(maps.Keys(params)) {
 		if !slices.Contains(declared, key) {
@@ -122,7 +122,7 @@ func (val *validator) checkDelegated(entries []DelegatedEntry) {
 	}
 }
 
-func (val *validator) checkDelegatedID(field *Field, id string, seen map[string]bool) {
+func (val *validator) checkDelegatedID(field *fieldPath, id string, seen map[string]bool) {
 	const maxDelegatedIDBytes = 64
 	const idAlnum = "abcdefghijklmnopqrstuvwxyz0123456789"
 	switch {
@@ -148,7 +148,7 @@ func delegatedIDs(entries []DelegatedEntry) map[string]bool {
 	return ids
 }
 
-func (val *validator) checkGlobs(at *Field, globs []string) []string {
+func (val *validator) checkGlobs(at *fieldPath, globs []string) []string {
 	passed := make([]string, 0, len(globs))
 	for idx, pattern := range globs {
 		if fault := globFault(pattern); fault != "" {
