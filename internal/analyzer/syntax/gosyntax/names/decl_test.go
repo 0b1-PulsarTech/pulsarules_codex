@@ -7,9 +7,9 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
-func kindsOf(names []syntax.Name) []syntax.NameKind {
-	kinds := make([]syntax.NameKind, 0, len(names))
-	for _, name := range names {
+func kindsOf(decls []syntax.Name) []syntax.NameKind {
+	kinds := make([]syntax.NameKind, 0, len(decls))
+	for _, name := range decls {
 		kinds = append(kinds, name.Kind)
 	}
 	return kinds

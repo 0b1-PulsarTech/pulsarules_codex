@@ -35,10 +35,10 @@ func TestIsTestingType(t *testing.T) {
 
 			file := parseFile(t, "package pkg\n\n"+testCase.header+"\n\nvar _ func(val "+
 				testCase.param+")\n")
-			names := testingNames(file)
+			aliases := testingNames(file)
 			spec, _ := file.Decls[1].(*ast.GenDecl).Specs[0].(*ast.ValueSpec)
 			funcType, _ := spec.Type.(*ast.FuncType)
-			got := isTestingType(funcType.Params.List[0].Type, names)
+			got := isTestingType(funcType.Params.List[0].Type, aliases)
 			if got != testCase.want {
 				t.Fatalf("isTestingType(%s) = %v", testCase.param, got)
 			}

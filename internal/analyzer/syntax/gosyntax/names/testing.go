@@ -7,35 +7,35 @@ import (
 )
 
 func testingNames(file *ast.File) map[string]bool {
-	names := map[string]bool{}
+	aliases := map[string]bool{}
 	for _, name := range goast.ImportNames(file, "testing") {
-		names[name] = true
+		aliases[name] = true
 	}
-	return names
+	return aliases
 }
 
-func testingTypeName(expr ast.Expr, names map[string]bool) string {
+func testingTypeName(expr ast.Expr, aliases map[string]bool) string {
 	switch typed := expr.(type) {
 	case *ast.Ident:
-		if names["."] {
+		if aliases["."] {
 			return typed.Name
 		}
 	case *ast.SelectorExpr:
 		pkg, ok := typed.X.(*ast.Ident)
-		if ok && names[pkg.Name] {
+		if ok && aliases[pkg.Name] {
 			return typed.Sel.Name
 		}
 	}
 	return ""
 }
 
-func isTestingType(expr ast.Expr, names map[string]bool) bool {
+func isTestingType(expr ast.Expr, aliases map[string]bool) bool {
 	expr = ast.Unparen(expr)
 	star, isPointer := expr.(*ast.StarExpr)
 	if isPointer {
 		expr = ast.Unparen(star.X)
 	}
-	switch testingTypeName(expr, names) {
+	switch testingTypeName(expr, aliases) {
 	case "T", "B", "F", "M":
 		return isPointer
 	case "TB":
