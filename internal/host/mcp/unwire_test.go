@@ -16,7 +16,7 @@ import (
 )
 
 //nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
-func TestRemoveMCP_DeletesOurFile(t *testing.T) {
+func TestRemove_DeletesOurFile(t *testing.T) {
 	fakeOnPath(t, "gopls")
 
 	repoDir := t.TempDir()
@@ -24,11 +24,11 @@ func TestRemoveMCP_DeletesOurFile(t *testing.T) {
 		repoDir,
 		detect.NewSet(language.Go),
 	); err != nil {
-		t.Fatalf("WriteMCP: %v", err)
+		t.Fatalf("Write: %v", err)
 	}
 
 	if _, err := Remove(repoDir); err != nil {
-		t.Fatalf("RemoveMCP: %v", err)
+		t.Fatalf("Remove: %v", err)
 	}
 
 	if _, err := os.Stat(filepath.Join(repoDir, ".mcp.json")); !errors.Is(err, fs.ErrNotExist) {
@@ -39,7 +39,7 @@ func TestRemoveMCP_DeletesOurFile(t *testing.T) {
 	}
 }
 
-func TestRemoveMCP_PreservesUnrelated(t *testing.T) {
+func TestRemove_PreservesUnrelated(t *testing.T) {
 	t.Parallel()
 
 	repoDir := t.TempDir()
@@ -56,7 +56,7 @@ func TestRemoveMCP_PreservesUnrelated(t *testing.T) {
 	}
 
 	if _, err := Remove(repoDir); err != nil {
-		t.Fatalf("RemoveMCP: %v", err)
+		t.Fatalf("Remove: %v", err)
 	}
 
 	raw, err := os.ReadFile(path) //nolint:gosec // temp dir.
@@ -82,7 +82,7 @@ func TestRemoveMCP_PreservesUnrelated(t *testing.T) {
 }
 
 //nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
-func TestRemoveMCP_StripsGitignore(t *testing.T) {
+func TestRemove_StripsGitignore(t *testing.T) {
 	fakeOnPath(t, "gopls")
 
 	repoDir := t.TempDir()
@@ -96,19 +96,19 @@ func TestRemoveMCP_StripsGitignore(t *testing.T) {
 		repoDir,
 		detect.NewSet(language.Go),
 	); err != nil {
-		t.Fatalf("WriteMCP: %v", err)
+		t.Fatalf("Write: %v", err)
 	}
 	giPath := filepath.Join(repoDir, ".gitignore")
 	giBefore, err := os.ReadFile(giPath) //nolint:gosec // temp dir.
 	if err != nil {
-		t.Fatalf("read .gitignore after WriteMCP: %v", err)
+		t.Fatalf("read .gitignore after Write: %v", err)
 	}
 	if !strings.Contains(string(giBefore), ".mcp.json") {
-		t.Fatalf(".gitignore missing .mcp.json entry after WriteMCP: %q", giBefore)
+		t.Fatalf(".gitignore missing .mcp.json entry after Write: %q", giBefore)
 	}
 
 	if _, err = Remove(repoDir); err != nil {
-		t.Fatalf("RemoveMCP: %v", err)
+		t.Fatalf("Remove: %v", err)
 	}
 
 	if _, statErr := os.Stat(path); statErr != nil {
@@ -116,13 +116,13 @@ func TestRemoveMCP_StripsGitignore(t *testing.T) {
 	}
 	giAfter, readErr := os.ReadFile(giPath) //nolint:gosec // temp dir.
 	if readErr == nil {
-		t.Errorf(".gitignore still holds the .mcp.json entry after RemoveMCP: %q", giAfter)
+		t.Errorf(".gitignore still holds the .mcp.json entry after Remove: %q", giAfter)
 	} else if !errors.Is(readErr, fs.ErrNotExist) {
-		t.Fatalf("read .gitignore after RemoveMCP: %v", readErr)
+		t.Fatalf("read .gitignore after Remove: %v", readErr)
 	}
 }
 
-func TestRemoveMCP_Unparseable(t *testing.T) {
+func TestRemove_Unparseable(t *testing.T) {
 	t.Parallel()
 
 	repoDir := t.TempDir()
@@ -145,19 +145,19 @@ func TestRemoveMCP_Unparseable(t *testing.T) {
 	}
 }
 
-func TestRemoveMCP_NoOpWhenAbsent(t *testing.T) {
+func TestRemove_NoOpWhenAbsent(t *testing.T) {
 	t.Parallel()
 
 	changed, err := Remove(t.TempDir())
 	if err != nil {
-		t.Fatalf("RemoveMCP: %v", err)
+		t.Fatalf("Remove: %v", err)
 	}
 	if changed {
 		t.Error("changed = true, want false (nothing was there to remove)")
 	}
 }
 
-func TestRemoveMCP_ChangedSignal(t *testing.T) {
+func TestRemove_ChangedSignal(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -210,7 +210,7 @@ func TestRemoveMCP_ChangedSignal(t *testing.T) {
 			}
 			changed, err := Remove(repoDir)
 			if err != nil {
-				t.Fatalf("RemoveMCP: %v", err)
+				t.Fatalf("Remove: %v", err)
 			}
 			if changed != testCase.wantChanged {
 				t.Errorf("changed = %v, want %v", changed, testCase.wantChanged)
@@ -220,7 +220,7 @@ func TestRemoveMCP_ChangedSignal(t *testing.T) {
 }
 
 //nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
-func TestRemoveMCP_Idempotent(t *testing.T) {
+func TestRemove_Idempotent(t *testing.T) {
 	fakeOnPath(t, "gopls")
 
 	repoDir := t.TempDir()
@@ -228,17 +228,17 @@ func TestRemoveMCP_Idempotent(t *testing.T) {
 		repoDir,
 		detect.NewSet(language.Go),
 	); err != nil {
-		t.Fatalf("WriteMCP: %v", err)
+		t.Fatalf("Write: %v", err)
 	}
 	if _, err := Remove(repoDir); err != nil {
-		t.Fatalf("RemoveMCP #1: %v", err)
+		t.Fatalf("Remove #1: %v", err)
 	}
 	if _, err := Remove(repoDir); err != nil {
-		t.Fatalf("RemoveMCP #2: %v", err)
+		t.Fatalf("Remove #2: %v", err)
 	}
 }
 
-func TestRemoveMCP_Warnings(t *testing.T) {
+func TestRemove_Warnings(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -273,13 +273,13 @@ func TestRemoveMCP_Warnings(t *testing.T) {
 				want = "strip mcpServers: " + want
 			}
 			if !errors.Is(err, jsondoc.ErrUnparseable) || err.Error() != want || changed {
-				t.Fatalf("RemoveMCP = %v, %v, want false and %q", changed, err, want)
+				t.Fatalf("Remove = %v, %v, want false and %q", changed, err, want)
 			}
 		})
 	}
 }
 
-func TestRemoveMCP_NullFileIsLeftAlone(t *testing.T) {
+func TestRemove_NullFileIsLeftAlone(t *testing.T) {
 	t.Parallel()
 
 	repoDir := t.TempDir()
@@ -289,7 +289,7 @@ func TestRemoveMCP_NullFileIsLeftAlone(t *testing.T) {
 	}
 	changed, err := Remove(repoDir)
 	if err != nil || changed {
-		t.Fatalf("RemoveMCP(null) = %v, %v, want false, nil", changed, err)
+		t.Fatalf("Remove(null) = %v, %v, want false, nil", changed, err)
 	}
 	if got, readErr := os.ReadFile(path); readErr != nil || string(got) != "null" {
 		t.Errorf("file = %q (%v), want it untouched", got, readErr)

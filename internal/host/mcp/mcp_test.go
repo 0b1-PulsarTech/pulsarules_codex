@@ -16,13 +16,13 @@ import (
 )
 
 //nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
-func TestWriteMCP_FreshFile(t *testing.T) {
+func TestWrite_FreshFile(t *testing.T) {
 	fakeOnPath(t, "gopls")
 	repoDir := t.TempDir()
 
 	wired, skipped, err := Write(repoDir, detect.NewSet(language.Go))
 	if err != nil {
-		t.Fatalf("WriteMCP: %v", err)
+		t.Fatalf("Write: %v", err)
 	}
 	if want := []string{"gopls"}; !slices.Equal(wired, want) {
 		t.Errorf("wired = %v, want %v", wired, want)
@@ -74,7 +74,7 @@ func TestRenderServers_EscapesRepoDir(t *testing.T) {
 }
 
 //nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
-func TestWriteMCP_PreservesExisting(t *testing.T) {
+func TestWrite_PreservesExisting(t *testing.T) {
 	fakeOnPath(t, "gopls")
 	repoDir := t.TempDir()
 	seed := `{
@@ -90,10 +90,10 @@ func TestWriteMCP_PreservesExisting(t *testing.T) {
 
 	languages := detect.NewSet(language.Go)
 	if _, _, err := Write(repoDir, languages); err != nil {
-		t.Fatalf("WriteMCP #1: %v", err)
+		t.Fatalf("Write #1: %v", err)
 	}
 	if _, _, err := Write(repoDir, languages); err != nil {
-		t.Fatalf("WriteMCP #2: %v", err)
+		t.Fatalf("Write #2: %v", err)
 	}
 
 	raw, err := os.ReadFile(path) //nolint:gosec // temp dir.
@@ -121,7 +121,7 @@ func TestWriteMCP_PreservesExisting(t *testing.T) {
 }
 
 //nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
-func TestWriteMCP_GitignoresMCPJSON(t *testing.T) {
+func TestWrite_GitignoresMCPJSON(t *testing.T) {
 	fakeOnPath(t, "gopls")
 	repoDir := t.TempDir()
 
@@ -129,7 +129,7 @@ func TestWriteMCP_GitignoresMCPJSON(t *testing.T) {
 		repoDir,
 		detect.NewSet(language.Go),
 	); err != nil {
-		t.Fatalf("WriteMCP: %v", err)
+		t.Fatalf("Write: %v", err)
 	}
 	giContent, err := os.ReadFile(filepath.Join(repoDir, ".gitignore")) //nolint:gosec // temp dir.
 	if err != nil {
@@ -141,7 +141,7 @@ func TestWriteMCP_GitignoresMCPJSON(t *testing.T) {
 }
 
 //nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
-func TestWriteMCP_LanguageAware(t *testing.T) {
+func TestWrite_LanguageAware(t *testing.T) {
 	fakeOnPath(t, "gopls", "dart")
 
 	testCases := []struct {
@@ -170,7 +170,7 @@ func TestWriteMCP_LanguageAware(t *testing.T) {
 			repoDir := t.TempDir()
 			wired, _, err := Write(repoDir, testCase.languages)
 			if err != nil {
-				t.Fatalf("WriteMCP: %v", err)
+				t.Fatalf("Write: %v", err)
 			}
 			got := slices.Clone(wired)
 			slices.Sort(got)
@@ -186,13 +186,13 @@ func TestWriteMCP_LanguageAware(t *testing.T) {
 	}
 }
 
-func TestWriteMCP_SkipsMissingCommand(t *testing.T) {
+func TestWrite_SkipsMissingCommand(t *testing.T) {
 	t.Setenv("PATH", "")
 	repoDir := t.TempDir()
 
 	wired, skipped, err := Write(repoDir, detect.NewSet(language.Go))
 	if err != nil {
-		t.Fatalf("WriteMCP: %v", err)
+		t.Fatalf("Write: %v", err)
 	}
 	if len(wired) != 0 {
 		t.Errorf("wired = %v, want none", wired)
@@ -231,7 +231,7 @@ func readServer(tb testing.TB, repoDir, name string) mcpServer {
 }
 
 //nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
-func TestWriteMCP_ParseFailureWording(t *testing.T) {
+func TestWrite_ParseFailureWording(t *testing.T) {
 	fakeOnPath(t, "gopls")
 
 	testCases := []struct {
@@ -266,7 +266,7 @@ func TestWriteMCP_ParseFailureWording(t *testing.T) {
 }
 
 //nolint:paralleltest // fakeOnPath needs t.Setenv, which bars t.Parallel.
-func TestWriteMCP_NullInputIsWired(t *testing.T) {
+func TestWrite_NullInputIsWired(t *testing.T) {
 	fakeOnPath(t, "gopls")
 
 	for _, seed := range []string{`null`, `{"mcpServers":null}`} {
@@ -278,7 +278,7 @@ func TestWriteMCP_NullInputIsWired(t *testing.T) {
 				t.Fatalf("seed: %v", err)
 			}
 			if _, _, err := Write(repoDir, detect.NewSet(language.Go)); err != nil {
-				t.Fatalf("WriteMCP(%s): %v", seed, err)
+				t.Fatalf("Write(%s): %v", seed, err)
 			}
 			if got := readServer(t, repoDir, "gopls"); got.Command != "gopls" {
 				t.Errorf("gopls command = %q, want gopls", got.Command)
