@@ -25,7 +25,7 @@ func RetireLegacyAgents(projectDir string) (removed bool, warning string, err er
 		}
 		return false, "", fmt.Errorf("read %q: %w", path, err)
 	}
-	// The legacy file predates ownedfile.Installed, so only this sentence proves it is ours.
+	// The legacy file predates ownedfile.Marker, so only this sentence proves it is ours.
 	if !strings.Contains(string(content), legacyAgentsFingerprint) {
 		return false, fmt.Sprintf(
 			"found %s but its content does not match the pre-migration template; "+
