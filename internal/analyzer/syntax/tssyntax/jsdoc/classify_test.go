@@ -7,7 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/docshape"
 )
 
-func TestIsJSDoc(t *testing.T) {
+func TestIsBlock(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -26,7 +26,7 @@ func TestIsJSDoc(t *testing.T) {
 			t.Parallel()
 
 			if got := IsBlock(testCase.comment); got != testCase.want {
-				t.Fatalf("IsJSDoc = %v, want %v", got, testCase.want)
+				t.Fatalf("IsBlock = %v, want %v", got, testCase.want)
 			}
 		})
 	}
