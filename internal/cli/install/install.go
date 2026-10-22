@@ -92,17 +92,17 @@ func newTargetContext(
 		return host.Context{}, err
 	}
 
-	selection, err := resolveSelection(cmd, shared.Index, console)
+	choice, err := resolveSelection(cmd, shared.Index, console)
 	if err != nil {
 		return host.Context{}, err
 	}
-	selection.Languages = languages
-	ids, pulled := selection.Resolve(shared.Index)
+	choice.Languages = languages
+	ids, pulled := choice.Resolve(shared.Index)
 	printDependencyPulls(os.Stdout, pulled)
 	var routerFilter []string
 	// Filter the rendered router to what's actually installed, unless it is
 	// everything anyway (--all) or router-only (nothing to filter against).
-	if !selection.All && !selection.RouterOnly {
+	if !choice.All && !choice.RouterOnly {
 		routerFilter = ids
 	}
 
