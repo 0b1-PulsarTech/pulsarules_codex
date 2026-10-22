@@ -2,6 +2,7 @@ package commitlint
 
 import (
 	"errors"
+	"flag"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -43,7 +43,7 @@ func lintAfterHistory(t *testing.T, configYAML string, history []string, message
 	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: dir}); err != nil {
 		t.Fatalf("DoInjections: %v", err)
 	}
-	return RunCommitLint(inj, &version.Options{CommitMsg: message})
+	return (&Command{msg: message}).Run(inj, nil)
 }
 
 func runGit(t *testing.T, dir string, args ...string) {
@@ -55,7 +55,7 @@ func runGit(t *testing.T, dir string, args ...string) {
 	}
 }
 
-func TestRunCommitLint_EmojiWindowFallsBack(t *testing.T) {
+func TestCommand_Run_EmojiWindowFallsBack(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -95,13 +95,13 @@ func TestRunCommitLint_EmojiWindowFallsBack(t *testing.T) {
 			history := append([]string{recent}, testCase.between...)
 			err := lintAfterHistory(t, testCase.config, append(history, newest), repeat)
 			if got := errors.Is(err, command.ErrFindings); got != testCase.wantErr {
-				t.Fatalf("RunCommitLint() error = %v, want findings %v", err, testCase.wantErr)
+				t.Fatalf("Run() error = %v, want findings %v", err, testCase.wantErr)
 			}
 		})
 	}
 }
 
-func TestRunCommitLint_ProjectConfig(t *testing.T) {
+func TestCommand_Run_ProjectConfig(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -128,18 +128,18 @@ func TestRunCommitLint_ProjectConfig(t *testing.T) {
 			err := lintInRepo(t, testCase.config, testCase.message)
 			if !testCase.wantErr {
 				if err != nil {
-					t.Fatalf("RunCommitLint() error = %v, want nil", err)
+					t.Fatalf("Run() error = %v, want nil", err)
 				}
 				return
 			}
 			if !errors.Is(err, command.ErrFindings) {
-				t.Fatalf("RunCommitLint() error = %v, want command.ErrFindings (exit code 1)", err)
+				t.Fatalf("Run() error = %v, want command.ErrFindings (exit code 1)", err)
 			}
 		})
 	}
 }
 
-func TestRunCommitLint_ReturnsErrFindings(t *testing.T) {
+func TestCommand_Run_ReturnsErrFindings(t *testing.T) {
 	t.Parallel()
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
@@ -148,14 +148,14 @@ func TestRunCommitLint_ReturnsErrFindings(t *testing.T) {
 	}
 
 	const messageTrippingEmojiTypeAndInitialRules = "bad commit message"
-	err := RunCommitLint(inj, &version.Options{CommitMsg: messageTrippingEmojiTypeAndInitialRules})
+	err := (&Command{msg: messageTrippingEmojiTypeAndInitialRules}).Run(inj, nil)
 
 	if !errors.Is(err, command.ErrFindings) {
 		t.Fatalf("error = %v, want command.ErrFindings", err)
 	}
 }
 
-func TestRunCommitLint_PropagatesRepositoryError(t *testing.T) {
+func TestCommand_Run_PropagatesRepositoryError(t *testing.T) {
 	t.Parallel()
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
@@ -165,13 +165,13 @@ func TestRunCommitLint_PropagatesRepositoryError(t *testing.T) {
 		func() (*vcs.Repository, error) { return nil, wantErr },
 	)
 
-	err := RunCommitLint(inj, &version.Options{CommitMsg: "valid enough message"})
+	err := (&Command{msg: "valid enough message"}).Run(inj, nil)
 	if !errors.Is(err, wantErr) {
-		t.Fatalf("RunCommitLint() error = %v, want wrapping %v", err, wantErr)
+		t.Fatalf("Run() error = %v, want wrapping %v", err, wantErr)
 	}
 }
 
-func TestRunCommitLint_NoRepository(t *testing.T) {
+func TestCommand_Run_NoRepository(t *testing.T) {
 	t.Parallel()
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
@@ -180,11 +180,43 @@ func TestRunCommitLint_NoRepository(t *testing.T) {
 	}
 
 	const invalidCommitMessage = "bad commit message"
-	err := RunCommitLint(
-		inj,
-		&version.Options{CommitMsg: invalidCommitMessage},
-	)
+	err := (&Command{msg: invalidCommitMessage}).Run(inj, nil)
 	if !errors.Is(err, command.ErrFindings) {
 		t.Fatalf("error = %v, want command.ErrFindings from analysis findings", err)
+	}
+}
+
+func TestCommand_Bind(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		args []string
+		want Command
+		dir  string
+	}{
+		{name: "defaults", dir: "."},
+		{
+			name: "every flag",
+			args: []string{"--msg", "m", "--file", "f", "--project", "p"},
+			want: Command{msg: "m", file: "f", project: "p"},
+			dir:  "p",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cmd Command
+			fs := flag.NewFlagSet("commitlint", flag.ContinueOnError)
+			cmd.Bind(fs)
+			if err := fs.Parse(testCase.args); err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if cmd != testCase.want || cmd.ProjectDir() != testCase.dir {
+				t.Errorf("Command = %+v dir %q, want %+v and %q",
+					cmd, cmd.ProjectDir(), testCase.want, testCase.dir)
+			}
+		})
 	}
 }

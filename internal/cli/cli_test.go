@@ -17,7 +17,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/commitlint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
@@ -343,7 +342,11 @@ func TestCatalogFailureFailsTheCommand(t *testing.T) {
 		{
 			name: "commit-lint",
 			run: func(inj remy.Injector) error {
-				return commitlint.RunCommitLint(inj, &version.Options{CommitMsg: "feat: x"})
+				call, err := Parse([]string{"commitlint", "--msg", "feat: x"}, flags.Environment{})
+				if err != nil {
+					return err
+				}
+				return call.Run(inj)
 			},
 		},
 		{

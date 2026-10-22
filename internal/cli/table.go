@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/clean"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/commitlint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/evals"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/generate"
@@ -41,6 +42,10 @@ func table() []entry {
 		{
 			name:  "clean",
 			build: func(flags.Environment) command.Runner { return &clean.Command{} },
+		},
+		{
+			name:  "commitlint",
+			build: func(flags.Environment) command.Runner { return &commitlint.Command{} },
 		},
 	}
 }

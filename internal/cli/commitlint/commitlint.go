@@ -2,6 +2,7 @@ package commitlint
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"slices"
@@ -9,7 +10,6 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
@@ -19,11 +19,30 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func RunCommitLint(inj remy.Injector, opts *version.Options) error {
-	msg := opts.CommitMsg
-	if msg == "" && opts.CommitFile != "" {
-		// CommitFile is a CLI flag value the operator supplies intentionally.
-		msgBytes, err := os.ReadFile(opts.CommitFile)
+type Command struct {
+	msg     string
+	file    string
+	project string
+}
+
+func (cmd *Command) Bind(fs *flag.FlagSet) {
+	fs.StringVar(&cmd.msg, "msg", "", "commit message to validate")
+	fs.StringVar(&cmd.file, "file", "", "path to a COMMIT_EDITMSG file")
+	fs.StringVar(&cmd.project, "project", "", "project dir for git history lookup")
+}
+
+func (cmd *Command) ProjectDir() string {
+	if cmd.project == "" {
+		return "."
+	}
+	return cmd.project
+}
+
+func (cmd *Command) Run(inj remy.Injector, _ []string) error {
+	msg := cmd.msg
+	if msg == "" && cmd.file != "" {
+		// The file is a CLI flag value the operator supplies intentionally.
+		msgBytes, err := os.ReadFile(cmd.file)
 		if err != nil {
 			return fmt.Errorf("read commit file: %w", err)
 		}

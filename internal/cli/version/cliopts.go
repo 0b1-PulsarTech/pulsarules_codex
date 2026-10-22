@@ -36,8 +36,5 @@ type Options struct {
 
 	Mode string
 
-	CommitMsg  string
-	CommitFile string
-
 	ProjectDir string
 }
