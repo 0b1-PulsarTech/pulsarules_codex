@@ -14,7 +14,7 @@ import (
 func TestResolve_MissingBinding(t *testing.T) {
 	t.Parallel()
 
-	_, err := resolve(remy.NewInjector(remy.Config{DuckTypeElements: true}))
+	_, err := resolve(remy.NewInjector(remy.Config{DuckTypeElements: true}), defaultBuilders())
 	if err == nil || !strings.HasPrefix(err.Error(), "get knowledge index: ") {
 		t.Fatalf("resolve() error = %v, want the knowledge index lookup to fail first", err)
 	}
@@ -41,7 +41,7 @@ func TestServices_LazyFailuresStayLazy(t *testing.T) {
 				LogPath:    filepath.Join(notADir, "x.log"),
 			},
 			open: func(svc Services) error {
-				_, err := svc.OpenLogger()
+				_, _, err := svc.OpenLogger()
 				return err
 			},
 			wantErr: "build logger: create log dir: ",
@@ -54,7 +54,7 @@ func TestServices_LazyFailuresStayLazy(t *testing.T) {
 				LogPath:    filepath.Join(t.TempDir(), "x.log"),
 			},
 			open: func(svc Services) error {
-				_, err := svc.OpenLogger()
+				_, _, err := svc.OpenLogger()
 				return err
 			},
 			wantErr: "build logger: parse log level: ",

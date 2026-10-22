@@ -9,12 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -41,18 +41,22 @@ func lintAfterHistory(t *testing.T, configYAML string, history []string, message
 			t.Fatalf("write config: %v", err)
 		}
 	}
-	svc := servicesIn(t, dir)
-	return (&Command{msg: message}).Run(svc, nil)
+	return lintIn(t, dir, message, registryLoader())
 }
 
-func servicesIn(t *testing.T, projectDir string) bootstrap.Services {
+func registryLoader() func() *loader.Loader {
+	return func() *loader.Loader { return loader.NewLoader(registry.ConfigRules()) }
+}
+
+func lintIn(t *testing.T, dir, message string, loader func() *loader.Loader) error {
 	t.Helper()
 
-	svc, err := bootstrap.New(bootstrap.Options{ProjectDir: projectDir})
+	index, _, err := knowledge.Load("")
 	if err != nil {
-		t.Fatalf("bootstrap.New: %v", err)
+		t.Fatalf("load knowledge: %v", err)
 	}
-	return svc
+	open := func() (*vcs.Repository, error) { return vcs.Open(dir) }
+	return (&Command{msg: message}).Run(open, index, emoji.NewCatalog, loader)
 }
 
 func runGit(t *testing.T, dir string, args ...string) {
@@ -151,10 +155,8 @@ func TestCommand_Run_ProjectConfig(t *testing.T) {
 func TestCommand_Run_ReturnsErrFindings(t *testing.T) {
 	t.Parallel()
 
-	svc := servicesIn(t, ".")
-
 	const messageTrippingEmojiTypeAndInitialRules = "bad commit message"
-	err := (&Command{msg: messageTrippingEmojiTypeAndInitialRules}).Run(svc, nil)
+	err := lintIn(t, ".", messageTrippingEmojiTypeAndInitialRules, registryLoader())
 
 	if !errors.Is(err, command.ErrFindings) {
 		t.Fatalf("error = %v, want command.ErrFindings", err)
@@ -165,11 +167,9 @@ func TestCommand_Run_PropagatesRepositoryError(t *testing.T) {
 	t.Parallel()
 
 	wantErr := errors.New("boom: repository wiring failed")
-	svc := bootstrap.Services{
-		OpenRepository: func() (*vcs.Repository, error) { return nil, wantErr },
-	}
+	open := func() (*vcs.Repository, error) { return nil, wantErr }
 
-	err := (&Command{msg: "valid enough message"}).Run(svc, nil)
+	err := (&Command{msg: "valid enough message"}).Run(open, nil, nil, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("Run() error = %v, want wrapping %v", err, wantErr)
 	}
@@ -178,10 +178,8 @@ func TestCommand_Run_PropagatesRepositoryError(t *testing.T) {
 func TestCommand_Run_NoRepository(t *testing.T) {
 	t.Parallel()
 
-	svc := servicesIn(t, t.TempDir())
-
 	const invalidCommitMessage = "bad commit message"
-	err := (&Command{msg: invalidCommitMessage}).Run(svc, nil)
+	err := lintIn(t, t.TempDir(), invalidCommitMessage, registryLoader())
 	if !errors.Is(err, command.ErrFindings) {
 		t.Fatalf("error = %v, want command.ErrFindings from analysis findings", err)
 	}
@@ -226,30 +224,28 @@ func TestCommand_Bind(t *testing.T) {
 func TestCommand_Run_CatalogFailure(t *testing.T) {
 	t.Parallel()
 
-	svc := bootstrap.Services{
-		Index:          &knowledge.Index{},
-		OpenRepository: func() (*vcs.Repository, error) { return nil, vcs.ErrNoRepository },
-		LoadCatalog:    func() (*emoji.Catalog, error) { return nil, errors.New("boom") },
-	}
+	open := func() (*vcs.Repository, error) { return nil, vcs.ErrNoRepository }
+	catalog := func() (*emoji.Catalog, error) { return nil, errors.New("boom") }
 
-	err := (&Command{msg: "feat: x"}).Run(svc, nil)
+	err := (&Command{msg: "feat: x"}).Run(open, &knowledge.Index{}, catalog, nil)
 	if err == nil || !strings.Contains(err.Error(), "get emoji catalog") {
 		t.Fatalf("Run() error = %v, want one naming %q", err, "get emoji catalog")
 	}
 }
 
-func TestCommand_Run_UsesTheServicesLoader(t *testing.T) {
+func TestCommand_Run_UsesTheGivenLoader(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name    string
-		loader  *loader.Loader
+		loader  func() *loader.Loader
 		wantErr error
 	}{
-		{"registry rules reject the analyzer", nil, command.ErrFindings},
+		{"registry rules reject the analyzer", registryLoader(), command.ErrFindings},
 		{
 			"a loader built for any analyzer accepts it",
-			loader.NewLoader(projectfile.Rules{AnyAnalyzer: true}), nil,
+			func() *loader.Loader { return loader.NewLoader(projectfile.Rules{AnyAnalyzer: true}) },
+			nil,
 		},
 	}
 	for _, testCase := range testCases {
@@ -263,12 +259,8 @@ func TestCommand_Run_UsesTheServicesLoader(t *testing.T) {
 			if err := os.WriteFile(path, []byte(yaml), disk.File); err != nil {
 				t.Fatalf("write config: %v", err)
 			}
-			svc := servicesIn(t, dir)
-			if testCase.loader != nil {
-				svc.Loader = testCase.loader
-			}
 
-			err := (&Command{msg: ":tea: docs(cli): Document the config flag"}).Run(svc, nil)
+			err := lintIn(t, dir, ":tea: docs(cli): Document the config flag", testCase.loader)
 			if !errors.Is(err, testCase.wantErr) {
 				t.Fatalf("Run() error = %v, want %v", err, testCase.wantErr)
 			}

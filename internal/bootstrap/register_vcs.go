@@ -8,13 +8,13 @@ import (
 
 type resolvedProjectDir string
 
-func registerVCS(inj remy.Injector, opts Options) {
+func registerVCS(inj remy.Injector, opts Options, build builders) {
 	remy.RegisterInstance(inj, resolvedProjectDir(opts.ProjectDir))
 	// A factory, not a singleton: it fails when the directory is not a git repo, and the
 	// caller decides whether that is fatal.
 	remy.RegisterConstructorArgs1Err(inj, remy.Factory[*vcs.Repository],
 		func(dir resolvedProjectDir) (*vcs.Repository, error) {
-			return vcs.Open(string(dir))
+			return build.openRepository(string(dir))
 		},
 	)
 }

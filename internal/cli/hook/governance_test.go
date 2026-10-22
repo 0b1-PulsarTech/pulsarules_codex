@@ -246,8 +246,8 @@ func TestGovernanceCheck_CatalogFailureYieldsNothing(t *testing.T) {
 	}
 }
 
-func testLoader() *loader.Loader {
-	return loader.NewLoader(registry.ConfigRules())
+func testLoader() func() *loader.Loader {
+	return func() *loader.Loader { return loader.NewLoader(registry.ConfigRules()) }
 }
 
 func TestGovernor_Changes_UsesItsLoader(t *testing.T) {
@@ -256,12 +256,13 @@ func TestGovernor_Changes_UsesItsLoader(t *testing.T) {
 	const unlistedAnalyzer = "version: 1\nanalyzers: {not-an-analyzer: {enabled: false}}\n"
 	testCases := []struct {
 		name        string
-		loader      *loader.Loader
+		loader      func() *loader.Loader
 		wantFinding bool
 	}{
 		{"registry rules reject it", testLoader(), true},
-		{"a loader built for any analyzer accepts it", loader.NewLoader(
-			projectfile.Rules{AnyAnalyzer: true}), false},
+		{"a loader built for any analyzer accepts it", func() *loader.Loader {
+			return loader.NewLoader(projectfile.Rules{AnyAnalyzer: true})
+		}, false},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

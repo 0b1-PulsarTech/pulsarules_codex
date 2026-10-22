@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 type Command struct {
@@ -18,13 +18,13 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 	fs.BoolVar(&cmd.write, "write", false, "rewrite files instead of only reporting")
 }
 
-func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
+func (cmd *Command) Run(openRepository func() (*vcs.Repository, error)) error {
 	// Only --write mutates; the dangerous path is the one a caller has to ask for.
 	how := inspecting()
 	if cmd.write {
 		how = rewriting()
 	}
-	repo, err := command.OptionalRepository(svc.OpenRepository)
+	repo, err := command.OptionalRepository(openRepository)
 	if err != nil {
 		return err
 	}

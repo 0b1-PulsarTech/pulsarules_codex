@@ -14,15 +14,15 @@ func TestRun_ProjectNeverTouchesTheUserDirs(t *testing.T) {
 	t.Parallel()
 
 	home, configDir, projectDir := t.TempDir(), t.TempDir(), t.TempDir()
-	svc := testServices(t)
+	wired := testWiring(t)
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, svc, installArgs); err != nil {
+	if err := runInstall(t, wired, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 
 	cmd := New(flags.Environment{Home: home, ConfigDir: configDir})
 	cmd.project = projectDir
-	if err := cmd.Run(svc, nil); err != nil {
+	if err := cmd.Run(wired.targets); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 

@@ -7,9 +7,13 @@ import (
 )
 
 type (
-	runner interface {
+	runner struct {
+		command flagged
+		run     func(svc bootstrap.Services, args []string) error
+	}
+
+	flagged interface {
 		Bind(fs *flag.FlagSet)
-		Run(svc bootstrap.Services, args []string) error
 	}
 
 	anchored interface {

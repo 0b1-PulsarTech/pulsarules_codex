@@ -10,7 +10,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -19,8 +18,8 @@ type Command struct{}
 
 func (Command) Bind(*flag.FlagSet) {}
 
-func (Command) Run(svc bootstrap.Services, args []string) error {
-	return writeList(os.Stdout, svc.Index, kindOf(args))
+func (Command) Run(index *knowledge.Index, args []string) error {
+	return writeList(os.Stdout, index, kindOf(args))
 }
 
 func kindOf(args []string) string {

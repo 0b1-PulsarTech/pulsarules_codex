@@ -2,18 +2,26 @@ package install
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 
 	"golang.org/x/term"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/claude"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
-	if err := cmd.install(svc); err != nil {
+func (cmd *Command) Run(
+	index *knowledge.Index,
+	templates fs.FS,
+	renderer *render.Renderer,
+	targets *host.Registry,
+) error {
+	shared := host.Context{Templates: templates, Index: index, Renderer: renderer}
+	if err := cmd.install(shared, targets); err != nil {
 		return fmt.Errorf("install: %w", err)
 	}
 	return nil
@@ -21,7 +29,7 @@ func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
 
 func (cmd *Command) ProjectDir() string { return cmd.project }
 
-func (cmd *Command) install(svc bootstrap.Services) error {
+func (cmd *Command) install(shared host.Context, registry *host.Registry) error {
 	cfg, err := resolveInstallConfig(cmd)
 	if err != nil {
 		return err
@@ -33,23 +41,23 @@ func (cmd *Command) install(svc bootstrap.Services) error {
 
 	targets := cmd.targets()
 	// Refuse before any prompt: a question about an install that cannot happen is noise.
-	if err = svc.Targets.Check(targets); err != nil {
+	if err = registry.Check(targets); err != nil {
 		return err
 	}
 	if cfg.global {
-		if err = svc.Targets.CheckGlobal(targets); err != nil {
+		if err = registry.CheckGlobal(targets); err != nil {
 			return err
 		}
 	}
 
 	console := newPrompter(os.Stdin, os.Stdout)
 	console.isTerminal = term.IsTerminal(int(os.Stdin.Fd()))
-	ctx, err := newTargetContext(cmd, cfg, svc, console)
+	ctx, err := newTargetContext(cmd, cfg, shared, console)
 	if err != nil {
 		return err
 	}
 	for _, name := range targets {
-		report, installErr := svc.Targets.Install(name, ctx)
+		report, installErr := registry.Install(name, ctx)
 		report.Print(os.Stdout, os.Stderr)
 		if installErr != nil {
 			// The target registry's Install already wraps this as
@@ -73,10 +81,10 @@ func printHooksBlock(cfg installConfig) error {
 func newTargetContext(
 	cmd *Command,
 	cfg installConfig,
-	svc bootstrap.Services,
+	shared host.Context,
 	console *prompter,
 ) (host.Context, error) {
-	if err := applySelectedLayout(cmd, svc.Index, console); err != nil {
+	if err := applySelectedLayout(cmd, shared.Index, console); err != nil {
 		return host.Context{}, fmt.Errorf("apply layout: %w", err)
 	}
 	languages, err := resolveLanguages(cfg, cmd.languages)
@@ -84,12 +92,12 @@ func newTargetContext(
 		return host.Context{}, err
 	}
 
-	selection, err := resolveSelection(cmd, svc.Index, console)
+	selection, err := resolveSelection(cmd, shared.Index, console)
 	if err != nil {
 		return host.Context{}, err
 	}
 	selection.Languages = languages
-	ids, pulled := selection.Resolve(svc.Index)
+	ids, pulled := selection.Resolve(shared.Index)
 	printDependencyPulls(os.Stdout, pulled)
 	var routerFilter []string
 	// Filter the rendered router to what's actually installed, unless it is
@@ -98,21 +106,17 @@ func newTargetContext(
 		routerFilter = ids
 	}
 
-	return host.Context{
-		Templates:     svc.Templates,
-		Index:         svc.Index,
-		Renderer:      svc.Renderer,
-		Base:          cfg.absBase,
-		Global:        cfg.global,
-		ClaudeDir:     cfg.claudeDir,
-		UserClaudeDir: cfg.userClaudeDir,
-		IDs:           ids,
-		RouterFilter:  routerFilter,
-		NoMCP:         cmd.noMCP,
-		NoHooks:       cmd.noHooks,
-		SettingsFile:  cfg.settingsFile,
-		Languages:     languages,
-	}, nil
+	shared.Base = cfg.absBase
+	shared.Global = cfg.global
+	shared.ClaudeDir = cfg.claudeDir
+	shared.UserClaudeDir = cfg.userClaudeDir
+	shared.IDs = ids
+	shared.RouterFilter = routerFilter
+	shared.NoMCP = cmd.noMCP
+	shared.NoHooks = cmd.noHooks
+	shared.SettingsFile = cfg.settingsFile
+	shared.Languages = languages
+	return shared, nil
 }
 
 type installConfig struct {

@@ -34,9 +34,9 @@ func TestParse_WithoutARunner(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
-			if call.Name != testCase.want || call.runner != nil {
+			if call.Name != testCase.want || call.runner.command != nil {
 				t.Errorf("Parse() = %q with runner %v, want %q with none",
-					call.Name, call.runner, testCase.want)
+					call.Name, call.runner.command, testCase.want)
 			}
 		})
 	}
@@ -109,7 +109,7 @@ func TestParse_CommonFlags(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
-			if call.Name != "generate" || call.runner == nil || call.env != testCase.env {
+			if call.Name != "generate" || call.runner.command == nil || call.env != testCase.env {
 				t.Fatalf("Parse() = %+v, want the generate runner and the caller's env", call)
 			}
 			if call.root != testCase.wantRoot || call.logLevel != testCase.wantLogLevel {

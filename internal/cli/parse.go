@@ -71,6 +71,6 @@ func newFlagSet(
 ) *flag.FlagSet {
 	flagSet := flag.NewFlagSet(name, flag.ContinueOnError)
 	flags.BindCommon(flagSet, root, logLevel, env)
-	bound.Bind(flagSet)
+	bound.command.Bind(flagSet)
 	return flagSet
 }

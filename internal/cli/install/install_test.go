@@ -13,26 +13,42 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func testServices(tb testing.TB) bootstrap.Services {
+type wiring struct {
+	shared  host.Context
+	targets *host.Registry
+}
+
+func testWiring(tb testing.TB) wiring {
 	tb.Helper()
 
-	svc, err := bootstrap.New(bootstrap.Options{ProjectDir: "."})
+	index, assets, err := knowledge.Load("")
 	if err != nil {
-		tb.Fatalf("bootstrap.New: %v", err)
+		tb.Fatalf("load knowledge: %v", err)
 	}
-	return svc
+	renderer, err := render.NewRenderer(assets)
+	if err != nil {
+		tb.Fatalf("new renderer: %v", err)
+	}
+	return wiring{
+		shared:  host.Context{Templates: assets, Index: index, Renderer: renderer},
+		targets: host.NewRegistry(),
+	}
+}
+
+func (wired wiring) run(cmd *Command) error {
+	return cmd.Run(wired.shared.Index, wired.shared.Templates, wired.shared.Renderer, wired.targets)
 }
 
 //nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
 func TestNewTargetContext_LayoutThenSkillsShareOneReader(t *testing.T) {
-	svc := testServices(t)
-	catalog := svc.Index.SkillsOrdered()
+	wired := testWiring(t)
+	catalog := wired.shared.Index.SkillsOrdered()
 	cmd := &Command{interactive: true, languages: []string{"go"}, noMCP: true}
 	cfg := installConfig{absBase: t.TempDir()}
 	var prompts strings.Builder
@@ -42,7 +58,7 @@ func TestNewTargetContext_LayoutThenSkillsShareOneReader(t *testing.T) {
 	var ctx host.Context
 	var err error
 	stdout, _ := captureStreams(t, func() {
-		ctx, err = newTargetContext(cmd, cfg, svc, console)
+		ctx, err = newTargetContext(cmd, cfg, wired.shared, console)
 	})
 	if err != nil {
 		t.Fatalf("newTargetContext: %v", err)
@@ -72,7 +88,7 @@ func TestRun_MalformedMCPJSON_ErrorNotDoubled(t *testing.T) {
 		t.Fatalf("seed malformed .mcp.json: %v", err)
 	}
 
-	svc := testServices(t)
+	wired := testWiring(t)
 	const forcedLanguage = "go"
 	cmd := &Command{
 		project:   projectDir,
@@ -80,7 +96,7 @@ func TestRun_MalformedMCPJSON_ErrorNotDoubled(t *testing.T) {
 		languages: []string{forcedLanguage},
 	}
 
-	err := cmd.Run(svc, nil)
+	err := wired.run(cmd)
 	if err == nil {
 		t.Fatal("expected an error from a malformed .mcp.json")
 	}
@@ -156,9 +172,9 @@ func TestRun_PrintHooks(t *testing.T) {
 	projectDir := t.TempDir()
 	cmd := &Command{project: projectDir, printHooks: true}
 
-	svc := testServices(t)
+	wired := testWiring(t)
 	var runErr error
-	stdout, _ := captureStreams(t, func() { runErr = cmd.Run(svc, nil) })
+	stdout, _ := captureStreams(t, func() { runErr = wired.run(cmd) })
 	if runErr != nil {
 		t.Fatalf("Run: %v", runErr)
 	}
@@ -207,8 +223,8 @@ func TestRun_RejectsAMalformedTargetBeforeWriting(t *testing.T) {
 				t.Fatalf("Parse: %v", err)
 			}
 
-			svc := testServices(t)
-			err := cmd.Run(svc, nil)
+			wired := testWiring(t)
+			err := wired.run(cmd)
 			want := fmt.Sprintf("invalid --target %q (want ", testCase.bad)
 			if err == nil || !strings.Contains(err.Error(), want) {
 				t.Fatalf("err = %v, want an error containing %q", err, want)
@@ -271,7 +287,7 @@ func TestRun_GlobalStaysInsideTheClaudeConfigDir(t *testing.T) {
 	cmd.noMCP = true
 
 	var err error
-	stdout, _ := captureStreams(t, func() { err = cmd.Run(testServices(t), nil) })
+	stdout, _ := captureStreams(t, func() { err = testWiring(t).run(cmd) })
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -319,7 +335,7 @@ func TestRun_ProjectNeverWritesIntoTheUserDirs(t *testing.T) {
 	cmd.noMCP = true
 
 	var err error
-	captureStreams(t, func() { err = cmd.Run(testServices(t), nil) })
+	captureStreams(t, func() { err = testWiring(t).run(cmd) })
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -343,7 +359,7 @@ func TestRun_PrintHooksGlobalIsAbsolute(t *testing.T) {
 	cmd.printHooks = true
 
 	var err error
-	stdout, _ := captureStreams(t, func() { err = cmd.Run(testServices(t), nil) })
+	stdout, _ := captureStreams(t, func() { err = testWiring(t).run(cmd) })
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -365,7 +381,7 @@ func TestRun_GlobalRefusesProjectOnlyTargetsBeforeInstalling(t *testing.T) {
 	cmd.target = []string{"claude", "agents"}
 	cmd.skills = []string{"go-style"}
 
-	err := cmd.Run(testServices(t), nil)
+	err := testWiring(t).run(cmd)
 	if !errors.Is(err, host.ErrProjectOnly) || !strings.Contains(err.Error(), `target "agents"`) {
 		t.Fatalf("Run = %v, want a refusal naming the agents target", err)
 	}
@@ -387,7 +403,7 @@ func TestRun_GlobalRefusesBeforeAnyPrompt(t *testing.T) {
 	cmd.target = []string{"opencode"}
 
 	var err error
-	stdout, _ := captureStreams(t, func() { err = cmd.Run(testServices(t), nil) })
+	stdout, _ := captureStreams(t, func() { err = testWiring(t).run(cmd) })
 	if !errors.Is(err, host.ErrProjectOnly) || !strings.Contains(err.Error(), `target "opencode"`) {
 		t.Fatalf("Run = %v, want a refusal naming the opencode target", err)
 	}

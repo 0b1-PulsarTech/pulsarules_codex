@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -29,11 +28,9 @@ func TestCommand_RepositoryResolution(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := bootstrap.Services{
-				OpenRepository: func() (*vcs.Repository, error) { return nil, testCase.repoErr },
-			}
+			open := func() (*vcs.Repository, error) { return nil, testCase.repoErr }
 
-			err := boundCommand(t, "--project", t.TempDir()).Run(svc, nil)
+			err := boundCommand(t, "--project", t.TempDir()).Run(open)
 			if !errors.Is(err, testCase.wantErr) {
 				t.Fatalf("Run() error = %v, want %v", err, testCase.wantErr)
 			}
@@ -96,16 +93,14 @@ func TestCommand_Run_OnlyWriteRewrites(t *testing.T) {
 			if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
 				t.Fatalf("write fixture: %v", err)
 			}
-			svc := bootstrap.Services{
-				OpenRepository: func() (*vcs.Repository, error) { return nil, vcs.ErrNoRepository },
-			}
+			open := func() (*vcs.Repository, error) { return nil, vcs.ErrNoRepository }
 
 			out := captureStdout(t, func() {
 				args := []string{"--project", dir}
 				if testCase.write {
 					args = append(args, "--write")
 				}
-				if err := boundCommand(t, args...).Run(svc, nil); err != nil {
+				if err := boundCommand(t, args...).Run(open); err != nil {
 					t.Errorf("Run() = %v, want nil", err)
 				}
 			})

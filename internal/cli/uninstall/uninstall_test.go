@@ -12,22 +12,23 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func TestRun_RoundTrip(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	svc := testServices(t)
+	wired := testWiring(t)
 
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, svc, installArgs); err != nil {
+	if err := runInstall(t, wired, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	skillDoc := filepath.Join(projectDir, ".claude", "skills", "go-style", "SKILL.md")
@@ -40,7 +41,7 @@ func TestRun_RoundTrip(t *testing.T) {
 	}
 
 	uninstallOpts := &Command{project: projectDir}
-	if err := uninstallOpts.Run(svc, nil); err != nil {
+	if err := uninstallOpts.Run(wired.targets); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if _, statErr := os.Stat(skillDoc); !errors.Is(statErr, fs.ErrNotExist) {
@@ -52,7 +53,7 @@ func TestRun_RoundTrip(t *testing.T) {
 
 	t.Run("idempotent: second uninstall is not an error", func(t *testing.T) {
 		t.Parallel()
-		if err := uninstallOpts.Run(svc, nil); err != nil {
+		if err := uninstallOpts.Run(wired.targets); err != nil {
 			t.Fatalf("second Run: %v", err)
 		}
 	})
@@ -62,15 +63,15 @@ func TestRun_KeepSkills(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	svc := testServices(t)
+	wired := testWiring(t)
 
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, svc, installArgs); err != nil {
+	if err := runInstall(t, wired, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 
 	uninstallOpts := &Command{project: projectDir, keepSkills: true}
-	if err := uninstallOpts.Run(svc, nil); err != nil {
+	if err := uninstallOpts.Run(wired.targets); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
@@ -95,10 +96,10 @@ func TestRun_RemovesLanguageConfig(t *testing.T) {
 	); err != nil {
 		t.Fatalf("write go.mod: %v", err)
 	}
-	svc := testServices(t)
+	wired := testWiring(t)
 
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, svc, installArgs); err != nil {
+	if err := runInstall(t, wired, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	configPath := filepath.Join(projectDir, detect.ConfigFileName)
@@ -107,7 +108,7 @@ func TestRun_RemovesLanguageConfig(t *testing.T) {
 	}
 
 	uninstallOpts := &Command{project: projectDir}
-	if err := uninstallOpts.Run(svc, nil); err != nil {
+	if err := uninstallOpts.Run(wired.targets); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if _, statErr := os.Stat(configPath); !errors.Is(statErr, fs.ErrNotExist) {
@@ -118,9 +119,9 @@ func TestRun_RemovesLanguageConfig(t *testing.T) {
 func TestRun_Idempotent(t *testing.T) {
 	t.Parallel()
 
-	svc := testServices(t)
+	wired := testWiring(t)
 	opts := &Command{project: t.TempDir()}
-	if err := opts.Run(svc, nil); err != nil {
+	if err := opts.Run(wired.targets); err != nil {
 		t.Fatalf("Run on untouched project: %v", err)
 	}
 }
@@ -129,7 +130,7 @@ func TestRun_DetectsBothTargetsWhenNoneGiven(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	svc := testServices(t)
+	wired := testWiring(t)
 
 	installArgs := []string{
 		"--project",
@@ -142,7 +143,7 @@ func TestRun_DetectsBothTargetsWhenNoneGiven(t *testing.T) {
 		"opencode",
 		"--no-mcp",
 	}
-	if err := runInstall(t, svc, installArgs); err != nil {
+	if err := runInstall(t, wired, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	claudeSkill := filepath.Join(projectDir, ".claude", "skills", "go-style", "SKILL.md")
@@ -154,7 +155,7 @@ func TestRun_DetectsBothTargetsWhenNoneGiven(t *testing.T) {
 	}
 
 	uninstallOpts := &Command{project: projectDir}
-	if err := uninstallOpts.Run(svc, nil); err != nil {
+	if err := uninstallOpts.Run(wired.targets); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	for _, path := range []string{claudeSkill, opencodeConfig} {
@@ -168,7 +169,7 @@ func TestRun_UnwiresLocalHooksScopeByDefault(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	svc := testServices(t)
+	wired := testWiring(t)
 
 	installArgs := []string{
 		"--project",
@@ -179,7 +180,7 @@ func TestRun_UnwiresLocalHooksScopeByDefault(t *testing.T) {
 		"--hooks-scope",
 		"local",
 	}
-	if err := runInstall(t, svc, installArgs); err != nil {
+	if err := runInstall(t, wired, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	localSettings := filepath.Join(projectDir, ".claude", "settings.local.json")
@@ -188,7 +189,7 @@ func TestRun_UnwiresLocalHooksScopeByDefault(t *testing.T) {
 	}
 
 	uninstallOpts := &Command{project: projectDir}
-	if err := uninstallOpts.Run(svc, nil); err != nil {
+	if err := uninstallOpts.Run(wired.targets); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if _, statErr := os.Stat(localSettings); !errors.Is(statErr, fs.ErrNotExist) {
@@ -200,7 +201,7 @@ func TestRun_ReturnsErrorOnGitHookFailure(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	svc := testServices(t)
+	wired := testWiring(t)
 
 	hookAsDir := filepath.Join(
 		projectDir,
@@ -213,7 +214,7 @@ func TestRun_ReturnsErrorOnGitHookFailure(t *testing.T) {
 	}
 
 	opts := &Command{project: projectDir}
-	if err := opts.Run(svc, nil); err == nil {
+	if err := opts.Run(wired.targets); err == nil {
 		t.Fatal("expected a non-nil error when git hook removal fails")
 	}
 }
@@ -222,9 +223,9 @@ func TestRun_TargetErrorNotDoubled(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	svc := testServices(t)
+	wired := testWiring(t)
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, svc, installArgs); err != nil {
+	if err := runInstall(t, wired, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 
@@ -237,7 +238,7 @@ func TestRun_TargetErrorNotDoubled(t *testing.T) {
 	}
 
 	uninstallOpts := &Command{project: projectDir}
-	err := uninstallOpts.Run(svc, nil)
+	err := uninstallOpts.Run(wired.targets)
 	if err == nil {
 		t.Fatal("expected an error when settings.json cannot be read")
 	}
@@ -348,7 +349,7 @@ func TestRun_HostileTreeStaysOnOneLine(t *testing.T) {
 		t.Fatalf("seed settings: %v", err)
 	}
 
-	report, _ := testServices(t).Targets.Uninstall("claude", host.UninstallContext{
+	report, _ := testWiring(t).targets.Uninstall("claude", host.UninstallContext{
 		Base:          projectDir,
 		SettingsFiles: []string{"settings.json"},
 	})
@@ -383,7 +384,7 @@ func TestUninstallContext_SettingsFiles(t *testing.T) {
 	}
 }
 
-func runInstall(tb testing.TB, svc bootstrap.Services, args []string) error {
+func runInstall(tb testing.TB, wired wiring, args []string) error {
 	tb.Helper()
 
 	cmd := &install.Command{}
@@ -392,24 +393,35 @@ func runInstall(tb testing.TB, svc bootstrap.Services, args []string) error {
 	if err := fs.Parse(args); err != nil {
 		tb.Fatalf("Parse(%q): %v", args, err)
 	}
-	return cmd.Run(svc, nil)
+	return cmd.Run(wired.index, wired.templates, wired.renderer, wired.targets)
 }
 
-func testServices(tb testing.TB) bootstrap.Services {
+type wiring struct {
+	index     *knowledge.Index
+	templates fs.FS
+	renderer  *render.Renderer
+	targets   *host.Registry
+}
+
+func testWiring(tb testing.TB) wiring {
 	tb.Helper()
 
-	svc, err := bootstrap.New(bootstrap.Options{ProjectDir: "."})
+	index, assets, err := knowledge.Load("")
 	if err != nil {
-		tb.Fatalf("bootstrap.New: %v", err)
+		tb.Fatalf("load knowledge: %v", err)
 	}
-	return svc
+	renderer, err := render.NewRenderer(assets)
+	if err != nil {
+		tb.Fatalf("new renderer: %v", err)
+	}
+	return wiring{index, assets, renderer, host.NewRegistry()}
 }
 
 func TestRun_GlobalLeavesGitAndLanguageConfigAlone(t *testing.T) {
 	t.Parallel()
 
 	home := t.TempDir()
-	svc := testServices(t)
+	wired := testWiring(t)
 	languageConfig := filepath.Join(home, detect.ConfigFileName)
 	foreignHook := filepath.Join(home, ".git", "hooks", "pre-commit")
 	for path, body := range map[string]string{languageConfig: `{}`, foreignHook: "#!/bin/sh\n"} {
@@ -423,7 +435,7 @@ func TestRun_GlobalLeavesGitAndLanguageConfigAlone(t *testing.T) {
 
 	cmd := New(flags.Environment{Home: home})
 	cmd.global = true
-	if err := cmd.Run(svc, nil); err != nil {
+	if err := cmd.Run(wired.targets); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	for _, kept := range []string{languageConfig, foreignHook} {

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
@@ -25,7 +24,7 @@ import (
 func TestRunGovernance_RequiresProjectDir(t *testing.T) {
 	t.Parallel()
 
-	err := (&Command{}).Run(unopenableRepository(), nil)
+	err := (&Command{}).Run(unopenableRepository(), nil, nil, nil)
 	if !errors.Is(err, errProjectDirRequired) {
 		t.Errorf("err = %v, want %v", err, errProjectDirRequired)
 	}
@@ -35,7 +34,15 @@ func TestRunGovernance_EnvProjectDirSatisfiesTheRequirement(t *testing.T) {
 	t.Parallel()
 
 	opts := &Command{env: flags.Environment{ProjectDir: t.TempDir()}}
-	if err := opts.Run(unopenableRepository(), nil); errors.Is(err, errProjectDirRequired) {
+	if err := opts.Run(
+		unopenableRepository(),
+		nil,
+		nil,
+		nil,
+	); errors.Is(
+		err,
+		errProjectDirRequired,
+	) {
 		t.Errorf("err = %v, want the env project dir to count", err)
 	}
 }
@@ -398,14 +405,11 @@ func TestRunGovernance_CatalogFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("vcs.Open: %v", err)
 	}
-	svc := bootstrap.Services{
-		Index:          &knowledge.Index{},
-		Loader:         testLoader(),
-		OpenRepository: func() (*vcs.Repository, error) { return repo, nil },
-		LoadCatalog:    func() (*emoji.Catalog, error) { return nil, errors.New("boom") },
-	}
+	open := func() (*vcs.Repository, error) { return repo, nil }
+	catalog := func() (*emoji.Catalog, error) { return nil, errors.New("boom") }
+	loader := func() *loader.Loader { return testLoader() }
 
-	err = (&Command{project: dir}).Run(svc, nil)
+	err = (&Command{project: dir}).Run(open, &knowledge.Index{}, catalog, loader)
 	if err == nil || err.Error() != "get emoji catalog: boom" {
 		t.Fatalf("Run() error = %v, want %q", err, "get emoji catalog: boom")
 	}
@@ -414,7 +418,7 @@ func TestRunGovernance_CatalogFailure(t *testing.T) {
 func TestRunGovernance_RepositoryFailure(t *testing.T) {
 	t.Parallel()
 
-	err := (&Command{project: t.TempDir()}).Run(unopenableRepository(), nil)
+	err := (&Command{project: t.TempDir()}).Run(unopenableRepository(), nil, nil, nil)
 	if err == nil || err.Error() != "open repository: boom" {
 		t.Fatalf("Run() error = %v, want %q", err, "open repository: boom")
 	}
@@ -424,10 +428,8 @@ func testLoader() *loader.Loader {
 	return loader.NewLoader(registry.ConfigRules())
 }
 
-func unopenableRepository() bootstrap.Services {
-	return bootstrap.Services{
-		OpenRepository: func() (*vcs.Repository, error) { return nil, errors.New("boom") },
-	}
+func unopenableRepository() func() (*vcs.Repository, error) {
+	return func() (*vcs.Repository, error) { return nil, errors.New("boom") }
 }
 
 func TestGovernanceConfig_UsesTheGivenLoader(t *testing.T) {

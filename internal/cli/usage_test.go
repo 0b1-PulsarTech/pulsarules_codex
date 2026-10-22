@@ -55,7 +55,7 @@ func TestUsage_SynopsisNamesEveryFlagOfEveryCommand(t *testing.T) {
 			t.Parallel()
 
 			flagSet := flag.NewFlagSet(candidate.name, flag.ContinueOnError)
-			candidate.build(flags.Environment{}).Bind(flagSet)
+			candidate.build(flags.Environment{}).command.Bind(flagSet)
 			if !strings.HasPrefix(lines[index], candidate.name) {
 				t.Fatalf("line %d = %q, want it to start with %q", index, lines[index],
 					candidate.name)

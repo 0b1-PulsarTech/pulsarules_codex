@@ -61,7 +61,7 @@ func TestPromptLayout(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			idx := testServices(t).Index
+			idx := testWiring(t).shared.Index
 			if testCase.noProfiles {
 				idx.Profiles = nil
 			}

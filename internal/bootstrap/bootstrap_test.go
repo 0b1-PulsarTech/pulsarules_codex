@@ -1,7 +1,18 @@
 package bootstrap
 
 import (
+	"errors"
+	"io"
+	"io/fs"
+	"log/slog"
+	"os"
+	"path/filepath"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/logfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 func TestNew_ResolvesEveryService(t *testing.T) {
@@ -36,9 +47,9 @@ func TestNew_ResolvesEveryService(t *testing.T) {
 	if _, err = svc.LoadCatalog(); err != nil {
 		t.Errorf("LoadCatalog: %v", err)
 	}
-	logging, err := svc.OpenLogger()
-	if err != nil || logging.Logger == nil || logging.Closer == nil {
-		t.Errorf("OpenLogger() = %+v, %v, want a logger and a closer", logging, err)
+	logger, closer, err := svc.OpenLogger()
+	if err != nil || logger == nil || closer == nil {
+		t.Errorf("OpenLogger() = %v, %v, %v, want a logger and a closer", logger, closer, err)
 	}
 	if repo, repoErr := svc.OpenRepository(); repoErr != nil || repo == nil {
 		t.Errorf(
@@ -55,5 +66,80 @@ func TestNew_KnowledgeLoadFailure(t *testing.T) {
 	_, err := New(Options{Root: t.TempDir()})
 	if err == nil {
 		t.Fatal("New: want error for a dev root with no knowledge directory, got nil")
+	}
+}
+
+func TestNewServices_BuildsOnlyWhatIsAsked(t *testing.T) {
+	t.Parallel()
+
+	logPath := filepath.Join(t.TempDir(), "x.log")
+	var repositories, catalogs, loaders, loggers int
+	counted := defaultBuilders()
+	openRepository, newCatalog, newLoader, newLogger :=
+		counted.openRepository, counted.newCatalog, counted.newLoader, counted.newLogger
+	counted.openRepository = func(dir string) (*vcs.Repository, error) {
+		repositories++
+		return openRepository(dir)
+	}
+	counted.newCatalog = func() (*emoji.Catalog, error) {
+		catalogs++
+		return newCatalog()
+	}
+	counted.newLoader = func() *loader.Loader {
+		loaders++
+		return newLoader()
+	}
+	counted.newLogger = func(cfg logfile.Config) (*slog.Logger, io.Closer, error) {
+		loggers++
+		return newLogger(cfg)
+	}
+
+	svc, err := newServices(Options{ProjectDir: ".", LogLevel: "debug", LogPath: logPath}, counted)
+	if err != nil {
+		t.Fatalf("newServices: %v", err)
+	}
+	if _, statErr := os.Stat(logPath); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Fatalf(
+			"the log file exists after New (stat err = %v), want it created on first use",
+			statErr,
+		)
+	}
+
+	testCases := []struct {
+		name  string
+		ask   func()
+		built *int
+	}{
+		{"repository", func() { _, _ = svc.OpenRepository() }, &repositories},
+		{"catalog", func() { _, _ = svc.LoadCatalog() }, &catalogs},
+		{"config loader", func() { _ = svc.Loader() }, &loaders},
+		{"logger", func() {
+			_, closer, _ := svc.OpenLogger()
+			t.Cleanup(func() { _ = closer.Close() })
+		}, &loggers},
+	}
+	for _, testCase := range testCases {
+		if *testCase.built != 0 {
+			t.Fatalf("%s was built by New, want it built on first use", testCase.name)
+		}
+	}
+	for _, testCase := range testCases {
+		testCase.ask()
+		if *testCase.built != 1 {
+			t.Errorf("%s builds after one request = %d, want 1", testCase.name, *testCase.built)
+		}
+	}
+	if _, statErr := os.Stat(logPath); statErr != nil {
+		t.Errorf("the log file is missing after the logger was asked for: %v", statErr)
+	}
+	for _, testCase := range testCases[1:] {
+		testCase.ask()
+		if *testCase.built != 1 {
+			t.Errorf(
+				"%s was rebuilt on a second request (%d builds)",
+				testCase.name,
+				*testCase.built,
+			)
+		}
 	}
 }

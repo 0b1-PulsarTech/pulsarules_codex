@@ -13,9 +13,9 @@ func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	svc := testServices(t)
+	wired := testWiring(t)
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, svc, installArgs); err != nil {
+	if err := runInstall(t, wired, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	skillDoc := filepath.Join(projectDir, ".claude", "skills", "go-style", "SKILL.md")
@@ -47,7 +47,7 @@ func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
 			if err := fs.Parse(args[1:]); err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
-			err := opts.Run(svc, nil)
+			err := opts.Run(wired.targets)
 			want := fmt.Sprintf(
 				"invalid --target %q (want agents|claude|cursor|opencode)",
 				testCase.bad,

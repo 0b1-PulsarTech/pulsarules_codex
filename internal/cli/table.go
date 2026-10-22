@@ -4,19 +4,9 @@ import (
 	"io"
 	"slices"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/clean"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/commitlint"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/evals"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/generate"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/list"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/packaging"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/uninstall"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/validate"
 )
 
 type entry struct {
@@ -35,17 +25,17 @@ func renderEntries() []entry {
 	return []entry{
 		{
 			name:  "generate",
-			build: func(flags.Environment) runner { return &generate.Command{} },
+			build: generateRunner,
 			terms: []command.Term{command.Opt("root"), command.Opt("out")},
 		},
 		{
 			name:  "validate",
-			build: func(flags.Environment) runner { return validate.Command{} },
+			build: validateRunner,
 			terms: []command.Term{command.Opt("root")},
 		},
 		{
 			name:  "list",
-			build: func(flags.Environment) runner { return list.Command{} },
+			build: listRunner,
 			terms: []command.Term{
 				command.Opt("root"),
 				command.Lit("[skills|rules|patterns|workflows]"),
@@ -58,7 +48,7 @@ func installEntries() []entry {
 	return []entry{
 		{
 			name:  "install",
-			build: func(env flags.Environment) runner { return install.New(env) },
+			build: installRunner,
 			terms: []command.Term{
 				command.Opt("root"),
 				command.Req("global", "project"),
@@ -79,7 +69,7 @@ func installEntries() []entry {
 		},
 		{
 			name:  "uninstall",
-			build: func(env flags.Environment) runner { return uninstall.New(env) },
+			build: uninstallRunner,
 			terms: []command.Term{
 				command.Req("global", "project"),
 				command.Opt("target"),
@@ -89,7 +79,7 @@ func installEntries() []entry {
 		},
 		{
 			name:  "package",
-			build: func(flags.Environment) runner { return &packaging.Command{} },
+			build: packageRunner,
 			terms: []command.Term{command.Opt("root"), command.Opt("out")},
 		},
 	}
@@ -99,12 +89,12 @@ func checkEntries() []entry {
 	return []entry{
 		{
 			name:  "commitlint",
-			build: func(flags.Environment) runner { return &commitlint.Command{} },
+			build: commitlintRunner,
 			terms: []command.Term{command.Opt("msg", "file"), command.Opt("project")},
 		},
 		{
 			name:  "governance",
-			build: func(env flags.Environment) runner { return governance.New(env) },
+			build: governanceRunner,
 			terms: []command.Term{
 				command.Opt("project"),
 				command.Opt("root"),
@@ -120,17 +110,17 @@ func checkEntries() []entry {
 		},
 		{
 			name:  "clean",
-			build: func(flags.Environment) runner { return &clean.Command{} },
+			build: cleanRunner,
 			terms: []command.Term{command.Opt("project"), command.Opt("write")},
 		},
 		{
 			name:  "evals",
-			build: func(flags.Environment) runner { return &evals.Command{} },
+			build: evalsRunner,
 			terms: []command.Term{command.Req("artifact"), command.Opt("scenario")},
 		},
 		{
 			name:            "hook",
-			build:           func(env flags.Environment) runner { return hook.New(env) },
+			build:           hookRunner,
 			terms:           []command.Term{command.Lit("<mode>")},
 			bootstrapFailed: hook.BootstrapFailed,
 		},

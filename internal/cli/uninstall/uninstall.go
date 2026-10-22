@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
-func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
-	if err := cmd.uninstall(svc.Targets); err != nil {
+func (cmd *Command) Run(targets *host.Registry) error {
+	if err := cmd.uninstall(targets); err != nil {
 		return fmt.Errorf("uninstall: %w", err)
 	}
 	return nil

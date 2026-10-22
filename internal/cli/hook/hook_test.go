@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
@@ -145,15 +144,15 @@ func TestHookStop_CatalogFailureSkipsGovernance(t *testing.T) {
 //nolint:paralleltest // captureStderr swaps os.Stderr.
 func TestCommand_Run_OtherModesDoNotNeedTheCatalog(t *testing.T) {
 	var resolved bool
-	svc := hookServices(t)
-	svc.LoadCatalog = func() (*emoji.Catalog, error) {
+	needs := hookServices(t)
+	needs.LoadCatalog = func() (*emoji.Catalog, error) {
 		resolved = true
 		return nil, errors.New("emoji catalog must not be resolved here")
 	}
 	stderr := captureStderr(t, func() {
 		if err := New(
 			flags.Environment{ProjectDir: t.TempDir()},
-		).Run(svc, []string{"pre-search"}); err != nil {
+		).Run(needs, []string{"pre-search"}); err != nil {
 			t.Errorf("Run(pre-search) = %v, want nil", err)
 		}
 	})
@@ -189,7 +188,7 @@ func TestCommand_Run_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			svc := hookServices(t)
+			needs := hookServices(t)
 			stdin, err := os.CreateTemp(t.TempDir(), "stdin")
 			if err != nil {
 				t.Fatalf("create stdin: %v", err)
@@ -206,7 +205,7 @@ func TestCommand_Run_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
 			defer func() { os.Stdin = savedStdin }()
 
 			out := captureStream(t, &os.Stdout, func() {
-				if err = New(testCase.env).Run(svc, []string{"pre-search"}); err != nil {
+				if err = New(testCase.env).Run(needs, []string{"pre-search"}); err != nil {
 					t.Errorf("Run(pre-search) = %v, want nil", err)
 				}
 			})
@@ -217,19 +216,19 @@ func TestCommand_Run_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
 	}
 }
 
-func hookServices(t *testing.T) bootstrap.Services {
+func hookServices(t *testing.T) Collaborators {
 	t.Helper()
 
 	index, assets, err := knowledge.Load("")
 	if err != nil {
 		t.Fatalf("load knowledge: %v", err)
 	}
-	return bootstrap.Services{
+	return Collaborators{
 		Index:     index,
 		Templates: templates.New(assets),
 		Loader:    testLoader(),
-		OpenLogger: func() (bootstrap.Logging, error) {
-			return bootstrap.Logging{
+		OpenLogger: func() (Logging, error) {
+			return Logging{
 				Logger: slog.New(slog.DiscardHandler),
 				Closer: io.NopCloser(nil),
 			}, nil
@@ -248,13 +247,13 @@ func (rec closeRecorder) Close() error {
 
 //nolint:paralleltest // captureStderr swaps os.Stderr.
 func TestCommand_Run_NeverFailsOnALoggerFailure(t *testing.T) {
-	svc := hookServices(t)
-	svc.OpenLogger = func() (bootstrap.Logging, error) {
-		return bootstrap.Logging{}, errors.New("build logger: boom")
+	needs := hookServices(t)
+	needs.OpenLogger = func() (Logging, error) {
+		return Logging{}, errors.New("build logger: boom")
 	}
 	var err error
 	stderr := captureStderr(t, func() {
-		err = New(flags.Environment{}).Run(svc, []string{"pre-search"})
+		err = New(flags.Environment{}).Run(needs, []string{"pre-search"})
 	})
 	if err != nil {
 		t.Errorf("Run() = %v, want nil so the turn is never blocked", err)
@@ -267,14 +266,14 @@ func TestCommand_Run_NeverFailsOnALoggerFailure(t *testing.T) {
 //nolint:paralleltest // captureStderr swaps os.Stderr.
 func TestCommand_Run_ClosesTheLogger(t *testing.T) {
 	var closed bool
-	svc := hookServices(t)
-	svc.OpenLogger = func() (bootstrap.Logging, error) {
-		return bootstrap.Logging{
+	needs := hookServices(t)
+	needs.OpenLogger = func() (Logging, error) {
+		return Logging{
 			Logger: slog.New(slog.DiscardHandler),
 			Closer: closeRecorder{closed: &closed},
 		}, nil
 	}
-	captureStderr(t, func() { _ = New(flags.Environment{}).Run(svc, []string{"pre-search"}) })
+	captureStderr(t, func() { _ = New(flags.Environment{}).Run(needs, []string{"pre-search"}) })
 	if !closed {
 		t.Error("Run left the logger open")
 	}

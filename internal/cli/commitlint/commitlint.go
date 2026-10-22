@@ -7,11 +7,13 @@ import (
 	"os"
 	"slices"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 type Command struct {
@@ -26,7 +28,12 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 	cmd.BindProject(fs, "project `DIR` for git history lookup")
 }
 
-func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
+func (cmd *Command) Run(
+	openRepository func() (*vcs.Repository, error),
+	index *knowledge.Index,
+	loadCatalog func() (*emoji.Catalog, error),
+	loader func() *loader.Loader,
+) error {
 	msg := cmd.msg
 	if msg == "" && cmd.file != "" {
 		// The file is a CLI flag value the operator supplies intentionally.
@@ -43,7 +50,7 @@ func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
 	// Without a repository there is no git history, so the emoji-repetition
 	// window silently passes; any other resolution failure (e.g. a DI
 	// wiring bug) must still surface as an error.
-	repo, err := command.OptionalRepository(svc.OpenRepository)
+	repo, err := command.OptionalRepository(openRepository)
 	if err != nil {
 		return err
 	}
@@ -52,12 +59,12 @@ func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
 		root = repo.Root()
 	}
 
-	catalog, err := svc.LoadCatalog()
+	catalog, err := loadCatalog()
 	if err != nil {
 		return fmt.Errorf("get emoji catalog: %w", err)
 	}
-	cfg, configFindings := svc.Loader.ForRoot(root)
-	sess := governance.NewSession(repo, svc.Index, catalog, cfg)
+	cfg, configFindings := loader().ForRoot(root)
+	sess := governance.NewSession(repo, index, catalog, cfg)
 	// An explicit empty status keeps this a pure message linter. A nil
 	// status would have discovery read the worktree, and content findings from
 	// unrelated dirty files would fail a commit whose message is fine.

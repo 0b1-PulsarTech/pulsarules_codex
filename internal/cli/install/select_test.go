@@ -116,7 +116,7 @@ func TestPromptSkillSelection(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			idx := testServices(t).Index
+			idx := testWiring(t).shared.Index
 			catalog := idx.SkillsOrdered()
 			var out strings.Builder
 			console := newPrompter(strings.NewReader(testCase.input), &out)

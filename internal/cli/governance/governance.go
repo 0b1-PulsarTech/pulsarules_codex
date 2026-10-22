@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
@@ -54,24 +53,34 @@ type governanceRun struct {
 	catalog *emoji.Catalog
 }
 
-func (cmd *Command) loadGovernance(svc bootstrap.Services) (governanceRun, error) {
-	repo, err := svc.OpenRepository()
+func (cmd *Command) loadGovernance(
+	openRepository func() (*vcs.Repository, error),
+	index *knowledge.Index,
+	loadCatalog func() (*emoji.Catalog, error),
+	loader func() *loader.Loader,
+) (governanceRun, error) {
+	repo, err := openRepository()
 	if err != nil {
 		return governanceRun{}, fmt.Errorf("open repository: %w", err)
 	}
-	cfg, err := cmd.governanceConfig(svc.Loader, repo.Root())
+	cfg, err := cmd.governanceConfig(loader(), repo.Root())
 	if err != nil {
 		return governanceRun{}, err
 	}
 
-	catalog, err := svc.LoadCatalog()
+	catalog, err := loadCatalog()
 	if err != nil {
 		return governanceRun{}, fmt.Errorf("get emoji catalog: %w", err)
 	}
-	return governanceRun{repo: repo, cfg: cfg, idx: svc.Index, catalog: catalog}, nil
+	return governanceRun{repo: repo, cfg: cfg, idx: index, catalog: catalog}, nil
 }
 
-func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
+func (cmd *Command) Run(
+	openRepository func() (*vcs.Repository, error),
+	index *knowledge.Index,
+	loadCatalog func() (*emoji.Catalog, error),
+	loader func() *loader.Loader,
+) error {
 	if cmd.ProjectDir() == "" {
 		return errProjectDirRequired
 	}
@@ -80,7 +89,7 @@ func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
 		return err
 	}
 
-	run, err := cmd.loadGovernance(svc)
+	run, err := cmd.loadGovernance(openRepository, index, loadCatalog, loader)
 	if err != nil {
 		return err
 	}

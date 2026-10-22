@@ -15,7 +15,7 @@ import (
 
 type governor struct {
 	index  *knowledge.Index
-	loader *loader.Loader
+	loader func() *loader.Loader
 }
 
 func (gov governor) check(
@@ -45,7 +45,7 @@ func (gov governor) changes(
 		) + "\n", 1
 	}
 	// The empty commit message is deliberate: only the git commit-msg hook validates one.
-	cfg, configFindings := gov.loader.ForRoot(repo.Root())
+	cfg, configFindings := gov.loader().ForRoot(repo.Root())
 	sess := governance.NewSession(repo, gov.index, catalog, cfg)
 	result := sess.Analyze(governance.Request{
 		Scope:  governance.ScopeChanged,

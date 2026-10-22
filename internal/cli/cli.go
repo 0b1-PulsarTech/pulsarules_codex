@@ -10,7 +10,7 @@ import (
 )
 
 func (call Invocation) Run(svc bootstrap.Services) error {
-	return call.runner.Run(svc, call.args)
+	return call.runner.run(svc, call.args)
 }
 
 func (call Invocation) HandleBootstrapErr(err error) int {
@@ -28,7 +28,7 @@ func ReportError(out io.Writer, err error) {
 func (call Invocation) BootstrapOptions() bootstrap.Options {
 	// The bootstrap package never imports cli, so the translation lives here.
 	projectDir := "."
-	if anchored, ok := call.runner.(anchored); ok {
+	if anchored, ok := call.runner.command.(anchored); ok {
 		projectDir = anchored.ProjectDir()
 	}
 	return bootstrap.Options{

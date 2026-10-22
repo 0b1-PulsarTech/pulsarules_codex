@@ -7,19 +7,18 @@ import (
 	"io"
 	"os"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/evals"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/validate"
+	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 type Command struct{}
 
 func (Command) Bind(*flag.FlagSet) {}
 
-func (Command) Run(svc bootstrap.Services, _ []string) error {
-	idx := svc.Index
+func (Command) Run(idx *knowledge.Index) error {
 	result := validate.Validate(
 		idx,
 		registry.RuleAnalyzersCheck,
