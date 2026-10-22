@@ -142,6 +142,10 @@ func (moves *moveContext) embedsIn(
 		if !isGoFile(file) || moves.relocated[file] || gosrc.IsOutsidePackage(file) {
 			continue
 		}
+		// The go tool never reads a build-ignored file, so even a broken one cannot embed.
+		if _, isIgnored := snap.clause(file); isIgnored {
+			continue
+		}
 		// An unreadable or unparsable embedder counts: reporting beats a silent false negative.
 		src, err := snap.blob(file)
 		if err != nil {

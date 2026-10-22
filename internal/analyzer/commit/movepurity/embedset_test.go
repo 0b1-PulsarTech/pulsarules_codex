@@ -198,6 +198,9 @@ func TestEmbedSet_SkipsEmbeddersNeverCompiled(t *testing.T) {
 	testCases := []renameCase{
 		row("build-ignored embedder", "internal/assets/embed.go",
 			"//go:build ignore\n\n"+embedSrc("assets", static)),
+		row("build-ignored generator that does not parse", "internal/assets/gen.go",
+			"//go:build ignore\n\npackage main\n// emits //go:embed lines\n"+
+				"func main() { {{.Body}} }\n"),
 		row("embedder under testdata", "internal/assets/testdata/gen.go",
 			embedSrc("gen", static)),
 		row("embedder under an underscore directory", "internal/assets/_gen/gen.go",
@@ -398,7 +401,7 @@ func unreadFindingCases() []findingCase {
 		},
 		{
 			failingHeadDir(row("directory cannot be listed"), "internal/assets"),
-			message + "internal/assets/ could not be read or parsed", advice,
+			message + "internal/assets/ could not be listed", advice,
 		},
 	}
 }

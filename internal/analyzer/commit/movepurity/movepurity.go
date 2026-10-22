@@ -2,6 +2,7 @@ package movepurity
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -116,10 +117,13 @@ func (moves *moveContext) embedFinding(
 		rename.OldPath, rename.NewPath, dir,
 	)
 	if unread := moves.embedUnread[rename.NewPath]; unread != "" {
+		failure := "could not be read or parsed"
+		if strings.HasSuffix(unread, "/") {
+			failure = "could not be listed"
+		}
 		message = fmt.Sprintf(
-			"move of %s -> %s may change the files a //go:embed pattern in %s includes: "+
-				"%s could not be read or parsed",
-			rename.OldPath, rename.NewPath, dir, unread,
+			"move of %s -> %s may change the files a //go:embed pattern in %s includes: %s %s",
+			rename.OldPath, rename.NewPath, dir, unread, failure,
 		)
 		advice = "fix that file, or commit this rename on its own"
 	}
