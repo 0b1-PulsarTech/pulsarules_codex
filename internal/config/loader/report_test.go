@@ -420,7 +420,7 @@ func TestCapReportCutsAtAProblem(t *testing.T) {
 	}
 }
 
-func TestClipHeadLeavesNoFragment(t *testing.T) {
+func TestShortenLeavesNoFragment(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -438,7 +438,7 @@ func TestClipHeadLeavesNoFragment(t *testing.T) {
 			got := printable.Shorten(testCase.text, testCase.limit)
 			requireNoFragment(t, got)
 			if !strings.HasSuffix(got, "...") || strings.HasSuffix(got, `\...`) {
-				t.Fatalf("ClipHead() = %q, want an ellipsis after no backslash", got)
+				t.Fatalf("Shorten() = %q, want an ellipsis after no backslash", got)
 			}
 		})
 	}

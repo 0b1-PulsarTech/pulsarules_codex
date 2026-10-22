@@ -1,6 +1,7 @@
 package printable
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -116,6 +117,80 @@ func TestTailStartVisitsOnlyTheTail(t *testing.T) {
 			}
 			if visited > testCase.wantVisited {
 				t.Errorf("sized %d units, want at most %d", visited, testCase.wantVisited)
+			}
+		})
+	}
+}
+
+func clipTail(text string, limit int) string { return clip(text, limit, len(ellipsis), tailEdge) }
+
+func fitHead(text string, limit int) string {
+	kept, whole := Fit(text, limit)
+	return fmt.Sprint(kept, " ", whole)
+}
+
+func TestShorten(t *testing.T) {
+	t.Parallel()
+
+	const bs, acc, ctl = `\`, "\u00e9", "\x01"
+	testCases := []struct {
+		name  string
+		clip  func(string, int) string
+		text  string
+		limit int
+		want  string
+	}{
+		{"head fits", Shorten, `a\x01`, 5, `a\x01`},
+		{"head keeps whole runes", Shorten, acc + acc + acc, 6, acc + acc + acc},
+		{"head cut", Shorten, "abcdefg", 6, "abc..."},
+		{"head escapes the kept part", Shorten, "a" + ctl + ctl + ctl, 12, `a\x01\x01...`},
+		{"head never splits a rune", Shorten, "ab" + acc + acc + "x", 6, "ab..."},
+		{"head literal backslash", Shorten, "ab" + bs + "xyzw", 6, "ab..."},
+		{"head cut escape start", Shorten, "ab" + bs + "xyzwv", 7, "ab..."},
+		{"head cut unicode start", Shorten, "ab" + bs + "u00zwvv", 9, "ab..."},
+		{"head backslash pairs", Shorten, "a" + bs + bs + bs + "xyzwvv", 8, "a..."},
+		{"head cut supplementary escape", Shorten, "ab" + bs + "U000e0001zz", 10, "ab..."},
+		{"head cut short unicode escape", Shorten, "ab" + bs + "u00e9zzz", 10, "ab..."},
+		{"head complete escape text", Shorten, "a" + bs + "x41yzvv", 8, "a" + bs + "x41..."},
+		{"head invalid bytes", Shorten, "a\xff\xff\xff", 8, `a\xff...`},
+		{"head backslash then rune", Shorten, "x" + bs + acc + "abcd", 4, "x..."},
+		{"tail fits", clipTail, "abc", 3, "abc"},
+		{"tail cut", clipTail, "abcdefg", 6, "...efg"},
+		{"tail never splits a rune", clipTail, "ab" + acc + acc + "x", 6, "..." + acc + "x"},
+		{"tail escapes the kept part", clipTail, "a" + ctl + ctl + ctl, 11, `...\x01\x01`},
+		{"tail literal backslash", clipTail, "xxxx" + bs + acc + "ab", 8, "..." + bs + acc + "ab"},
+		{"fit stops before the limit", fitHead, "ab" + ctl + "cd", 6, "ab" + ctl + " false"},
+		{"fit keeps all", fitHead, "ab", 2, "ab true"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := testCase.clip(testCase.text, testCase.limit); got != testCase.want {
+				t.Fatalf("got %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestShortenPath(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name, text string
+		limit      int
+		want       string
+	}{
+		{"fits", "a/b.yaml", 8, "a/b.yaml"},
+		{"keeps the tail", "dddd/.git/p.yaml", 12, ".../p.yaml"},
+		{"keeps a quoted tail", "d\xffd/p\x01", 12, "...d/p\x01"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := ShortenPath(testCase.text, testCase.limit); got != testCase.want {
+				t.Fatalf("ShortenPath() = %q, want %q", got, testCase.want)
 			}
 		})
 	}

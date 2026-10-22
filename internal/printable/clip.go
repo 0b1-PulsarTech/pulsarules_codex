@@ -6,6 +6,8 @@ import (
 	"unicode/utf8"
 )
 
+const ellipsis = "..."
+
 func HeadEnd(text string, limit int, size func(string) int) int {
 	used := 0
 	pos := 0
@@ -50,21 +52,19 @@ func Tail(text string, limit int) string {
 	return Line(text[tailStart(text, limit, lineSize):])
 }
 
-const Ellipsis = "..."
-
 type edge int
 
-const headEdge, TailEdge edge = 0, 1
+const headEdge, tailEdge edge = 0, 1
 
 func Shorten(text string, limit int) string {
-	return Clip(text, limit, len(Ellipsis), headEdge)
+	return clip(text, limit, len(ellipsis), headEdge)
 }
 
 func Fit(text string, limit int) (string, bool) {
 	return fit(text, limit, headEdge, escapedWidth)
 }
 
-func Clip(text string, limit, reserve int, side edge) string {
+func clip(text string, limit, reserve int, side edge) string {
 	kept, whole := fit(text, limit, side, escapedWidth)
 	if !whole {
 		kept, _ = fit(text, max(limit-reserve, 0), side, escapedWidth)
@@ -72,10 +72,10 @@ func Clip(text string, limit, reserve int, side edge) string {
 	switch {
 	case whole:
 		return Line(kept)
-	case side == TailEdge:
-		return Ellipsis + Line(kept)
+	case side == tailEdge:
+		return ellipsis + Line(kept)
 	}
-	return Line(trimBrokenEscape(kept)) + Ellipsis
+	return Line(trimBrokenEscape(kept)) + ellipsis
 }
 
 func trimBrokenEscape(kept string) string {
@@ -108,7 +108,7 @@ func fit(text string, limit int, side edge, width func(string) int) (string, boo
 		if used += width(unit); used > limit {
 			break
 		}
-		if side == TailEdge {
+		if side == tailEdge {
 			hi -= len(unit)
 		} else {
 			lo += len(unit)
@@ -117,14 +117,14 @@ func fit(text string, limit int, side edge, width func(string) int) (string, boo
 	switch {
 	case lo >= hi:
 		return text, true
-	case side == TailEdge:
+	case side == tailEdge:
 		return text[hi:], false
 	}
 	return text[:lo], false
 }
 
 func edgeUnit(text string, side edge) string {
-	if side == TailEdge {
+	if side == tailEdge {
 		_, size := utf8.DecodeLastRuneInString(text)
 		return text[len(text)-size:]
 	}
@@ -139,8 +139,10 @@ func ShortenPath(name string, limit int) string {
 		return name
 	}
 	// Room for the quotes Path may add and for the ellipsis.
-	kept, _ := fit(name, limit-len(`""`)-len(Ellipsis), TailEdge, quotedWidth)
-	return Ellipsis + kept
+	kept, _ := fit(name, limit-len(`""`)-len(ellipsis), tailEdge, quotedWidth)
+	return ellipsis + kept
 }
 
 func quotedWidth(unit string) int { return len(strconv.Quote(unit)) - len(`""`) }
+
+const Ellipsis = "..."

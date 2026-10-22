@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
 func decoderTextCases() []parseCase {
@@ -410,76 +408,23 @@ func TestCollectorCapsBytes(t *testing.T) {
 	}
 }
 
-func clipTail(text string, limit int) string {
-	return printable.Clip(text, limit, len(printable.Ellipsis), printable.TailEdge)
-}
-
-func parseText(text string, _ int) string { return clipParseText(text) }
-
-func fitHead(text string, limit int) string {
-	kept, whole := printable.Fit(text, limit)
-	return fmt.Sprint(kept, " ", whole)
-}
-
-func TestClip(t *testing.T) {
+func TestClipParseText(t *testing.T) {
 	t.Parallel()
 
 	long := strings.Repeat("x", 100)
-	const bs, acc, ctl = `\`, "\u00e9", "\x01"
 	testCases := []struct {
-		name  string
-		clip  func(string, int) string
-		text  string
-		limit int
-		want  string
+		name string
+		text string
+		want string
 	}{
-		{"head fits", printable.Shorten, `a\x01`, 5, `a\x01`},
-		{"head keeps whole runes", printable.Shorten, acc + acc + acc, 6, acc + acc + acc},
-		{"head cut", printable.Shorten, "abcdefg", 6, "abc..."},
-		{
-			"head escapes the kept part",
-			printable.Shorten,
-			"a" + ctl + ctl + ctl,
-			12,
-			`a\x01\x01...`,
-		},
-		{"head never splits a rune", printable.Shorten, "ab" + acc + acc + "x", 6, "ab..."},
-		{"head literal backslash", printable.Shorten, "ab" + bs + "xyzw", 6, "ab..."},
-		{"head cut escape start", printable.Shorten, "ab" + bs + "xyzwv", 7, "ab..."},
-		{"head cut unicode start", printable.Shorten, "ab" + bs + "u00zwvv", 9, "ab..."},
-		{"head backslash pairs", printable.Shorten, "a" + bs + bs + bs + "xyzwvv", 8, "a..."},
-		{
-			"head cut supplementary escape",
-			printable.Shorten,
-			"ab" + bs + "U000e0001zz",
-			10,
-			"ab...",
-		},
-		{"head cut short unicode escape", printable.Shorten, "ab" + bs + "u00e9zzz", 10, "ab..."},
-		{
-			"head complete escape text",
-			printable.Shorten,
-			"a" + bs + "x41yzvv",
-			8,
-			"a" + bs + "x41...",
-		},
-		{"head invalid bytes", printable.Shorten, "a\xff\xff\xff", 8, `a\xff...`},
-		{"head backslash then rune", printable.Shorten, "x" + bs + acc + "abcd", 4, "x..."},
-		{"tail fits", clipTail, "abc", 3, "abc"},
-		{"tail cut", clipTail, "abcdefg", 6, "...efg"},
-		{"tail never splits a rune", clipTail, "ab" + acc + acc + "x", 6, "..." + acc + "x"},
-		{"tail escapes the kept part", clipTail, "a" + ctl + ctl + ctl, 11, `...\x01\x01`},
-		{"tail literal backslash", clipTail, "xxxx" + bs + acc + "ab", 8, "..." + bs + acc + "ab"},
-		{"fit stops before the limit", fitHead, "ab" + ctl + "cd", 6, "ab" + ctl + " false"},
-		{"fit keeps all", fitHead, "ab", 2, "ab true"},
-		{"parse short", parseText, "line 3: bad", 0, "line 3: bad"},
-		{"parse line", parseText, "line 1: " + long, 0, "line 1: " + long[:80] + "..."},
-		{"parse word", parseText, "line x: " + long, 0, "line x: " + long[:72] + "..."},
+		{"short", "line 3: bad", "line 3: bad"},
+		{"line", "line 1: " + long, "line 1: " + long[:80] + "..."},
+		{"word", "line x: " + long, "line x: " + long[:72] + "..."},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			if got := testCase.clip(testCase.text, testCase.limit); got != testCase.want {
+			if got := clipParseText(testCase.text); got != testCase.want {
 				t.Fatalf("got %q, want %q", got, testCase.want)
 			}
 		})
