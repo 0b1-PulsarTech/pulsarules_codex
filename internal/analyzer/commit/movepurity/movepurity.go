@@ -102,8 +102,11 @@ func embedSetFinding(reporter finding.Reporter, rename pass.Rename, dir string) 
 	advice := "move every file the pattern covers in the same commit, " +
 		"and keep the new location free of other files"
 	if !isGoFile(rename.NewPath) {
-		advice = "keep the file where the pattern finds it, " +
-			"or commit the move on its own with the embed pattern updated"
+		advice = "commit this rename on its own and say in its message " +
+			"which embedded files it adds or removes"
+	}
+	if dir == "." {
+		dir = "the module root"
 	}
 	return reporter.At(
 		rename.NewPath,

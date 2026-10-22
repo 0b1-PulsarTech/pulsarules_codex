@@ -284,14 +284,43 @@ func TestEmbedSet_NotCovered(t *testing.T) {
 	runRenameCases(t, testCases)
 }
 
+func rootAssetRow() renameCase {
+	row := assetRow(
+		"asset leaves a directory embedded at the module root",
+		"//go:embed static", "static/logo.png", "other/logo.png",
+	)
+	row.head = map[string]string{
+		"embed.go": embedSrc("assets", "//go:embed static"), "static/logo.png": "asset\n",
+	}
+	row.staged = map[string]string{
+		"embed.go": embedSrc("assets", "//go:embed static"), "other/logo.png": "asset\n",
+	}
+	return row
+}
+
+func landsAtRootRow() renameCase {
+	return renameCase{
+		name: "byte-identical Go file lands at the module root",
+		head: map[string]string{
+			"a/embed.go": embedSrc("assets", "//go:embed x.txt"),
+			"a/x.txt":    "x\n",
+		},
+		staged: map[string]string{
+			"embed.go": embedSrc("assets", "//go:embed x.txt"),
+			"a/x.txt":  "x\n",
+		},
+		renames: []pass.Rename{{OldPath: "a/embed.go", NewPath: "embed.go", Score: 100}},
+	}
+}
+
 func TestEmbedSet_Findings(t *testing.T) {
 	t.Parallel()
 
 	const lead = "changes the files a //go:embed pattern in "
 	const goAdvice = "move every file the pattern covers in the same commit, " +
 		"and keep the new location free of other files"
-	const assetAdvice = "keep the file where the pattern finds it, " +
-		"or commit the move on its own with the embed pattern updated"
+	const assetAdvice = "commit this rename on its own and say in its message " +
+		"which embedded files it adds or removes"
 	left := embedRow("embedded file stays behind", "//go:embed public.txt", nil)
 	identical := renameCase{
 		name: "byte-identical Go file leaves its embedded file behind",
@@ -325,6 +354,16 @@ func TestEmbedSet_Findings(t *testing.T) {
 			"move of internal/assets/static/logo.png -> internal/other/logo.png " + lead +
 				"internal/assets includes",
 			assetAdvice,
+		},
+		{
+			rootAssetRow(),
+			"move of static/logo.png -> other/logo.png " + lead + "the module root includes",
+			assetAdvice,
+		},
+		{
+			landsAtRootRow(),
+			"move of a/embed.go -> embed.go " + lead + "the module root includes",
+			goAdvice,
 		},
 	}
 	for _, testCase := range testCases {
