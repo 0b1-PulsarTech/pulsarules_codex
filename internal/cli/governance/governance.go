@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
@@ -80,7 +81,7 @@ func (cmd *Command) Run(inj remy.Injector, _ []string) error {
 	if cmd.ProjectDir() == "" {
 		return errProjectDirRequired
 	}
-	scope, err := governance.ParseScope(cmd.scope)
+	scope, err := parseScope(cmd.scope)
 	if err != nil {
 		return err
 	}
@@ -98,6 +99,18 @@ func (cmd *Command) Run(inj remy.Injector, _ []string) error {
 	sess := governance.NewSession(run.repo, run.idx, run.catalog, run.cfg)
 	result := sess.Analyze(governance.Request{Scope: scope, Files: files})
 	return reportGovernance(os.Stderr, result)
+}
+
+func parseScope(raw string) (governance.Scope, error) {
+	scope, err := governance.ParseScope(raw)
+	if unknown, ok := errors.AsType[governance.UnknownScopeError](err); ok {
+		return scope, fmt.Errorf(
+			"invalid --scope %q (want %s)",
+			unknown.Name,
+			strings.Join(governance.ScopeNames(), "|"),
+		)
+	}
+	return scope, err
 }
 
 func reportGovernance(out io.Writer, report findings.Report) error {

@@ -15,6 +15,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -390,5 +391,37 @@ func TestRunGovernance_CatalogFailure(t *testing.T) {
 	err = (&Command{project: dir}).Run(inj, nil)
 	if err == nil || !strings.Contains(err.Error(), "get emoji catalog") {
 		t.Fatalf("Run() error = %v, want one naming %q", err, "get emoji catalog")
+	}
+}
+
+func TestParseScope(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		raw     string
+		want    governance.Scope
+		wantErr string
+	}{
+		{name: "empty is the full scope", raw: "", want: governance.ScopeFull},
+		{name: "commit", raw: "commit", want: governance.ScopeCommit},
+		{
+			name: "unknown names the flag", raw: "bogus", want: governance.ScopeFull,
+			wantErr: `invalid --scope "bogus" (want full|commit|changed)`,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := parseScope(testCase.raw)
+			if got != testCase.want {
+				t.Errorf("parseScope(%q) = %v, want %v", testCase.raw, got, testCase.want)
+			}
+			if (err == nil) != (testCase.wantErr == "") ||
+				err != nil && err.Error() != testCase.wantErr {
+				t.Fatalf("parseScope(%q) error = %v, want %q", testCase.raw, err, testCase.wantErr)
+			}
+		})
 	}
 }
