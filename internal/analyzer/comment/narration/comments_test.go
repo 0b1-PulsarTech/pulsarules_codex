@@ -106,10 +106,10 @@ func TestScanSegments(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name   string
-		ext    string
-		source string
-		want   []segment
+		name string
+		ext  string
+		src  string
+		want []segment
 	}{
 		{"line comment", ".py", "x = 1 # a\n", []segment{{1, " a"}}},
 		{"empty line comment", ".py", "x\n#\n", []segment{{2, ""}}},
@@ -141,9 +141,9 @@ func TestScanSegments(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := scanSegments(testCase.source, testCase.ext)
+			got := scanSegments(testCase.src, testCase.ext)
 			if !slices.Equal(got, testCase.want) {
-				t.Fatalf("scanSegments(%q) = %v, want %v", testCase.source, got, testCase.want)
+				t.Fatalf("scanSegments(%q) = %v, want %v", testCase.src, got, testCase.want)
 			}
 		})
 	}
@@ -152,9 +152,9 @@ func TestScanSegments(t *testing.T) {
 func TestScanFileDartBlockCommentsNest(t *testing.T) {
 	t.Parallel()
 
-	source := "/* outer one /* inner two */ outer three\n   the old code used to be nested */\n"
+	src := "/* outer one /* inner two */ outer three\n   the old code used to be nested */\n"
 	fc := pass.FileChange{Path: "f.dart", Extension: ".dart"}
-	got := scanFile([]byte(source), fc, NewAnalyzer().reporter, parsedGo{})
+	got := scanFile([]byte(src), fc, NewAnalyzer().reporter, parsedGo{})
 	if len(got) == 0 || got[0].Line != 2 {
 		t.Fatalf("findings = %+v, want the first on line 2", got)
 	}

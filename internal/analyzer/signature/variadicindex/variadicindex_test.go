@@ -42,7 +42,7 @@ func TestAnalyze(t *testing.T) {
 
 type checkCase struct {
 	name   string
-	source string
+	src    string
 	expect int
 }
 
@@ -53,7 +53,7 @@ func TestCheckFile(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := analyzeSource(t, testCase.source)
+			got := analyzeSource(t, testCase.src)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d: %v", len(got), testCase.expect, got)
 			}
@@ -67,19 +67,19 @@ func TestSuggestion(t *testing.T) {
 	const want = "take a named options struct, or range over the values instead of indexing them"
 	testCases := []checkCase{
 		{
-			name:   "plain index",
-			source: "package foo\nfunc f(opts ...int) int { return opts[0] }\n",
+			name: "plain index",
+			src:  "package foo\nfunc f(opts ...int) int { return opts[0] }\n",
 		},
 		{
 			name: "index inside a range over the same variadic",
-			source: "package foo\nfunc f(opts ...int) (n int) {\n\tfor i := range opts {\n" +
+			src: "package foo\nfunc f(opts ...int) (n int) {\n\tfor i := range opts {\n" +
 				"\t\tn += opts[i]\n\t}\n\treturn\n}\n",
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := analyzeSource(t, testCase.source)
+			got := analyzeSource(t, testCase.src)
 			if len(got) != 1 || got[0].Suggestion != want {
 				t.Fatalf("got %v, want one finding suggesting %q", got, want)
 			}
@@ -91,56 +91,56 @@ func flaggedCases() []checkCase {
 	return []checkCase{
 		{
 			name:   "first element flagged",
-			source: "package foo\nfunc f(opts ...int) int { return opts[0] }\n",
+			src:    "package foo\nfunc f(opts ...int) int { return opts[0] }\n",
 			expect: 1,
 		},
 		{
 			name:   "any index flagged",
-			source: "package foo\nfunc f(n int, opts ...int) int { return opts[n] + opts[1] }\n",
+			src:    "package foo\nfunc f(n int, opts ...int) int { return opts[n] + opts[1] }\n",
 			expect: 2,
 		},
 		{
 			name: "method flagged",
-			source: "package foo\ntype T struct{}\nfunc (T) f(opts ...int) int { return " +
+			src: "package foo\ntype T struct{}\nfunc (T) f(opts ...int) int { return " +
 				"opts[0] }\n",
 			expect: 1,
 		},
 		{
 			name:   "func literal flagged",
-			source: "package foo\nvar f = func(opts ...int) int { return opts[0] }\n",
+			src:    "package foo\nvar f = func(opts ...int) int { return opts[0] }\n",
 			expect: 1,
 		},
 		{
 			name: "index inside nested block flagged",
-			source: "package foo\nfunc f(opts ...int) int {\n\tif len(opts) > 0 {\n" +
+			src: "package foo\nfunc f(opts ...int) int {\n\tif len(opts) > 0 {\n" +
 				"\t\treturn opts[0]\n\t}\n\treturn 0\n}\n",
 			expect: 1,
 		},
 		{
-			name:   "len is fine",
-			source: "package foo\nfunc f(opts ...int) int { return len(opts) }\n",
+			name: "len is fine",
+			src:  "package foo\nfunc f(opts ...int) int { return len(opts) }\n",
 		},
 		{
 			name: "range is fine",
-			source: "package foo\nfunc f(opts ...int) (n int) {\n" +
+			src: "package foo\nfunc f(opts ...int) (n int) {\n" +
 				"\tfor _, o := range opts {\n\t\tn += o\n\t}\n\treturn\n}\n",
 		},
 		{
-			name:   "slicing is not flagged",
-			source: "package foo\nfunc f(opts ...int) []int { return opts[1:] }\n",
+			name: "slicing is not flagged",
+			src:  "package foo\nfunc f(opts ...int) []int { return opts[1:] }\n",
 		},
 		{
-			name:   "non-variadic last param ignored",
-			source: "package foo\nfunc f(opts []int) int { return opts[0] }\n",
+			name: "non-variadic last param ignored",
+			src:  "package foo\nfunc f(opts []int) int { return opts[0] }\n",
 		},
 	}
 }
 
-func analyzeSource(t *testing.T, source string) []finding.Finding {
+func analyzeSource(t *testing.T, src string) []finding.Finding {
 	t.Helper()
 
 	cache := astcache.New()
-	file, err := cache.Parse("foo.go", []byte(source))
+	file, err := cache.Parse("foo.go", []byte(src))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func typeCheck(t *testing.T, fset *token.FileSet, file *ast.File) {
 func TestAnalyze_EndToEnd(t *testing.T) {
 	t.Parallel()
 
-	sourceItem := "package foo\nfunc f(opts ...int) int { return opts[0] }\n"
+	src := "package foo\nfunc f(opts ...int) int { return opts[0] }\n"
 	testCases := []struct {
 		name      string
 		generated bool
@@ -179,13 +179,13 @@ func TestAnalyze_EndToEnd(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			cache := astcache.New()
-			if _, err := cache.Parse("foo.go", []byte(sourceItem)); err != nil {
+			if _, err := cache.Parse("foo.go", []byte(src)); err != nil {
 				t.Fatal(err)
 			}
 			ctx := &pass.Context{
 				ASTCache: cache,
 				Sources: source.NewFSProvider(fstest.MapFS{
-					"foo.go": &fstest.MapFile{Data: []byte(sourceItem)},
+					"foo.go": &fstest.MapFile{Data: []byte(src)},
 				}, "", source.SkipSet{}),
 				ChangedFiles: []pass.FileChange{
 					{Path: "foo.go", Extension: ".go", Generated: testCase.generated},

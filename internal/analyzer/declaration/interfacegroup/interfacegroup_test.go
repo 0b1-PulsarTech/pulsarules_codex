@@ -42,7 +42,7 @@ func TestAnalyze(t *testing.T) {
 
 type checkCase struct {
 	name     string
-	source   string
+	src      string
 	expect   int
 	wantLine int
 	wantMsg  string
@@ -52,18 +52,18 @@ func checkCases() []checkCase {
 	return []checkCase{
 		{
 			name:     "two ungrouped flagged at the first",
-			source:   "package foo\ntype A interface{ F() }\ntype B interface{ G() }\n",
+			src:      "package foo\ntype A interface{ F() }\ntype B interface{ G() }\n",
 			expect:   1,
 			wantLine: 2,
 			wantMsg:  "file declares 2 interfaces outside a single type (...) block",
 		},
 		{
-			name:   "grouped in one block is fine",
-			source: "package foo\ntype (\n\tA interface{ F() }\n\tB interface{ G() }\n)\n",
+			name: "grouped in one block is fine",
+			src:  "package foo\ntype (\n\tA interface{ F() }\n\tB interface{ G() }\n)\n",
 		},
 		{
 			name: "grouped block plus a stray flagged at the stray",
-			source: "package foo\ntype (\n\tA interface{ F() }\n\tB interface{ G() }\n)\n" +
+			src: "package foo\ntype (\n\tA interface{ F() }\n\tB interface{ G() }\n)\n" +
 				"type C interface{ H() }\n",
 			expect:   1,
 			wantLine: 6,
@@ -71,51 +71,51 @@ func checkCases() []checkCase {
 		},
 		{
 			name:     "block of one plus a stray flagged once",
-			source:   "package foo\ntype (\n\tA interface{ F() }\n)\ntype B interface{ G() }\n",
+			src:      "package foo\ntype (\n\tA interface{ F() }\n)\ntype B interface{ G() }\n",
 			expect:   1,
 			wantLine: 5,
 			wantMsg:  "file declares 1 interface outside a single type (...) block",
 		},
 		{
-			name:   "alias to an interface literal is not a declaration",
-			source: "package foo\ntype A = interface{ F() }\ntype B interface{ G() }\n",
+			name: "alias to an interface literal is not a declaration",
+			src:  "package foo\ntype A = interface{ F() }\ntype B interface{ G() }\n",
 		},
 		{
 			name: "alias does not count toward the total",
-			source: "package foo\ntype A = interface{ F() }\ntype B interface{ G() }\n" +
+			src: "package foo\ntype A = interface{ F() }\ntype B interface{ G() }\n" +
 				"type C interface{ H() }\n",
 			expect:   1,
 			wantLine: 3,
 			wantMsg:  "file declares 2 interfaces outside a single type (...) block",
 		},
 		{
-			name:   "alias inside the group is not a declaration",
-			source: "package foo\ntype (\n\tA = interface{ F() }\n\tB interface{ G() }\n)\n",
+			name: "alias inside the group is not a declaration",
+			src:  "package foo\ntype (\n\tA = interface{ F() }\n\tB interface{ G() }\n)\n",
 		},
 		{
 			name: "two stray blocks of one",
-			source: "package foo\ntype (\n\tA interface{ F() }\n)\ntype (\n" +
+			src: "package foo\ntype (\n\tA interface{ F() }\n)\ntype (\n" +
 				"\tB interface{ G() }\n)\n",
 			expect:   1,
 			wantLine: 6,
 			wantMsg:  "file declares 1 interface outside a single type (...) block",
 		},
 		{
-			name:   "single interface is fine",
-			source: "package foo\ntype A interface{ F() }\n",
+			name: "single interface is fine",
+			src:  "package foo\ntype A interface{ F() }\n",
 		},
 		{
-			name:   "non-interface types ignored",
-			source: "package foo\ntype A struct{}\ntype B int\ntype C interface{ F() }\n",
+			name: "non-interface types ignored",
+			src:  "package foo\ntype A struct{}\ntype B int\ntype C interface{ F() }\n",
 		},
 		{
 			name: "interfaces mixed with structs in one block",
-			source: "package foo\ntype (\n\tA interface{ F() }\n\tS struct{}\n" +
+			src: "package foo\ntype (\n\tA interface{ F() }\n\tS struct{}\n" +
 				"\tB interface{ G() }\n)\n",
 		},
 		{
-			name:   "no type declarations",
-			source: "package foo\nvar x = 1\nfunc f() {}\n",
+			name: "no type declarations",
+			src:  "package foo\nvar x = 1\nfunc f() {}\n",
 		},
 	}
 }
@@ -127,7 +127,7 @@ func TestCheckFile(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := analyzeSource(t, testCase.source)
+			got := analyzeSource(t, testCase.src)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d: %v", len(got), testCase.expect, got)
 			}
@@ -141,11 +141,11 @@ func TestCheckFile(t *testing.T) {
 	}
 }
 
-func analyzeSource(t *testing.T, source string) []finding.Finding {
+func analyzeSource(t *testing.T, src string) []finding.Finding {
 	t.Helper()
 
 	cache := astcache.New()
-	file, err := cache.Parse("foo.go", []byte(source))
+	file, err := cache.Parse("foo.go", []byte(src))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +171,7 @@ func typeCheck(t *testing.T, fset *token.FileSet, file *ast.File) {
 func TestAnalyze_EndToEnd(t *testing.T) {
 	t.Parallel()
 
-	sourceItem := "package foo\ntype A interface{ F() }\ntype B interface{ G() }\n"
+	src := "package foo\ntype A interface{ F() }\ntype B interface{ G() }\n"
 	testCases := []struct {
 		name      string
 		generated bool
@@ -184,13 +184,13 @@ func TestAnalyze_EndToEnd(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			cache := astcache.New()
-			if _, err := cache.Parse("foo.go", []byte(sourceItem)); err != nil {
+			if _, err := cache.Parse("foo.go", []byte(src)); err != nil {
 				t.Fatal(err)
 			}
 			ctx := &pass.Context{
 				ASTCache: cache,
 				Sources: source.NewFSProvider(fstest.MapFS{
-					"foo.go": &fstest.MapFile{Data: []byte(sourceItem)},
+					"foo.go": &fstest.MapFile{Data: []byte(src)},
 				}, "", source.SkipSet{}),
 				ChangedFiles: []pass.FileChange{
 					{Path: "foo.go", Extension: ".go", Generated: testCase.generated},

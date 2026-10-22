@@ -34,12 +34,12 @@ func (brokenParseProvider) Summarize(
 	_ context.Context, corpus syntax.Corpus,
 ) (map[string]*syntax.File, error) {
 	files := map[string]*syntax.File{}
-	for _, source := range corpus.Sources {
-		file := &syntax.File{Path: source.Path}
-		if source.Path == "bad.go" {
+	for _, src := range corpus.Sources {
+		file := &syntax.File{Path: src.Path}
+		if src.Path == "bad.go" {
 			file.ParseError = "broken"
 		}
-		files[source.Path] = file
+		files[src.Path] = file
 	}
 	return files, nil
 }

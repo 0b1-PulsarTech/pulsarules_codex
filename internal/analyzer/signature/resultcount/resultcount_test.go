@@ -42,7 +42,7 @@ func TestAnalyze(t *testing.T) {
 
 type checkCase struct {
 	name   string
-	source string
+	src    string
 	limit  int
 	expect int
 }
@@ -54,7 +54,7 @@ func TestCheckFile(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := analyzeSource(t, testCase.source, testCase.limit)
+			got := analyzeSource(t, testCase.src, testCase.limit)
 			if len(got) != testCase.expect {
 				t.Fatalf("got %d findings, want %d: %v", len(got), testCase.expect, got)
 			}
@@ -65,38 +65,38 @@ func TestCheckFile(t *testing.T) {
 func firstCases() []checkCase {
 	return []checkCase{
 		{
-			name:   "three results ok",
-			source: "package foo\nfunc f() (int, string, error) { return 0, \"\", nil }\n",
-			limit:  3,
+			name:  "three results ok",
+			src:   "package foo\nfunc f() (int, string, error) { return 0, \"\", nil }\n",
+			limit: 3,
 		},
 		{
 			name: "four results flagged",
-			source: "package foo\nfunc f() (int, string, bool, error) " +
+			src: "package foo\nfunc f() (int, string, bool, error) " +
 				"{ return 0, \"\", false, nil }\n",
 			limit:  3,
 			expect: 1,
 		},
 		{
 			name:   "one field with four names flagged",
-			source: "package foo\nfunc f() (a, b, c, d int) { return }\n",
+			src:    "package foo\nfunc f() (a, b, c, d int) { return }\n",
 			limit:  3,
 			expect: 1,
 		},
 		{
-			name:   "grouped names count individually",
-			source: "package foo\nfunc f() (a, b int, c string) { return }\n",
-			limit:  3,
+			name:  "grouped names count individually",
+			src:   "package foo\nfunc f() (a, b int, c string) { return }\n",
+			limit: 3,
 		},
 		{
 			name: "method flagged",
-			source: "package foo\ntype T struct{}\nfunc (T) f() (int, int, int, int) " +
+			src: "package foo\ntype T struct{}\nfunc (T) f() (int, int, int, int) " +
 				"{ return 0, 0, 0, 0 }\n",
 			limit:  3,
 			expect: 1,
 		},
 		{
 			name:   "interface method flagged",
-			source: "package foo\ntype T interface {\n\tF() (int, int, int, int)\n}\n",
+			src:    "package foo\ntype T interface {\n\tF() (int, int, int, int)\n}\n",
 			limit:  3,
 			expect: 1,
 		},
@@ -106,60 +106,60 @@ func firstCases() []checkCase {
 func secondCases() []checkCase {
 	return []checkCase{
 		{
-			name:   "interface method within the limit",
-			source: "package foo\ntype T interface {\n\tF() (int, error)\n}\n",
-			limit:  3,
+			name:  "interface method within the limit",
+			src:   "package foo\ntype T interface {\n\tF() (int, error)\n}\n",
+			limit: 3,
 		},
 		{
-			name:   "embedded interface ignored",
-			source: "package foo\ntype R interface{ Read() int }\ntype T interface {\n\tR\n}\n",
-			limit:  3,
+			name:  "embedded interface ignored",
+			src:   "package foo\ntype R interface{ Read() int }\ntype T interface {\n\tR\n}\n",
+			limit: 3,
 		},
 		{
 			name:   "func literal flagged",
-			source: "package foo\nvar f = func() (int, int, int, int) { return 0, 0, 0, 0 }\n",
+			src:    "package foo\nvar f = func() (int, int, int, int) { return 0, 0, 0, 0 }\n",
 			limit:  3,
 			expect: 1,
 		},
 		{
-			name:   "no results",
-			source: "package foo\nfunc f() {}\n",
-			limit:  3,
+			name:  "no results",
+			src:   "package foo\nfunc f() {}\n",
+			limit: 3,
 		},
 		{
 			name:   "func type declaration flagged",
-			source: "package foo\ntype H func() (int, int, int, int)\n",
+			src:    "package foo\ntype H func() (int, int, int, int)\n",
 			limit:  3,
 			expect: 1,
 		},
 		{
-			name:   "func type declaration within the limit",
-			source: "package foo\ntype H func() (int, int)\n",
-			limit:  3,
+			name:  "func type declaration within the limit",
+			src:   "package foo\ntype H func() (int, int)\n",
+			limit: 3,
 		},
 		{
-			name:   "struct field func type out of scope",
-			source: "package foo\ntype S struct{ F func() (int, int, int, int) }\n",
-			limit:  3,
+			name:  "struct field func type out of scope",
+			src:   "package foo\ntype S struct{ F func() (int, int, int, int) }\n",
+			limit: 3,
 		},
 		{
-			name:   "func typed parameter out of scope",
-			source: "package foo\nfunc f(g func() (int, int, int, int)) {}\n",
-			limit:  3,
+			name:  "func typed parameter out of scope",
+			src:   "package foo\nfunc f(g func() (int, int, int, int)) {}\n",
+			limit: 3,
 		},
 		{
-			name:   "non func type declaration",
-			source: "package foo\ntype H int\n",
-			limit:  3,
+			name:  "non func type declaration",
+			src:   "package foo\ntype H int\n",
+			limit: 3,
 		},
 	}
 }
 
-func analyzeSource(t *testing.T, source string, limit int) []finding.Finding {
+func analyzeSource(t *testing.T, src string, limit int) []finding.Finding {
 	t.Helper()
 
 	cache := astcache.New()
-	file, err := cache.Parse("foo.go", []byte(source))
+	file, err := cache.Parse("foo.go", []byte(src))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,17 +172,17 @@ func analyzeSource(t *testing.T, source string, limit int) []finding.Finding {
 	)
 }
 
-func buildCtx(t *testing.T, sourceItem string, params pass.ParamSet) *pass.Context {
+func buildCtx(t *testing.T, src string, params pass.ParamSet) *pass.Context {
 	t.Helper()
 
 	cache := astcache.New()
-	if _, err := cache.Parse("foo.go", []byte(sourceItem)); err != nil {
+	if _, err := cache.Parse("foo.go", []byte(src)); err != nil {
 		t.Fatal(err)
 	}
 	ctx := &pass.Context{
 		ASTCache: cache,
 		Sources: source.NewFSProvider(fstest.MapFS{
-			"foo.go": &fstest.MapFile{Data: []byte(sourceItem)},
+			"foo.go": &fstest.MapFile{Data: []byte(src)},
 		}, "", source.SkipSet{}),
 		ChangedFiles: []pass.FileChange{{Path: "foo.go", Extension: ".go"}},
 	}
@@ -210,27 +210,27 @@ func TestAnalyze_EndToEnd(t *testing.T) {
 	four := "package foo\nfunc f() (int, int, int, int) { return 0, 0, 0, 0 }\n"
 	testCases := []struct {
 		name      string
-		source    string
+		src       string
 		generated bool
 		params    pass.ParamSet
 		expect    int
 	}{
-		{name: "default limit flags four", source: four, expect: 1},
-		{name: "default limit passes two", source: two},
-		{name: "generated file skipped", source: four, generated: true},
+		{name: "default limit flags four", src: four, expect: 1},
+		{name: "default limit passes two", src: two},
+		{name: "generated file skipped", src: four, generated: true},
 		{
-			name:   "max_results lowers the limit",
-			source: two, params: pass.ParamSet{"max_results": 1}, expect: 1,
+			name: "max_results lowers the limit",
+			src:  two, params: pass.ParamSet{"max_results": 1}, expect: 1,
 		},
 		{
-			name:   "max_results raises the limit",
-			source: four, params: pass.ParamSet{"max_results": 4},
+			name: "max_results raises the limit",
+			src:  four, params: pass.ParamSet{"max_results": 4},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			ctx := buildCtx(t, testCase.source, testCase.params)
+			ctx := buildCtx(t, testCase.src, testCase.params)
 			ctx.ChangedFiles[0].Generated = testCase.generated
 			got := NewAnalyzer().Analyze(ctx)
 			if len(got) != testCase.expect {

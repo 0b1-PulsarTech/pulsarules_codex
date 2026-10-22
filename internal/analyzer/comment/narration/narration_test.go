@@ -14,18 +14,18 @@ import (
 type scanCase struct {
 	name   string
 	ext    string
-	source string
+	src    string
 	expect int
 }
 
 func runScan(t *testing.T, testCase scanCase) {
 	t.Helper()
-	source := testCase.source
+	src := testCase.src
 	if testCase.ext == "go" {
-		source = "package p\n\nfunc f() {\n" + source + "}\n"
+		src = "package p\n\nfunc f() {\n" + src + "}\n"
 	}
 	fc := pass.FileChange{Path: "f", Extension: "." + testCase.ext}
-	got := scanFile([]byte(source), fc, NewAnalyzer().reporter, parsedGo{})
+	got := scanFile([]byte(src), fc, NewAnalyzer().reporter, parsedGo{})
 	if len(got) != testCase.expect {
 		t.Fatalf("findings = %d, want %d: %+v", len(got), testCase.expect, got)
 	}
@@ -51,7 +51,7 @@ func TestScanFileUnparsableGoFallback(t *testing.T) {
 
 	testCases := []struct {
 		name   string
-		source string
+		src    string
 		expect int
 	}{
 		{"raw string hides a comment", "x := `// used to be`\nfunc (", 0},
@@ -63,7 +63,7 @@ func TestScanFileUnparsableGoFallback(t *testing.T) {
 
 			fc := pass.FileChange{Path: "f.go", Extension: ".go"}
 			got := scanFile(
-				[]byte(testCase.source), fc, NewAnalyzer().reporter,
+				[]byte(testCase.src), fc, NewAnalyzer().reporter,
 				parsedGo{},
 			)
 			if len(got) != testCase.expect {
@@ -77,9 +77,9 @@ func TestScanFileSplitPhraseLine(t *testing.T) {
 	t.Parallel()
 
 	fc := pass.FileChange{Path: "f.go", Extension: ".go"}
-	source := "package p\n\n// the guard was\n// replaced by a check\n"
+	src := "package p\n\n// the guard was\n// replaced by a check\n"
 	got := scanFile(
-		[]byte(source),
+		[]byte(src),
 		fc,
 		NewAnalyzer().reporter,
 		parsedGo{},
@@ -93,9 +93,9 @@ func TestScanFileMessageNamesPhrase(t *testing.T) {
 	t.Parallel()
 
 	fc := pass.FileChange{Path: "f.go", Extension: ".go"}
-	source := "package p\n\n// we never ever used to retry\n"
+	src := "package p\n\n// we never ever used to retry\n"
 	got := scanFile(
-		[]byte(source),
+		[]byte(src),
 		fc,
 		NewAnalyzer().reporter,
 		parsedGo{},
