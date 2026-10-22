@@ -18,7 +18,7 @@ func TestClean_DoesNotImportTheGovernanceOrchestrator(t *testing.T) {
 	for _, spec := range parsed.Imports {
 		if strings.Trim(spec.Path.Value, `"`) == orchestrator {
 			t.Fatalf(
-				"clean.go imports %s; the file listing lives in analysis/discovery",
+				"clean.go imports %s; the file listing lives in governance/discovery",
 				orchestrator,
 			)
 		}
