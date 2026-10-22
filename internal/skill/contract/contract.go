@@ -11,7 +11,7 @@ const contractAsset = "hooks/contract.txt"
 func Session(templates fs.FS) (string, error) {
 	const tailAsset = "hooks/contract-tail.txt"
 
-	contract, err := readAsset(templates, contractAsset)
+	head, err := readAsset(templates, contractAsset)
 	if err != nil {
 		return "", err
 	}
@@ -19,7 +19,7 @@ func Session(templates fs.FS) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return contract + " " + tail, nil
+	return head + " " + tail, nil
 }
 
 func Subagent(templates fs.FS) (string, error) {
