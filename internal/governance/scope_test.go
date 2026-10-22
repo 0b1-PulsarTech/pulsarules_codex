@@ -1,7 +1,6 @@
 package governance
 
 import (
-	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -51,8 +50,8 @@ func TestParseScope_ErrorNamesNoFlag(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseScope("bogus")
-	if unknown, ok := errors.AsType[unknownScopeError](err); !ok || unknown.Name != "bogus" {
-		t.Fatalf("ParseScope() error = %v, want unknownScopeError for %q", err, "bogus")
+	if want := `"bogus" (want full|commit|changed)`; err == nil || err.Error() != want {
+		t.Fatalf("ParseScope() error = %v, want %q", err, want)
 	}
 	if strings.Contains(err.Error(), "--") {
 		t.Fatalf("error %q names a CLI flag, want it flag-agnostic", err)

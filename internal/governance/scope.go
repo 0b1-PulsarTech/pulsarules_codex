@@ -13,14 +13,6 @@ const (
 	ScopeChanged
 )
 
-type unknownScopeError struct {
-	Name string
-}
-
-func (err unknownScopeError) Error() string {
-	return fmt.Sprintf("%q (want %s)", err.Name, strings.Join(scopeNames(), "|"))
-}
-
 type namedScope struct {
 	name  string
 	scope Scope
@@ -52,5 +44,5 @@ func ParseScope(raw string) (Scope, error) {
 			return listed.scope, nil
 		}
 	}
-	return ScopeFull, unknownScopeError{Name: raw}
+	return ScopeFull, fmt.Errorf("%q (want %s)", raw, strings.Join(scopeNames(), "|"))
 }
