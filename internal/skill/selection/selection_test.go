@@ -22,7 +22,7 @@ func dependencyFixtureIndex() *knowledge.Index {
 	}}
 }
 
-func TestSelectionResolve(t *testing.T) {
+func TestChoiceResolve(t *testing.T) {
 	t.Parallel()
 
 	idx := dependencyFixtureIndex()
@@ -115,7 +115,7 @@ func languageFixtureIndex(t *testing.T) *knowledge.Index {
 	return idx
 }
 
-func TestSelectionResolve_LanguageAware(t *testing.T) {
+func TestChoiceResolve_LanguageAware(t *testing.T) {
 	t.Parallel()
 
 	idx := languageFixtureIndex(t)

@@ -70,7 +70,7 @@ func promptSkillSelection(idx *knowledge.Index, console *prompter) (selection.Ch
 	for _, choice := range picked {
 		ids = append(ids, catalog[choice-1].ID)
 	}
-	// Selection.Resolve unions the mandatory skills in regardless of what is picked.
+	// Choice.Resolve unions the mandatory skills in regardless of what is picked.
 	return selection.Choice{IDs: ids}, nil
 }
 
