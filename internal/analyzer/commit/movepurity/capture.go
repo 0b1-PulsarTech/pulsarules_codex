@@ -1,6 +1,7 @@
 package movepurity
 
 import (
+	"maps"
 	"path"
 	"slices"
 	"strings"
@@ -89,8 +90,9 @@ func (moves *moveContext) embedsFollow(patterns []string, dirs dirPair) bool {
 	}
 	before := gosrc.EmbedFiles(patterns, dirs.oldDir, oldFiles)
 	after := gosrc.EmbedFiles(patterns, dirs.newDir, moves.stagedFiles(newFiles))
-	// Each covered old file lands at its twin, so an equal count means nothing else is covered.
-	return len(before) > 0 && moves.renamedAlong(before, dirs) && len(after) == len(before)
+	// Each covered old file must land at its twin and the staged side must cover exactly those
+	// names: an equal count would let a twin lost to a nested module hide behind another file.
+	return len(before) > 0 && moves.renamedAlong(before, dirs) && maps.Equal(before, after)
 }
 
 func (moves *moveContext) renamedAlong(files map[string]bool, dirs dirPair) bool {

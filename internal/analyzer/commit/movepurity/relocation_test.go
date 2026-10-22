@@ -431,3 +431,23 @@ func TestEmbedRelocation(t *testing.T) {
 	}
 	runRenameCases(t, testCases)
 }
+
+func TestEmbedRelocation_TwinLostToNestedModule(t *testing.T) {
+	t.Parallel()
+
+	const nested, extra = "internal/routing/static/sub", "internal/routing/static/z.js"
+	row := func(name string) renameCase {
+		base := embedRow(name, "//go:embed static", []pass.Rename{
+			pair("internal/util/static/x.js", "internal/routing/static/x.js"),
+			pair("internal/util/static/y.js", "internal/routing/static/y.js"),
+		})
+		return withFile(base, "internal/util/static/sub/w.js", nested+"/w.js")
+	}
+	atHead := withFile(row("nested module and a covered file already in the new directory"),
+		nested+"/go.mod", nested+"/go.mod")
+	atHead = withFile(atHead, extra, extra)
+	renamedIn := withFile(row("nested module and a covered file renamed in"),
+		"internal/other/go.mod", nested+"/go.mod")
+	renamedIn = withFile(renamedIn, "internal/other/z.js", extra)
+	runRenameCases(t, []renameCase{atHead, renamedIn})
+}
