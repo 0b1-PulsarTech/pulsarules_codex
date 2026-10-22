@@ -202,7 +202,10 @@ func TestResolveProjectDir(t *testing.T) {
 func TestResolveProjectDir_InstallFlag(t *testing.T) {
 	t.Parallel()
 
-	opts, err := version.ParseArgs([]string{"install", "--project", "/tmp/repo", "--all"})
+	opts, err := version.ParseArgs(
+		[]string{"install", "--project", "/tmp/repo", "--all"},
+		flags.Environment{},
+	)
 	if err != nil {
 		t.Fatalf("ParseArgs: %v", err)
 	}

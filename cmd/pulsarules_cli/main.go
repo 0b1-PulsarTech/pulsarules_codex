@@ -11,6 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 )
 
@@ -18,7 +19,7 @@ func main() {
 	if tssyntax.RunChild(os.Args, os.Exit) {
 		return
 	}
-	opts, err := version.ParseArgs(os.Args[1:])
+	opts, err := version.ParseArgs(os.Args[1:], flags.ReadEnvironment())
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(0)

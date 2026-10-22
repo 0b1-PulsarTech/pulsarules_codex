@@ -10,6 +10,7 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 )
@@ -51,7 +52,7 @@ func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
 			for _, value := range testCase.flags {
 				args = append(args, "--target", value)
 			}
-			opts, err := version.ParseArgs(args)
+			opts, err := version.ParseArgs(args, flags.Environment{})
 			if err != nil {
 				t.Fatalf("ParseArgs: %v", err)
 			}

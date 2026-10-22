@@ -3,6 +3,8 @@ package version
 import (
 	"slices"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
 type listFlagCase struct {
@@ -16,7 +18,7 @@ func runListFlagCases(t *testing.T, pick func(*Options) []string, testCases []li
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			opts, err := ParseArgs(testCase.args)
+			opts, err := ParseArgs(testCase.args, flags.Environment{})
 			if err != nil {
 				t.Fatalf("ParseArgs(%q): %v", testCase.args, err)
 			}

@@ -9,8 +9,8 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
-func ParseArgs(args []string) (*Options, error) {
-	opts := &Options{Env: flags.ReadEnvironment()}
+func ParseArgs(args []string, env flags.Environment) (*Options, error) {
+	opts := &Options{Env: env}
 	if len(args) == 0 {
 		return opts, nil
 	}

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
 type parseArgsCase struct {
@@ -19,7 +21,7 @@ func runParseArgsCases(t *testing.T, testCases []parseArgsCase) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			opts, err := ParseArgs(testCase.args)
+			opts, err := ParseArgs(testCase.args, flags.Environment{})
 			if testCase.wantErr {
 				if err == nil {
 					t.Fatalf("expected error, got opts %+v", opts)
@@ -335,8 +337,9 @@ func workDir(t *testing.T) string {
 	return dir
 }
 
-//nolint:paralleltest // t.Setenv bars t.Parallel.
 func TestParseArgs_LogLevelDefaultsFromTheEnvironment(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 		env  string
@@ -354,8 +357,9 @@ func TestParseArgs_LogLevelDefaultsFromTheEnvironment(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Setenv("PULSARULES_LOG_LEVEL", testCase.env)
-			opts, err := ParseArgs(testCase.args)
+			t.Parallel()
+
+			opts, err := ParseArgs(testCase.args, flags.Environment{LogLevel: testCase.env})
 			if err != nil {
 				t.Fatalf("ParseArgs: %v", err)
 			}
