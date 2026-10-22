@@ -78,5 +78,5 @@ func Handles(ext string) bool { return eligibleExt(strings.ToLower(ext)) }
 
 func eligibleExt(ext string) bool {
 	// The mutation blast radius: only Go and Markdown files are rewritten.
-	return ext == ".go" || markdown.IsMarkdown(ext)
+	return ext == ".go" || markdown.HasExt(ext)
 }

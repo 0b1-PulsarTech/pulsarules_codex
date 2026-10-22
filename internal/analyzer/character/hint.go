@@ -75,7 +75,7 @@ func typographicAdvice(
 }
 
 func unread(found invisible.Mark, ext string, literals language.Literals) bool {
-	if markdown.IsMarkdown(ext) {
+	if markdown.HasExt(ext) {
 		return false
 	}
 	return !literals.Covers(found.Offset) || literals.Incomplete()

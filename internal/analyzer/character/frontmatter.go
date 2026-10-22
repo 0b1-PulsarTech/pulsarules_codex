@@ -27,7 +27,7 @@ func frontmatterFindings(
 	src string,
 	reporter finding.Reporter,
 ) []finding.Finding {
-	if !markdown.IsMarkdown(fc.Extension) {
+	if !markdown.HasExt(fc.Extension) {
 		return nil
 	}
 	var findings []finding.Finding

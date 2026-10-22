@@ -37,7 +37,7 @@ func (report Report) HeldNote(found invisible.Mark) string {
 	switch {
 	case !report.IsHeld(found):
 		return ""
-	case markdown.IsMarkdown(filepath.Ext(report.Path)):
+	case markdown.HasExt(filepath.Ext(report.Path)):
 		return "in possible code: judge it by hand; clean leaves it"
 	case report.literals.Raw(found.Offset):
 		return report.EscapeAdvice(found) + "; clean leaves it"

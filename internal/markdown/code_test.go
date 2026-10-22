@@ -90,7 +90,7 @@ func runRegionCases(t *testing.T, testCases []regionCase) {
 	}
 }
 
-func TestMarkdownCode(t *testing.T) {
+func TestCodeIn(t *testing.T) {
 	t.Parallel()
 
 	const src = "```\ncode\n```\n"
@@ -107,7 +107,7 @@ func TestMarkdownCode(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			if got := MarkdownCode(testCase.ext, src).Certain(5); got != testCase.want {
+			if got := CodeIn(testCase.ext, src).Certain(5); got != testCase.want {
 				t.Errorf("Certain = %v, want %v", got, testCase.want)
 			}
 		})

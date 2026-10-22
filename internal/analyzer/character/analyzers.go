@@ -108,7 +108,7 @@ func hintMarks(
 		return nil
 	}
 	literals := language.ScanLiterals(fc.Extension, src)
-	code := markdown.MarkdownCode(fc.Extension, src)
+	code := markdown.CodeIn(fc.Extension, src)
 	var hinted []hintedFinding
 	for _, found := range marks {
 		reporter, advice, skip := advise(found, literals, code)

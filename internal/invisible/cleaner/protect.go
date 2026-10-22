@@ -10,7 +10,7 @@ import (
 
 func protection(path, src string, literals language.Literals) func(offset int) bool {
 	ext := filepath.Ext(path)
-	code := markdown.MarkdownCode(ext, src)
+	code := markdown.CodeIn(ext, src)
 	// Whatever might be code is left alone: rewriting shown code is the one unsafe mistake.
 	// Literals are empty for Markdown and code regions are empty elsewhere, so one holds at a time.
 	return func(offset int) bool { return literals.Contains(offset) || code.Possible(offset) }

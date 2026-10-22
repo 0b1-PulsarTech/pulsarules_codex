@@ -15,11 +15,11 @@ type Code struct {
 	possible []Region
 }
 
-func IsMarkdown(ext string) bool { return strings.EqualFold(ext, ".md") }
+func HasExt(ext string) bool { return strings.EqualFold(ext, ".md") }
 
-func MarkdownCode(ext, src string) Code {
+func CodeIn(ext, src string) Code {
 	// Only Markdown has fenced or indented code.
-	if !IsMarkdown(ext) {
+	if !HasExt(ext) {
 		return Code{}
 	}
 	return codeRegions(src)
