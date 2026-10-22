@@ -413,3 +413,19 @@ func TestSession_Load_LogsWorktreeStatusFailure(t *testing.T) {
 		t.Fatalf("log output %q does not report the status failure", logs.String())
 	}
 }
+
+func TestConfigFinding(t *testing.T) {
+	t.Parallel()
+
+	want := finding.Finding{
+		AnalyzerID: "config",
+		Severity:   finding.SeverityError,
+		Category:   finding.CatProject,
+		File:       ".pulsarules.yaml",
+		Message:    "compile glob",
+		Suggestion: "fix the test globs",
+	}
+	if got := configFinding(errors.New("compile glob")); got != want {
+		t.Fatalf("configFinding() = %+v, want %+v", got, want)
+	}
+}

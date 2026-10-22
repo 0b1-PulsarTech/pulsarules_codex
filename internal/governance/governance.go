@@ -130,7 +130,7 @@ func (sess *Session) load(req Request) *pass.Context {
 func (sess *Session) discover(ctx *pass.Context, req Request) {
 	if req.Files == FileSetAll {
 		sess.attachSources(ctx)
-		ctx.ChangedFiles = discovery.WalkAllFiles(ctx.Sources, sess.classifier)
+		ctx.ChangedFiles = discovery.Walk(ctx.Sources, sess.classifier)
 		return
 	}
 
@@ -157,7 +157,7 @@ func (sess *Session) changedFiles(req Request) []pass.FileChange {
 			return !change.Staged
 		})
 	}
-	return discovery.ChangesToFileChanges(changes, sess.classifier)
+	return discovery.FromChanges(changes, sess.classifier)
 }
 
 func configFinding(err error) finding.Finding {
