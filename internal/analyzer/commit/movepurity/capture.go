@@ -3,8 +3,10 @@ package movepurity
 import (
 	"path"
 	"slices"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
 
 type declScope struct {
@@ -80,12 +82,22 @@ func (moves *moveContext) pathFollows(oldPath, newPath string) bool {
 	if moves.movedTo[oldPath] == newPath {
 		return true
 	}
+	// An unmoved file or a missing directory lists nothing; an empty set must not pass vacuously.
 	children, err := moves.head.dir(oldPath)
-	// A directory follows only when every HEAD entry under it moved to the same place.
-	if err != nil || len(children) == 0 {
+	if err != nil || len(children) == 0 || !moves.arrivesAlone(oldPath, newPath) {
 		return false
 	}
 	return !slices.ContainsFunc(children, func(child string) bool {
 		return !moves.pathFollows(child, path.Join(newPath, path.Base(child)))
+	})
+}
+
+func (moves *moveContext) arrivesAlone(oldPath, newPath string) bool {
+	if existing, err := moves.head.dir(newPath); err == nil && len(existing) > 0 {
+		return false
+	}
+	return !slices.ContainsFunc(moves.renames, func(rename pass.Rename) bool {
+		rel, isUnder := strings.CutPrefix(rename.NewPath, newPath+"/")
+		return isUnder && rename.OldPath != path.Join(oldPath, rel)
 	})
 }

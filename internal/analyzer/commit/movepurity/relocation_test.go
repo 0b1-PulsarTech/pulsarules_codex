@@ -361,6 +361,7 @@ func TestEmbedRelocation(t *testing.T) {
 
 	const embedPublic, embedStatic = "//go:embed public.txt", "//go:embed static"
 	const oldSub, newSub = "internal/util/static/sub/z.js", "internal/routing/static/sub/z.js"
+	const existing, newZ = "internal/routing/static/w.js", "internal/routing/static/z.js"
 	public := []pass.Rename{pair("internal/util/public.txt", "internal/routing/public.txt")}
 	static := []pass.Rename{
 		pair("internal/util/static/x.js", "internal/routing/static/x.js"),
@@ -381,6 +382,13 @@ func TestEmbedRelocation(t *testing.T) {
 		dir("directory pattern one moved elsewhere", []pass.Rename{static[0], strayY}),
 		accepted(withFile(dir("nested directory all co-moved", static), oldSub, newSub)),
 		withFile(dir("nested file left behind", static), oldSub, ""),
+		accepted(withFile(
+			dir("sibling directory with a shared prefix", static),
+			"internal/other/w.js", "internal/routing/static2/w.js",
+		)),
+		withFile(dir("hidden file left behind warns", static), "internal/util/static/.keep", ""),
+		withFile(dir("new directory already existed", static), existing, existing),
+		withFile(dir("file moved in from elsewhere", static), "internal/other/z.js", newZ),
 		embedRow("one of several patterns left behind", embedPublic+" static/x.js", public),
 		embedRow("unterminated quote", "//go:embed \"public.txt", public),
 		accepted(embedRow("quoted literal co-moved", "//go:embed \"public.txt\"", public)),
