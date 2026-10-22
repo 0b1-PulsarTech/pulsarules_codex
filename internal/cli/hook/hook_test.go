@@ -3,6 +3,7 @@ package hook
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/findings"
@@ -292,15 +292,14 @@ func TestHookStop_CatalogFailureSkipsGovernance(t *testing.T) {
 }
 
 //nolint:paralleltest // captureStderr swaps os.Stderr.
-func TestRunHook_OtherModesDoNotNeedTheCatalog(t *testing.T) {
+func TestCommand_Run_OtherModesDoNotNeedTheCatalog(t *testing.T) {
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
 	bindHookWithoutCatalog(t, inj, t.TempDir())
 	stderr := captureStderr(t, func() {
-		if err := RunHook(inj, &version.Options{
-			Mode: "pre-search",
-			Env:  flags.Environment{ProjectDir: t.TempDir()},
-		}); err != nil {
-			t.Errorf("RunHook(pre-search) = %v, want nil", err)
+		if err := New(
+			flags.Environment{ProjectDir: t.TempDir()},
+		).Run(inj, []string{"pre-search"}); err != nil {
+			t.Errorf("Run(pre-search) = %v, want nil", err)
 		}
 	})
 
@@ -310,7 +309,7 @@ func TestRunHook_OtherModesDoNotNeedTheCatalog(t *testing.T) {
 }
 
 //nolint:paralleltest // t.Setenv and the os.Stdin/os.Stdout swaps bar t.Parallel.
-func TestRunHook_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
+func TestCommand_Run_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
 	t.Setenv("TMPDIR", t.TempDir())
 
 	project, skills := t.TempDir(), t.TempDir()
@@ -353,11 +352,8 @@ func TestRunHook_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
 			defer func() { os.Stdin = savedStdin }()
 
 			out := captureStream(t, &os.Stdout, func() {
-				if err = RunHook(
-					inj,
-					&version.Options{Mode: "pre-search", Env: testCase.env},
-				); err != nil {
-					t.Errorf("RunHook(pre-search) = %v, want nil", err)
+				if err = New(testCase.env).Run(inj, []string{"pre-search"}); err != nil {
+					t.Errorf("Run(pre-search) = %v, want nil", err)
 				}
 			})
 			if got := out != ""; got != testCase.want {
@@ -442,4 +438,19 @@ func bindHookWithoutCatalog(t *testing.T, inj remy.Injector, dir string) {
 	remy.RegisterInstance(inj, index)
 	remy.RegisterInstance(inj, templates.New(assets))
 	remy.RegisterInstance(inj, slog.New(slog.DiscardHandler))
+}
+
+func TestCommand_BootstrapFailed(t *testing.T) {
+	t.Parallel()
+
+	forged := fmt.Errorf("open %s: %w", "a\n[ERROR] forged", os.ErrNotExist)
+	var out strings.Builder
+	if got := New(flags.Environment{}).BootstrapFailed(&out, forged); got != 0 {
+		t.Errorf("BootstrapFailed() = %d, want 0 so a hook never blocks the turn", got)
+	}
+	text := strings.TrimSuffix(out.String(), "\n")
+	if strings.Contains(text, "\n") || !strings.Contains(text, `a\n[ERROR] forged`) ||
+		!strings.HasPrefix(text, "pulsarules_cli: hook: ") {
+		t.Errorf("output = %q, want one escaped line", out.String())
+	}
 }

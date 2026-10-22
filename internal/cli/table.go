@@ -8,6 +8,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/generate"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/list"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/packaging"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/validate"
@@ -51,6 +52,10 @@ func table() []entry {
 		{
 			name:  "governance",
 			build: func(env flags.Environment) command.Runner { return governance.New(env) },
+		},
+		{
+			name:  "hook",
+			build: func(env flags.Environment) command.Runner { return hook.New(env) },
 		},
 	}
 }

@@ -87,29 +87,24 @@ func TestHandleBootstrapErr(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name    string
-		command string
-		want    int
+		name string
+		args []string
+		want int
 	}{
-		{name: "hook degrades to success", command: "hook", want: 0},
-		{name: "governance fails loudly", command: "governance", want: 1},
-		{name: "unknown command fails loudly", command: "", want: 1},
+		{name: "hook degrades to success", args: []string{"hook"}, want: 0},
+		{name: "governance fails loudly", args: []string{"governance"}, want: 1},
+		{name: "a command without a runner fails loudly", want: 1},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			call := Invocation{
-				Name:   testCase.command,
-				Runner: legacyRunner{name: testCase.command, opts: &version.Options{}},
+
+			call, err := Parse(testCase.args, flags.Environment{})
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
 			}
-			got := call.HandleBootstrapErr(errors.New("boom"))
-			if got != testCase.want {
-				t.Errorf(
-					"HandleBootstrapErr(%q) = %d, want %d",
-					testCase.command,
-					got,
-					testCase.want,
-				)
+			if got := call.HandleBootstrapErr(errors.New("boom")); got != testCase.want {
+				t.Errorf("HandleBootstrapErr(%q) = %d, want %d", testCase.args, got, testCase.want)
 			}
 		})
 	}
@@ -125,16 +120,6 @@ func TestErrorPrinters_StaySingleLine(t *testing.T) {
 		print func(out io.Writer)
 	}{
 		{"report error", "pulsarules_cli:", func(out io.Writer) { ReportError(out, forged) }},
-		{
-			"bootstrap hook",
-			"pulsarules_cli: hook:",
-			func(out io.Writer) { handleBootstrapErr(out, "hook", forged) },
-		},
-		{
-			"bootstrap other",
-			"pulsarules_cli:",
-			func(out io.Writer) { handleBootstrapErr(out, "clean", forged) },
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

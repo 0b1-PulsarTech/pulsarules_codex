@@ -9,7 +9,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/uninstall"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
@@ -22,7 +21,6 @@ func commands() map[string]handler {
 	return map[string]handler{
 		"install":   prefixed("install", install.Run),
 		"uninstall": prefixed("uninstall", uninstall.Run),
-		"hook":      hook.RunHook,
 	}
 }
 
@@ -44,16 +42,6 @@ func (call Invocation) HandleBootstrapErr(err error) int {
 		return forgiving.BootstrapFailed(os.Stderr, err)
 	}
 	ReportError(os.Stderr, err)
-	return 1
-}
-
-func handleBootstrapErr(out io.Writer, command string, err error) int {
-	if command == "hook" {
-		_, _ = fmt.Fprintln(out, "pulsarules_cli: hook:", printable.Line(err.Error()))
-		// A hook invocation must never block the caller's turn.
-		return 0
-	}
-	ReportError(out, err)
 	return 1
 }
 

@@ -27,7 +27,5 @@ type Options struct {
 
 	KeepSkills bool
 
-	Mode string
-
 	ProjectDir string
 }

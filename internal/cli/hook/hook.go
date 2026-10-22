@@ -1,6 +1,7 @@
 package hook
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
@@ -9,7 +10,7 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
@@ -22,7 +23,23 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
-func RunHook(inj remy.Injector, opts *version.Options) error {
+type Command struct {
+	env flags.Environment
+}
+
+func New(env flags.Environment) *Command {
+	return &Command{env: env}
+}
+
+func (*Command) Bind(*flag.FlagSet) {}
+
+func (*Command) BootstrapFailed(out io.Writer, err error) int {
+	_, _ = fmt.Fprintln(out, "pulsarules_cli: hook:", printable.Line(err.Error()))
+	// A hook invocation must never block the caller's turn.
+	return 0
+}
+
+func (cmd *Command) Run(inj remy.Injector, args []string) error {
 	// simplification: every lookup below degrades to a no-op (log, return nil)
 	// so a hook never blocks the caller's turn over a load/logger hiccup.
 	// Upgrade path: revisit if a no-op ever hides a failure operators need paged on.
@@ -54,12 +71,16 @@ func RunHook(inj remy.Injector, opts *version.Options) error {
 		Logger:     logger,
 		Index:      idx,
 		Out:        os.Stdout,
-		ProjectDir: opts.Env.ProjectDir,
-		SkillsDir:  opts.Env.SkillsDir,
+		ProjectDir: cmd.env.ProjectDir,
+		SkillsDir:  cmd.env.SkillsDir,
 	}, catalog)
 
-	if dispatchErr := disp.Dispatch(opts.Mode, payload); dispatchErr != nil {
-		return fmt.Errorf("dispatch hook %q: %w", opts.Mode, dispatchErr)
+	var mode string
+	if len(args) > 0 {
+		mode = args[0]
+	}
+	if dispatchErr := disp.Dispatch(mode, payload); dispatchErr != nil {
+		return fmt.Errorf("dispatch hook %q: %w", mode, dispatchErr)
 	}
 	return nil
 }

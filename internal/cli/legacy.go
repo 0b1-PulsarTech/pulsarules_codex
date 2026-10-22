@@ -2,7 +2,6 @@ package cli
 
 import (
 	"flag"
-	"io"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
@@ -22,7 +21,3 @@ func (legacy legacyRunner) Run(inj remy.Injector, _ []string) error {
 }
 
 func (legacy legacyRunner) ProjectDir() string { return resolveProjectDir(legacy.opts) }
-
-func (legacy legacyRunner) BootstrapFailed(out io.Writer, err error) int {
-	return handleBootstrapErr(out, legacy.name, err)
-}

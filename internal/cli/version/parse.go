@@ -30,7 +30,6 @@ func ParseArgs(args []string, env flags.Environment) (*Options, error) {
 		return nil, fmt.Errorf("parse %s flags: %w", opts.Command, err)
 	}
 
-	parsePositionalArgs(opts, fs)
 	return opts, nil
 }
 
@@ -40,7 +39,6 @@ func commandBinders() map[string]flagBinder {
 	return map[string]flagBinder{
 		"install":   bindInstallFlags,
 		"uninstall": bindUninstallFlags,
-		"hook":      bindNoFlags,
 	}
 }
 
@@ -51,14 +49,6 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 	}
 	bind(fs, opts)
 	return nil
-}
-
-func bindNoFlags(*flag.FlagSet, *Options) {}
-
-func parsePositionalArgs(opts *Options, fs *flag.FlagSet) {
-	if opts.Command == "hook" && fs.NArg() > 0 {
-		opts.Mode = fs.Arg(0)
-	}
 }
 
 func Commands() []string {
