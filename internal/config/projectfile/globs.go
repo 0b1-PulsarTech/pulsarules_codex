@@ -7,16 +7,19 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
-func (val *validator) checkGlobs(at *fieldPath, globs []string) []string {
+func (val *validator) checkGlobs(at *Field, globs []string) []string {
 	passed := make([]string, 0, len(globs))
 	for idx, pattern := range globs {
 		if fault := globFault(pattern); fault != "" {
-			val.fail(at.item(idx), "%s", fault)
+			val.fail(at.Item(idx), "%s", fault)
 			continue
 		}
 		if _, err := glob.Compile(pattern); err != nil {
 			reason := strings.TrimPrefix(err.Error(), fmt.Sprintf("compile glob %q: ", pattern))
-			val.fail(at.item(idx), "compile glob %q: %s", clipValue(pattern), clipValue(reason))
+			val.fail(
+				at.Item(idx), "compile glob %q: %s",
+				ClipValue(pattern), ClipValue(reason),
+			)
 			continue
 		}
 		passed = append(passed, pattern)
@@ -45,7 +48,7 @@ func (val *validator) checkGlobBudget(globs []string) bool {
 		wildcards += glob.WildcardWork(pattern)
 		tails += glob.StarTail(pattern)
 	}
-	at := val.root.key("overrides and tests")
+	at := val.root.Key("overrides and tests")
 	switch {
 	case len(globs) > MaxTotalGlobs:
 		val.fail(at, "more than %d globs in total", MaxTotalGlobs)

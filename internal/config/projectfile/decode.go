@@ -10,7 +10,7 @@ import (
 )
 
 func (parsed decoded) result() (*File, error) {
-	if err := parsed.problems.err(); err != nil {
+	if err := parsed.problems.Err(); err != nil {
 		return nil, err
 	}
 	return parsed.file, nil
@@ -18,8 +18,8 @@ func (parsed decoded) result() (*File, error) {
 
 type decoded struct {
 	file     *File
-	problems *collector
-	top      *fieldPath
+	problems *Problems
+	top      *Field
 }
 
 func decode(path string, content []byte) (decoded, error) {
@@ -36,8 +36,8 @@ func decode(path string, content []byte) (decoded, error) {
 	if err = checkExpansion(path, root); err != nil {
 		return decoded{}, err
 	}
-	value, top := root.Content[0], newRoot()
-	parsed := decoded{problems: &collector{path: path}, top: top}
+	value, top := root.Content[0], Root()
+	parsed := decoded{problems: &Problems{path: path}, top: top}
 	walkSchema(parsed.problems, value, top)
 	if value = deref(value); value.Kind != yaml.MappingNode && !isNull(value) {
 		return parsed, nil

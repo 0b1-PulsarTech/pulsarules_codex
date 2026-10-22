@@ -21,7 +21,7 @@ type expander struct {
 
 type overflow struct {
 	line   int
-	path   *fieldPath
+	path   *Field
 	reason string
 }
 
@@ -29,7 +29,7 @@ func checkExpansion(path string, root *yaml.Node) error {
 	walker := expander{extents: map[*yaml.Node]extent{}, active: map[*yaml.Node]bool{}}
 	// Aliases and merge keys share nodes, so the expanded document can be exponentially
 	// larger and deeper than the file. Measuring each node once bounds every later pass.
-	_, over := walker.size(root, newRoot(), 0)
+	_, over := walker.size(root, Root(), 0)
 	if over == nil {
 		return nil
 	}
@@ -40,7 +40,7 @@ func checkExpansion(path string, root *yaml.Node) error {
 	return fmt.Errorf("%s: line %d: %s", path, over.line, message)
 }
 
-func (walker *expander) size(node *yaml.Node, at *fieldPath, above int) (extent, *overflow) {
+func (walker *expander) size(node *yaml.Node, at *Field, above int) (extent, *overflow) {
 	if node.Kind == yaml.AliasNode && node.Alias != nil {
 		span, over := walker.size(node.Alias, at, above)
 		if over != nil {
@@ -65,7 +65,7 @@ func (walker *expander) size(node *yaml.Node, at *fieldPath, above int) (extent,
 }
 
 func (walker *expander) sizeChildren(
-	node *yaml.Node, at *fieldPath, above int,
+	node *yaml.Node, at *Field, above int,
 ) (extent, *overflow) {
 	walker.visits++
 	span, nested := extent{count: 1}, above
@@ -95,7 +95,7 @@ func (walker *expander) sizeChildren(
 	return span, nil
 }
 
-func breadth(node *yaml.Node, at *fieldPath) *overflow {
+func breadth(node *yaml.Node, at *Field) *overflow {
 	switch node.Kind {
 	case yaml.MappingNode:
 		if len(node.Content)/2 > MaxMapKeys {
@@ -112,7 +112,7 @@ func breadth(node *yaml.Node, at *fieldPath) *overflow {
 	return nil
 }
 
-func duplicateKey(node *yaml.Node, at *fieldPath) *overflow {
+func duplicateKey(node *yaml.Node, at *Field) *overflow {
 	type rawKey struct {
 		kind  yaml.Kind
 		value string
@@ -131,30 +131,30 @@ func duplicateKey(node *yaml.Node, at *fieldPath) *overflow {
 	return nil
 }
 
-func depthOverflow(node *yaml.Node, at *fieldPath) *overflow {
+func depthOverflow(node *yaml.Node, at *Field) *overflow {
 	reason := fmt.Sprintf("nested deeper than %d levels", MaxDepth)
 	return &overflow{line: node.Line, path: at, reason: reason}
 }
 
-func longOverflow(node *yaml.Node, at *fieldPath) *overflow {
+func longOverflow(node *yaml.Node, at *Field) *overflow {
 	reason := fmt.Sprintf("value longer than %d bytes", MaxScalarBytes)
 	return &overflow{line: node.Line, path: at, reason: reason}
 }
 
-func nodesOverflow(node *yaml.Node, at *fieldPath) *overflow {
+func nodesOverflow(node *yaml.Node, at *Field) *overflow {
 	reason := fmt.Sprintf("document expands past %d nodes", MaxExpandedNodes)
 	return &overflow{line: node.Line, path: at, reason: reason}
 }
 
-func childPath(node *yaml.Node, idx int, path *fieldPath) *fieldPath {
+func childPath(node *yaml.Node, idx int, path *Field) *Field {
 	switch node.Kind {
 	case yaml.SequenceNode:
-		return path.item(idx)
+		return path.Item(idx)
 	case yaml.MappingNode:
 		if key := node.Content[idx&^1]; isMerge(key) {
-			return path.key("<<")
+			return path.Key("<<")
 		}
-		return path.key(keyName(node.Content[idx&^1]))
+		return path.Key(keyName(node.Content[idx&^1]))
 	}
 	return path
 }

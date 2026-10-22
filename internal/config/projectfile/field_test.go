@@ -9,28 +9,28 @@ import (
 func TestFieldPathCovered(t *testing.T) {
 	t.Parallel()
 
-	root := newRoot()
-	root.key("skip_dirs").item(3).mark()
-	root.key("analyzers").key("x").mark()
-	root.key("a[0]").key("p.q").mark()
+	root := Root()
+	root.Key("skip_dirs").Item(3).mark()
+	root.Key("analyzers").Key("x").mark()
+	root.Key("a[0]").Key("p.q").mark()
 	testCases := []struct {
 		name string
-		at   *fieldPath
+		at   *Field
 		want bool
 	}{
-		{"the same field", root.key("analyzers").key("x"), true},
-		{"a child by key", root.key("analyzers").key("x").key("params"), true},
-		{"a child by index", root.key("skip_dirs").item(3).item(0), true},
-		{"the list holding a skipped item", root.key("skip_dirs"), true},
-		{"an unrelated field", root.key("tests"), false},
-		{"a sibling item", root.key("skip_dirs").item(4), false},
-		{"a longer name with the same prefix", root.key("analyzers").key("xy"), false},
-		{"a key that spells an index", root.key("skip_dirs[3]"), false},
-		{"a key that spells a dotted child", root.key("analyzers.x"), false},
-		{"a key made of brackets", root.key("[").key("[[["), false},
-		{"an item beside a bracketed key", root.key("a").item(0), false},
-		{"a dotted key beside its halves", root.key("a[0]").key("p"), false},
-		{"the dotted key itself", root.key("a[0]").key("p.q"), true},
+		{"the same field", root.Key("analyzers").Key("x"), true},
+		{"a child by key", root.Key("analyzers").Key("x").Key("params"), true},
+		{"a child by index", root.Key("skip_dirs").Item(3).Item(0), true},
+		{"the list holding a skipped item", root.Key("skip_dirs"), true},
+		{"an unrelated field", root.Key("tests"), false},
+		{"a sibling item", root.Key("skip_dirs").Item(4), false},
+		{"a longer name with the same prefix", root.Key("analyzers").Key("xy"), false},
+		{"a key that spells an index", root.Key("skip_dirs[3]"), false},
+		{"a key that spells a dotted child", root.Key("analyzers.x"), false},
+		{"a key made of brackets", root.Key("[").Key("[[["), false},
+		{"an item beside a bracketed key", root.Key("a").Item(0), false},
+		{"a dotted key beside its halves", root.Key("a[0]").Key("p"), false},
+		{"the dotted key itself", root.Key("a[0]").Key("p.q"), true},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -45,7 +45,7 @@ func TestFieldPathCovered(t *testing.T) {
 func TestFieldPathCoveredWhenEmpty(t *testing.T) {
 	t.Parallel()
 
-	if newRoot().key("tests").covered(new(int)) {
+	if Root().Key("tests").covered(new(int)) {
 		t.Fatal("an unmarked path is covered")
 	}
 }
@@ -53,23 +53,23 @@ func TestFieldPathCoveredWhenEmpty(t *testing.T) {
 func TestFieldPathString(t *testing.T) {
 	t.Parallel()
 
-	root := newRoot()
+	root := Root()
 	testCases := []struct {
 		name string
-		at   *fieldPath
+		at   *Field
 		want string
 	}{
 		{"the root", root, ""},
-		{"a key", root.key("tests"), "tests"},
-		{"keys", root.key("analyzers").key("x").key("params"), "analyzers.x.params"},
-		{"an item", root.key("tests").item(2), "tests[2]"},
-		{"an item first", root.item(0).key("a"), "[0].a"},
-		{"an empty key", root.key("a").key(""), "a.<empty key>"},
-		{"brackets in a key", root.key("[").key("a.b"), "[.a.b"},
-		{"a control byte", root.key("a").key("\x01\x7f"), "a.\x01\x7f"},
-		{"a C1 character", root.key("\u0085"), "\u0085"},
-		{"a backslash", root.key("a").key(`b\`), `a.b\`},
-		{"a printable rune", root.key("caf\u00e9"), "caf\u00e9"},
+		{"a key", root.Key("tests"), "tests"},
+		{"keys", root.Key("analyzers").Key("x").Key("params"), "analyzers.x.params"},
+		{"an item", root.Key("tests").Item(2), "tests[2]"},
+		{"an item first", root.Item(0).Key("a"), "[0].a"},
+		{"an empty key", root.Key("a").Key(""), "a.<empty key>"},
+		{"brackets in a key", root.Key("[").Key("a.b"), "[.a.b"},
+		{"a control byte", root.Key("a").Key("\x01\x7f"), "a.\x01\x7f"},
+		{"a C1 character", root.Key("\u0085"), "\u0085"},
+		{"a backslash", root.Key("a").Key(`b\`), `a.b\`},
+		{"a printable rune", root.Key("caf\u00e9"), "caf\u00e9"},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -84,12 +84,12 @@ func TestFieldPathString(t *testing.T) {
 func TestFieldPathInterns(t *testing.T) {
 	t.Parallel()
 
-	root := newRoot()
-	first := root.key("a").item(1)
-	if root.key("a").item(1) != first {
+	root := Root()
+	first := root.Key("a").Item(1)
+	if root.Key("a").Item(1) != first {
 		t.Fatal("the same segments gave two nodes")
 	}
-	if root.key("[1]") == root.item(1) {
+	if root.Key("[1]") == root.Item(1) {
 		t.Fatal("a key spelled like an index shares its node")
 	}
 }
@@ -222,7 +222,7 @@ func TestClipValue(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			if got := clipValue(testCase.value); got != testCase.want {
+			if got := ClipValue(testCase.value); got != testCase.want {
 				t.Fatalf("clipValue() = %q, want %q", got, testCase.want)
 			}
 		})

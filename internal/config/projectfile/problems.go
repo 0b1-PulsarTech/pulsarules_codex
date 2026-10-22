@@ -12,7 +12,7 @@ import (
 
 const ellipsis = "..."
 
-type collector struct {
+type Problems struct {
 	path   string
 	stored []string
 	bytes  int
@@ -20,7 +20,7 @@ type collector struct {
 	walked int
 }
 
-func (col *collector) add(line int, at *fieldPath, format string, args ...any) {
+func (col *Problems) add(line int, at *Field, format string, args ...any) {
 	col.total++
 	if len(col.stored) >= MaxReported || col.bytes >= MaxReportedBytes {
 		return
@@ -37,7 +37,7 @@ func (col *collector) add(line int, at *fieldPath, format string, args ...any) {
 	col.stored = append(col.stored, text)
 }
 
-func (col *collector) err() error {
+func (col *Problems) Err() error {
 	texts := col.stored
 	switch extra := col.total - len(col.stored); {
 	case extra == 1:
@@ -53,7 +53,7 @@ func (col *collector) err() error {
 
 func clipParseText(text string) string {
 	prefix := linePrefix(text)
-	return prefix + clipValue(strings.TrimPrefix(text, prefix))
+	return prefix + ClipValue(strings.TrimPrefix(text, prefix))
 }
 
 func leftover(path string, root *yaml.Node, err error) error {

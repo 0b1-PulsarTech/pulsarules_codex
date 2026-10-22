@@ -13,22 +13,22 @@ type pair struct {
 }
 
 type schemaWalker struct {
-	problems *collector
+	problems *Problems
 }
 
-func walkSchema(problems *collector, root *yaml.Node, top *fieldPath) {
+func walkSchema(problems *Problems, root *yaml.Node, top *Field) {
 	walker := schemaWalker{problems: problems}
 	if !isNull(deref(root)) {
 		walker.walk(root, reflect.TypeFor[File](), top)
 	}
 }
 
-func (walker *schemaWalker) report(line int, at *fieldPath, format string, args ...any) {
+func (walker *schemaWalker) report(line int, at *Field, format string, args ...any) {
 	at.mark()
 	walker.problems.add(line, at, format, args...)
 }
 
-func (walker *schemaWalker) walk(node *yaml.Node, typ reflect.Type, at *fieldPath) {
+func (walker *schemaWalker) walk(node *yaml.Node, typ reflect.Type, at *Field) {
 	line := node.Line
 	node = deref(node)
 	for typ.Kind() == reflect.Pointer {
@@ -47,7 +47,7 @@ func (walker *schemaWalker) walk(node *yaml.Node, typ reflect.Type, at *fieldPat
 	}
 }
 
-func (walker *schemaWalker) walkValue(node *yaml.Node, typ reflect.Type, at *fieldPath) bool {
+func (walker *schemaWalker) walkValue(node *yaml.Node, typ reflect.Type, at *Field) bool {
 	switch typ.Kind() {
 	case reflect.Struct:
 		walker.walkStruct(node, typ, at)
@@ -55,7 +55,7 @@ func (walker *schemaWalker) walkValue(node *yaml.Node, typ reflect.Type, at *fie
 		walker.walkMap(node, typ, at)
 	case reflect.Slice:
 		for idx, item := range node.Content {
-			walker.walk(item, typ.Elem(), at.item(idx))
+			walker.walk(item, typ.Elem(), at.Item(idx))
 		}
 	default:
 		if typ.Kind() == reflect.Int && node.ShortTag() != "!!int" {
@@ -66,9 +66,9 @@ func (walker *schemaWalker) walkValue(node *yaml.Node, typ reflect.Type, at *fie
 	return true
 }
 
-func (walker *schemaWalker) walkMap(node *yaml.Node, typ reflect.Type, at *fieldPath) {
+func (walker *schemaWalker) walkMap(node *yaml.Node, typ reflect.Type, at *Field) {
 	for _, entry := range walker.pairs(node, at) {
-		field := at.key(keyName(entry.key))
+		field := at.Key(keyName(entry.key))
 		key := deref(entry.key)
 		if key.Kind != yaml.ScalarNode || isNull(key) {
 			walker.report(key.Line, field, "want a string key")
@@ -82,10 +82,10 @@ func (walker *schemaWalker) walkMap(node *yaml.Node, typ reflect.Type, at *field
 	}
 }
 
-func (walker *schemaWalker) walkStruct(node *yaml.Node, typ reflect.Type, at *fieldPath) {
+func (walker *schemaWalker) walkStruct(node *yaml.Node, typ reflect.Type, at *Field) {
 	fields := yamlFields(typ)
 	for _, entry := range walker.pairs(node, at) {
-		field := at.key(keyName(entry.key))
+		field := at.Key(keyName(entry.key))
 		if undecodableKey(deref(entry.key)) {
 			walker.report(entry.key.Line, field, "invalid key")
 			continue
@@ -101,12 +101,12 @@ func (walker *schemaWalker) walkStruct(node *yaml.Node, typ reflect.Type, at *fi
 	}
 }
 
-func (walker *schemaWalker) pairs(node *yaml.Node, at *fieldPath) []pair {
+func (walker *schemaWalker) pairs(node *yaml.Node, at *Field) []pair {
 	return walker.collect(node, at, map[*yaml.Node]bool{node: true})
 }
 
 func (walker *schemaWalker) collect(
-	node *yaml.Node, at *fieldPath, merged map[*yaml.Node]bool,
+	node *yaml.Node, at *Field, merged map[*yaml.Node]bool,
 ) []pair {
 	var entries []pair
 	firstLine := map[string]int{}
@@ -119,7 +119,7 @@ func (walker *schemaWalker) collect(
 		if name := deref(key); name.Kind == yaml.ScalarNode {
 			if first, dup := firstLine[name.Value]; dup {
 				walker.report(
-					key.Line, at.key(name.Value), "duplicate key, first at line %d", first,
+					key.Line, at.Key(name.Value), "duplicate key, first at line %d", first,
 				)
 				continue
 			}
@@ -131,11 +131,11 @@ func (walker *schemaWalker) collect(
 }
 
 func (walker *schemaWalker) inherit(
-	key, value *yaml.Node, at *fieldPath, merged map[*yaml.Node]bool,
+	key, value *yaml.Node, at *Field, merged map[*yaml.Node]bool,
 ) []pair {
 	targets, ok := mergeTargets(value)
 	if !ok {
-		walker.report(key.Line, at.key("<<"), "want a mapping or a list of mappings")
+		walker.report(key.Line, at.Key("<<"), "want a mapping or a list of mappings")
 		return nil
 	}
 	var entries []pair

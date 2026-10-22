@@ -13,43 +13,43 @@ type segment struct {
 	indexed bool
 }
 
-type fieldPath struct {
-	parent *fieldPath
+type Field struct {
+	parent *Field
 	seg    segment
-	kids   map[segment]*fieldPath
+	kids   map[segment]*Field
 	marked bool
 	under  bool
 }
 
-func newRoot() *fieldPath {
+func Root() *Field {
 	// Interned: equal fields are one node, and a "." or "[" in a key never splits a segment.
-	return &fieldPath{}
+	return &Field{}
 }
 
-func (at *fieldPath) key(name string) *fieldPath {
+func (at *Field) Key(name string) *Field {
 	if name == "" {
 		name = "<empty key>"
 	}
 	return at.child(segment{name: name})
 }
 
-func (at *fieldPath) item(idx int) *fieldPath {
+func (at *Field) Item(idx int) *Field {
 	return at.child(segment{index: idx, indexed: true})
 }
 
-func (at *fieldPath) child(seg segment) *fieldPath {
+func (at *Field) child(seg segment) *Field {
 	if next, found := at.kids[seg]; found {
 		return next
 	}
 	if at.kids == nil {
-		at.kids = map[segment]*fieldPath{}
+		at.kids = map[segment]*Field{}
 	}
-	next := &fieldPath{parent: at, seg: seg}
+	next := &Field{parent: at, seg: seg}
 	at.kids[seg] = next
 	return next
 }
 
-func (at *fieldPath) String() string {
+func (at *Field) String() string {
 	var chain []segment
 	for node := at; node.parent != nil; node = node.parent {
 		chain = append(chain, node.seg)
@@ -68,7 +68,7 @@ func (at *fieldPath) String() string {
 	return out.String()
 }
 
-func (at *fieldPath) mark() {
+func (at *Field) mark() {
 	at.marked = true
 	for node := at; node.parent != nil; node = node.parent {
 		if node.seg.indexed {
@@ -77,7 +77,7 @@ func (at *fieldPath) mark() {
 	}
 }
 
-func (at *fieldPath) covered(walked *int) bool {
+func (at *Field) covered(walked *int) bool {
 	// Covered by an equal or enclosing problem, or when it holds an item with a problem.
 	if at.marked || at.under {
 		return true
@@ -91,7 +91,7 @@ func (at *fieldPath) covered(walked *int) bool {
 	return false
 }
 
-func clipValue(value string) string {
+func ClipValue(value string) string {
 	if len(value) <= MaxClipBytes {
 		return value
 	}

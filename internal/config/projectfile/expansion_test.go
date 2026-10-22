@@ -259,7 +259,7 @@ func requireOneVisitPerNode(t *testing.T, content string) {
 		return
 	}
 	walker := expander{extents: map[*yaml.Node]extent{}, active: map[*yaml.Node]bool{}}
-	walker.size(root, newRoot(), 0)
+	walker.size(root, Root(), 0)
 	if nodes := distinctNodes(root); walker.visits > nodes {
 		t.Errorf("walk visited %d nodes of a %d node document, want each at most once",
 			walker.visits, nodes)

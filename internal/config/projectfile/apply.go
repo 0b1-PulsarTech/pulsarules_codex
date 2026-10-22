@@ -33,8 +33,8 @@ func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 }
 
 func (file *File) CheckOverrides(govCfg *config.GovernanceConfig) error {
-	problems := &collector{path: file.Path}
-	listed := newRoot().key("overrides")
+	problems := &Problems{path: file.Path}
+	listed := Root().Key("overrides")
 	for idx, override := range file.Overrides {
 		for _, id := range slices.Sorted(maps.Keys(override.Analyzers)) {
 			rules := override.Analyzers[id]
@@ -43,12 +43,12 @@ func (file *File) CheckOverrides(govCfg *config.GovernanceConfig) error {
 			if rules.Enabled == nil || !*rules.Enabled || !found || current.Enabled {
 				continue
 			}
-			field := listed.item(idx).key("analyzers").key(id).key("enabled")
+			field := listed.Item(idx).Key("analyzers").Key(id).Key("enabled")
 			problems.add(0, field, "%s is disabled for the whole project; "+
-				"an override can only narrow it", clipValue(base))
+				"an override can only narrow it", ClipValue(base))
 		}
 	}
-	return problems.err()
+	return problems.Err()
 }
 
 func applyAnalyzer(govCfg *config.GovernanceConfig, id string, entry AnalyzerEntry) {
@@ -88,65 +88,71 @@ func toCoreOverride(entry OverrideEntry) pass.Override {
 }
 
 func (val *validator) checkOverrides(entries []OverrideEntry) {
-	field := val.root.key("overrides")
+	field := val.root.Key("overrides")
 	for idx, override := range entries {
-		val.checkOverride(field.item(idx), override)
+		val.checkOverride(field.Item(idx), override)
 	}
 }
 
-func (val *validator) checkOverride(field *fieldPath, override OverrideEntry) {
+func (val *validator) checkOverride(field *Field, override OverrideEntry) {
 	if len(override.Files) == 0 {
-		val.fail(field.key("files"), "at least one glob is required")
+		val.fail(field.Key("files"), "at least one glob is required")
 	}
 	for _, id := range slices.Sorted(maps.Keys(override.Analyzers)) {
 		rules := override.Analyzers[id]
-		idField := field.key("analyzers").key(id)
+		idField := field.Key("analyzers").Key(id)
 		val.checkOverrideAnalyzer(idField, id)
-		val.checkSeverity(idField.key("severity"), rules.Severity)
-		val.checkOverrideParams(idField.key("params"), id, rules.Params)
+		val.checkSeverity(idField.Key("severity"), rules.Severity)
+		val.checkOverrideParams(idField.Key("params"), id, rules.Params)
 	}
 }
 
-func (val *validator) checkOverrideParams(field *fieldPath, id string, params map[string]any) {
+func (val *validator) checkOverrideParams(
+	field *Field, id string, params map[string]any,
+) {
 	if params == nil {
 		return
 	}
 	if id != filesize.ID {
 		val.fail(field, "per-path params are only supported for %s, not %s",
-			filesize.ID, clipValue(id))
+			filesize.ID, ClipValue(id))
 		return
 	}
 	val.checkAnalyzerParams(field, id, params)
 	if _, set := params[pass.ParamExtensions]; set {
-		val.fail(field.key(pass.ParamExtensions), "%s is not supported per path",
+		val.fail(field.Key(pass.ParamExtensions), "%s is not supported per path",
 			pass.ParamExtensions)
 	}
 }
 
-func (val *validator) checkAnalyzerParams(field *fieldPath, id string, params map[string]any) {
+func (val *validator) checkAnalyzerParams(
+	field *Field, id string, params map[string]any,
+) {
 	val.checkParams(field, id, params)
 	if id == filesize.ID {
 		val.checkLimitParams(field, params)
 	}
 }
 
-func (val *validator) checkLimitParams(field *fieldPath, params map[string]any) {
+func (val *validator) checkLimitParams(field *Field, params map[string]any) {
 	soft := val.limitParam(field, params, filesize.ParamMaxLines, 1)
 	hard := val.limitParam(field, params, filesize.ParamErrorLines, 0)
 	if soft > 0 && hard > 0 && hard <= soft {
-		val.fail(field.key(filesize.ParamErrorLines), "must be above %s (%d)",
+		val.fail(field.Key(filesize.ParamErrorLines), "must be above %s (%d)",
 			filesize.ParamMaxLines, soft)
 	}
 }
 
-func (val *validator) limitParam(at *fieldPath, params map[string]any, key string, floor int) int {
+func (val *validator) limitParam(
+	at *Field, params map[string]any, key string, floor int,
+) int {
 	raw, set := params[key]
 	if !set {
 		return 0
 	}
 	number, ok := raw.(int)
 	if !ok || number < floor {
-		val.fail(at.key(key), "must be an integer of at least %d", floor)
+		val.fail(at.Key(key), "must be an integer of at least %d", floor)
 		return 0
 	}
 	return number
