@@ -12,6 +12,7 @@ type (
 	moveContext struct {
 		dirMoves  map[string]string
 		moved     map[string]bool
+		relocated map[string]bool
 		movedTo   map[string]string
 		renames   []pass.Rename
 		head      *snapshot
@@ -40,6 +41,7 @@ func newMoveContext(reader gitReader, renames []pass.Rename) *moveContext {
 	moves := &moveContext{
 		dirMoves:  make(map[string]string, len(renames)),
 		moved:     make(map[string]bool, len(renames)*2),
+		relocated: map[string]bool{},
 		movedTo:   make(map[string]string, len(renames)),
 		renames:   renames,
 		head:      newSnapshot(reader, vcs.Head),
@@ -59,6 +61,10 @@ func newMoveContext(reader gitReader, renames []pass.Rename) *moveContext {
 		moves.moved[rename.OldPath] = true
 		moves.moved[rename.NewPath] = true
 		moves.movedTo[rename.OldPath] = rename.NewPath
+		if dirs.oldDir != dirs.newDir {
+			moves.relocated[rename.OldPath] = true
+			moves.relocated[rename.NewPath] = true
+		}
 	}
 	return moves
 }

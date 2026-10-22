@@ -118,7 +118,7 @@ func (moves *moveContext) embedCoverDir(snap *snapshot, file string) string {
 
 func (moves *moveContext) embedsIn(snap *snapshot, files []string, rel string) bool {
 	for _, file := range files {
-		if !isGoFile(file) || moves.moved[file] {
+		if !isGoFile(file) || moves.relocated[file] {
 			continue
 		}
 		if src, err := snap.blob(file); err != nil || !strings.Contains(src, "go:embed") {

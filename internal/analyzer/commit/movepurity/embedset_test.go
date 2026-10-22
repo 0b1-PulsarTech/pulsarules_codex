@@ -128,6 +128,7 @@ func TestEmbedSet_Detected(t *testing.T) {
 			"internal/assets/static/a.png", "internal/other/a.png",
 		),
 		grandparentRow(),
+		renamedEmbedderRow(),
 	}
 	runRenameCases(t, testCases)
 }
@@ -199,6 +200,18 @@ func grandparentRow() renameCase {
 		"x/a.css": "asset\n",
 	}
 	return row
+}
+
+func renamedEmbedderRow() renameCase {
+	const oldGo, newGo = "internal/web/a.go", "internal/web/b.go"
+	const asset, moved = "internal/web/static/x.txt", "x/x.txt"
+	src := embedSrc("web", "//go:embed static")
+	return renameCase{
+		name:    "embedder renamed inside its directory still embeds there",
+		head:    map[string]string{oldGo: src, asset: "x\n", "internal/web/static/y.txt": "y\n"},
+		staged:  map[string]string{newGo: src, moved: "x\n", "internal/web/static/y.txt": "y\n"},
+		renames: []pass.Rename{pair(asset, moved), {OldPath: oldGo, NewPath: newGo, Score: 100}},
+	}
 }
 
 func TestEmbedSet_NotCovered(t *testing.T) {
