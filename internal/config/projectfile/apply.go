@@ -109,10 +109,10 @@ func (val *validator) checkOverride(field *Field, override OverrideEntry) {
 
 func (val *validator) checkGlobBudget(globs []string) bool {
 	size, wildcards, tails := 0, 0, 0
-	for _, glob := range globs {
-		size += len(glob)
-		wildcards += wildcardWork(glob)
-		tails += starTail(glob)
+	for _, pattern := range globs {
+		size += len(pattern)
+		wildcards += wildcardWork(pattern)
+		tails += starTail(pattern)
 	}
 	at := val.root.key("overrides and tests")
 	switch {
