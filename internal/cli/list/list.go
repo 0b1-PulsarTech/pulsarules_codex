@@ -1,6 +1,7 @@
 package list
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -11,17 +12,27 @@ import (
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func RunList(inj remy.Injector, opts *version.Options) error {
+type Command struct{}
+
+func (Command) Bind(*flag.FlagSet) {}
+
+func (Command) Run(inj remy.Injector, args []string) error {
 	idx, err := remy.Get[*knowledge.Index](inj)
 	if err != nil {
 		return fmt.Errorf("get knowledge index: %w", err)
 	}
-	return writeList(os.Stdout, idx, opts.Kind)
+	return writeList(os.Stdout, idx, kindOf(args))
+}
+
+func kindOf(args []string) string {
+	if len(args) > 0 {
+		return args[0]
+	}
+	return "skills"
 }
 
 func writeList(out io.Writer, idx *knowledge.Index, kind string) error {

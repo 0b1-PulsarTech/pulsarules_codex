@@ -2,13 +2,13 @@ package validate
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/evals"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance/registry"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
@@ -16,7 +16,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func RunValidate(inj remy.Injector, _ *version.Options) error {
+type Command struct{}
+
+func (Command) Bind(*flag.FlagSet) {}
+
+func (Command) Run(inj remy.Injector, _ []string) error {
 	idx, err := remy.Get[*knowledge.Index](inj)
 	if err != nil {
 		return fmt.Errorf("get knowledge index: %w", err)

@@ -40,8 +40,6 @@ func commandBinders() map[string]flagBinder {
 	return map[string]flagBinder{
 		"install":    bindInstallFlags,
 		"uninstall":  bindUninstallFlags,
-		"list":       bindNoFlags,
-		"validate":   bindNoFlags,
 		"hook":       bindNoFlags,
 		"commitlint": bindCommitLintFlags,
 		"clean":      bindCleanFlags,
@@ -78,12 +76,6 @@ func bindEvalsFlags(fs *flag.FlagSet, opts *Options) {
 }
 
 func parsePositionalArgs(opts *Options, fs *flag.FlagSet) {
-	if opts.Command == "list" {
-		opts.Kind = "skills"
-		if fs.NArg() > 0 {
-			opts.Kind = fs.Arg(0)
-		}
-	}
 	if opts.Command == "hook" && fs.NArg() > 0 {
 		opts.Mode = fs.Arg(0)
 	}

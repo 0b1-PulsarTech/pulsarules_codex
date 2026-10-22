@@ -34,8 +34,6 @@ type Options struct {
 	AllFiles         bool
 	IncludeGenerated bool
 
-	Kind string
-
 	Mode string
 
 	CommitMsg  string

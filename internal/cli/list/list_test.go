@@ -110,3 +110,30 @@ func TestWriteList(t *testing.T) {
 		})
 	}
 }
+
+func TestKindOf(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "no argument lists skills", want: "skills"},
+		{name: "first argument names the kind", args: []string{"rules"}, want: "rules"},
+		{
+			name: "extra arguments are ignored",
+			args: []string{"patterns", "rules"},
+			want: "patterns",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := kindOf(testCase.args); got != testCase.want {
+				t.Errorf("kindOf(%q) = %q, want %q", testCase.args, got, testCase.want)
+			}
+		})
+	}
+}

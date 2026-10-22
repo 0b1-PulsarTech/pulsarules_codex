@@ -68,11 +68,6 @@ func TestParseArgs(t *testing.T) {
 			args:  []string{"install", "--project", "/tmp/repo"},
 			check: checkInstallDefaultGitHooks,
 		},
-		{
-			name:  "list defaults to skills",
-			args:  []string{"list"},
-			check: checkListDefaultsToSkills,
-		},
 		{name: "unknown command", args: []string{"frobnicate"}, wantErr: true},
 	})
 }
@@ -189,13 +184,6 @@ func checkUninstallDefaultHooksScope(t *testing.T, opts *Options) {
 			"HooksScope = %q, want empty (uninstall defaults to unwiring both files)",
 			opts.HooksScope,
 		)
-	}
-}
-
-func checkListDefaultsToSkills(t *testing.T, opts *Options) {
-	t.Helper()
-	if opts.Kind != "skills" {
-		t.Errorf("Kind = %q, want skills", opts.Kind)
 	}
 }
 
@@ -334,12 +322,12 @@ func TestParseArgs_LogLevelDefaultsFromTheEnvironment(t *testing.T) {
 		args []string
 		want string
 	}{
-		{name: "unset env and no flag", args: []string{"list"}, want: ""},
-		{name: "env sets the default", env: "debug", args: []string{"list"}, want: "debug"},
+		{name: "unset env and no flag", args: []string{"clean"}, want: ""},
+		{name: "env sets the default", env: "debug", args: []string{"clean"}, want: "debug"},
 		{
 			name: "flag beats env",
 			env:  "debug",
-			args: []string{"list", "--log-level", "error"},
+			args: []string{"clean", "--log-level", "error"},
 			want: "error",
 		},
 	}
