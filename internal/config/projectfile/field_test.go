@@ -319,3 +319,31 @@ func TestClipName(t *testing.T) {
 		})
 	}
 }
+
+func TestClipValue(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{"empty", "", ""},
+		{"short", "abc", "abc"},
+		{"exactly the clip", strings.Repeat("a", 80), strings.Repeat("a", 80)},
+		{"one over", strings.Repeat("a", 81), strings.Repeat("a", 80) + "..."},
+		{
+			"a rune across the cut",
+			strings.Repeat("a", 79) + "\u00e9" + "tail",
+			strings.Repeat("a", 79) + "...",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			if got := clipValue(testCase.value); got != testCase.want {
+				t.Fatalf("clipValue() = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}

@@ -69,8 +69,8 @@ func (val *validator) checkHeader(file *File) {
 		val.fail(version, "unsupported %d (want %d)", file.Version, SupportedVersion)
 	}
 	if file.Preset != "" && !config.ValidPreset(file.Preset) {
-		val.fail(val.root.key("preset"), "unknown preset %q (want %s)",
-			clipValue(file.Preset), strings.Join(config.Presets(), "|"))
+		val.fail(val.root.key("preset"), "%s",
+			config.UnknownPreset("unknown preset", clipValue(file.Preset)))
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
@@ -119,9 +118,7 @@ func reportGovernance(out io.Writer, report findings.Report) error {
 func (cmd *Command) projectConfig(root string) (*config.GovernanceConfig, error) {
 	// ApplyPreset silently ignores an unknown name, so reject it here.
 	if cmd.preset != "" && !config.ValidPreset(cmd.preset) {
-		return nil, fmt.Errorf(
-			"invalid --preset %q (want %s)", cmd.preset, strings.Join(config.Presets(), "|"),
-		)
+		return nil, errors.New(config.UnknownPreset("invalid --preset", cmd.preset))
 	}
 	file, err := loader.NewLoader(registry.ConfigRules()).Load(
 		root, cmd.config, cmd.preset,

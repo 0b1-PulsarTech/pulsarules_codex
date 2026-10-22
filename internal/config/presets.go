@@ -1,8 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
@@ -107,4 +109,8 @@ func Presets() []string {
 		names[idx] = listed.name
 	}
 	return names
+}
+
+func UnknownPreset(subject, name string) string {
+	return fmt.Sprintf("%s %q (want %s)", subject, name, strings.Join(Presets(), "|"))
 }

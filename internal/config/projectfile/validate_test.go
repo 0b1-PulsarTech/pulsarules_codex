@@ -66,7 +66,10 @@ func TestValidateHeader(t *testing.T) {
 		{"valid", "version: 1\nanalyzers: {file-size: {params: {max_lines: 9}}}\n", ""},
 		{"missing version", "preset: strict\n", "version: required"},
 		{"bad version", "version: 2\n", "version: unsupported 2"},
-		{"bad preset", "version: 1\npreset: wild\n", "preset: unknown preset"},
+		{
+			"bad preset", "version: 1\npreset: wild\n",
+			`preset: unknown preset "wild" (want recommended|strict|minimal)`,
+		},
 		{"bad skip dir", "version: 1\nskip_dirs: [a/b]\n", "skip_dirs: \"a/b\""},
 		{"bad tests glob", "version: 1\ntests: [\"a//b\"]\n", "tests[0]:"},
 	})
@@ -325,34 +328,6 @@ func TestValidateClipsQuotedValues(t *testing.T) {
 			}
 			if !strings.Contains(message, strings.Repeat("x", 78)) {
 				t.Errorf("message lost the start of the value: %q", message)
-			}
-		})
-	}
-}
-
-func TestClipValue(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name  string
-		value string
-		want  string
-	}{
-		{"empty", "", ""},
-		{"short", "abc", "abc"},
-		{"exactly the clip", strings.Repeat("a", 80), strings.Repeat("a", 80)},
-		{"one over", strings.Repeat("a", 81), strings.Repeat("a", 80) + "..."},
-		{
-			"a rune across the cut",
-			strings.Repeat("a", 79) + "\u00e9" + "tail",
-			strings.Repeat("a", 79) + "...",
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			if got := clipValue(testCase.value); got != testCase.want {
-				t.Fatalf("clipValue() = %q, want %q", got, testCase.want)
 			}
 		})
 	}

@@ -217,3 +217,39 @@ func TestPresets_ReadNamesWithoutBuildingOverrides(t *testing.T) {
 		})
 	}
 }
+
+func TestUnknownPreset(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		subject string
+		preset  string
+		want    string
+	}{
+		{
+			"flag wording", "invalid --preset", "stict",
+			`invalid --preset "stict" (want recommended|strict|minimal)`,
+		},
+		{
+			"file wording", "unknown preset", "wild",
+			`unknown preset "wild" (want recommended|strict|minimal)`,
+		},
+		{
+			"empty name is quoted", "unknown preset", "",
+			`unknown preset "" (want recommended|strict|minimal)`,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := config.UnknownPreset(
+				testCase.subject,
+				testCase.preset,
+			); got != testCase.want {
+				t.Fatalf("UnknownPreset() = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}

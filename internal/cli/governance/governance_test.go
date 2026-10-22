@@ -93,15 +93,10 @@ func TestGovernanceConfig(t *testing.T) {
 func TestGovernanceConfig_InvalidPreset(t *testing.T) {
 	t.Parallel()
 
+	const want = `invalid --preset "stict" (want recommended|strict|minimal)`
 	_, err := (&Command{preset: "stict"}).governanceConfig("")
-	if err == nil {
-		t.Fatal("governanceConfig: expected an error for an unknown preset")
-	}
-	presets := []string{config.PresetRecommended, config.PresetStrict, config.PresetMinimal}
-	for _, want := range presets {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("error %q does not name valid preset %q", err, want)
-		}
+	if err == nil || err.Error() != want {
+		t.Fatalf("governanceConfig error = %v, want %q", err, want)
 	}
 }
 
