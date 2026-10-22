@@ -14,8 +14,12 @@ import (
 func (moves *moveContext) relocationVerdict(oldFile, newFile gosrc.File, edit fileEdit) verdict {
 	dirs := edit.dirs()
 	if gosrc.RelocationUnsafe(oldFile, newFile) || moves.takesOverName(newFile, edit) ||
-		!moves.loadFollowsDir(newFile, edit) || !moves.embedsFollow(newFile.Embeds, dirs) {
+		!moves.loadFollowsDir(newFile, edit) {
 		return verdictClauseOnly
+	}
+	if !moves.embedsFollow(newFile.Embeds, dirs) {
+		moves.embedDirs[edit.newPath] = dirs.newDir
+		return verdictEmbeds
 	}
 	file, listed := moves.strandedCompiled(dirs)
 	switch {

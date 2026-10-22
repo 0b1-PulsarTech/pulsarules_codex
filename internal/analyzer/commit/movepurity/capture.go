@@ -101,3 +101,33 @@ func (moves *moveContext) arrivesAlone(oldPath, newPath string) bool {
 		return isUnder && rename.OldPath != path.Join(oldPath, rel)
 	})
 }
+
+func (moves *moveContext) embedCoverDir(snap *snapshot, file string) string {
+	rest := path.Base(file)
+	for dir := path.Dir(file); ; dir = path.Dir(dir) {
+		files, err := snap.dir(dir)
+		if err != nil || moves.embedsIn(snap, files, rest) {
+			return dir
+		}
+		if dir == "." || slices.Contains(files, path.Join(dir, "go.mod")) {
+			return ""
+		}
+		rest = path.Join(path.Base(dir), rest)
+	}
+}
+
+func (moves *moveContext) embedsIn(snap *snapshot, files []string, rel string) bool {
+	for _, file := range files {
+		if !isGoFile(file) || moves.moved[file] {
+			continue
+		}
+		if src, err := snap.blob(file); err != nil || !strings.Contains(src, "go:embed") {
+			continue
+		}
+		parsed, err := snap.parse(file)
+		if err == nil && !parsed.IsIgnored && gosrc.EmbedCovers(parsed.Embeds, rel) {
+			return true
+		}
+	}
+	return false
+}

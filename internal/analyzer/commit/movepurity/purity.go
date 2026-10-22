@@ -26,6 +26,7 @@ const (
 	verdictInclusion
 	verdictUnlinksLoad
 	verdictStrands
+	verdictEmbeds
 )
 
 func (moves *moveContext) renameVerdict(rename pass.Rename) verdict {
@@ -54,16 +55,28 @@ func (moves *moveContext) identicalVerdict(rename pass.Rename) verdict {
 		gosrc.IsOutsidePackage(rename.OldPath) && gosrc.IsOutsidePackage(rename.NewPath):
 		return verdictPure
 	case !isGo && !gosrc.IsCompiled(rename.OldPath):
-		return verdictPure
+		return moves.assetVerdict(rename)
 	case isGo:
 		got := moves.isGoEdit(fileEdit{
 			oldPath: rename.OldPath, newPath: rename.NewPath, isMove: true, isSame: true,
 		})
-		if got == verdictPure || got == verdictStrands {
+		if got == verdictPure || got == verdictStrands || got == verdictEmbeds {
 			return got
 		}
 	}
 	return verdictUnsafe
+}
+
+func (moves *moveContext) assetVerdict(rename pass.Rename) verdict {
+	dir := moves.embedCoverDir(moves.head, rename.OldPath)
+	if dir == "" {
+		dir = moves.embedCoverDir(moves.staged, rename.NewPath)
+	}
+	if dir == "" {
+		return verdictPure
+	}
+	moves.embedDirs[rename.NewPath] = dir
+	return verdictEmbeds
 }
 
 func (moves *moveContext) importChangeVerdict(changedPath string) verdict {

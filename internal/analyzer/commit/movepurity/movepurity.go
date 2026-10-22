@@ -1,6 +1,8 @@
 package movepurity
 
 import (
+	"fmt"
+
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
@@ -79,6 +81,8 @@ func renameFinding(
 			rename,
 			"differs only by mechanical package/import fixups but is",
 		), true
+	case got == verdictEmbeds:
+		return embedSetFinding(reporter, rename, moves.embedDirs[rename.NewPath]), true
 	case got == verdictStrands:
 		return strandsCompiledFinding(reporter, rename, moves.stranded[rename.NewPath]), true
 	case isLow:
@@ -92,6 +96,24 @@ func renameFinding(
 	}
 	// A failed git read lands here too: reporting beats a silent false negative.
 	return renameCarriesEditFinding(reporter, rename), true
+}
+
+func embedSetFinding(reporter finding.Reporter, rename pass.Rename, dir string) finding.Finding {
+	advice := "move every file the pattern covers in the same commit, " +
+		"and keep the new location free of other files"
+	if !isGoFile(rename.NewPath) {
+		advice = "keep the file where the pattern finds it, " +
+			"or commit the move on its own with the embed pattern updated"
+	}
+	return reporter.At(
+		rename.NewPath,
+		0,
+		fmt.Sprintf(
+			"move of %s -> %s changes the files a //go:embed pattern in %s includes",
+			rename.OldPath, rename.NewPath, dir,
+		),
+		advice,
+	)
 }
 
 func unrelatedStagedEdits(
