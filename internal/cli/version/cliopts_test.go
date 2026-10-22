@@ -69,11 +69,6 @@ func TestParseArgs(t *testing.T) {
 			check: checkInstallDefaultGitHooks,
 		},
 		{
-			name:  "generate default out",
-			args:  []string{"generate"},
-			check: checkGenerateDefaultOut,
-		},
-		{
 			name:  "list defaults to skills",
 			args:  []string{"list"},
 			check: checkListDefaultsToSkills,
@@ -194,13 +189,6 @@ func checkUninstallDefaultHooksScope(t *testing.T, opts *Options) {
 			"HooksScope = %q, want empty (uninstall defaults to unwiring both files)",
 			opts.HooksScope,
 		)
-	}
-}
-
-func checkGenerateDefaultOut(t *testing.T, opts *Options) {
-	t.Helper()
-	if opts.Out != filepath.Join(".", "generated") {
-		t.Errorf("Out = %q, want ./generated", opts.Out)
 	}
 }
 

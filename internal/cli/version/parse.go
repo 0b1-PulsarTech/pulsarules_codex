@@ -21,13 +21,7 @@ func ParseArgs(args []string, env flags.Environment) (*Options, error) {
 
 	fs := flag.NewFlagSet(opts.Command, flag.ContinueOnError)
 	fs.Usage = func() { _ = Usage() }
-	fs.StringVar(&opts.Root, "root", "", "repository root for dev mode (defaults to embedded)")
-	fs.StringVar(
-		&opts.LogLevel,
-		"log-level",
-		opts.Env.LogLevel,
-		"hook execution log level: debug|info|warn|error (empty disables logging)",
-	)
+	flags.BindCommon(fs, &opts.Root, &opts.LogLevel, env)
 	if err := bindCommandFlags(opts.Command, fs, opts); err != nil {
 		return nil, err
 	}
@@ -45,7 +39,6 @@ type flagBinder func(fs *flag.FlagSet, opts *Options)
 
 func commandBinders() map[string]flagBinder {
 	return map[string]flagBinder{
-		"generate":   bindGenerateFlags,
 		"install":    bindInstallFlags,
 		"uninstall":  bindUninstallFlags,
 		"package":    bindPackageFlags,
@@ -69,10 +62,6 @@ func bindCommandFlags(command string, fs *flag.FlagSet, opts *Options) error {
 }
 
 func bindNoFlags(*flag.FlagSet, *Options) {}
-
-func bindGenerateFlags(fs *flag.FlagSet, opts *Options) {
-	fs.StringVar(&opts.Out, "out", "", "output dir (defaults to ./generated)")
-}
 
 func bindPackageFlags(fs *flag.FlagSet, opts *Options) {
 	fs.StringVar(

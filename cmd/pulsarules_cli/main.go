@@ -19,7 +19,7 @@ func main() {
 	if tssyntax.RunChild(os.Args, os.Exit) {
 		return
 	}
-	opts, err := version.ParseArgs(os.Args[1:], flags.ReadEnvironment())
+	call, err := cli.Parse(os.Args[1:], flags.ReadEnvironment())
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			os.Exit(0)
@@ -27,21 +27,21 @@ func main() {
 		die(err)
 	}
 
-	if opts.Command == "" || version.IsHelp(opts.Command) {
+	if call.Name == "" || version.IsHelp(call.Name) {
 		_ = version.Usage()
 		return
 	}
-	if version.IsVersion(opts.Command) {
+	if version.IsVersion(call.Name) {
 		version.PrintVersion()
 		return
 	}
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if bootErr := bootstrap.DoInjections(inj, cli.BootstrapOptions(opts)); bootErr != nil {
-		os.Exit(cli.HandleBootstrapErr(opts.Command, bootErr))
+	if bootErr := bootstrap.DoInjections(inj, call.BootstrapOptions()); bootErr != nil {
+		os.Exit(call.HandleBootstrapErr(bootErr))
 	}
 
-	if err = cli.Run(inj, opts); err != nil {
+	if err = call.Run(inj); err != nil {
 		die(err)
 	}
 }

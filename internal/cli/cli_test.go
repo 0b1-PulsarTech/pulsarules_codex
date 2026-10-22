@@ -29,8 +29,7 @@ import (
 func TestRun_UnknownCommand(t *testing.T) {
 	t.Parallel()
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	err := Run(inj, &version.Options{Command: "frobnicate"})
+	_, err := Parse([]string{"frobnicate"}, flags.Environment{})
 	if err == nil {
 		t.Fatal("expected an error for an unknown command")
 	}
@@ -75,7 +74,7 @@ func TestRun_PrefixesInstallAndUninstallErrors(t *testing.T) {
 			if opts.Command == "install" {
 				opts.Project = t.TempDir()
 			}
-			err := Run(inj, &opts)
+			err := commands()[opts.Command](inj, &opts)
 			if err == nil {
 				t.Fatal("expected an error")
 			}
@@ -101,7 +100,11 @@ func TestHandleBootstrapErr(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			got := HandleBootstrapErr(testCase.command, errors.New("boom"))
+			call := Invocation{
+				Name:   testCase.command,
+				Runner: legacyRunner{name: testCase.command, opts: &version.Options{}},
+			}
+			got := call.HandleBootstrapErr(errors.New("boom"))
 			if got != testCase.want {
 				t.Errorf(
 					"HandleBootstrapErr(%q) = %d, want %d",
@@ -223,11 +226,16 @@ func TestBootstrapOptions_ReadsTheEnvironmentOnce(t *testing.T) {
 		Root:    "/root",
 		Env:     flags.Environment{LogPath: logPath},
 	}
-	got := BootstrapOptions(opts)
+	got := Invocation{
+		Root:   opts.Root,
+		Env:    opts.Env,
+		Runner: legacyRunner{name: opts.Command, opts: opts},
+	}.BootstrapOptions()
 	if got.LogPath != logPath || got.Root != "/root" {
 		t.Errorf("BootstrapOptions() = %+v, want LogPath %q and Root /root", got, logPath)
 	}
-	if got = BootstrapOptions(&version.Options{Command: "hook"}); got.LogPath != "" {
+	unset := Invocation{Runner: legacyRunner{opts: &version.Options{Command: "hook"}}}
+	if got = unset.BootstrapOptions(); got.LogPath != "" {
 		t.Errorf("unset env LogPath = %q, want empty so logfile decides", got.LogPath)
 	}
 }
@@ -292,7 +300,12 @@ func TestRun_GovernanceReportsFindings(t *testing.T) {
 			opts := &version.Options{
 				Command: "governance", ProjectDir: dir, Scope: testCase.scope, AllFiles: true,
 			}
-			if got := outcome(Run(inj, opts)); !strings.HasPrefix(got, testCase.want) {
+			if got := outcome(
+				commands()[opts.Command](inj, opts),
+			); !strings.HasPrefix(
+				got,
+				testCase.want,
+			) {
 				t.Errorf("Run outcome = %q, want prefix %q", got, testCase.want)
 			}
 		})
