@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestDetect(t *testing.T) {
+func TestScan(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -59,16 +59,16 @@ func TestDetect(t *testing.T) {
 
 			got, err := scan(root, DefaultMaxDepth)
 			if err != nil {
-				t.Fatalf("Detect: %v", err)
+				t.Fatalf("scan: %v", err)
 			}
 			if diff := got.Strings(); !slices.Equal(diff, testCase.want) {
-				t.Errorf("Detect(%v) = %v, want %v", testCase.files, diff, testCase.want)
+				t.Errorf("scan(%v) = %v, want %v", testCase.files, diff, testCase.want)
 			}
 		})
 	}
 }
 
-func TestDetect_MaxDepth(t *testing.T) {
+func TestScan_MaxDepth(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -105,10 +105,10 @@ func TestDetect_MaxDepth(t *testing.T) {
 
 			got, err := scan(root, testCase.maxDepth)
 			if err != nil {
-				t.Fatalf("Detect: %v", err)
+				t.Fatalf("scan: %v", err)
 			}
 			if diff := got.Strings(); !slices.Equal(diff, testCase.want) {
-				t.Errorf("Detect(%q, maxDepth=%d) = %v, want %v",
+				t.Errorf("scan(%q, maxDepth=%d) = %v, want %v",
 					testCase.marker, testCase.maxDepth, diff, testCase.want)
 			}
 		})
@@ -126,15 +126,12 @@ func writeMarker(tb testing.TB, root, rel string) {
 	}
 }
 
-func TestDetect_UnreadableRoot(t *testing.T) {
+func TestScan_UnreadableRoot(t *testing.T) {
 	t.Parallel()
 
-	got, err := scan(
-		filepath.Join(t.TempDir(), "no-such-dir"),
-		DefaultMaxDepth,
-	)
+	got, err := scan(filepath.Join(t.TempDir(), "no-such-dir"), DefaultMaxDepth)
 	if err == nil {
-		t.Fatalf("Detect on a missing root returned no error, set = %v", got.Strings())
+		t.Fatalf("scan on a missing root returned no error, set = %v", got.Strings())
 	}
 	if !got.Empty() {
 		t.Fatalf("set = %v, want empty on error", got.Strings())

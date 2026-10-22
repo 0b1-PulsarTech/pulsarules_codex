@@ -29,7 +29,7 @@ func LoadConfig(repoDir string) (set Set, ok bool, err error) {
 	if err != nil {
 		return Set{}, false, err
 	}
-	// No config yet returns ok false, so Resolve falls through to Detect.
+	// No config yet returns ok false, so Resolve falls through to scan.
 	if raw == nil {
 		return Set{}, false, nil
 	}
