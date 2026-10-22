@@ -161,7 +161,10 @@ func childPath(node *yaml.Node, idx int, path *Field) *Field {
 
 func clipPath(path string) string {
 	// Keeps the last MaxClipBytes of escaped text, and the ellipsis comes on top of that.
-	return printable.Clip(path, maxClipBytes, 0, printable.TailEdge)
+	if shown := printable.Line(path); len(shown) <= maxClipBytes {
+		return shown
+	}
+	return printable.Ellipsis + printable.Tail(path, maxClipBytes)
 }
 
 func firstAliasLine(node *yaml.Node) int {
