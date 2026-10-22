@@ -127,14 +127,14 @@ func reportGovernance(out io.Writer, report findings.Report) error {
 }
 
 func (cmd *Command) projectConfig(
-	loaderItem *loader.Loader,
+	layered *loader.Loader,
 	root string,
 ) (*config.GovernanceConfig, error) {
 	// ApplyPreset silently ignores an unknown name, so reject it here.
 	if cmd.preset != "" && !config.ValidPreset(cmd.preset) {
 		return nil, errors.New(config.UnknownPreset("invalid --preset", cmd.preset))
 	}
-	file, err := loaderItem.Load(root, cmd.config, cmd.preset)
+	file, err := layered.Load(root, cmd.config, cmd.preset)
 	if err != nil {
 		return nil, err
 	}
