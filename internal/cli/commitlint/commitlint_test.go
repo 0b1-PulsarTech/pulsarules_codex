@@ -44,11 +44,11 @@ func lintAfterHistory(t *testing.T, configYAML string, history []string, message
 	return lintIn(t, dir, message, registryLoader())
 }
 
-func registryLoader() func() *loader.Loader {
-	return func() *loader.Loader { return loader.NewLoader(registry.ConfigRules()) }
+func registryLoader() func() *loader.Layered {
+	return func() *loader.Layered { return loader.New(registry.ConfigRules()) }
 }
 
-func lintIn(t *testing.T, dir, message string, loader func() *loader.Loader) error {
+func lintIn(t *testing.T, dir, message string, loader func() *loader.Layered) error {
 	t.Helper()
 
 	index, _, err := knowledge.Load("")
@@ -238,13 +238,13 @@ func TestCommand_Run_UsesTheGivenLoader(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		loader  func() *loader.Loader
+		loader  func() *loader.Layered
 		wantErr error
 	}{
 		{"registry rules reject the analyzer", registryLoader(), command.ErrFindings},
 		{
 			"a loader built for any analyzer accepts it",
-			func() *loader.Loader { return loader.NewLoader(projectfile.Rules{AnyAnalyzer: true}) },
+			func() *loader.Layered { return loader.New(projectfile.Rules{AnyAnalyzer: true}) },
 			nil,
 		},
 	}

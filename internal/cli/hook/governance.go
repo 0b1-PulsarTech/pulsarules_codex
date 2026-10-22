@@ -15,7 +15,7 @@ import (
 
 type governor struct {
 	index  *knowledge.Index
-	loader func() *loader.Loader
+	loader func() *loader.Layered
 }
 
 func (gov governor) check(

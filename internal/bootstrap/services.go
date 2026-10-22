@@ -27,7 +27,7 @@ type Services struct {
 	OpenLogger     func() (*slog.Logger, io.Closer, error)
 	LoadCatalog    func() (*emoji.Catalog, error)
 	// Built on the first call, so only a command that reads project config pays for it.
-	Loader func() *loader.Loader
+	Loader func() *loader.Layered
 }
 
 func resolve(inj remy.Injector, build builders) (Services, error) {

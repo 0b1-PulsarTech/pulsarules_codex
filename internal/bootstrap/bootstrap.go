@@ -17,7 +17,7 @@ import (
 type builders struct {
 	openRepository func(dir string) (*vcs.Repository, error)
 	newCatalog     func() (*emoji.Catalog, error)
-	newLoader      func() *loader.Loader
+	newLoader      func() *loader.Layered
 	newLogger      func(cfg logfile.Config) (*slog.Logger, io.Closer, error)
 }
 
@@ -29,7 +29,7 @@ func defaultBuilders() builders {
 	return builders{
 		openRepository: vcs.Open,
 		newCatalog:     emoji.NewCatalog,
-		newLoader:      func() *loader.Loader { return loader.NewLoader(registry.ConfigRules()) },
+		newLoader:      func() *loader.Layered { return loader.New(registry.ConfigRules()) },
 		newLogger:      logfile.New,
 	}
 }

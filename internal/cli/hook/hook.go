@@ -21,7 +21,7 @@ type Collaborators struct {
 	Templates   templates.Set
 	OpenLogger  func() (*slog.Logger, io.Closer, error)
 	LoadCatalog func() (*emoji.Catalog, error)
-	Loader      func() *loader.Loader
+	Loader      func() *loader.Layered
 }
 
 type Command struct {
@@ -76,7 +76,7 @@ func (cmd *Command) Run(needs Collaborators, args []string) error {
 func newHookDispatcher(
 	deps hook.Deps,
 	catalog func() (*emoji.Catalog, error),
-	loader func() *loader.Loader,
+	loader func() *loader.Layered,
 ) *hook.Dispatcher {
 	deps.Governance = governor{index: deps.Index, loader: loader}.check(catalog)
 	return hook.NewDispatcher(deps)

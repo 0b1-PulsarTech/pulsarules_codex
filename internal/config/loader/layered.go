@@ -19,7 +19,7 @@ type layers struct {
 	rules         projectfile.Rules
 }
 
-func (loader *Loader) loadLayers(
+func (loader *Layered) loadLayers(
 	root string, resolve commonDirResolver, presetFlag string,
 ) (*projectfile.File, error) {
 	base, baseErr := loadOptional(filepath.Join(root, projectfile.Name),

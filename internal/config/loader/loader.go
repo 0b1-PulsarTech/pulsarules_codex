@@ -12,20 +12,20 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-type Loader struct {
+type Layered struct {
 	rules projectfile.Rules
 }
 
-func NewLoader(rules projectfile.Rules) *Loader {
-	return &Loader{rules: rules}
+func New(rules projectfile.Rules) *Layered {
+	return &Layered{rules: rules}
 }
 
-func (loader *Loader) Load(root, explicit, presetFlag string) (*projectfile.File, error) {
+func (loader *Layered) Load(root, explicit, presetFlag string) (*projectfile.File, error) {
 	file, err := loader.load(root, explicit, presetFlag)
 	return file, capReport(err, file)
 }
 
-func (loader *Loader) load(root, explicit, presetFlag string) (*projectfile.File, error) {
+func (loader *Layered) load(root, explicit, presetFlag string) (*projectfile.File, error) {
 	if explicit != "" {
 		return loadFile(explicit, explicit, loader.rules)
 	}
@@ -78,7 +78,7 @@ func withPreset(file *projectfile.File, presetFlag string) *config.GovernanceCon
 	return cfg
 }
 
-func (loader *Loader) ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
+func (loader *Layered) ForRoot(root string) (*config.GovernanceConfig, []finding.Finding) {
 	file, err := loader.Load(root, "", "")
 	if err == nil {
 		var cfg *config.GovernanceConfig

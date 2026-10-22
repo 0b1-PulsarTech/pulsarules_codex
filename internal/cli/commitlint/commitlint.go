@@ -32,7 +32,7 @@ func (cmd *Command) Run(
 	openRepository func() (*vcs.Repository, error),
 	index *knowledge.Index,
 	loadCatalog func() (*emoji.Catalog, error),
-	loader func() *loader.Loader,
+	loader func() *loader.Layered,
 ) error {
 	msg := cmd.msg
 	if msg == "" && cmd.file != "" {

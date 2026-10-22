@@ -400,7 +400,7 @@ func TestRunGovernance_CatalogFailure(t *testing.T) {
 	}
 	open := func() (*vcs.Repository, error) { return repo, nil }
 	catalog := func() (*emoji.Catalog, error) { return nil, errors.New("boom") }
-	loader := func() *loader.Loader { return testLoader() }
+	loader := func() *loader.Layered { return testLoader() }
 
 	err = (&Command{project: dir}).Run(open, &knowledge.Index{}, catalog, loader)
 	if err == nil || err.Error() != "get emoji catalog: boom" {
@@ -417,8 +417,8 @@ func TestRunGovernance_RepositoryFailure(t *testing.T) {
 	}
 }
 
-func testLoader() *loader.Loader {
-	return loader.NewLoader(registry.ConfigRules())
+func testLoader() *loader.Layered {
+	return loader.New(registry.ConfigRules())
 }
 
 func unopenableRepository() func() (*vcs.Repository, error) {
@@ -431,7 +431,7 @@ func TestGovernanceConfig_UsesTheGivenLoader(t *testing.T) {
 	const unlistedAnalyzer = "version: 1\nanalyzers: {not-an-analyzer: {enabled: false}}\n"
 	testCases := []struct {
 		name    string
-		loader  *loader.Loader
+		loader  *loader.Layered
 		wantErr bool
 	}{
 		{"registry rules reject it", testLoader(), true},
@@ -450,6 +450,6 @@ func TestGovernanceConfig_UsesTheGivenLoader(t *testing.T) {
 	}
 }
 
-func anyAnalyzerLoader() *loader.Loader {
-	return loader.NewLoader(projectfile.Rules{AnyAnalyzer: true})
+func anyAnalyzerLoader() *loader.Layered {
+	return loader.New(projectfile.Rules{AnyAnalyzer: true})
 }

@@ -56,7 +56,7 @@ func (cmd *Command) loadGovernance(
 	openRepository func() (*vcs.Repository, error),
 	index *knowledge.Index,
 	loadCatalog func() (*emoji.Catalog, error),
-	loader func() *loader.Loader,
+	loader func() *loader.Layered,
 ) (governanceRun, error) {
 	repo, err := openRepository()
 	if err != nil {
@@ -78,7 +78,7 @@ func (cmd *Command) Run(
 	openRepository func() (*vcs.Repository, error),
 	index *knowledge.Index,
 	loadCatalog func() (*emoji.Catalog, error),
-	loader func() *loader.Loader,
+	loader func() *loader.Layered,
 ) error {
 	if cmd.ProjectDir() == "" {
 		return errProjectDirRequired
@@ -127,7 +127,7 @@ func reportGovernance(out io.Writer, report findings.Report) error {
 }
 
 func (cmd *Command) projectConfig(
-	layered *loader.Loader,
+	layered *loader.Layered,
 	root string,
 ) (*config.GovernanceConfig, error) {
 	// ApplyPreset silently ignores an unknown name, so reject it here.
@@ -142,7 +142,7 @@ func (cmd *Command) projectConfig(
 }
 
 func (cmd *Command) governanceConfig(
-	loader *loader.Loader,
+	loader *loader.Layered,
 	root string,
 ) (*config.GovernanceConfig, error) {
 	cfg, err := cmd.projectConfig(loader, root)

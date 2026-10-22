@@ -85,7 +85,7 @@ func TestNewServices_BuildsOnlyWhatIsAsked(t *testing.T) {
 		catalogs++
 		return newCatalog()
 	}
-	counted.newLoader = func() *loader.Loader {
+	counted.newLoader = func() *loader.Layered {
 		loaders++
 		return newLoader()
 	}
