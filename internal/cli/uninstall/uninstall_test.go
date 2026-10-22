@@ -388,9 +388,9 @@ func runInstall(tb testing.TB, wired wiring, args []string) error {
 	tb.Helper()
 
 	cmd := &install.Command{}
-	fs := flag.NewFlagSet("install", flag.ContinueOnError)
-	cmd.Bind(fs)
-	if err := fs.Parse(args); err != nil {
+	flagSet := flag.NewFlagSet("install", flag.ContinueOnError)
+	cmd.Bind(flagSet)
+	if err := flagSet.Parse(args); err != nil {
 		tb.Fatalf("Parse(%q): %v", args, err)
 	}
 	return cmd.Run(wired.index, wired.templates, wired.renderer, wired.targets)
