@@ -37,24 +37,24 @@ func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
 	if analyzer.repo == nil {
 		return nil
 	}
-	branch, err := analyzer.repo.CurrentBranch()
+	current, err := analyzer.repo.CurrentBranch()
 	// Silent on an unreadable repo: failing the run because git was unavailable
 	// would block work over a naming rule with nothing to say.
-	if err != nil || branch == "" || isExemptBranch(branch) {
+	if err != nil || current == "" || isExemptBranch(current) {
 		return nil
 	}
 	allowed := allowedTypes(ctx.Params(ID))
-	if hasAllowedType(branch, allowed) {
+	if hasAllowedType(current, allowed) {
 		return nil
 	}
 	return []finding.Finding{analyzer.reporter.New(fmt.Sprintf(
 		"branch %q does not start with a type prefix (want <type>/<description>, type one of %s)",
-		branch, strings.Join(allowed, "|"),
+		current, strings.Join(allowed, "|"),
 	))}
 }
 
-func isExemptBranch(branch string) bool {
-	switch branch {
+func isExemptBranch(name string) bool {
+	switch name {
 	// A long-lived trunk names a line of history, not the work landing on it.
 	case "main", "master", "develop":
 		return true
@@ -72,8 +72,8 @@ func allowedTypes(params pass.ParamSet) []string {
 	return slices.Compact(allowed)
 }
 
-func hasAllowedType(branch string, allowed []string) bool {
-	prefix, description, found := strings.Cut(branch, "/")
+func hasAllowedType(name string, allowed []string) bool {
+	prefix, description, found := strings.Cut(name, "/")
 	if !found || description == "" {
 		return false
 	}
