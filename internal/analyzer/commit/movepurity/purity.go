@@ -45,7 +45,12 @@ func (moves *moveContext) renameVerdict(rename pass.Rename) verdict {
 	if isSame {
 		return moves.identicalVerdict(rename)
 	}
-	return moves.isGoEdit(fileEdit{oldPath: rename.OldPath, newPath: rename.NewPath, isMove: true})
+	// A rename that already reports an edit keeps that verdict; the embed check decides the rest.
+	got := moves.isGoEdit(fileEdit{oldPath: rename.OldPath, newPath: rename.NewPath, isMove: true})
+	if got != verdictPure {
+		return got
+	}
+	return moves.coveredVerdict(rename)
 }
 
 func (moves *moveContext) identicalVerdict(rename pass.Rename) verdict {
