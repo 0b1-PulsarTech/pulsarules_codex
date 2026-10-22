@@ -38,10 +38,9 @@ type flagBinder func(fs *flag.FlagSet, opts *Options)
 
 func commandBinders() map[string]flagBinder {
 	return map[string]flagBinder{
-		"install":    bindInstallFlags,
-		"uninstall":  bindUninstallFlags,
-		"hook":       bindNoFlags,
-		"governance": bindGovernanceFlags,
+		"install":   bindInstallFlags,
+		"uninstall": bindUninstallFlags,
+		"hook":      bindNoFlags,
 	}
 }
 
@@ -60,42 +59,6 @@ func parsePositionalArgs(opts *Options, fs *flag.FlagSet) {
 	if opts.Command == "hook" && fs.NArg() > 0 {
 		opts.Mode = fs.Arg(0)
 	}
-}
-
-func bindGovernanceFlags(fs *flag.FlagSet, opts *Options) {
-	fs.StringVar(&opts.ProjectDir, "project", "", "project dir to analyze")
-	fs.StringVar(
-		&opts.Preset,
-		"preset",
-		"",
-		"analyzer preset (recommended|strict|minimal); wins over the project config file",
-	)
-	fs.StringVar(
-		&opts.Config,
-		"config",
-		"",
-		"path to the project config file (default: <project>/.pulsarules.yaml if present)",
-	)
-	fs.StringVar(&opts.Scope, "scope", "full", "analysis scope (full|commit|changed)")
-	fs.StringVar(
-		&opts.GolangciConfig,
-		"golangci-config",
-		"",
-		"path to .golangci.yml (overrides auto-discovery)",
-	)
-	opts.Tuning.Bind(fs, flags.Analyze)
-	fs.BoolVar(
-		&opts.AllFiles,
-		"all-files",
-		false,
-		"analyze every source file in the tree instead of only changed ones",
-	)
-	fs.BoolVar(
-		&opts.IncludeGenerated,
-		"include-generated",
-		false,
-		"report findings in generated files too (suppressed by default)",
-	)
 }
 
 func Commands() []string {

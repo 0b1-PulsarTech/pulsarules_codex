@@ -9,7 +9,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/uninstall"
@@ -21,10 +20,9 @@ type handler func(inj remy.Injector, opts *version.Options) error
 
 func commands() map[string]handler {
 	return map[string]handler{
-		"install":    prefixed("install", install.Run),
-		"uninstall":  prefixed("uninstall", uninstall.Run),
-		"hook":       hook.RunHook,
-		"governance": governance.RunGovernance,
+		"install":   prefixed("install", install.Run),
+		"uninstall": prefixed("uninstall", uninstall.Run),
+		"hook":      hook.RunHook,
 	}
 }
 
@@ -78,16 +76,9 @@ func (call Invocation) BootstrapOptions() bootstrap.Options {
 }
 
 func resolveProjectDir(opts *version.Options) string {
-	if opts.ProjectDir != "" {
-		return opts.ProjectDir
-	}
-	// Install/uninstall bind --project onto opts.Project, and that checkout is also
-	// the analyzed repository.
 	if opts.Command == "install" || opts.Command == "uninstall" {
+		// The checkout install/uninstall target is also the analyzed repository.
 		return opts.Project
-	}
-	if opts.Command == "governance" {
-		return opts.Env.ProjectDir
 	}
 	return "."
 }

@@ -18,7 +18,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -161,28 +160,6 @@ func TestResolveProjectDir(t *testing.T) {
 		want string
 	}{
 		{
-			name: "explicit flag wins everywhere",
-			opts: &version.Options{
-				Command:    "governance",
-				ProjectDir: "/explicit",
-				Env:        flags.Environment{ProjectDir: "/from-env"},
-			},
-			want: "/explicit",
-		},
-		{
-			name: "governance falls back to the env var",
-			opts: &version.Options{
-				Command: "governance",
-				Env:     flags.Environment{ProjectDir: "/from-env"},
-			},
-			want: "/from-env",
-		},
-		{
-			name: "governance with no env reports nothing rather than guessing",
-			opts: &version.Options{Command: "governance"},
-			want: "",
-		},
-		{
 			name: "every other command defaults to the working directory",
 			opts: &version.Options{
 				Command: "list",
@@ -296,15 +273,15 @@ func TestRun_GovernanceReportsFindings(t *testing.T) {
 			if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: dir}); err != nil {
 				t.Fatalf("DoInjections: %v", err)
 			}
-			opts := &version.Options{
-				Command: "governance", ProjectDir: dir, Scope: testCase.scope, AllFiles: true,
+			args := []string{"governance", "--project", dir, "--all-files"}
+			if testCase.scope != "" {
+				args = append(args, "--scope", testCase.scope)
 			}
-			if got := outcome(
-				commands()[opts.Command](inj, opts),
-			); !strings.HasPrefix(
-				got,
-				testCase.want,
-			) {
+			call, err := Parse(args, flags.Environment{})
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got := outcome(call.Run(inj)); !strings.HasPrefix(got, testCase.want) {
 				t.Errorf("Run outcome = %q, want prefix %q", got, testCase.want)
 			}
 		})
@@ -352,7 +329,11 @@ func TestCatalogFailureFailsTheCommand(t *testing.T) {
 		{
 			name: "governance",
 			run: func(inj remy.Injector) error {
-				return governance.RunGovernance(inj, &version.Options{ProjectDir: "."})
+				call, err := Parse([]string{"governance", "--project", "."}, flags.Environment{})
+				if err != nil {
+					return err
+				}
+				return call.Run(inj)
 			},
 		},
 	}

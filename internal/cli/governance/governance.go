@@ -11,7 +11,7 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/loader"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
@@ -26,6 +26,29 @@ var errProjectDirRequired = errors.New(
 	"governance requires --project DIR or PULSARULES_PROJECT_DIR",
 )
 
+type Command struct {
+	project          string
+	preset           string
+	config           string
+	scope            string
+	golangciConfig   string
+	tuning           flags.Tuning
+	allFiles         bool
+	includeGenerated bool
+	env              flags.Environment
+}
+
+func New(env flags.Environment) *Command {
+	return &Command{env: env}
+}
+
+func (cmd *Command) ProjectDir() string {
+	if cmd.project == "" {
+		return cmd.env.ProjectDir
+	}
+	return cmd.project
+}
+
 type governanceRun struct {
 	repo    *vcs.Repository
 	cfg     *config.GovernanceConfig
@@ -33,12 +56,12 @@ type governanceRun struct {
 	catalog *emoji.Catalog
 }
 
-func loadGovernance(inj remy.Injector, opts *version.Options) (governanceRun, error) {
+func (cmd *Command) loadGovernance(inj remy.Injector) (governanceRun, error) {
 	repo, err := remy.Get[*vcs.Repository](inj)
 	if err != nil {
 		return governanceRun{}, fmt.Errorf("open repository: %w", err)
 	}
-	cfg, err := governanceConfig(opts, repo.Root())
+	cfg, err := cmd.governanceConfig(repo.Root())
 	if err != nil {
 		return governanceRun{}, err
 	}
@@ -54,22 +77,22 @@ func loadGovernance(inj remy.Injector, opts *version.Options) (governanceRun, er
 	return governanceRun{repo: repo, cfg: cfg, idx: idx, catalog: catalog}, nil
 }
 
-func RunGovernance(inj remy.Injector, opts *version.Options) error {
-	if opts.ProjectDir == "" && opts.Env.ProjectDir == "" {
+func (cmd *Command) Run(inj remy.Injector, _ []string) error {
+	if cmd.ProjectDir() == "" {
 		return errProjectDirRequired
 	}
-	scope, err := governance.ParseScope(opts.Scope)
+	scope, err := governance.ParseScope(cmd.scope)
 	if err != nil {
 		return err
 	}
 
-	run, err := loadGovernance(inj, opts)
+	run, err := cmd.loadGovernance(inj)
 	if err != nil {
 		return err
 	}
 
 	files := governance.FileSetChanged
-	if opts.AllFiles {
+	if cmd.allFiles {
 		files = governance.FileSetAll
 	}
 
@@ -93,37 +116,37 @@ func reportGovernance(out io.Writer, report findings.Report) error {
 	return nil
 }
 
-func projectConfig(opts *version.Options, root string) (*config.GovernanceConfig, error) {
+func (cmd *Command) projectConfig(root string) (*config.GovernanceConfig, error) {
 	// ApplyPreset silently ignores an unknown name, so reject it here.
-	if opts.Preset != "" && !config.ValidPreset(opts.Preset) {
+	if cmd.preset != "" && !config.ValidPreset(cmd.preset) {
 		return nil, fmt.Errorf(
-			"invalid --preset %q (want %s)", opts.Preset, strings.Join(config.Presets(), "|"),
+			"invalid --preset %q (want %s)", cmd.preset, strings.Join(config.Presets(), "|"),
 		)
 	}
 	file, err := loader.NewLoader(registry.ConfigRules()).Load(
-		root, opts.Config, opts.Preset,
+		root, cmd.config, cmd.preset,
 	)
 	if err != nil {
 		return nil, err
 	}
-	return loader.Build(file, opts.Preset)
+	return loader.Build(file, cmd.preset)
 }
 
-func governanceConfig(opts *version.Options, root string) (*config.GovernanceConfig, error) {
-	cfg, err := projectConfig(opts, root)
+func (cmd *Command) governanceConfig(root string) (*config.GovernanceConfig, error) {
+	cfg, err := cmd.projectConfig(root)
 	if err != nil {
 		return nil, err
 	}
-	if opts.IncludeGenerated {
+	if cmd.includeGenerated {
 		cfg.IncludeGenerated = true
 	}
 
-	if opts.GolangciConfig != "" {
-		cfg.SetParam(golangcilint.ID, golangcilint.ParamConfigPath, opts.GolangciConfig)
+	if cmd.golangciConfig != "" {
+		cfg.SetParam(golangcilint.ID, golangcilint.ParamConfigPath, cmd.golangciConfig)
 	}
-	if err = opts.Tuning.Validate(); err != nil {
+	if err = cmd.tuning.Validate(); err != nil {
 		return nil, err
 	}
-	opts.Tuning.Apply(cfg)
+	cmd.tuning.Apply(cfg)
 	return cfg, nil
 }

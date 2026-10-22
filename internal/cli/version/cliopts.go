@@ -27,13 +27,6 @@ type Options struct {
 
 	KeepSkills bool
 
-	Preset           string
-	Scope            string
-	GolangciConfig   string
-	Config           string
-	AllFiles         bool
-	IncludeGenerated bool
-
 	Mode string
 
 	ProjectDir string

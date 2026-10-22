@@ -7,6 +7,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/evals"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/generate"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/list"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/packaging"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/validate"
@@ -46,6 +47,10 @@ func table() []entry {
 		{
 			name:  "commitlint",
 			build: func(flags.Environment) command.Runner { return &commitlint.Command{} },
+		},
+		{
+			name:  "governance",
+			build: func(env flags.Environment) command.Runner { return governance.New(env) },
 		},
 	}
 }

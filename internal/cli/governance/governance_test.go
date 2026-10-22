@@ -12,7 +12,6 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
@@ -22,7 +21,7 @@ func TestRunGovernance_RequiresProjectDir(t *testing.T) {
 	t.Parallel()
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	err := RunGovernance(inj, &version.Options{})
+	err := (&Command{}).Run(inj, nil)
 	if !errors.Is(err, errProjectDirRequired) {
 		t.Errorf("err = %v, want %v", err, errProjectDirRequired)
 	}
@@ -32,8 +31,8 @@ func TestRunGovernance_EnvProjectDirSatisfiesTheRequirement(t *testing.T) {
 	t.Parallel()
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	opts := &version.Options{Env: flags.Environment{ProjectDir: t.TempDir()}}
-	if err := RunGovernance(inj, opts); errors.Is(err, errProjectDirRequired) {
+	opts := &Command{env: flags.Environment{ProjectDir: t.TempDir()}}
+	if err := opts.Run(inj, nil); errors.Is(err, errProjectDirRequired) {
 		t.Errorf("err = %v, want the env project dir to count", err)
 	}
 }
@@ -43,29 +42,29 @@ func TestGovernanceConfig(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		opts       *version.Options
+		opts       *Command
 		wantPreset string
 		wantPath   any
 	}{
 		{
 			name:       "no flags keeps the default preset",
-			opts:       &version.Options{},
+			opts:       &Command{},
 			wantPreset: config.PresetRecommended,
 		},
 		{
 			name:       "preset flag wins",
-			opts:       &version.Options{Preset: config.PresetStrict},
+			opts:       &Command{preset: config.PresetStrict},
 			wantPreset: config.PresetStrict,
 		},
 		{
 			name:       "golangci config lands in the analyzer params",
-			opts:       &version.Options{GolangciConfig: "build/.golangci.yml"},
+			opts:       &Command{golangciConfig: "build/.golangci.yml"},
 			wantPreset: config.PresetRecommended,
 			wantPath:   "build/.golangci.yml",
 		},
 		{
 			name:       "preset and config path compose",
-			opts:       &version.Options{Preset: config.PresetMinimal, GolangciConfig: "x.yml"},
+			opts:       &Command{preset: config.PresetMinimal, golangciConfig: "x.yml"},
 			wantPreset: config.PresetMinimal,
 			wantPath:   "x.yml",
 		},
@@ -74,7 +73,7 @@ func TestGovernanceConfig(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := governanceConfig(testCase.opts, "")
+			cfg, err := testCase.opts.governanceConfig("")
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -92,7 +91,7 @@ func TestGovernanceConfig(t *testing.T) {
 func TestGovernanceConfig_InvalidPreset(t *testing.T) {
 	t.Parallel()
 
-	_, err := governanceConfig(&version.Options{Preset: "stict"}, "")
+	_, err := (&Command{preset: "stict"}).governanceConfig("")
 	if err == nil {
 		t.Fatal("governanceConfig: expected an error for an unknown preset")
 	}
@@ -109,13 +108,13 @@ func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 
 	testCases := []struct {
 		name string
-		opts *version.Options
+		opts *Command
 		want bool
 	}{
-		{name: "suppressed by default", opts: &version.Options{}, want: false},
+		{name: "suppressed by default", opts: &Command{}, want: false},
 		{
 			name: "flag turns the filter off",
-			opts: &version.Options{IncludeGenerated: true},
+			opts: &Command{includeGenerated: true},
 			want: true,
 		},
 	}
@@ -123,7 +122,7 @@ func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := governanceConfig(testCase.opts, "")
+			cfg, err := testCase.opts.governanceConfig("")
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -137,7 +136,7 @@ func TestGovernanceConfig_IncludeGenerated(t *testing.T) {
 func TestGovernanceConfig_StrictLowersFileSize(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := governanceConfig(&version.Options{Preset: config.PresetStrict}, "")
+	cfg, err := (&Command{preset: config.PresetStrict}).governanceConfig("")
 	if err != nil {
 		t.Fatalf("governanceConfig: %v", err)
 	}
@@ -172,8 +171,8 @@ func TestGovernanceConfig_BranchExtraTypes(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			opts := &version.Options{Tuning: flags.Tuning{BranchExtraTypes: testCase.spec}}
-			cfg, err := governanceConfig(opts, "")
+			opts := &Command{tuning: flags.Tuning{BranchExtraTypes: testCase.spec}}
+			cfg, err := opts.governanceConfig("")
 			if testCase.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
 					t.Fatalf("err = %v, want one naming %q", err, testCase.wantErr)
@@ -203,7 +202,7 @@ func writeProjectConfig(t *testing.T, content string) string {
 
 type precedenceCase struct {
 	name         string
-	opts         *version.Options
+	opts         *Command
 	wantPreset   string
 	wantGolangci any
 	wantSeverity string
@@ -239,27 +238,27 @@ func TestGovernanceConfig_ProjectFilePrecedence(t *testing.T) {
 	root := writeProjectConfig(t, content)
 
 	testCases := []precedenceCase{
-		{"file only", &version.Options{}, config.PresetMinimal, "file.yml", "error"},
+		{"file only", &Command{}, config.PresetMinimal, "file.yml", "error"},
 		{
 			"preset flag beats the file",
-			&version.Options{Preset: config.PresetStrict},
+			&Command{preset: config.PresetStrict},
 			config.PresetStrict, "file.yml", "error",
 		},
 		{
 			"param flag beats the file",
-			&version.Options{GolangciConfig: "flag.yml"},
+			&Command{golangciConfig: "flag.yml"},
 			config.PresetMinimal, "flag.yml", "error",
 		},
 		{
 			"severity flag beats the file",
-			&version.Options{Tuning: flags.Tuning{TypographicSeverity: "warning"}},
+			&Command{tuning: flags.Tuning{TypographicSeverity: "warning"}},
 			config.PresetMinimal, "file.yml", "warning",
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			cfg, err := governanceConfig(testCase.opts, root)
+			cfg, err := testCase.opts.governanceConfig(root)
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}
@@ -294,7 +293,7 @@ func TestGovernanceConfig_ProjectFileErrors(t *testing.T) {
 			t.Parallel()
 
 			root := writeProjectConfig(t, testCase.content)
-			_, err := governanceConfig(&version.Options{}, root)
+			_, err := (&Command{}).governanceConfig(root)
 			if err == nil || !strings.Contains(err.Error(), testCase.want) {
 				t.Fatalf("governanceConfig error = %v, want containing %q", err, testCase.want)
 			}
@@ -309,15 +308,15 @@ func TestGovernanceConfig_ExplicitConfigPath(t *testing.T) {
 	dir := writeProjectConfig(t, content)
 	explicit := filepath.Join(dir, projectfile.Name)
 
-	cfg, err := governanceConfig(&version.Options{Config: explicit}, "")
+	cfg, err := (&Command{config: explicit}).governanceConfig("")
 	if err != nil {
 		t.Fatalf("governanceConfig: %v", err)
 	}
 	if got := cfg.Analyzers["big-comment"].Params["max_lines"]; got != 2 {
 		t.Errorf("max_lines = %v, want 2", got)
 	}
-	missing := &version.Options{Config: filepath.Join(dir, "nope.yaml")}
-	if _, err = governanceConfig(missing, dir); err == nil {
+	missing := &Command{config: filepath.Join(dir, "nope.yaml")}
+	if _, err = missing.governanceConfig(dir); err == nil {
 		t.Error("governanceConfig with a missing --config: expected an error")
 	}
 }
@@ -325,7 +324,7 @@ func TestGovernanceConfig_ExplicitConfigPath(t *testing.T) {
 func TestGovernanceConfig_NoProjectFileIsUnchanged(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := governanceConfig(&version.Options{}, t.TempDir())
+	cfg, err := (&Command{}).governanceConfig(t.TempDir())
 	if err != nil {
 		t.Fatalf("governanceConfig: %v", err)
 	}
@@ -364,7 +363,7 @@ func TestGovernanceConfig_PresetFlag(t *testing.T) {
 			if err := os.WriteFile(path, []byte(private), disk.File); err != nil {
 				t.Fatalf("write private config: %v", err)
 			}
-			cfg, err := governanceConfig(&version.Options{Preset: testCase.preset}, root)
+			cfg, err := (&Command{preset: testCase.preset}).governanceConfig(root)
 			if err != nil {
 				t.Fatalf("governanceConfig: %v", err)
 			}

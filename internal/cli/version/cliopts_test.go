@@ -72,28 +72,6 @@ func TestParseArgs(t *testing.T) {
 	})
 }
 
-func TestParseArgs_Governance(t *testing.T) {
-	t.Parallel()
-
-	runParseArgsCases(t, []parseArgsCase{
-		{
-			name:  "governance suppresses generated files by default",
-			args:  []string{"governance", "--project", "/tmp/repo"},
-			check: checkGovernanceDefaults,
-		},
-		{
-			name:  "governance with --include-generated",
-			args:  []string{"governance", "--project", "/tmp/repo", "--include-generated"},
-			check: checkGovernanceIncludeGenerated,
-		},
-		{
-			name:  "governance takes a config path",
-			args:  []string{"governance", "--project", "/tmp/repo", "--config", "x/app.yaml"},
-			check: checkGovernanceConfigPath,
-		},
-	})
-}
-
 func TestParseArgs_Uninstall(t *testing.T) {
 	t.Parallel()
 
@@ -184,31 +162,6 @@ func checkUninstallDefaultHooksScope(t *testing.T, opts *Options) {
 			"HooksScope = %q, want empty (uninstall defaults to unwiring both files)",
 			opts.HooksScope,
 		)
-	}
-}
-
-func checkGovernanceConfigPath(t *testing.T, opts *Options) {
-	t.Helper()
-	if opts.Config != "x/app.yaml" {
-		t.Errorf("Config = %q, want x/app.yaml", opts.Config)
-	}
-}
-
-func checkGovernanceDefaults(t *testing.T, opts *Options) {
-	t.Helper()
-	if opts.Preset != "" || opts.Config != "" {
-		t.Errorf("Preset = %q, Config = %q, want both unset so the file can supply them",
-			opts.Preset, opts.Config)
-	}
-	if opts.IncludeGenerated {
-		t.Error("IncludeGenerated = true, want false without the flag")
-	}
-}
-
-func checkGovernanceIncludeGenerated(t *testing.T, opts *Options) {
-	t.Helper()
-	if !opts.IncludeGenerated {
-		t.Error("IncludeGenerated = false, want true with --include-generated")
 	}
 }
 
