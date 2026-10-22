@@ -119,7 +119,7 @@ func printReport(out io.Writer, found cleaner.Report, how sweepStrategy) {
 func advice(class invisible.Class, ext, escape string) string {
 	caveat := "; inside a string literal it is data: " + escape
 	removable := "removable outside a string literal; inside one, " + escape
-	if markdown.HasExt(ext) {
+	if markdown.IsExt(ext) {
 		caveat, removable = "", "removable outside possible code"
 	}
 	switch class {
