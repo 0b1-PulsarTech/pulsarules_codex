@@ -60,11 +60,11 @@ func InstallWorkflows(
 func installDocs(
 	dest, docName string,
 	ids []string,
-	render func(id string) (body string, ok bool, err error),
+	lookup func(id string) (body string, ok bool, err error),
 ) (InstallResult, error) {
 	var result InstallResult
 	for _, id := range ids {
-		body, ok, renderErr := render(id)
+		body, ok, renderErr := lookup(id)
 		if renderErr != nil {
 			// The render callbacks already wrap their errors with the id; do not wrap again.
 			return result, renderErr
