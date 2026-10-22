@@ -40,20 +40,20 @@ func buildCtx(
 	for path, src := range files {
 		mapFS[path] = &fstest.MapFile{Data: []byte(src)}
 	}
-	policy := testfile.Defaults()
+	classifier := testfile.Defaults()
 	changedFiles := make([]pass.FileChange, 0, len(changed))
 	for _, path := range changed {
 		changedFiles = append(
 			changedFiles,
 			pass.FileChange{
-				Path: path, Extension: filepath.Ext(path), IsTest: policy.IsTest(path),
+				Path: path, Extension: filepath.Ext(path), IsTest: classifier.IsTest(path),
 			},
 		)
 	}
 	ctx := &pass.Context{
-		Sources:      source.NewFSProvider(mapFS, "", source.SkipSet{}),
-		ChangedFiles: changedFiles,
-		TestPolicy:   policy,
+		Sources:        source.NewFSProvider(mapFS, "", source.SkipSet{}),
+		ChangedFiles:   changedFiles,
+		TestClassifier: classifier,
 	}
 	if params != nil {
 		ctx.Config = &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{

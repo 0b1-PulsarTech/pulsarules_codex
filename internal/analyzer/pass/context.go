@@ -37,17 +37,17 @@ type Module struct {
 }
 
 type Context struct {
-	ProjectDir    string
-	ChangedFiles  []FileChange
-	StagedRenames []Rename
-	CommitMsg     string
-	GitHistory    []GitCommitEntry
-	Config        *AnalysisConfig
-	TestPolicy    testfile.Classifier
-	ASTCache      *astcache.Cache
-	Syntax        *syntax.Cache
-	Sources       source.Provider
-	Skips         source.SkipSet
+	ProjectDir     string
+	ChangedFiles   []FileChange
+	StagedRenames  []Rename
+	CommitMsg      string
+	GitHistory     []GitCommitEntry
+	Config         *AnalysisConfig
+	TestClassifier testfile.Classifier
+	ASTCache       *astcache.Cache
+	Syntax         *syntax.Cache
+	Sources        source.Provider
+	Skips          source.SkipSet
 
 	goPackages     *gomod.Index
 	goPackagesOnce sync.Once

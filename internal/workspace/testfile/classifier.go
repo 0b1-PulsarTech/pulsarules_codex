@@ -22,27 +22,27 @@ func Defaults() Classifier {
 }
 
 func New(globs []string) (Classifier, error) {
-	policy := Defaults()
+	classifier := Defaults()
 	patterns, err := glob.CompileAll(globs)
 	if err != nil {
 		return Classifier{}, fmt.Errorf("test glob: %w", err)
 	}
-	policy.globs = patterns
-	return policy, nil
+	classifier.globs = patterns
+	return classifier, nil
 }
 
-func (policy Classifier) IsTest(file string) bool {
+func (classifier Classifier) IsTest(file string) bool {
 	slashed := filepath.ToSlash(file)
-	if slices.ContainsFunc(policy.globs, func(pattern glob.Pattern) bool {
+	if slices.ContainsFunc(classifier.globs, func(pattern glob.Pattern) bool {
 		return pattern.Match(slashed)
 	}) {
 		return true
 	}
-	return policy.ruleFor(path.Ext(slashed)).matches(slashed)
+	return classifier.ruleFor(path.Ext(slashed)).matches(slashed)
 }
 
-func (policy Classifier) ruleFor(ext string) rule {
-	rules, fallback := policy.rules, policy.fallback
+func (classifier Classifier) ruleFor(ext string) rule {
+	rules, fallback := classifier.rules, classifier.fallback
 	// The zero value behaves like Defaults, as the zero Skips set does.
 	if rules == nil {
 		rules, fallback = languageRules(), fallbackRule()

@@ -11,11 +11,11 @@ type testCase struct {
 func assertIsTest(t *testing.T, testCases []testCase) {
 	t.Helper()
 
-	for _, policy := range []Classifier{Defaults(), {}} {
+	for _, classifier := range []Classifier{Defaults(), {}} {
 		for _, testCase := range testCases {
 			t.Run(testCase.name, func(t *testing.T) {
 				t.Parallel()
-				if got := policy.IsTest(testCase.path); got != testCase.want {
+				if got := classifier.IsTest(testCase.path); got != testCase.want {
 					t.Errorf("IsTest(%q) = %v, want %v", testCase.path, got, testCase.want)
 				}
 			})
@@ -96,14 +96,14 @@ func TestNew(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			policy, err := New(testCase.globs)
+			classifier, err := New(testCase.globs)
 			if (err != nil) != testCase.wantErr {
 				t.Fatalf("err = %v, wantErr %v", err, testCase.wantErr)
 			}
 			if err != nil {
 				return
 			}
-			if got := policy.IsTest(testCase.path); got != testCase.want {
+			if got := classifier.IsTest(testCase.path); got != testCase.want {
 				t.Errorf("IsTest(%q) = %v, want %v", testCase.path, got, testCase.want)
 			}
 		})

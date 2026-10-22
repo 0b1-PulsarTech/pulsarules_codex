@@ -91,11 +91,11 @@ func TestAnalyzeTestPolicy(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := buildCtx(t, testCase.files, testCase.changed, tsParams)
-			policy, err := testfile.New(testCase.globs)
+			classifier, err := testfile.New(testCase.globs)
 			if err != nil {
 				t.Fatalf("testfile.New: %v", err)
 			}
-			ctx.TestPolicy = policy
+			ctx.TestClassifier = classifier
 			findings := NewAnalyzer().Analyze(ctx)
 			got := make([]string, 0, len(findings))
 			for _, finding := range findings {

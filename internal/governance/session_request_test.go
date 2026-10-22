@@ -56,7 +56,7 @@ func TestNewSession_PolicyIsFixedAtConstruction(t *testing.T) {
 	sess := NewSession(nil, nil, testCatalog(t), cfg)
 	sess.cfgAnalysis.TestGlobs = nil
 
-	if !sess.policy.IsTest("check/a.go") {
+	if !sess.classifier.IsTest("check/a.go") {
 		t.Fatal("the test glob was read after construction, not at it")
 	}
 }

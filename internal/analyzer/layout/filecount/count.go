@@ -25,7 +25,7 @@ func countByDir(
 		file = filepath.ToSlash(file)
 		dir := path.Dir(file)
 		if !wanted[dir] || !eligible(pass.FileChange{Path: file, Extension: ext}) ||
-			ctx.TestPolicy.IsTest(file) || gomod.IsHiddenName(path.Base(file)) {
+			ctx.TestClassifier.IsTest(file) || gomod.IsHiddenName(path.Base(file)) {
 			return true
 		}
 		src, ok := ctx.Sources.Read(file)

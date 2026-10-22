@@ -7,13 +7,13 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/testfile"
 )
 
-func WalkAllFiles(provider source.Provider, policy testfile.Classifier) []pass.FileChange {
+func WalkAllFiles(provider source.Provider, classifier testfile.Classifier) []pass.FileChange {
 	var files []pass.FileChange
 	provider.Walk(func(path, ext string) bool {
 		files = append(files, pass.FileChange{
 			Path:      path,
 			Extension: ext,
-			IsTest:    policy.IsTest(path),
+			IsTest:    classifier.IsTest(path),
 		})
 		return true
 	})
@@ -21,14 +21,14 @@ func WalkAllFiles(provider source.Provider, policy testfile.Classifier) []pass.F
 }
 
 func ChangesToFileChanges(
-	changes []vcs.Change, policy testfile.Classifier,
+	changes []vcs.Change, classifier testfile.Classifier,
 ) []pass.FileChange {
 	files := make([]pass.FileChange, len(changes))
 	for idx, change := range changes {
 		files[idx] = pass.FileChange{
 			Path:      change.Path,
 			Extension: change.Extension,
-			IsTest:    policy.IsTest(change.Path),
+			IsTest:    classifier.IsTest(change.Path),
 			Staged:    change.Staged,
 		}
 	}

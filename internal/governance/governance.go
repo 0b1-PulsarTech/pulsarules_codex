@@ -43,7 +43,7 @@ type Session struct {
 	gitSkips    source.SkipSet
 	logger      *slog.Logger
 	providers   providerFactory
-	policy      testfile.Classifier
+	classifier  testfile.Classifier
 	seed        []finding.Finding
 }
 
@@ -66,12 +66,12 @@ func NewSession(
 		logger:      slog.Default(),
 		providers:   defaultProviders,
 	}
-	policy, err := testfile.New(sess.cfgAnalysis.TestGlobs)
+	classifier, err := testfile.New(sess.cfgAnalysis.TestGlobs)
 	if err != nil {
 		sess.seed = []finding.Finding{configFinding(err)}
-		policy = testfile.Defaults()
+		classifier = testfile.Defaults()
 	}
-	sess.policy = policy
+	sess.classifier = classifier
 	return sess
 }
 
@@ -95,11 +95,11 @@ func (sess *Session) Analyze(req Request) findings.Report {
 
 func (sess *Session) load(req Request) *pass.Context {
 	ctx := &pass.Context{
-		CommitMsg:  req.CommitMsg,
-		Config:     sess.cfgAnalysis,
-		GitHistory: sess.gitHistory(req.CommitMsg),
-		Skips:      sess.skips,
-		TestPolicy: sess.policy,
+		CommitMsg:      req.CommitMsg,
+		Config:         sess.cfgAnalysis,
+		GitHistory:     sess.gitHistory(req.CommitMsg),
+		Skips:          sess.skips,
+		TestClassifier: sess.classifier,
 	}
 	if sess.repo == nil {
 		return ctx
@@ -130,7 +130,7 @@ func (sess *Session) load(req Request) *pass.Context {
 func (sess *Session) discover(ctx *pass.Context, req Request) {
 	if req.Files == FileSetAll {
 		sess.attachSources(ctx)
-		ctx.ChangedFiles = discovery.WalkAllFiles(ctx.Sources, sess.policy)
+		ctx.ChangedFiles = discovery.WalkAllFiles(ctx.Sources, sess.classifier)
 		return
 	}
 
@@ -157,7 +157,7 @@ func (sess *Session) changedFiles(req Request) []pass.FileChange {
 			return !change.Staged
 		})
 	}
-	return discovery.ChangesToFileChanges(changes, sess.policy)
+	return discovery.ChangesToFileChanges(changes, sess.classifier)
 }
 
 func configFinding(err error) finding.Finding {
