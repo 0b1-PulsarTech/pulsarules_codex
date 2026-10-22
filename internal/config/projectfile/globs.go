@@ -7,6 +7,15 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
+const (
+	MaxGlobBytes      = 256
+	MaxGlobStars      = 4
+	MaxTotalGlobs     = 256
+	MaxTotalGlobBytes = 4096
+	MaxWildcardWork   = 256
+	MaxStarTextBytes  = 2048
+)
+
 func (val *validator) checkGlobs(at *Field, globs []string) []string {
 	passed := make([]string, 0, len(globs))
 	for idx, pattern := range globs {

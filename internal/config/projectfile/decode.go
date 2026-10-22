@@ -10,6 +10,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	MaxFileBytes     = 256 << 10
+	MaxScalarBytes   = 1024
+	MaxDepth         = 64
+	MaxExpandedNodes = 100_000
+	MaxMapKeys       = 256
+	MaxSeqItems      = 1024
+	MaxReported      = 20
+	MaxReportedBytes = 3072
+	MaxClipBytes     = 80
+)
+
 type Document[Target any] struct {
 	Value    *Target
 	Problems *Problems

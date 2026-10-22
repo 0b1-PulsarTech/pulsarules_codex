@@ -5,24 +5,6 @@ const (
 	SupportedVersion = 1
 )
 
-const (
-	MaxFileBytes      = 256 << 10
-	MaxScalarBytes    = 1024
-	MaxDepth          = 64
-	MaxExpandedNodes  = 100_000
-	MaxMapKeys        = 256
-	MaxSeqItems       = 1024
-	MaxGlobBytes      = 256
-	MaxGlobStars      = 4
-	MaxTotalGlobs     = 256
-	MaxTotalGlobBytes = 4096
-	MaxWildcardWork   = 256
-	MaxStarTextBytes  = 2048
-	MaxReported       = 20
-	MaxReportedBytes  = 3072
-	MaxClipBytes      = 80
-)
-
 type Rules struct {
 	AnalyzerIDs      []string
 	ReservedIDs      []string
