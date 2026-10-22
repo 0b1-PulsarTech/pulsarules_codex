@@ -11,7 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func TestWriteAgents_MatchesSessionStart(t *testing.T) {
+func TestWrite_MatchesSessionStart(t *testing.T) {
 	t.Parallel()
 
 	idx, templates, err := knowledge.Load("")
@@ -26,7 +26,7 @@ func TestWriteAgents_MatchesSessionStart(t *testing.T) {
 	projectDir := t.TempDir()
 	wrote, err := Write(templates, projectDir, idx, []string{"go-style"})
 	if err != nil {
-		t.Fatalf("WriteAgents: %v", err)
+		t.Fatalf("Write: %v", err)
 	}
 	if wrote == ownedfile.Kept {
 		t.Fatalf("outcome = %v, want Wrote for a fresh project dir", wrote)

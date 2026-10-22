@@ -11,7 +11,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func TestWriteAgents_RendersOnlySelectedSkills(t *testing.T) {
+func TestWrite_RendersOnlySelectedSkills(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
@@ -21,7 +21,7 @@ func TestWriteAgents_RendersOnlySelectedSkills(t *testing.T) {
 	projectDir := t.TempDir()
 	wrote, err := Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
 	if err != nil {
-		t.Fatalf("WriteAgents: %v", err)
+		t.Fatalf("Write: %v", err)
 	}
 	if wrote == ownedfile.Kept {
 		t.Fatalf("outcome = %v, want Wrote for a fresh project dir", wrote)
@@ -45,7 +45,7 @@ func TestWriteAgents_RendersOnlySelectedSkills(t *testing.T) {
 	}
 }
 
-func TestWriteAgents_OwnershipDiscipline(t *testing.T) {
+func TestWrite_OwnershipDiscipline(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
@@ -92,7 +92,7 @@ func TestWriteAgents_OwnershipDiscipline(t *testing.T) {
 
 			wrote, writeErr := Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
 			if writeErr != nil {
-				t.Fatalf("WriteAgents: %v", writeErr)
+				t.Fatalf("Write: %v", writeErr)
 			}
 			if (wrote != ownedfile.Kept) != testCase.wantWrote {
 				t.Errorf("wrote = %v, want %v", wrote, testCase.wantWrote)
@@ -110,7 +110,7 @@ func TestWriteAgents_OwnershipDiscipline(t *testing.T) {
 	}
 }
 
-func TestWriteAgents_Errors(t *testing.T) {
+func TestWrite_Errors(t *testing.T) {
 	t.Parallel()
 
 	idx, _, err := knowledge.Load("")
@@ -182,7 +182,7 @@ func TestWriteAgents_Errors(t *testing.T) {
 	}
 }
 
-func TestWriteAgents_MkdirErrorWording(t *testing.T) {
+func TestWrite_MkdirErrorWording(t *testing.T) {
 	t.Parallel()
 
 	if os.Geteuid() == 0 {
@@ -202,6 +202,6 @@ func TestWriteAgents_MkdirErrorWording(t *testing.T) {
 	_, err = Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
 	want := "mkdir " + `"` + projectDir + `": mkdir ` + projectDir + ": permission denied"
 	if err == nil || err.Error() != want {
-		t.Fatalf("WriteAgents err = %v, want %q", err, want)
+		t.Fatalf("Write err = %v, want %q", err, want)
 	}
 }
