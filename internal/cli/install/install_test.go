@@ -13,32 +13,26 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
-func newTestCollaborators(tb testing.TB) installCollaborators {
+func testServices(tb testing.TB) bootstrap.Services {
 	tb.Helper()
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		tb.Fatalf("DoInjections: %v", err)
-	}
-	deps, err := resolveInstallCollaborators(inj)
+	svc, err := bootstrap.New(bootstrap.Options{ProjectDir: "."})
 	if err != nil {
-		tb.Fatalf("resolveInstallCollaborators: %v", err)
+		tb.Fatalf("bootstrap.New: %v", err)
 	}
-	return deps
+	return svc
 }
 
 //nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
 func TestNewTargetContext_LayoutThenSkillsShareOneReader(t *testing.T) {
-	deps := newTestCollaborators(t)
-	catalog := deps.idx.SkillsOrdered()
+	svc := testServices(t)
+	catalog := svc.Index.SkillsOrdered()
 	cmd := &Command{interactive: true, languages: []string{"go"}, noMCP: true}
 	cfg := installConfig{absBase: t.TempDir()}
 	var prompts strings.Builder
@@ -48,7 +42,7 @@ func TestNewTargetContext_LayoutThenSkillsShareOneReader(t *testing.T) {
 	var ctx host.Context
 	var err error
 	stdout, _ := captureStreams(t, func() {
-		ctx, err = newTargetContext(cmd, cfg, deps, console)
+		ctx, err = newTargetContext(cmd, cfg, svc, console)
 	})
 	if err != nil {
 		t.Fatalf("newTargetContext: %v", err)
@@ -78,10 +72,7 @@ func TestRun_MalformedMCPJSON_ErrorNotDoubled(t *testing.T) {
 		t.Fatalf("seed malformed .mcp.json: %v", err)
 	}
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 	const forcedLanguage = "go"
 	cmd := &Command{
 		project:   projectDir,
@@ -89,7 +80,7 @@ func TestRun_MalformedMCPJSON_ErrorNotDoubled(t *testing.T) {
 		languages: []string{forcedLanguage},
 	}
 
-	err := cmd.Run(inj, nil)
+	err := cmd.Run(svc, nil)
 	if err == nil {
 		t.Fatal("expected an error from a malformed .mcp.json")
 	}
@@ -160,22 +151,14 @@ func TestInstallPostTargets_EmptyGitHooks(t *testing.T) {
 	}
 }
 
-func injectRun(tb testing.TB, inj remy.Injector) {
-	tb.Helper()
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		tb.Fatalf("DoInjections: %v", err)
-	}
-}
-
 //nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
 func TestRun_PrintHooks(t *testing.T) {
 	projectDir := t.TempDir()
 	cmd := &Command{project: projectDir, printHooks: true}
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	injectRun(t, inj)
+	svc := testServices(t)
 	var runErr error
-	stdout, _ := captureStreams(t, func() { runErr = cmd.Run(inj, nil) })
+	stdout, _ := captureStreams(t, func() { runErr = cmd.Run(svc, nil) })
 	if runErr != nil {
 		t.Fatalf("Run: %v", runErr)
 	}
@@ -224,9 +207,8 @@ func TestRun_RejectsAMalformedTargetBeforeWriting(t *testing.T) {
 				t.Fatalf("Parse: %v", err)
 			}
 
-			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-			injectRun(t, inj)
-			err := cmd.Run(inj, nil)
+			svc := testServices(t)
+			err := cmd.Run(svc, nil)
 			want := fmt.Sprintf("invalid --target %q (want ", testCase.bad)
 			if err == nil || !strings.Contains(err.Error(), want) {
 				t.Fatalf("err = %v, want an error containing %q", err, want)
@@ -283,17 +265,13 @@ func TestRun_GlobalStaysInsideTheClaudeConfigDir(t *testing.T) {
 	home := t.TempDir()
 	configDir := filepath.Join(t.TempDir(), "claude")
 	cmd := New(flags.Environment{Home: home, ConfigDir: configDir})
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
 	cmd.global = true
 	cmd.skills = []string{"go-style"}
 	cmd.languages = []string{"go"}
 	cmd.noMCP = true
 
 	var err error
-	stdout, _ := captureStreams(t, func() { err = cmd.Run(inj, nil) })
+	stdout, _ := captureStreams(t, func() { err = cmd.Run(testServices(t), nil) })
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -335,17 +313,13 @@ func readFile(tb testing.TB, path string) string {
 func TestRun_ProjectNeverWritesIntoTheUserDirs(t *testing.T) {
 	home, configDir, projectDir := t.TempDir(), t.TempDir(), t.TempDir()
 	cmd := New(flags.Environment{Home: home, ConfigDir: configDir})
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
 	cmd.project = projectDir
 	cmd.skills = []string{"go-style"}
 	cmd.languages = []string{"go"}
 	cmd.noMCP = true
 
 	var err error
-	captureStreams(t, func() { err = cmd.Run(inj, nil) })
+	captureStreams(t, func() { err = cmd.Run(testServices(t), nil) })
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -365,15 +339,11 @@ func TestRun_ProjectNeverWritesIntoTheUserDirs(t *testing.T) {
 func TestRun_PrintHooksGlobalIsAbsolute(t *testing.T) {
 	configDir := filepath.Join(t.TempDir(), "claude")
 	cmd := New(flags.Environment{Home: t.TempDir(), ConfigDir: configDir})
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
 	cmd.global = true
 	cmd.printHooks = true
 
 	var err error
-	stdout, _ := captureStreams(t, func() { err = cmd.Run(inj, nil) })
+	stdout, _ := captureStreams(t, func() { err = cmd.Run(testServices(t), nil) })
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -391,15 +361,11 @@ func TestRun_GlobalRefusesProjectOnlyTargetsBeforeInstalling(t *testing.T) {
 
 	home := t.TempDir()
 	cmd := New(flags.Environment{Home: home})
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
 	cmd.global = true
 	cmd.target = []string{"claude", "agents"}
 	cmd.skills = []string{"go-style"}
 
-	err := cmd.Run(inj, nil)
+	err := cmd.Run(testServices(t), nil)
 	if !errors.Is(err, host.ErrProjectOnly) || !strings.Contains(err.Error(), `target "agents"`) {
 		t.Fatalf("Run = %v, want a refusal naming the agents target", err)
 	}
@@ -416,16 +382,12 @@ func TestRun_GlobalRefusesProjectOnlyTargetsBeforeInstalling(t *testing.T) {
 func TestRun_GlobalRefusesBeforeAnyPrompt(t *testing.T) {
 	home := t.TempDir()
 	cmd := New(flags.Environment{Home: home})
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
 	cmd.global = true
 	cmd.interactive = true
 	cmd.target = []string{"opencode"}
 
 	var err error
-	stdout, _ := captureStreams(t, func() { err = cmd.Run(inj, nil) })
+	stdout, _ := captureStreams(t, func() { err = cmd.Run(testServices(t), nil) })
 	if !errors.Is(err, host.ErrProjectOnly) || !strings.Contains(err.Error(), `target "opencode"`) {
 		t.Fatalf("Run = %v, want a refusal naming the opencode target", err)
 	}

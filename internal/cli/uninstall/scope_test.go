@@ -7,9 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
@@ -17,18 +14,15 @@ func TestRun_ProjectNeverTouchesTheUserDirs(t *testing.T) {
 	t.Parallel()
 
 	home, configDir, projectDir := t.TempDir(), t.TempDir(), t.TempDir()
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, inj, installArgs); err != nil {
+	if err := runInstall(t, svc, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 
 	cmd := New(flags.Environment{Home: home, ConfigDir: configDir})
 	cmd.project = projectDir
-	if err := cmd.Run(inj, nil); err != nil {
+	if err := cmd.Run(svc, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 

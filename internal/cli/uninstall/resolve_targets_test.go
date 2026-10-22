@@ -5,26 +5,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
-
-	"github.com/wrapped-owls/goremy-di/remy"
-
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 )
 
 func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, inj, installArgs); err != nil {
+	if err := runInstall(t, svc, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	skillDoc := filepath.Join(projectDir, ".claude", "skills", "go-style", "SKILL.md")
@@ -56,7 +47,7 @@ func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
 			if err := fs.Parse(args[1:]); err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
-			err := opts.Run(inj, nil)
+			err := opts.Run(svc, nil)
 			want := fmt.Sprintf(
 				"invalid --target %q (want agents|claude|cursor|opencode)",
 				testCase.bad,
@@ -68,18 +59,5 @@ func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
 				t.Errorf("an invalid --target removed %q: %v", skillDoc, statErr)
 			}
 		})
-	}
-}
-
-func TestResolveTargets_GlobalDefaultsToClaude(t *testing.T) {
-	t.Parallel()
-
-	home := t.TempDir()
-	if err := os.WriteFile(filepath.Join(home, "AGENTS.md"), []byte("mine"), 0o600); err != nil {
-		t.Fatalf("seed AGENTS.md: %v", err)
-	}
-	got, err := resolveTargets(&Command{global: true}, host.NewRegistry(), home)
-	if err != nil || !slices.Equal(got, []string{"claude"}) {
-		t.Errorf("resolveTargets = %v, %v, want [claude]", got, err)
 	}
 }

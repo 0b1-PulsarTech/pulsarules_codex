@@ -7,9 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/delegation/golangcilint"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
@@ -56,8 +55,8 @@ type governanceRun struct {
 	catalog *emoji.Catalog
 }
 
-func (cmd *Command) loadGovernance(inj remy.Injector) (governanceRun, error) {
-	repo, err := remy.Get[*vcs.Repository](inj)
+func (cmd *Command) loadGovernance(svc bootstrap.Services) (governanceRun, error) {
+	repo, err := svc.OpenRepository()
 	if err != nil {
 		return governanceRun{}, fmt.Errorf("open repository: %w", err)
 	}
@@ -66,18 +65,14 @@ func (cmd *Command) loadGovernance(inj remy.Injector) (governanceRun, error) {
 		return governanceRun{}, err
 	}
 
-	idx, err := remy.Get[*knowledge.Index](inj)
-	if err != nil {
-		return governanceRun{}, fmt.Errorf("get knowledge index: %w", err)
-	}
-	catalog, err := remy.Get[*emoji.Catalog](inj)
+	catalog, err := svc.LoadCatalog()
 	if err != nil {
 		return governanceRun{}, fmt.Errorf("get emoji catalog: %w", err)
 	}
-	return governanceRun{repo: repo, cfg: cfg, idx: idx, catalog: catalog}, nil
+	return governanceRun{repo: repo, cfg: cfg, idx: svc.Index, catalog: catalog}, nil
 }
 
-func (cmd *Command) Run(inj remy.Injector, _ []string) error {
+func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
 	if cmd.ProjectDir() == "" {
 		return errProjectDirRequired
 	}
@@ -86,7 +81,7 @@ func (cmd *Command) Run(inj remy.Injector, _ []string) error {
 		return err
 	}
 
-	run, err := cmd.loadGovernance(inj)
+	run, err := cmd.loadGovernance(svc)
 	if err != nil {
 		return err
 	}

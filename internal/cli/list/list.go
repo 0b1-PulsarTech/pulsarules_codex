@@ -10,8 +10,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -20,12 +19,8 @@ type Command struct{}
 
 func (Command) Bind(*flag.FlagSet) {}
 
-func (Command) Run(inj remy.Injector, args []string) error {
-	idx, err := remy.Get[*knowledge.Index](inj)
-	if err != nil {
-		return fmt.Errorf("get knowledge index: %w", err)
-	}
-	return writeList(os.Stdout, idx, kindOf(args))
+func (Command) Run(svc bootstrap.Services, args []string) error {
+	return writeList(os.Stdout, svc.Index, kindOf(args))
 }
 
 func kindOf(args []string) string {

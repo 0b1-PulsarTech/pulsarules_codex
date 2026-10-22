@@ -8,13 +8,13 @@ import (
 
 func New(opts Options) (Services, error) {
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := DoInjections(inj, opts); err != nil {
+	if err := doInjections(inj, opts); err != nil {
 		return Services{}, err
 	}
 	return resolve(inj)
 }
 
-func DoInjections(inj remy.Injector, opts Options) error {
+func doInjections(inj remy.Injector, opts Options) error {
 	if err := registerKnowledge(inj, opts); err != nil {
 		return fmt.Errorf("register knowledge: %w", err)
 	}

@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
-func (cmd *Command) Run(inj remy.Injector, _ []string) error {
-	if err := cmd.uninstall(inj); err != nil {
+func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
+	if err := cmd.uninstall(svc.Targets); err != nil {
 		return fmt.Errorf("uninstall: %w", err)
 	}
 	return nil
@@ -22,23 +21,19 @@ func (cmd *Command) Run(inj remy.Injector, _ []string) error {
 
 func (cmd *Command) ProjectDir() string { return cmd.project }
 
-func (cmd *Command) uninstall(inj remy.Injector) error {
+func (cmd *Command) uninstall(registry *host.Registry) error {
 	ctx, err := uninstallContext(cmd)
-	if err != nil {
-		return err
-	}
-	deps, err := resolveUninstallCollaborators(inj)
 	if err != nil {
 		return err
 	}
 
 	// No default target: with none given, every layout found on disk is unwired.
-	targets, err := resolveTargets(cmd, deps.targets, ctx.Base)
+	targets, err := resolveTargets(cmd, registry, ctx.Base)
 	if err != nil {
 		return err
 	}
 
-	errs := uninstallTargets(deps, targets, ctx)
+	errs := uninstallTargets(registry, targets, ctx)
 	if !cmd.global {
 		errs = append(errs, uninstallProjectWide(ctx.Base)...)
 	}
@@ -93,13 +88,13 @@ func uninstallContext(cmd *Command) (host.UninstallContext, error) {
 }
 
 func uninstallTargets(
-	deps uninstallCollaborators,
+	registry *host.Registry,
 	targets []string,
 	ctx host.UninstallContext,
 ) []error {
 	var errs []error
 	for _, name := range targets {
-		report, uninstallErr := deps.targets.Uninstall(name, ctx)
+		report, uninstallErr := registry.Uninstall(name, ctx)
 		report.Print(os.Stdout, os.Stderr)
 		if uninstallErr != nil {
 			// The target registry's Uninstall already wraps this as

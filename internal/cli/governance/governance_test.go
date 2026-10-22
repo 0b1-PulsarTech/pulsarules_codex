@@ -9,12 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -23,8 +23,7 @@ import (
 func TestRunGovernance_RequiresProjectDir(t *testing.T) {
 	t.Parallel()
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	err := (&Command{}).Run(inj, nil)
+	err := (&Command{}).Run(unopenableRepository(), nil)
 	if !errors.Is(err, errProjectDirRequired) {
 		t.Errorf("err = %v, want %v", err, errProjectDirRequired)
 	}
@@ -33,9 +32,8 @@ func TestRunGovernance_RequiresProjectDir(t *testing.T) {
 func TestRunGovernance_EnvProjectDirSatisfiesTheRequirement(t *testing.T) {
 	t.Parallel()
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
 	opts := &Command{env: flags.Environment{ProjectDir: t.TempDir()}}
-	if err := opts.Run(inj, nil); errors.Is(err, errProjectDirRequired) {
+	if err := opts.Run(unopenableRepository(), nil); errors.Is(err, errProjectDirRequired) {
 		t.Errorf("err = %v, want the env project dir to count", err)
 	}
 }
@@ -384,13 +382,30 @@ func TestRunGovernance_CatalogFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("vcs.Open: %v", err)
 	}
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	remy.RegisterInstance(inj, repo)
-	remy.RegisterInstance(inj, &knowledge.Index{})
+	svc := bootstrap.Services{
+		Index:          &knowledge.Index{},
+		OpenRepository: func() (*vcs.Repository, error) { return repo, nil },
+		LoadCatalog:    func() (*emoji.Catalog, error) { return nil, errors.New("boom") },
+	}
 
-	err = (&Command{project: dir}).Run(inj, nil)
-	if err == nil || !strings.Contains(err.Error(), "get emoji catalog") {
-		t.Fatalf("Run() error = %v, want one naming %q", err, "get emoji catalog")
+	err = (&Command{project: dir}).Run(svc, nil)
+	if err == nil || err.Error() != "get emoji catalog: boom" {
+		t.Fatalf("Run() error = %v, want %q", err, "get emoji catalog: boom")
+	}
+}
+
+func TestRunGovernance_RepositoryFailure(t *testing.T) {
+	t.Parallel()
+
+	err := (&Command{project: t.TempDir()}).Run(unopenableRepository(), nil)
+	if err == nil || err.Error() != "open repository: boom" {
+		t.Fatalf("Run() error = %v, want %q", err, "open repository: boom")
+	}
+}
+
+func unopenableRepository() bootstrap.Services {
+	return bootstrap.Services{
+		OpenRepository: func() (*vcs.Repository, error) { return nil, errors.New("boom") },
 	}
 }
 

@@ -9,17 +9,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
@@ -145,12 +142,11 @@ func TestHookStop_CatalogFailureSkipsGovernance(t *testing.T) {
 
 //nolint:paralleltest // captureStderr swaps os.Stderr.
 func TestCommand_Run_OtherModesDoNotNeedTheCatalog(t *testing.T) {
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	bindHookWithoutCatalog(t, inj, t.TempDir())
+	svc := hookServices(t)
 	stderr := captureStderr(t, func() {
 		if err := New(
 			flags.Environment{ProjectDir: t.TempDir()},
-		).Run(inj, []string{"pre-search"}); err != nil {
+		).Run(svc, []string{"pre-search"}); err != nil {
 			t.Errorf("Run(pre-search) = %v, want nil", err)
 		}
 	})
@@ -186,8 +182,7 @@ func TestCommand_Run_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-			bindHookWithoutCatalog(t, inj, t.TempDir())
+			svc := hookServices(t)
 			stdin, err := os.CreateTemp(t.TempDir(), "stdin")
 			if err != nil {
 				t.Fatalf("create stdin: %v", err)
@@ -204,7 +199,7 @@ func TestCommand_Run_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
 			defer func() { os.Stdin = savedStdin }()
 
 			out := captureStream(t, &os.Stdout, func() {
-				if err = New(testCase.env).Run(inj, []string{"pre-search"}); err != nil {
+				if err = New(testCase.env).Run(svc, []string{"pre-search"}); err != nil {
 					t.Errorf("Run(pre-search) = %v, want nil", err)
 				}
 			})
@@ -215,54 +210,68 @@ func TestCommand_Run_PassesTheCallersEnvironmentToTheDispatcher(t *testing.T) {
 	}
 }
 
-func bindHookWithoutCatalog(t *testing.T, inj remy.Injector, dir string, omit ...string) {
+func hookServices(t *testing.T) bootstrap.Services {
 	t.Helper()
 
-	initGitRepo(t, dir)
-	repo, err := vcs.Open(dir)
-	if err != nil {
-		t.Fatalf("vcs.Open: %v", err)
-	}
 	index, assets, err := knowledge.Load("")
 	if err != nil {
 		t.Fatalf("load knowledge: %v", err)
 	}
-	remy.RegisterInstance(inj, repo)
-	if !slices.Contains(omit, "index") {
-		remy.RegisterInstance(inj, index)
+	return bootstrap.Services{
+		Index:     index,
+		Templates: templates.New(assets),
+		OpenLogger: func() (bootstrap.Logging, error) {
+			return bootstrap.Logging{
+				Logger: slog.New(slog.DiscardHandler),
+				Closer: io.NopCloser(nil),
+			}, nil
+		},
+		LoadCatalog: func() (*emoji.Catalog, error) {
+			return nil, errors.New("emoji catalog must not be resolved here")
+		},
 	}
-	if !slices.Contains(omit, "templates") {
-		remy.RegisterInstance(inj, templates.New(assets))
+}
+
+type closeRecorder struct {
+	closed *bool
+}
+
+func (rec closeRecorder) Close() error {
+	*rec.closed = true
+	return nil
+}
+
+//nolint:paralleltest // captureStderr swaps os.Stderr.
+func TestCommand_Run_NeverFailsOnALoggerFailure(t *testing.T) {
+	svc := hookServices(t)
+	svc.OpenLogger = func() (bootstrap.Logging, error) {
+		return bootstrap.Logging{}, errors.New("build logger: boom")
 	}
-	if !slices.Contains(omit, "logger") {
-		remy.RegisterInstance(inj, slog.New(slog.DiscardHandler))
+	var err error
+	stderr := captureStderr(t, func() {
+		err = New(flags.Environment{}).Run(svc, []string{"pre-search"})
+	})
+	if err != nil {
+		t.Errorf("Run() = %v, want nil so the turn is never blocked", err)
+	}
+	if want := "hook: build logger: build logger: boom\n"; stderr != want {
+		t.Errorf("stderr = %q, want %q", stderr, want)
 	}
 }
 
 //nolint:paralleltest // captureStderr swaps os.Stderr.
-func TestCommand_Run_NeverFailsOnAMissingBinding(t *testing.T) {
-	testCases := []struct {
-		name       string
-		omit       string
-		wantStderr string
-	}{
-		{name: "knowledge index", omit: "index", wantStderr: "hook: get knowledge index:"},
-		{name: "templates", omit: "templates", wantStderr: "hook: get templates:"},
-		{name: "logger", omit: "logger", wantStderr: "hook: build logger:"},
+func TestCommand_Run_ClosesTheLogger(t *testing.T) {
+	var closed bool
+	svc := hookServices(t)
+	svc.OpenLogger = func() (bootstrap.Logging, error) {
+		return bootstrap.Logging{
+			Logger: slog.New(slog.DiscardHandler),
+			Closer: closeRecorder{closed: &closed},
+		}, nil
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-			bindHookWithoutCatalog(t, inj, t.TempDir(), testCase.omit)
-			stderr := captureStderr(t, func() {
-				if err := New(flags.Environment{}).Run(inj, []string{"pre-search"}); err != nil {
-					t.Errorf("Run() = %v, want nil so the turn is never blocked", err)
-				}
-			})
-			if !strings.Contains(stderr, testCase.wantStderr) {
-				t.Errorf("stderr = %q, want it to contain %q", stderr, testCase.wantStderr)
-			}
-		})
+	captureStderr(t, func() { _ = New(flags.Environment{}).Run(svc, []string{"pre-search"}) })
+	if !closed {
+		t.Error("Run left the logger open")
 	}
 }
 

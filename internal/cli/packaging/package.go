@@ -5,11 +5,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/docs"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
-	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 type Command struct {
@@ -32,17 +29,9 @@ func (cmd *Command) outPath() string {
 	return cmd.out
 }
 
-func (cmd *Command) Run(inj remy.Injector, _ []string) error {
-	idx, err := remy.Get[*knowledge.Index](inj)
-	if err != nil {
-		return fmt.Errorf("get knowledge index: %w", err)
-	}
-	rnd, err := remy.Get[*render.Renderer](inj)
-	if err != nil {
-		return fmt.Errorf("get renderer: %w", err)
-	}
+func (cmd *Command) Run(svc bootstrap.Services, _ []string) error {
 	out := cmd.outPath()
-	if err = docs.Package(idx, rnd, out); err != nil {
+	if err := docs.Package(svc.Index, svc.Renderer, out); err != nil {
 		return fmt.Errorf("package: %w", err)
 	}
 	fmt.Printf("packaged: %s\n", out)

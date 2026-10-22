@@ -5,8 +5,6 @@ import (
 	"flag"
 	"os"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax/tssyntax"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli"
@@ -38,12 +36,12 @@ func main() {
 		return
 	}
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if bootErr := bootstrap.DoInjections(inj, call.BootstrapOptions()); bootErr != nil {
+	svc, bootErr := bootstrap.New(call.BootstrapOptions())
+	if bootErr != nil {
 		os.Exit(call.HandleBootstrapErr(bootErr))
 	}
 
-	if err = call.Run(inj); err != nil {
+	if err = call.Run(svc); err != nil {
 		die(err)
 	}
 }

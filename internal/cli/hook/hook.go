@@ -4,17 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
-	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
-	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
 
 type Command struct {
@@ -33,41 +29,28 @@ func BootstrapFailed(out io.Writer, err error) int {
 	return 0
 }
 
-func (cmd *Command) Run(inj remy.Injector, args []string) error {
-	// simplification: every lookup below degrades to a no-op (log, return nil)
-	// so a hook never blocks the caller's turn over a load/logger hiccup.
+func (cmd *Command) Run(svc bootstrap.Services, args []string) error {
+	// simplification: the logger lookup below degrades to a no-op (log, return nil)
+	// so a hook never blocks the caller's turn over a logger hiccup.
 	// Upgrade path: revisit if a no-op ever hides a failure operators need paged on.
-	idx, err := remy.Get[*knowledge.Index](inj)
-	if err != nil {
-		printHookError(os.Stderr, "get knowledge index", err)
-		return nil
-	}
-	assets, err := remy.Get[templates.Set](inj)
-	if err != nil {
-		printHookError(os.Stderr, "get templates", err)
-		return nil
-	}
-	logger, err := remy.Get[*slog.Logger](inj)
+	logging, err := svc.OpenLogger()
 	if err != nil {
 		printHookError(os.Stderr, "build logger", err)
 		return nil
 	}
-	if closer, closerErr := remy.Get[io.Closer](inj); closerErr == nil {
-		defer func() { _ = closer.Close() }()
-	}
+	defer func() { _ = logging.Closer.Close() }()
 
 	payload, _ := io.ReadAll(os.Stdin)
 
 	// Only the stop checklist lints with it, so no other hook mode needs the catalog.
-	catalog := func() (*emoji.Catalog, error) { return remy.Get[*emoji.Catalog](inj) }
 	disp := newHookDispatcher(hook.Deps{
-		Templates:  assets,
-		Logger:     logger,
-		Index:      idx,
+		Templates:  svc.Templates,
+		Logger:     logging.Logger,
+		Index:      svc.Index,
 		Out:        os.Stdout,
 		ProjectDir: cmd.env.ProjectDir,
 		SkillsDir:  cmd.env.SkillsDir,
-	}, catalog)
+	}, svc.LoadCatalog)
 
 	var mode string
 	if len(args) > 0 {

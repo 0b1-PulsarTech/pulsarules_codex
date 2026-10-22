@@ -9,12 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/emoji"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -41,11 +40,18 @@ func lintAfterHistory(t *testing.T, configYAML string, history []string, message
 			t.Fatalf("write config: %v", err)
 		}
 	}
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: dir}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
+	svc := servicesIn(t, dir)
+	return (&Command{msg: message}).Run(svc, nil)
+}
+
+func servicesIn(t *testing.T, projectDir string) bootstrap.Services {
+	t.Helper()
+
+	svc, err := bootstrap.New(bootstrap.Options{ProjectDir: projectDir})
+	if err != nil {
+		t.Fatalf("bootstrap.New: %v", err)
 	}
-	return (&Command{msg: message}).Run(inj, nil)
+	return svc
 }
 
 func runGit(t *testing.T, dir string, args ...string) {
@@ -144,13 +150,10 @@ func TestCommand_Run_ProjectConfig(t *testing.T) {
 func TestCommand_Run_ReturnsErrFindings(t *testing.T) {
 	t.Parallel()
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := servicesIn(t, ".")
 
 	const messageTrippingEmojiTypeAndInitialRules = "bad commit message"
-	err := (&Command{msg: messageTrippingEmojiTypeAndInitialRules}).Run(inj, nil)
+	err := (&Command{msg: messageTrippingEmojiTypeAndInitialRules}).Run(svc, nil)
 
 	if !errors.Is(err, command.ErrFindings) {
 		t.Fatalf("error = %v, want command.ErrFindings", err)
@@ -160,14 +163,12 @@ func TestCommand_Run_ReturnsErrFindings(t *testing.T) {
 func TestCommand_Run_PropagatesRepositoryError(t *testing.T) {
 	t.Parallel()
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	wantErr := errors.New("boom: injector wiring failed")
-	remy.RegisterConstructorErr(
-		inj, remy.Factory[*vcs.Repository],
-		func() (*vcs.Repository, error) { return nil, wantErr },
-	)
+	wantErr := errors.New("boom: repository wiring failed")
+	svc := bootstrap.Services{
+		OpenRepository: func() (*vcs.Repository, error) { return nil, wantErr },
+	}
 
-	err := (&Command{msg: "valid enough message"}).Run(inj, nil)
+	err := (&Command{msg: "valid enough message"}).Run(svc, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("Run() error = %v, want wrapping %v", err, wantErr)
 	}
@@ -176,13 +177,10 @@ func TestCommand_Run_PropagatesRepositoryError(t *testing.T) {
 func TestCommand_Run_NoRepository(t *testing.T) {
 	t.Parallel()
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: t.TempDir()}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := servicesIn(t, t.TempDir())
 
 	const invalidCommitMessage = "bad commit message"
-	err := (&Command{msg: invalidCommitMessage}).Run(inj, nil)
+	err := (&Command{msg: invalidCommitMessage}).Run(svc, nil)
 	if !errors.Is(err, command.ErrFindings) {
 		t.Fatalf("error = %v, want command.ErrFindings from analysis findings", err)
 	}
@@ -227,14 +225,13 @@ func TestCommand_Bind(t *testing.T) {
 func TestCommand_Run_CatalogFailure(t *testing.T) {
 	t.Parallel()
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	remy.RegisterConstructorErr(
-		inj, remy.Factory[*vcs.Repository],
-		func() (*vcs.Repository, error) { return nil, vcs.ErrNoRepository },
-	)
-	remy.RegisterInstance(inj, &knowledge.Index{})
+	svc := bootstrap.Services{
+		Index:          &knowledge.Index{},
+		OpenRepository: func() (*vcs.Repository, error) { return nil, vcs.ErrNoRepository },
+		LoadCatalog:    func() (*emoji.Catalog, error) { return nil, errors.New("boom") },
+	}
 
-	err := (&Command{msg: "feat: x"}).Run(inj, nil)
+	err := (&Command{msg: "feat: x"}).Run(svc, nil)
 	if err == nil || !strings.Contains(err.Error(), "get emoji catalog") {
 		t.Fatalf("Run() error = %v, want one naming %q", err, "get emoji catalog")
 	}

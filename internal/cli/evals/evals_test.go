@@ -8,8 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/evals"
 )
@@ -83,7 +82,7 @@ func TestRunEvals_Grading(t *testing.T) {
 			t.Parallel()
 
 			cmd := evalsCommand(t, testCase)
-			err := cmd.Run(remy.NewInjector(remy.Config{DuckTypeElements: true}), nil)
+			err := cmd.Run(bootstrap.Services{}, nil)
 			if testCase.wantErrIs != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErrIs) {
 					t.Fatalf("error = %v, want it to mention %q", err, testCase.wantErrIs)

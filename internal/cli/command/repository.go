@@ -4,15 +4,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 //nolint:ireturn // returns the consumer port, nil when there is no repository
-func OptionalRepository(inj remy.Injector) (governance.Repository, error) {
-	opened, err := remy.Get[*vcs.Repository](inj)
+func OptionalRepository(open func() (*vcs.Repository, error)) (governance.Repository, error) {
+	opened, err := open()
 	if err != nil && !errors.Is(err, vcs.ErrNoRepository) {
 		return nil, fmt.Errorf("open repository: %w", err)
 	}

@@ -9,15 +9,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 func TestCommand_RepositoryResolution(t *testing.T) {
 	t.Parallel()
 
-	wiringErr := errors.New("boom: injector wiring failed")
+	wiringErr := errors.New("boom: repository wiring failed")
 	testCases := []struct {
 		name    string
 		repoErr error
@@ -30,13 +29,11 @@ func TestCommand_RepositoryResolution(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-			remy.RegisterConstructorErr(
-				inj, remy.Factory[*vcs.Repository],
-				func() (*vcs.Repository, error) { return nil, testCase.repoErr },
-			)
+			svc := bootstrap.Services{
+				OpenRepository: func() (*vcs.Repository, error) { return nil, testCase.repoErr },
+			}
 
-			err := boundCommand(t, "--project", t.TempDir()).Run(inj, nil)
+			err := boundCommand(t, "--project", t.TempDir()).Run(svc, nil)
 			if !errors.Is(err, testCase.wantErr) {
 				t.Fatalf("Run() error = %v, want %v", err, testCase.wantErr)
 			}
@@ -99,18 +96,16 @@ func TestCommand_Run_OnlyWriteRewrites(t *testing.T) {
 			if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
 				t.Fatalf("write fixture: %v", err)
 			}
-			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-			remy.RegisterConstructorErr(
-				inj, remy.Factory[*vcs.Repository],
-				func() (*vcs.Repository, error) { return nil, vcs.ErrNoRepository },
-			)
+			svc := bootstrap.Services{
+				OpenRepository: func() (*vcs.Repository, error) { return nil, vcs.ErrNoRepository },
+			}
 
 			out := captureStdout(t, func() {
 				args := []string{"--project", dir}
 				if testCase.write {
 					args = append(args, "--write")
 				}
-				if err := boundCommand(t, args...).Run(inj, nil); err != nil {
+				if err := boundCommand(t, args...).Run(svc, nil); err != nil {
 					t.Errorf("Run() = %v, want nil", err)
 				}
 			})

@@ -5,14 +5,12 @@ import (
 	"io"
 	"os"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
 
-func (call Invocation) Run(inj remy.Injector) error {
-	return call.runner.Run(inj, call.args)
+func (call Invocation) Run(svc bootstrap.Services) error {
+	return call.runner.Run(svc, call.args)
 }
 
 func (call Invocation) HandleBootstrapErr(err error) int {

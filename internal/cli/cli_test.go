@@ -11,8 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
@@ -57,10 +55,7 @@ func TestRun_PrefixesInstallAndUninstallErrors(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-			if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-				t.Fatalf("DoInjections: %v", err)
-			}
+			svc := servicesIn(t, ".")
 			args := slices.Clone(testCase.args)
 			if idx := slices.Index(args, "--project"); idx >= 0 {
 				args[idx+1] = t.TempDir()
@@ -69,7 +64,7 @@ func TestRun_PrefixesInstallAndUninstallErrors(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
-			err = call.Run(inj)
+			err = call.Run(svc)
 			if err == nil {
 				t.Fatal("expected an error")
 			}
@@ -262,10 +257,7 @@ func TestRun_GovernanceReportsFindings(t *testing.T) {
 
 			dir := t.TempDir()
 			seedGovernanceRepo(t, dir, testCase.source)
-			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-			if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: dir}); err != nil {
-				t.Fatalf("DoInjections: %v", err)
-			}
+			svc := servicesIn(t, dir)
 			args := []string{"governance", "--project", dir, "--all-files"}
 			if testCase.scope != "" {
 				args = append(args, "--scope", testCase.scope)
@@ -274,7 +266,7 @@ func TestRun_GovernanceReportsFindings(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
-			if got := outcome(call.Run(inj)); !strings.HasPrefix(got, testCase.want) {
+			if got := outcome(call.Run(svc)); !strings.HasPrefix(got, testCase.want) {
 				t.Errorf("Run outcome = %q, want prefix %q", got, testCase.want)
 			}
 		})
@@ -301,20 +293,14 @@ func TestParse_HookReceivesTheEnvironment(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-			if err := bootstrap.DoInjections(
-				inj,
-				bootstrap.Options{ProjectDir: project},
-			); err != nil {
-				t.Fatalf("DoInjections: %v", err)
-			}
+			svc := servicesIn(t, project)
 			call, err := Parse([]string{"hook", "pre-search"}, testCase.env, io.Discard)
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
 
 			out := runWithStdin(t, payload, func() {
-				if err = call.Run(inj); err != nil {
+				if err = call.Run(svc); err != nil {
 					t.Errorf("Run() = %v, want nil", err)
 				}
 			})
@@ -323,6 +309,16 @@ func TestParse_HookReceivesTheEnvironment(t *testing.T) {
 			}
 		})
 	}
+}
+
+func servicesIn(t *testing.T, projectDir string) bootstrap.Services {
+	t.Helper()
+
+	svc, err := bootstrap.New(bootstrap.Options{ProjectDir: projectDir})
+	if err != nil {
+		t.Fatalf("bootstrap.New: %v", err)
+	}
+	return svc
 }
 
 func writeFile(t *testing.T, path, content string) {

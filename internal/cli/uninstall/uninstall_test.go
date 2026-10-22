@@ -12,8 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
@@ -26,13 +24,10 @@ func TestRun_RoundTrip(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, inj, installArgs); err != nil {
+	if err := runInstall(t, svc, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	skillDoc := filepath.Join(projectDir, ".claude", "skills", "go-style", "SKILL.md")
@@ -45,7 +40,7 @@ func TestRun_RoundTrip(t *testing.T) {
 	}
 
 	uninstallOpts := &Command{project: projectDir}
-	if err := uninstallOpts.Run(inj, nil); err != nil {
+	if err := uninstallOpts.Run(svc, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if _, statErr := os.Stat(skillDoc); !errors.Is(statErr, fs.ErrNotExist) {
@@ -57,7 +52,7 @@ func TestRun_RoundTrip(t *testing.T) {
 
 	t.Run("idempotent: second uninstall is not an error", func(t *testing.T) {
 		t.Parallel()
-		if err := uninstallOpts.Run(inj, nil); err != nil {
+		if err := uninstallOpts.Run(svc, nil); err != nil {
 			t.Fatalf("second Run: %v", err)
 		}
 	})
@@ -67,18 +62,15 @@ func TestRun_KeepSkills(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, inj, installArgs); err != nil {
+	if err := runInstall(t, svc, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 
 	uninstallOpts := &Command{project: projectDir, keepSkills: true}
-	if err := uninstallOpts.Run(inj, nil); err != nil {
+	if err := uninstallOpts.Run(svc, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
@@ -103,13 +95,10 @@ func TestRun_RemovesLanguageConfig(t *testing.T) {
 	); err != nil {
 		t.Fatalf("write go.mod: %v", err)
 	}
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, inj, installArgs); err != nil {
+	if err := runInstall(t, svc, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	configPath := filepath.Join(projectDir, detect.ConfigFileName)
@@ -118,7 +107,7 @@ func TestRun_RemovesLanguageConfig(t *testing.T) {
 	}
 
 	uninstallOpts := &Command{project: projectDir}
-	if err := uninstallOpts.Run(inj, nil); err != nil {
+	if err := uninstallOpts.Run(svc, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if _, statErr := os.Stat(configPath); !errors.Is(statErr, fs.ErrNotExist) {
@@ -129,12 +118,9 @@ func TestRun_RemovesLanguageConfig(t *testing.T) {
 func TestRun_Idempotent(t *testing.T) {
 	t.Parallel()
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 	opts := &Command{project: t.TempDir()}
-	if err := opts.Run(inj, nil); err != nil {
+	if err := opts.Run(svc, nil); err != nil {
 		t.Fatalf("Run on untouched project: %v", err)
 	}
 }
@@ -143,10 +129,7 @@ func TestRun_DetectsBothTargetsWhenNoneGiven(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 
 	installArgs := []string{
 		"--project",
@@ -159,7 +142,7 @@ func TestRun_DetectsBothTargetsWhenNoneGiven(t *testing.T) {
 		"opencode",
 		"--no-mcp",
 	}
-	if err := runInstall(t, inj, installArgs); err != nil {
+	if err := runInstall(t, svc, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	claudeSkill := filepath.Join(projectDir, ".claude", "skills", "go-style", "SKILL.md")
@@ -171,7 +154,7 @@ func TestRun_DetectsBothTargetsWhenNoneGiven(t *testing.T) {
 	}
 
 	uninstallOpts := &Command{project: projectDir}
-	if err := uninstallOpts.Run(inj, nil); err != nil {
+	if err := uninstallOpts.Run(svc, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	for _, path := range []string{claudeSkill, opencodeConfig} {
@@ -185,10 +168,7 @@ func TestRun_UnwiresLocalHooksScopeByDefault(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 
 	installArgs := []string{
 		"--project",
@@ -199,7 +179,7 @@ func TestRun_UnwiresLocalHooksScopeByDefault(t *testing.T) {
 		"--hooks-scope",
 		"local",
 	}
-	if err := runInstall(t, inj, installArgs); err != nil {
+	if err := runInstall(t, svc, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	localSettings := filepath.Join(projectDir, ".claude", "settings.local.json")
@@ -208,7 +188,7 @@ func TestRun_UnwiresLocalHooksScopeByDefault(t *testing.T) {
 	}
 
 	uninstallOpts := &Command{project: projectDir}
-	if err := uninstallOpts.Run(inj, nil); err != nil {
+	if err := uninstallOpts.Run(svc, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if _, statErr := os.Stat(localSettings); !errors.Is(statErr, fs.ErrNotExist) {
@@ -220,10 +200,7 @@ func TestRun_ReturnsErrorOnGitHookFailure(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 
 	hookAsDir := filepath.Join(
 		projectDir,
@@ -236,7 +213,7 @@ func TestRun_ReturnsErrorOnGitHookFailure(t *testing.T) {
 	}
 
 	opts := &Command{project: projectDir}
-	if err := opts.Run(inj, nil); err == nil {
+	if err := opts.Run(svc, nil); err == nil {
 		t.Fatal("expected a non-nil error when git hook removal fails")
 	}
 }
@@ -245,12 +222,9 @@ func TestRun_TargetErrorNotDoubled(t *testing.T) {
 	t.Parallel()
 
 	projectDir := t.TempDir()
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
-	if err := runInstall(t, inj, installArgs); err != nil {
+	if err := runInstall(t, svc, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 
@@ -263,7 +237,7 @@ func TestRun_TargetErrorNotDoubled(t *testing.T) {
 	}
 
 	uninstallOpts := &Command{project: projectDir}
-	err := uninstallOpts.Run(inj, nil)
+	err := uninstallOpts.Run(svc, nil)
 	if err == nil {
 		t.Fatal("expected an error when settings.json cannot be read")
 	}
@@ -374,15 +348,7 @@ func TestRun_HostileTreeStaysOnOneLine(t *testing.T) {
 		t.Fatalf("seed settings: %v", err)
 	}
 
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
-	deps, err := resolveUninstallCollaborators(inj)
-	if err != nil {
-		t.Fatalf("resolve: %v", err)
-	}
-	report, _ := deps.targets.Uninstall("claude", host.UninstallContext{
+	report, _ := testServices(t).Targets.Uninstall("claude", host.UninstallContext{
 		Base:          projectDir,
 		SettingsFiles: []string{"settings.json"},
 	})
@@ -417,7 +383,7 @@ func TestUninstallContext_SettingsFiles(t *testing.T) {
 	}
 }
 
-func runInstall(tb testing.TB, inj remy.Injector, args []string) error {
+func runInstall(tb testing.TB, svc bootstrap.Services, args []string) error {
 	tb.Helper()
 
 	cmd := &install.Command{}
@@ -426,17 +392,24 @@ func runInstall(tb testing.TB, inj remy.Injector, args []string) error {
 	if err := fs.Parse(args); err != nil {
 		tb.Fatalf("Parse(%q): %v", args, err)
 	}
-	return cmd.Run(inj, nil)
+	return cmd.Run(svc, nil)
+}
+
+func testServices(tb testing.TB) bootstrap.Services {
+	tb.Helper()
+
+	svc, err := bootstrap.New(bootstrap.Options{ProjectDir: "."})
+	if err != nil {
+		tb.Fatalf("bootstrap.New: %v", err)
+	}
+	return svc
 }
 
 func TestRun_GlobalLeavesGitAndLanguageConfigAlone(t *testing.T) {
 	t.Parallel()
 
 	home := t.TempDir()
-	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
-		t.Fatalf("DoInjections: %v", err)
-	}
+	svc := testServices(t)
 	languageConfig := filepath.Join(home, detect.ConfigFileName)
 	foreignHook := filepath.Join(home, ".git", "hooks", "pre-commit")
 	for path, body := range map[string]string{languageConfig: `{}`, foreignHook: "#!/bin/sh\n"} {
@@ -450,12 +423,25 @@ func TestRun_GlobalLeavesGitAndLanguageConfigAlone(t *testing.T) {
 
 	cmd := New(flags.Environment{Home: home})
 	cmd.global = true
-	if err := cmd.Run(inj, nil); err != nil {
+	if err := cmd.Run(svc, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	for _, kept := range []string{languageConfig, foreignHook} {
 		if _, statErr := os.Stat(kept); statErr != nil {
 			t.Errorf("%q was removed by a global uninstall: %v", kept, statErr)
 		}
+	}
+}
+
+func TestResolveTargets_GlobalDefaultsToClaude(t *testing.T) {
+	t.Parallel()
+
+	home := t.TempDir()
+	if err := os.WriteFile(filepath.Join(home, "AGENTS.md"), []byte("mine"), 0o600); err != nil {
+		t.Fatalf("seed AGENTS.md: %v", err)
+	}
+	got, err := resolveTargets(&Command{global: true}, host.NewRegistry(), home)
+	if err != nil || !slices.Equal(got, []string{"claude"}) {
+		t.Errorf("resolveTargets = %v, %v, want [claude]", got, err)
 	}
 }

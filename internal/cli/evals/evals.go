@@ -7,8 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/evals"
 )
@@ -23,7 +22,7 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 	fs.StringVar(&cmd.scenario, "scenario", "", "grade only this scenario `ID`")
 }
 
-func (cmd *Command) Run(_ remy.Injector, _ []string) error {
+func (cmd *Command) Run(_ bootstrap.Services, _ []string) error {
 	if cmd.artifact == "" {
 		return errors.New("evals: --artifact is required (the code or transcript to grade)")
 	}

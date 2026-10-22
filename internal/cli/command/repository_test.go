@@ -5,15 +5,13 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/wrapped-owls/goremy-di/remy"
-
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
 func TestOptionalRepository(t *testing.T) {
 	t.Parallel()
 
-	wiringErr := errors.New("boom: injector wiring failed")
+	wiringErr := errors.New("boom: repository wiring failed")
 	dir := t.TempDir()
 	if out, err := exec.CommandContext(t.Context(), "git", "-C", dir, "init").
 		CombinedOutput(); err != nil {
@@ -39,13 +37,9 @@ func TestOptionalRepository(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
-			remy.RegisterConstructorErr(
-				inj, remy.Factory[*vcs.Repository],
-				func() (*vcs.Repository, error) { return testCase.repo, testCase.repoErr },
-			)
+			open := func() (*vcs.Repository, error) { return testCase.repo, testCase.repoErr }
 
-			repo, err := OptionalRepository(inj)
+			repo, err := OptionalRepository(open)
 			if !errors.Is(err, testCase.wantErr) {
 				t.Fatalf("OptionalRepository() error = %v, want %v", err, testCase.wantErr)
 			}
