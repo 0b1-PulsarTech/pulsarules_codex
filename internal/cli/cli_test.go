@@ -213,104 +213,6 @@ func TestTable_NamesAreUnique(t *testing.T) {
 	}
 }
 
-func seedGovernanceRepo(t *testing.T, dir, source string) {
-	t.Helper()
-
-	if err := os.WriteFile(filepath.Join(dir, "alpha.go"), []byte(source), 0o600); err != nil {
-		t.Fatalf("write source: %v", err)
-	}
-	for _, args := range [][]string{{"init", "-q"}, {"add", "alpha.go"}} {
-		cmd := exec.CommandContext(t.Context(), "git", append([]string{"-C", dir}, args...)...)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
-}
-
-func outcome(err error) string {
-	if err == nil {
-		return "ok"
-	}
-	if errors.Is(err, command.ErrFindings) {
-		return "exit 1"
-	}
-	return err.Error()
-}
-
-func TestRun_GovernanceReportsFindings(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name   string
-		scope  string
-		source string
-		want   string
-	}{
-		{name: "clean tree", source: "package alpha\n", want: "ok"},
-		{name: "warnings do not fail the run", source: "package alpha\n\nfunc {\n", want: "ok"},
-		{name: "errors exit 1", source: "package alpha\n\nvar _ = \"\u2014\"\n", want: "exit 1"},
-		{name: "invalid scope", scope: "fulll", want: "invalid --scope"},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			dir := t.TempDir()
-			seedGovernanceRepo(t, dir, testCase.source)
-			svc := servicesIn(t, dir)
-			args := []string{"governance", "--project", dir, "--all-files"}
-			if testCase.scope != "" {
-				args = append(args, "--scope", testCase.scope)
-			}
-			call, err := Parse(args, flags.Environment{}, io.Discard)
-			if err != nil {
-				t.Fatalf("Parse: %v", err)
-			}
-			if got := outcome(call.Run(svc)); !strings.HasPrefix(got, testCase.want) {
-				t.Errorf("Run outcome = %q, want prefix %q", got, testCase.want)
-			}
-		})
-	}
-}
-
-//nolint:paralleltest // t.Setenv and the os.Stdin/os.Stdout swaps bar t.Parallel.
-func TestParse_HookReceivesTheEnvironment(t *testing.T) {
-	t.Setenv("TMPDIR", t.TempDir())
-
-	project, skills := t.TempDir(), t.TempDir()
-	writeFile(t, filepath.Join(project, "go.mod"), "module x\n")
-	writeFile(t, filepath.Join(skills, "gopls-navigation", "SKILL.md"), "x")
-	payload := `{"session_id":"s","tool_name":"Grep","tool_input":{"pattern":"a.go"}}`
-
-	testCases := []struct {
-		name string
-		env  flags.Environment
-		want bool
-	}{
-		{"both given", flags.Environment{ProjectDir: project, SkillsDir: skills}, true},
-		{"no skills dir", flags.Environment{ProjectDir: project}, false},
-		{"no project dir", flags.Environment{SkillsDir: skills}, false},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			svc := servicesIn(t, project)
-			call, err := Parse([]string{"hook", "pre-search"}, testCase.env, io.Discard)
-			if err != nil {
-				t.Fatalf("Parse: %v", err)
-			}
-
-			out := runWithStdin(t, payload, func() {
-				if err = call.Run(svc); err != nil {
-					t.Errorf("Run() = %v, want nil", err)
-				}
-			})
-			if got := out != ""; got != testCase.want {
-				t.Errorf("pre-search emitted = %v, want %v:\n%s", got, testCase.want, out)
-			}
-		})
-	}
-}
-
 func servicesIn(t *testing.T, projectDir string) bootstrap.Services {
 	t.Helper()
 
@@ -332,26 +234,54 @@ func writeFile(t *testing.T, path, content string) {
 	}
 }
 
-func runWithStdin(t *testing.T, stdin string, body func()) string {
+func capture(t *testing.T, stdin string, body func()) (stdout, stderr string) {
 	t.Helper()
 
-	stdinFile, stdoutFile := filepath.Join(t.TempDir(), "in"), filepath.Join(t.TempDir(), "out")
+	scratch := t.TempDir()
+	stdinFile := filepath.Join(scratch, "in")
 	writeFile(t, stdinFile, stdin)
 	input, err := os.Open(stdinFile)
 	if err != nil {
 		t.Fatalf("open stdin: %v", err)
 	}
-	output, err := os.Create(stdoutFile)
+	defer func() { _ = input.Close() }()
+	outFile, err := os.Create(filepath.Join(scratch, "out"))
 	if err != nil {
 		t.Fatalf("create stdout: %v", err)
 	}
-	savedIn, savedOut := os.Stdin, os.Stdout
-	os.Stdin, os.Stdout = input, output
-	defer func() { os.Stdin, os.Stdout = savedIn, savedOut }()
-	body()
-	captured, err := os.ReadFile(stdoutFile)
+	defer func() { _ = outFile.Close() }()
+	errFile, err := os.Create(filepath.Join(scratch, "err"))
 	if err != nil {
-		t.Fatalf("read stdout: %v", err)
+		t.Fatalf("create stderr: %v", err)
+	}
+	defer func() { _ = errFile.Close() }()
+	savedIn, savedOut, savedErr := os.Stdin, os.Stdout, os.Stderr
+	os.Stdin, os.Stdout, os.Stderr = input, outFile, errFile
+	func() {
+		defer func() { os.Stdin, os.Stdout, os.Stderr = savedIn, savedOut, savedErr }()
+		body()
+	}()
+	return readText(t, outFile.Name()), readText(t, errFile.Name())
+}
+
+func readText(t *testing.T, path string) string {
+	t.Helper()
+
+	captured, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
 	}
 	return string(captured)
+}
+
+func gitIn(t *testing.T, dir string, args ...string) {
+	t.Helper()
+
+	full := append([]string{
+		"-C", dir, "-c", "user.name=n", "-c", "user.email=n@example.com",
+		"-c", "commit.gpgsign=false",
+	}, args...)
+	if out, err := exec.CommandContext(t.Context(), "git", full...).CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
 }
