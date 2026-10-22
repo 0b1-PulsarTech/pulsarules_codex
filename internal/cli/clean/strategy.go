@@ -3,7 +3,7 @@ package clean
 import "github.com/0b1-PulsarTech/pulsarules_codex/internal/invisible/cleaner"
 
 type sweepStrategy struct {
-	apply   func(cleaner *cleaner.Cleaner, path string) (cleaner.Report, error)
+	apply   func(scrub *cleaner.Cleaner, path string) (cleaner.Report, error)
 	verb    string
 	summary func(tally cleaner.Tally) string
 }
