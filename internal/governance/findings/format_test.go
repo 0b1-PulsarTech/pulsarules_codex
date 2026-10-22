@@ -191,15 +191,15 @@ func TestReport_Text_Escapes(t *testing.T) {
 func TestReport_TextRendersEveryFinding(t *testing.T) {
 	t.Parallel()
 
-	findings := []finding.Finding{
+	hits := []finding.Finding{
 		{AnalyzerID: "one", Severity: finding.SeverityError, Message: "first"},
 		{AnalyzerID: "two", Severity: finding.SeverityWarning, Message: "second"},
 		{AnalyzerID: "three", Severity: finding.SeverityInfo, Message: "third"},
 	}
 
-	got := Report{Findings: findings}.Text(CLI(), "")
-	if lines := strings.Count(got, "\n"); lines != len(findings) {
-		t.Fatalf("rendered %d lines, want %d:\n%s", lines, len(findings), got)
+	got := Report{Findings: hits}.Text(CLI(), "")
+	if lines := strings.Count(got, "\n"); lines != len(hits) {
+		t.Fatalf("rendered %d lines, want %d:\n%s", lines, len(hits), got)
 	}
 	for _, want := range []string{"[ERROR] one", "[WARNING] two", "[INFO] three"} {
 		if !strings.Contains(got, want) {
