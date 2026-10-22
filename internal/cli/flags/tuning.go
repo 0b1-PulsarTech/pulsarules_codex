@@ -10,30 +10,25 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
 )
 
-type Purpose int
-
-const (
-	Analyze Purpose = iota
-	Bake
-)
-
 type Tuning struct {
 	TypographicSeverity string
 	BranchExtraTypes    string
 }
 
-func (tuning *Tuning) Bind(fs *flag.FlagSet, purpose Purpose) {
-	severityHelp := "how hard a typographic-marker finding lands (`error|warning|info`)"
-	extraTypesHelp := "comma-separated branch types (`a,b`) allowed beyond the Conventional Commit " +
-		"and gitflow types"
-	if purpose == Bake {
-		severityHelp = "bake into the git hooks how hard a typographic-marker finding lands " +
-			"(`error|warning|info`); empty keeps the analyzer default"
-		extraTypesHelp = "bake into the pre-push hook extra branch types a project allows " +
-			"beyond the Conventional Commit and gitflow types (`a,b`, e.g. spike,experiment)"
-	}
-	fs.StringVar(&tuning.TypographicSeverity, "typographic-severity", "", severityHelp)
-	fs.StringVar(&tuning.BranchExtraTypes, "branch-extra-types", "", extraTypesHelp)
+func (tuning *Tuning) Bind(fs *flag.FlagSet) {
+	fs.StringVar(
+		&tuning.TypographicSeverity,
+		"typographic-severity",
+		"",
+		"how hard a typographic-marker finding lands (`error|warning|info`)",
+	)
+	fs.StringVar(
+		&tuning.BranchExtraTypes,
+		"branch-extra-types",
+		"",
+		"comma-separated branch types (`a,b`) allowed beyond the Conventional Commit "+
+			"and gitflow types",
+	)
 }
 
 func (tuning Tuning) Validate() error {

@@ -4,7 +4,6 @@ import (
 	"flag"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 )
 
 func (cmd *Command) Bind(fs *flag.FlagSet) {
@@ -28,7 +27,7 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 		"",
 		".golangci.yml `PATH` (overrides auto-discovery)",
 	)
-	cmd.tuning.Bind(fs, flags.Analyze)
+	cmd.tuning.Bind(fs)
 	fs.BoolVar(
 		&cmd.allFiles,
 		"all-files",

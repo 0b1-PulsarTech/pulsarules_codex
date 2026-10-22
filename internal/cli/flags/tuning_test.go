@@ -103,64 +103,14 @@ func TestTuningApply(t *testing.T) {
 func TestTuningBind(t *testing.T) {
 	t.Parallel()
 
-	for _, purpose := range []Purpose{Analyze, Bake} {
-		var tuning Tuning
-		fs := flag.NewFlagSet("test", flag.ContinueOnError)
-		tuning.Bind(fs, purpose)
-		args := []string{"--typographic-severity", "info", "--branch-extra-types", "a,b"}
-		if err := fs.Parse(args); err != nil {
-			t.Fatalf("purpose %d Parse: %v", purpose, err)
-		}
-		if tuning.TypographicSeverity != "info" || tuning.BranchExtraTypes != "a,b" {
-			t.Errorf("purpose %d tuning = %+v", purpose, tuning)
-		}
+	var tuning Tuning
+	fs := flag.NewFlagSet("test", flag.ContinueOnError)
+	tuning.Bind(fs)
+	args := []string{"--typographic-severity", "info", "--branch-extra-types", "a,b"}
+	if err := fs.Parse(args); err != nil {
+		t.Fatalf("Parse: %v", err)
 	}
-}
-
-func TestTuningBind_HelpTextFollowsThePurpose(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		name     string
-		purpose  Purpose
-		severity string
-		extra    string
-	}{
-		{
-			name:     "analyze",
-			purpose:  Analyze,
-			severity: "how hard a typographic-marker finding lands (`error|warning|info`)",
-			extra:    "comma-separated branch types (`a,b`) allowed beyond the Conventional Commit",
-		},
-		{
-			name:     "bake",
-			purpose:  Bake,
-			severity: "bake into the git hooks how hard a typographic-marker finding lands",
-			extra:    "bake into the pre-push hook extra branch types a project allows",
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			var tuning Tuning
-			fs := flag.NewFlagSet("test", flag.ContinueOnError)
-			tuning.Bind(fs, testCase.purpose)
-			if got := fs.Lookup(
-				"typographic-severity",
-			).Usage; !strings.HasPrefix(
-				got,
-				testCase.severity,
-			) {
-				t.Errorf("severity usage = %q, want prefix %q", got, testCase.severity)
-			}
-			if got := fs.Lookup(
-				"branch-extra-types",
-			).Usage; !strings.HasPrefix(
-				got,
-				testCase.extra,
-			) {
-				t.Errorf("extra types usage = %q, want prefix %q", got, testCase.extra)
-			}
-		})
+	if tuning.TypographicSeverity != "info" || tuning.BranchExtraTypes != "a,b" {
+		t.Errorf("tuning = %+v", tuning)
 	}
 }

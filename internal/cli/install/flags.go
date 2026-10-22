@@ -130,7 +130,7 @@ func (cmd *Command) bindGitHooks(fs *flag.FlagSet) {
 		false,
 		"skip git hooks installation entirely",
 	)
-	cmd.tuning.Bind(fs, flags.Bake)
+	cmd.tuning.Bind(fs)
 }
 
 func (cmd *Command) Terms() []command.Term {
