@@ -40,7 +40,7 @@ Applies to: adding or editing any skill, rule, pattern, or workflow in this repo
 6. Validate and generate: run `pulsarules_cli validate` (integrity + clauselint) and `generate`, then
    spot-check the rendered skill and its mirror for every target.
 7. Back any objective rule with an analyzer under `internal/analyzer/**`, registered in
-   `internal/governance/boot.go` and gated in `internal/config` - a rule with no analyzer is a
+   `internal/governance/registry/table.go` and gated in `internal/config` - a rule with no analyzer is a
    suggestion, not a guardrail.
 {{end}}
 
