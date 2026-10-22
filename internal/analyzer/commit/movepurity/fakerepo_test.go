@@ -4,7 +4,9 @@ import (
 	"maps"
 	"path"
 	"slices"
+	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -48,7 +50,11 @@ func (repo fakeRepo) Entry(side vcs.Side, path string) (mode, id string, err err
 }
 
 func (repo fakeRepo) Dir(side vcs.Side, dir string) ([]string, error) {
-	return dirOf(repo.tree(side), dir), nil
+	tree := repo.tree(side)
+	if side == vcs.Head {
+		return childrenOf(tree, dir), nil
+	}
+	return dirOf(tree, dir), nil
 }
 
 func blobOf(tree map[string]string, path string) (string, error) {
@@ -63,6 +69,21 @@ func dirOf(tree map[string]string, dir string) []string {
 	return slices.DeleteFunc(slices.Sorted(maps.Keys(tree)), func(name string) bool {
 		return path.Dir(name) != dir
 	})
+}
+
+func childrenOf(tree map[string]string, dir string) []string {
+	prefix := dir + "/"
+	if dir == "." {
+		prefix = ""
+	}
+	names := map[string]bool{}
+	for name := range tree {
+		if rest, isUnder := strings.CutPrefix(name, prefix); isUnder {
+			first, _, _ := strings.Cut(rest, "/")
+			names[prefix+first] = true
+		}
+	}
+	return slices.Sorted(maps.Keys(names))
 }
 
 type emptyRepo struct{ fakeRepo }
@@ -90,4 +111,58 @@ func (repo noDirRepo) Dir(side vcs.Side, dir string) ([]string, error) {
 		return nil, errMissing
 	}
 	return repo.fakeRepo.Dir(side, dir)
+}
+
+func embedRow(name, directive string, comoved []pass.Rename) renameCase {
+	const oldGo, newGo = "internal/util/a.go", "internal/routing/a.go"
+	staged := map[string]string{
+		newGo:                         embedSrc("routing", directive),
+		routingMain:                   routingOther,
+		"internal/routing/public.txt": "secret\n",
+	}
+	if len(comoved) > 0 {
+		staged["internal/routing/public.txt"] = "public\n"
+	}
+	return renameCase{
+		name: name,
+		head: map[string]string{
+			oldGo:                       embedSrc("util", directive),
+			"internal/util/public.txt":  "public\n",
+			"internal/util/static/x.js": "x\n",
+			"internal/util/static/y.js": "y\n",
+		},
+		staged:  staged,
+		renames: append([]pass.Rename{pair(oldGo, newGo)}, comoved...),
+	}
+}
+
+func accepted(row renameCase) renameCase {
+	row.want = true
+	return row
+}
+
+func withFile(row renameCase, oldPath, newPath string) renameCase {
+	if oldPath != "" {
+		row.head[oldPath] = "z\n"
+	}
+	if newPath != "" {
+		row.staged[newPath] = "z\n"
+	}
+	if oldPath != "" && newPath != "" && oldPath != newPath {
+		row.renames = append(row.renames, pair(oldPath, newPath))
+	}
+	return row
+}
+
+func embedLiteralNamed(pattern string) renameCase {
+	oldFile, newFile := "internal/util/"+pattern, "internal/routing/"+pattern
+	renamed := embedRow("glob lookalike "+pattern, "//go:embed "+pattern, nil)
+	renamed.head[oldFile] = "x\n"
+	renamed.staged[newFile] = "x\n"
+	renamed.renames = append(renamed.renames, pair(oldFile, newFile))
+	return renamed
+}
+
+func embedSrc(pkg, directive string) string {
+	return pkgFile(pkg, "import _ \"embed\"\n\n"+directive+"\nvar Data string\n")
 }

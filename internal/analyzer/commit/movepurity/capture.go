@@ -2,6 +2,7 @@ package movepurity
 
 import (
 	"path"
+	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
 )
@@ -73,4 +74,18 @@ func (moves *moveContext) isComovedFrom(newPath, oldDir string) bool {
 		}
 	}
 	return false
+}
+
+func (moves *moveContext) pathFollows(oldPath, newPath string) bool {
+	if moves.movedTo[oldPath] == newPath {
+		return true
+	}
+	children, err := moves.head.dir(oldPath)
+	// A directory follows only when every HEAD entry under it moved to the same place.
+	if err != nil || len(children) == 0 {
+		return false
+	}
+	return !slices.ContainsFunc(children, func(child string) bool {
+		return !moves.pathFollows(child, path.Join(newPath, path.Base(child)))
+	})
 }

@@ -356,70 +356,35 @@ func sameDirSrc(dir string) string {
 	)
 }
 
-func embedRow(name, directive string, comoved []pass.Rename) renameCase {
-	const oldGo, newGo = "internal/util/a.go", "internal/routing/a.go"
-	staged := map[string]string{
-		newGo:                         embedSrc("routing", directive),
-		routingMain:                   routingOther,
-		"internal/routing/public.txt": "secret\n",
-	}
-	if len(comoved) > 0 {
-		staged["internal/routing/public.txt"] = "public\n"
-	}
-	return renameCase{
-		name: name,
-		head: map[string]string{
-			oldGo:                       embedSrc("util", directive),
-			"internal/util/public.txt":  "public\n",
-			"internal/util/static/x.js": "x\n",
-		},
-		staged:  staged,
-		renames: append([]pass.Rename{pair(oldGo, newGo)}, comoved...),
-	}
-}
-
-func accepted(row renameCase) renameCase {
-	row.want = true
-	return row
-}
-
-func embedLiteralNamed(pattern string) renameCase {
-	oldFile, newFile := "internal/util/"+pattern, "internal/routing/"+pattern
-	renamed := embedRow("glob lookalike "+pattern, "//go:embed "+pattern, nil)
-	renamed.head[oldFile] = "x\n"
-	renamed.staged[newFile] = "x\n"
-	renamed.renames = append(renamed.renames, pair(oldFile, newFile))
-	return renamed
-}
-
 func TestEmbedRelocation(t *testing.T) {
 	t.Parallel()
 
+	const embedPublic, embedStatic = "//go:embed public.txt", "//go:embed static"
+	const oldSub, newSub = "internal/util/static/sub/z.js", "internal/routing/static/sub/z.js"
 	public := []pass.Rename{pair("internal/util/public.txt", "internal/routing/public.txt")}
+	static := []pass.Rename{
+		pair("internal/util/static/x.js", "internal/routing/static/x.js"),
+		pair("internal/util/static/y.js", "internal/routing/static/y.js"),
+	}
+	strayY := pair("internal/util/static/y.js", "internal/routing/other/y.js")
+	dir := func(name string, comoved []pass.Rename) renameCase {
+		return embedRow(name, embedStatic, comoved)
+	}
 	testCases := []renameCase{
-		embedRow(
-			"S19 embedded file stays behind while newDir has its own",
-			"//go:embed public.txt",
-			nil,
-		),
-		accepted(
-			embedRow(
-				"whole directory move with the embedded file co-moved",
-				"//go:embed public.txt",
-				public,
-			),
-		),
+		embedRow("S19 embedded file stays behind while newDir has its own", embedPublic, nil),
+		accepted(embedRow("directory move with the embedded file co-moved", embedPublic, public)),
 		embedRow("glob pattern", "//go:embed *.txt", public),
 		embedRow("all: prefix", "//go:embed all:public.txt", public),
-		embedRow("directory pattern", "//go:embed static", public),
-		embedRow(
-			"one of several patterns left behind",
-			"//go:embed public.txt static/x.js",
-			public,
-		),
+		dir("directory pattern", public),
+		accepted(dir("directory pattern all co-moved", static)),
+		dir("directory pattern one left behind", static[:1]),
+		dir("directory pattern one moved elsewhere", []pass.Rename{static[0], strayY}),
+		accepted(withFile(dir("nested directory all co-moved", static), oldSub, newSub)),
+		withFile(dir("nested file left behind", static), oldSub, ""),
+		embedRow("one of several patterns left behind", embedPublic+" static/x.js", public),
 		embedRow("unterminated quote", "//go:embed \"public.txt", public),
 		accepted(embedRow("quoted literal co-moved", "//go:embed \"public.txt\"", public)),
-		embedRow("embedded file renamed to another name", "//go:embed public.txt", []pass.Rename{
+		embedRow("embedded file renamed to another name", embedPublic, []pass.Rename{
 			pair("internal/util/public.txt", "internal/routing/other.txt"),
 		}),
 		embedLiteralNamed("a*.txt"),
@@ -448,8 +413,4 @@ func TestEmbedRelocation(t *testing.T) {
 		},
 	}
 	runRenameCases(t, testCases)
-}
-
-func embedSrc(pkg, directive string) string {
-	return pkgFile(pkg, "import _ \"embed\"\n\n"+directive+"\nvar Data string\n")
 }

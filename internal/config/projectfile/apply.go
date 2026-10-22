@@ -23,7 +23,7 @@ func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 		govCfg.Overrides = append(govCfg.Overrides, toCoreOverride(override))
 	}
 	for _, entry := range file.Delegated {
-		// Same fields as core.DelegatedCommand; the yaml tags live on the file side only.
+		// Same fields as pass.DelegatedCommand; the yaml tags live on the file side only.
 		// The conversion copies reference fields shallowly: clone any new one below.
 		command := pass.DelegatedCommand(entry)
 		command.Run = slices.Clone(entry.Run)
@@ -78,7 +78,7 @@ func applyAnalyzer(govCfg *config.GovernanceConfig, id string, entry AnalyzerEnt
 func toCoreOverride(entry OverrideEntry) pass.Override {
 	analyzers := make(map[string]pass.OverrideConfig, len(entry.Analyzers))
 	for id, rules := range entry.Analyzers {
-		// Same fields as core.OverrideConfig; a field added to one breaks this conversion.
+		// Same fields as pass.OverrideConfig; a field added to one breaks this conversion.
 		// The conversion copies reference fields shallowly: clone any new one below.
 		override := pass.OverrideConfig(rules)
 		override.Params = maps.Clone(rules.Params)

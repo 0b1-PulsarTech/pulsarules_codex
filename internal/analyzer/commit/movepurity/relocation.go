@@ -105,7 +105,7 @@ func (moves *moveContext) dirKeepsLoad(dir string) bool {
 func (moves *moveContext) embedsFollow(patterns []string, dirs dirPair) bool {
 	for _, pattern := range patterns {
 		if strings.ContainsAny(pattern, "*?[\\") || strings.HasPrefix(pattern, "all:") ||
-			moves.movedTo[path.Join(dirs.oldDir, pattern)] != path.Join(dirs.newDir, pattern) {
+			!moves.pathFollows(path.Join(dirs.oldDir, pattern), path.Join(dirs.newDir, pattern)) {
 			return false
 		}
 	}
