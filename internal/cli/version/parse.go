@@ -43,7 +43,6 @@ func commandBinders() map[string]flagBinder {
 		"hook":       bindNoFlags,
 		"commitlint": bindCommitLintFlags,
 		"clean":      bindCleanFlags,
-		"evals":      bindEvalsFlags,
 		"governance": bindGovernanceFlags,
 	}
 }
@@ -68,11 +67,6 @@ func bindCommitLintFlags(fs *flag.FlagSet, opts *Options) {
 func bindCleanFlags(fs *flag.FlagSet, opts *Options) {
 	fs.StringVar(&opts.ProjectDir, "project", "", "project dir to clean")
 	fs.BoolVar(&opts.Write, "write", false, "rewrite files instead of only reporting")
-}
-
-func bindEvalsFlags(fs *flag.FlagSet, opts *Options) {
-	fs.StringVar(&opts.Artifact, "artifact", "", "path to the produced artifact to grade")
-	fs.StringVar(&opts.Scenario, "scenario", "", "grade only this scenario id")
 }
 
 func parsePositionalArgs(opts *Options, fs *flag.FlagSet) {

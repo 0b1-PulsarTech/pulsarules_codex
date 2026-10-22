@@ -11,7 +11,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/clean"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/commitlint"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/evals"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
@@ -30,7 +29,6 @@ func commands() map[string]handler {
 		"commitlint": commitlint.RunCommitLint,
 		"governance": governance.RunGovernance,
 		"clean":      clean.RunClean,
-		"evals":      evals.RunEvals,
 	}
 }
 

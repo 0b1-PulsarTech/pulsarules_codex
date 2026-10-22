@@ -2,6 +2,7 @@ package evals
 
 import (
 	"errors"
+	"flag"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/evals"
 )
 
@@ -31,21 +31,21 @@ type evalsCase struct {
 	wantExit  bool
 }
 
-func evalsOptions(t *testing.T, testCase evalsCase) *version.Options {
+func evalsCommand(t *testing.T, testCase evalsCase) *Command {
 	t.Helper()
 
-	opts := &version.Options{Command: "evals", Scenario: testCase.scenario}
+	cmd := &Command{scenario: testCase.scenario}
 	switch testCase.mode {
 	case artifactUnset:
 	case artifactAbsent:
-		opts.Artifact = filepath.Join(t.TempDir(), "absent.txt")
+		cmd.artifact = filepath.Join(t.TempDir(), "absent.txt")
 	case artifactWritten:
-		opts.Artifact = filepath.Join(t.TempDir(), "artifact.txt")
-		if err := os.WriteFile(opts.Artifact, []byte(testCase.artifact), 0o600); err != nil {
+		cmd.artifact = filepath.Join(t.TempDir(), "artifact.txt")
+		if err := os.WriteFile(cmd.artifact, []byte(testCase.artifact), 0o600); err != nil {
 			t.Fatalf("write artifact: %v", err)
 		}
 	}
-	return opts
+	return cmd
 }
 
 func TestRunEvals_Grading(t *testing.T) {
@@ -82,8 +82,8 @@ func TestRunEvals_Grading(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			opts := evalsOptions(t, testCase)
-			err := RunEvals(remy.NewInjector(remy.Config{DuckTypeElements: true}), opts)
+			cmd := evalsCommand(t, testCase)
+			err := cmd.Run(remy.NewInjector(remy.Config{DuckTypeElements: true}), nil)
 			if testCase.wantErrIs != "" {
 				if err == nil || !strings.Contains(err.Error(), testCase.wantErrIs) {
 					t.Fatalf("error = %v, want it to mention %q", err, testCase.wantErrIs)
@@ -111,4 +111,18 @@ func scenarioFailingOn(tb testing.TB, artifact string) string {
 	}
 	tb.Fatalf("no embedded scenario fails on %q; cannot test the non-zero-exit path", artifact)
 	return ""
+}
+
+func TestCommand_Bind(t *testing.T) {
+	t.Parallel()
+
+	var cmd Command
+	fs := flag.NewFlagSet("evals", flag.ContinueOnError)
+	cmd.Bind(fs)
+	if err := fs.Parse([]string{"--artifact", "a.txt", "--scenario", "s1"}); err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if cmd.artifact != "a.txt" || cmd.scenario != "s1" {
+		t.Errorf("artifact %q scenario %q, want a.txt and s1", cmd.artifact, cmd.scenario)
+	}
 }

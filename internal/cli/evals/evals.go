@@ -2,6 +2,7 @@ package evals
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -9,15 +10,24 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/evals"
 )
 
-func RunEvals(_ remy.Injector, opts *version.Options) error {
-	if opts.Artifact == "" {
+type Command struct {
+	artifact string
+	scenario string
+}
+
+func (cmd *Command) Bind(fs *flag.FlagSet) {
+	fs.StringVar(&cmd.artifact, "artifact", "", "path to the produced artifact to grade")
+	fs.StringVar(&cmd.scenario, "scenario", "", "grade only this scenario id")
+}
+
+func (cmd *Command) Run(_ remy.Injector, _ []string) error {
+	if cmd.artifact == "" {
 		return errors.New("evals: --artifact is required (the code or transcript to grade)")
 	}
-	artifact, err := os.ReadFile(opts.Artifact) //nolint:gosec // The operator's own argument.
+	artifact, err := os.ReadFile(cmd.artifact) //nolint:gosec // The operator's own argument.
 	if err != nil {
 		return fmt.Errorf("evals: read artifact: %w", err)
 	}
@@ -26,9 +36,9 @@ func RunEvals(_ remy.Injector, opts *version.Options) error {
 	if err != nil {
 		return fmt.Errorf("evals: load scenarios: %w", err)
 	}
-	selected := selectScenarios(scenarios, opts.Scenario)
+	selected := selectScenarios(scenarios, cmd.scenario)
 	if len(selected) == 0 {
-		return fmt.Errorf("evals: no scenario matches %q", opts.Scenario)
+		return fmt.Errorf("evals: no scenario matches %q", cmd.scenario)
 	}
 
 	// No model is invoked; a human grades the needs-judge assertions.

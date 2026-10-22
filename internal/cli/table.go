@@ -2,6 +2,7 @@ package cli
 
 import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/evals"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/generate"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/list"
@@ -31,6 +32,10 @@ func table() []entry {
 		{
 			name:  "list",
 			build: func(flags.Environment) command.Runner { return list.Command{} },
+		},
+		{
+			name:  "evals",
+			build: func(flags.Environment) command.Runner { return &evals.Command{} },
 		},
 	}
 }
