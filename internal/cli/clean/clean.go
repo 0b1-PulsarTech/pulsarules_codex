@@ -20,7 +20,7 @@ func sweep(out io.Writer, dir string, how sweepStrategy, repo discovery.Lister) 
 	if err != nil {
 		return err
 	}
-	cleanerItem := cleaner.New(filepath.Join(root, scope))
+	scrub := cleaner.New(filepath.Join(root, scope))
 	var tally cleaner.Tally
 	var walkErr error
 	walkSources(root, repo, func(rel, _ string) bool {
@@ -28,7 +28,7 @@ func sweep(out io.Writer, dir string, how sweepStrategy, repo discovery.Lister) 
 			return true
 		}
 		// Walk yields a path relative to root; Abs would anchor it to the working directory.
-		found, err := how.apply(cleanerItem, filepath.Join(root, rel))
+		found, err := how.apply(scrub, filepath.Join(root, rel))
 		if err != nil {
 			walkErr = err
 			return false
