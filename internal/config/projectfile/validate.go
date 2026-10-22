@@ -8,22 +8,23 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile/strictyaml"
 )
 
 type validator struct {
 	rules     Rules
 	delegated map[string]bool
-	root      *Field
-	problems  *Problems
+	root      *strictyaml.Field
+	problems  *strictyaml.Problems
 }
 
 func (file *File) Validate(rules Rules) error {
-	problems := NewProblems(file.Path)
-	file.check(rules, Root(), problems)
+	problems := strictyaml.NewProblems(file.Path)
+	file.check(rules, strictyaml.Root(), problems)
 	return problems.Err()
 }
 
-func (file *File) check(rules Rules, root *Field, problems *Problems) {
+func (file *File) check(rules Rules, root *strictyaml.Field, problems *strictyaml.Problems) {
 	val := &validator{
 		rules: rules, delegated: delegatedIDs(file.Delegated), root: root, problems: problems,
 	}
@@ -32,7 +33,7 @@ func (file *File) check(rules Rules, root *Field, problems *Problems) {
 		if dir == "" || strings.ContainsAny(dir, `/\`) {
 			val.fail(
 				val.root.Key("skip_dirs"), "%q is not a directory basename",
-				ClipValue(dir),
+				strictyaml.ClipValue(dir),
 			)
 		}
 	}
@@ -55,7 +56,7 @@ func (file *File) check(rules Rules, root *Field, problems *Problems) {
 	val.checkDelegated(file.Delegated)
 }
 
-func (val *validator) fail(at *Field, format string, args ...any) {
+func (val *validator) fail(at *strictyaml.Field, format string, args ...any) {
 	val.problems.Report(at, format, args...)
 }
 
@@ -69,31 +70,31 @@ func (val *validator) checkHeader(file *File) {
 	}
 	if file.Preset != "" && !config.ValidPreset(file.Preset) {
 		val.fail(val.root.Key("preset"), "%s",
-			config.UnknownPreset("unknown preset", ClipValue(file.Preset)))
+			config.UnknownPreset("unknown preset", strictyaml.ClipValue(file.Preset)))
 	}
 }
 
-func (val *validator) checkAnalyzer(field *Field, id string) {
+func (val *validator) checkAnalyzer(field *strictyaml.Field, id string) {
 	known := val.rules.AnyAnalyzer || slices.Contains(val.rules.AnalyzerIDs, id)
 	if !known && !val.delegated[id] {
 		val.fail(field, "unknown analyzer")
 	}
 }
 
-func (val *validator) checkOverrideAnalyzer(field *Field, id string) {
+func (val *validator) checkOverrideAnalyzer(field *strictyaml.Field, id string) {
 	// A sub-ID such as golangci-lint/errcheck names one linter of a delegated analyzer.
 	base, _, _ := strings.Cut(id, "/")
 	val.checkAnalyzer(field, base)
 }
 
-func (val *validator) checkSeverity(field *Field, severity string) {
+func (val *validator) checkSeverity(field *strictyaml.Field, severity string) {
 	if err := finding.ValidateSeverityName(severity); err != nil {
 		val.fail(field, "invalid severity %q (want %s)",
-			ClipValue(severity), strings.Join(finding.SeverityNames(), "|"))
+			strictyaml.ClipValue(severity), strings.Join(finding.SeverityNames(), "|"))
 	}
 }
 
-func (val *validator) checkParams(field *Field, id string, params map[string]any) {
+func (val *validator) checkParams(field *strictyaml.Field, id string, params map[string]any) {
 	declared := val.rules.Params[id]
 	for _, key := range slices.Sorted(maps.Keys(params)) {
 		if !slices.Contains(declared, key) {
@@ -112,29 +113,29 @@ func (val *validator) checkDelegated(entries []DelegatedEntry) {
 		}
 		if entry.Dir != "" && !filepath.IsLocal(entry.Dir) {
 			val.fail(field.Key("dir"), "%q must be a relative path inside the project",
-				ClipValue(entry.Dir))
+				strictyaml.ClipValue(entry.Dir))
 		}
 		if !slices.Contains(val.rules.DelegatedFormats, entry.Format) {
 			val.fail(field.Key("format"), "unknown format %q (want %s)",
-				ClipValue(entry.Format), strings.Join(val.rules.DelegatedFormats, "|"))
+				strictyaml.ClipValue(entry.Format), strings.Join(val.rules.DelegatedFormats, "|"))
 		}
 	}
 }
 
-func (val *validator) checkDelegatedID(field *Field, id string, seen map[string]bool) {
+func (val *validator) checkDelegatedID(field *strictyaml.Field, id string, seen map[string]bool) {
 	const maxDelegatedIDBytes = 64
 	const idAlnum = "abcdefghijklmnopqrstuvwxyz0123456789"
 	switch {
 	case id == "":
 		val.fail(field, "required")
 	case slices.Contains(val.rules.ReservedIDs, id):
-		val.fail(field, "%q is a built-in analyzer id", ClipValue(id))
+		val.fail(field, "%q is a built-in analyzer id", strictyaml.ClipValue(id))
 	case len(id) > maxDelegatedIDBytes, strings.Trim(id, idAlnum+"_-") != "",
 		!strings.Contains(idAlnum, id[:1]):
 		val.fail(field, "%q is not a valid id (want [a-z0-9][a-z0-9_-]*, at most %d bytes)",
-			ClipValue(id), maxDelegatedIDBytes)
+			strictyaml.ClipValue(id), maxDelegatedIDBytes)
 	case seen[id]:
-		val.fail(field, "duplicate id %q", ClipValue(id))
+		val.fail(field, "duplicate id %q", strictyaml.ClipValue(id))
 	}
 	seen[id] = true
 }

@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile/strictyaml"
 )
 
 func TestReadBounded(t *testing.T) {
@@ -18,8 +18,8 @@ func TestReadBounded(t *testing.T) {
 		name       string
 		size, want int
 	}{
-		{"file at the cap", projectfile.MaxFileBytes, projectfile.MaxFileBytes},
-		{"file twice the cap", 2 * projectfile.MaxFileBytes, projectfile.MaxFileBytes + 1},
+		{"file at the cap", strictyaml.MaxFileBytes, strictyaml.MaxFileBytes},
+		{"file twice the cap", 2 * strictyaml.MaxFileBytes, strictyaml.MaxFileBytes + 1},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

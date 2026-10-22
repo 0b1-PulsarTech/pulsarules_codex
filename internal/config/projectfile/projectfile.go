@@ -1,5 +1,7 @@
 package projectfile
 
+import "github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile/strictyaml"
+
 const (
 	Name             = ".pulsarules.yaml"
 	SupportedVersion = 1
@@ -46,7 +48,7 @@ type DelegatedEntry struct {
 }
 
 func Parse(path string, content []byte, rules Rules) (*File, error) {
-	doc, err := Decode[File](path, content)
+	doc, err := strictyaml.Decode[File](path, content)
 	if err != nil {
 		return nil, err
 	}

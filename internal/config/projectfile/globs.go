@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile/strictyaml"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
@@ -16,7 +17,7 @@ const (
 	MaxStarTextBytes  = 2048
 )
 
-func (val *validator) checkGlobs(at *Field, globs []string) []string {
+func (val *validator) checkGlobs(at *strictyaml.Field, globs []string) []string {
 	passed := make([]string, 0, len(globs))
 	for idx, pattern := range globs {
 		if fault := globFault(pattern); fault != "" {
@@ -27,7 +28,7 @@ func (val *validator) checkGlobs(at *Field, globs []string) []string {
 			reason := strings.TrimPrefix(err.Error(), fmt.Sprintf("compile glob %q: ", pattern))
 			val.fail(
 				at.Item(idx), "compile glob %q: %s",
-				ClipValue(pattern), ClipValue(reason),
+				strictyaml.ClipValue(pattern), strictyaml.ClipValue(reason),
 			)
 			continue
 		}

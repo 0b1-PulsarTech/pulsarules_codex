@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"io/fs"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile/strictyaml"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/disk"
 )
 
 func readBounded(path string) ([]byte, error) {
 	// One byte past the cap is enough for Parse to reject the file without reading all of it.
-	content, err := disk.ReadBounded(path, projectfile.MaxFileBytes)
+	content, err := disk.ReadBounded(path, strictyaml.MaxFileBytes)
 	if err != nil {
 		return nil, readFault(err)
 	}

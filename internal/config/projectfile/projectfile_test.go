@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile/strictyaml"
 )
 
 const fullProjectYAML = `version: 1
@@ -23,7 +25,7 @@ delegated:
 `
 
 func decodeFile(content []byte) (*File, error) {
-	doc, err := Decode[File](Name, content)
+	doc, err := strictyaml.Decode[File](Name, content)
 	if err != nil {
 		return nil, err
 	}

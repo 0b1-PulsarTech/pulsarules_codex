@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile/strictyaml"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 )
 
@@ -49,11 +50,11 @@ func checkMergedSizes(merged *projectfile.File) error {
 		field        string
 		count, limit int
 	}{
-		{"skip_dirs", len(merged.SkipDirs), projectfile.MaxSeqItems},
-		{"tests", len(merged.Tests), projectfile.MaxSeqItems},
-		{"overrides", len(merged.Overrides), projectfile.MaxSeqItems},
-		{"delegated", len(merged.Delegated), projectfile.MaxSeqItems},
-		{"analyzers", len(merged.Analyzers), projectfile.MaxMapKeys},
+		{"skip_dirs", len(merged.SkipDirs), strictyaml.MaxSeqItems},
+		{"tests", len(merged.Tests), strictyaml.MaxSeqItems},
+		{"overrides", len(merged.Overrides), strictyaml.MaxSeqItems},
+		{"delegated", len(merged.Delegated), strictyaml.MaxSeqItems},
+		{"analyzers", len(merged.Analyzers), strictyaml.MaxMapKeys},
 	}
 	for _, size := range sizes {
 		if size.count > size.limit {

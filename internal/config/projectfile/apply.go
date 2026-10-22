@@ -8,6 +8,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile/strictyaml"
 )
 
 func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
@@ -33,8 +34,8 @@ func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 }
 
 func (file *File) CheckOverrides(govCfg *config.GovernanceConfig) error {
-	problems := NewProblems(file.Path)
-	listed := Root().Key("overrides")
+	problems := strictyaml.NewProblems(file.Path)
+	listed := strictyaml.Root().Key("overrides")
 	for idx, override := range file.Overrides {
 		for _, id := range slices.Sorted(maps.Keys(override.Analyzers)) {
 			rules := override.Analyzers[id]
@@ -45,7 +46,7 @@ func (file *File) CheckOverrides(govCfg *config.GovernanceConfig) error {
 			}
 			field := listed.Item(idx).Key("analyzers").Key(id).Key("enabled")
 			problems.Report(field, "%s is disabled for the whole project; "+
-				"an override can only narrow it", ClipValue(base))
+				"an override can only narrow it", strictyaml.ClipValue(base))
 		}
 	}
 	return problems.Err()
@@ -94,7 +95,7 @@ func (val *validator) checkOverrides(entries []OverrideEntry) {
 	}
 }
 
-func (val *validator) checkOverride(field *Field, override OverrideEntry) {
+func (val *validator) checkOverride(field *strictyaml.Field, override OverrideEntry) {
 	if len(override.Files) == 0 {
 		val.fail(field.Key("files"), "at least one glob is required")
 	}
@@ -108,14 +109,14 @@ func (val *validator) checkOverride(field *Field, override OverrideEntry) {
 }
 
 func (val *validator) checkOverrideParams(
-	field *Field, id string, params map[string]any,
+	field *strictyaml.Field, id string, params map[string]any,
 ) {
 	if params == nil {
 		return
 	}
 	if id != filesize.ID {
 		val.fail(field, "per-path params are only supported for %s, not %s",
-			filesize.ID, ClipValue(id))
+			filesize.ID, strictyaml.ClipValue(id))
 		return
 	}
 	val.checkAnalyzerParams(field, id, params)
@@ -126,7 +127,7 @@ func (val *validator) checkOverrideParams(
 }
 
 func (val *validator) checkAnalyzerParams(
-	field *Field, id string, params map[string]any,
+	field *strictyaml.Field, id string, params map[string]any,
 ) {
 	val.checkParams(field, id, params)
 	if id == filesize.ID {
@@ -134,7 +135,7 @@ func (val *validator) checkAnalyzerParams(
 	}
 }
 
-func (val *validator) checkLimitParams(field *Field, params map[string]any) {
+func (val *validator) checkLimitParams(field *strictyaml.Field, params map[string]any) {
 	soft := val.limitParam(field, params, filesize.ParamMaxLines, 1)
 	hard := val.limitParam(field, params, filesize.ParamErrorLines, 0)
 	if soft > 0 && hard > 0 && hard <= soft {
@@ -144,7 +145,7 @@ func (val *validator) checkLimitParams(field *Field, params map[string]any) {
 }
 
 func (val *validator) limitParam(
-	at *Field, params map[string]any, key string, floor int,
+	at *strictyaml.Field, params map[string]any, key string, floor int,
 ) int {
 	raw, set := params[key]
 	if !set {

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile/strictyaml"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
@@ -161,7 +162,7 @@ func lookupLayoutCases() []lookupCase {
 }
 
 func lookupFaultCases() []lookupCase {
-	huge := "version: 1\n#" + strings.Repeat("x", projectfile.MaxFileBytes)
+	huge := "version: 1\n#" + strings.Repeat("x", strictyaml.MaxFileBytes)
 	return []lookupCase{
 		{
 			name:    "linked worktree names the private file by its absolute path",

@@ -1,4 +1,4 @@
-package projectfile
+package strictyaml
 
 const fixtureName = ".pulsarules.yaml"
 
