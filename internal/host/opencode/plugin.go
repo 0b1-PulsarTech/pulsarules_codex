@@ -18,7 +18,7 @@ const pluginName = "pulsarules-governance.js"
 
 const pluginTemplate = "hooks/opencode-plugin.js"
 
-func Install(dir string, templates fs.FS) (ledger ownedfile.Ledger, err error) {
+func InstallPlugin(dir string, templates fs.FS) (ledger ownedfile.Ledger, err error) {
 	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
 	if err = os.MkdirAll(pluginsDir, disk.ModeDirPrivate); err != nil {
 		return ledger, fmt.Errorf("mkdir plugins: %w", err)
@@ -56,7 +56,7 @@ type PluginRemoval struct {
 	ownedfile.Ledger
 }
 
-func Uninstall(dir string) (PluginRemoval, error) {
+func UninstallPlugin(dir string) (PluginRemoval, error) {
 	var res PluginRemoval
 	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
 	removed, ledger, err := ownedfile.UninstallFiles(

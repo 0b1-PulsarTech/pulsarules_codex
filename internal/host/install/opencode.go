@@ -26,7 +26,7 @@ func UninstallOpencode(dir string) (report.Report, error) {
 }
 
 func installOpencode(dir string, templates fs.FS) (report.Report, error) {
-	ledger, err := opencode.Install(dir, templates)
+	ledger, err := opencode.InstallPlugin(dir, templates)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("install opencode hook: %w", err)
 	}
@@ -39,7 +39,7 @@ func installOpencode(dir string, templates fs.FS) (report.Report, error) {
 }
 
 func uninstallOpencode(dir string) (report.Report, error) {
-	res, err := opencode.Uninstall(dir)
+	res, err := opencode.UninstallPlugin(dir)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("uninstall opencode hook: %w", err)
 	}

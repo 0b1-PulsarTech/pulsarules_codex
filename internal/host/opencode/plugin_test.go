@@ -36,8 +36,8 @@ func TestInstall(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if _, err := Install(dir, testTemplates(t)); err != nil {
-		t.Fatalf("Install: %v", err)
+	if _, err := InstallPlugin(dir, testTemplates(t)); err != nil {
+		t.Fatalf("InstallPlugin: %v", err)
 	}
 
 	pluginPath := filepath.Join(dir, ".opencode", "plugins", pluginName)
@@ -54,8 +54,8 @@ func TestInstall_BinaryPresent(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if _, err := Install(dir, testTemplates(t)); err != nil {
-		t.Fatalf("Install: %v", err)
+	if _, err := InstallPlugin(dir, testTemplates(t)); err != nil {
+		t.Fatalf("InstallPlugin: %v", err)
 	}
 	binPath := filepath.Join(dir, ".opencode", "bin", "pulsarules_cli")
 	stat, err := os.Stat(binPath)
@@ -71,8 +71,8 @@ func TestInstall_GitignoreIgnoresBin(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if _, err := Install(dir, testTemplates(t)); err != nil {
-		t.Fatalf("Install: %v", err)
+	if _, err := InstallPlugin(dir, testTemplates(t)); err != nil {
+		t.Fatalf("InstallPlugin: %v", err)
 	}
 	giPath := filepath.Join(dir, ".opencode", ".gitignore")
 	giContent, err := os.ReadFile(giPath)
@@ -88,16 +88,16 @@ func TestUninstall_RemovesPluginAndGitignore(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	if _, err := Install(dir, testTemplates(t)); err != nil {
-		t.Fatalf("Install: %v", err)
+	if _, err := InstallPlugin(dir, testTemplates(t)); err != nil {
+		t.Fatalf("InstallPlugin: %v", err)
 	}
 
-	res, err := Uninstall(dir)
+	res, err := UninstallPlugin(dir)
 	if err != nil {
-		t.Fatalf("Uninstall: %v", err)
+		t.Fatalf("UninstallPlugin: %v", err)
 	}
 	if !res.Removed {
-		t.Error("expected Uninstall to report the plugin as removed")
+		t.Error("expected UninstallPlugin to report the plugin as removed")
 	}
 
 	for _, rel := range []string{
@@ -118,12 +118,12 @@ func TestUninstall_RemovesPluginAndGitignore(t *testing.T) {
 func TestUninstall_UntouchedDir(t *testing.T) {
 	t.Parallel()
 
-	res, err := Uninstall(t.TempDir())
+	res, err := UninstallPlugin(t.TempDir())
 	if err != nil {
-		t.Fatalf("Uninstall on untouched dir: %v", err)
+		t.Fatalf("UninstallPlugin on untouched dir: %v", err)
 	}
 	if res.Removed {
-		t.Error("expected Uninstall on an untouched dir to report nothing removed")
+		t.Error("expected UninstallPlugin on an untouched dir to report nothing removed")
 	}
 }
 
@@ -136,11 +136,11 @@ func TestUninstall_PluginFailureWording(t *testing.T) {
 		t.Fatalf("seed a directory in place of the plugin: %v", err)
 	}
 
-	_, err := Uninstall(dir)
+	_, err := UninstallPlugin(dir)
 	want := `uninstall plugin: check "` + pluginPath + `": read "` + pluginPath +
 		`": read ` + pluginPath + `: is a directory`
 	if err == nil || err.Error() != want {
-		t.Fatalf("Uninstall err = %v, want %q", err, want)
+		t.Fatalf("UninstallPlugin err = %v, want %q", err, want)
 	}
 }
 
@@ -151,8 +151,8 @@ func TestUninstall_OrphanScanFailureIsBare(t *testing.T) {
 		t.Skip("root ignores directory permissions")
 	}
 	dir := t.TempDir()
-	if _, err := Install(dir, testTemplates(t)); err != nil {
-		t.Fatalf("Install: %v", err)
+	if _, err := InstallPlugin(dir, testTemplates(t)); err != nil {
+		t.Fatalf("InstallPlugin: %v", err)
 	}
 	pluginsDir := filepath.Join(dir, ".opencode", "plugins")
 	if err := os.Chmod(pluginsDir, 0o300); err != nil {
@@ -160,11 +160,11 @@ func TestUninstall_OrphanScanFailureIsBare(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(pluginsDir, disk.ModeDirPrivate) })
 
-	_, err := Uninstall(dir)
+	_, err := UninstallPlugin(dir)
 	want := `list backups of "` + filepath.Join(pluginsDir, pluginName) + `": scan "` +
 		pluginsDir + `": open ` + pluginsDir + `: permission denied`
 	if err == nil || err.Error() != want {
-		t.Fatalf("Uninstall err = %v, want %q", err, want)
+		t.Fatalf("UninstallPlugin err = %v, want %q", err, want)
 	}
 }
 
@@ -173,7 +173,7 @@ func TestInstall_MissingTemplate(t *testing.T) {
 
 	dir := t.TempDir()
 	empty := os.DirFS(t.TempDir())
-	if _, err := Install(dir, empty); err == nil {
+	if _, err := InstallPlugin(dir, empty); err == nil {
 		t.Fatal("expected an error when the plugin template is missing")
 	}
 }
@@ -192,9 +192,9 @@ func TestInstall_ForeignFileBackup(t *testing.T) {
 		t.Fatalf("seed foreign plugin: %v", err)
 	}
 
-	ledger, err := Install(dir, testTemplates(t))
+	ledger, err := InstallPlugin(dir, testTemplates(t))
 	if err != nil {
-		t.Fatalf("Install: %v", err)
+		t.Fatalf("InstallPlugin: %v", err)
 	}
 	if len(ledger.BackedUp) != 1 {
 		t.Fatalf("backedUp = %v, want exactly one backup message", ledger.BackedUp)
@@ -296,12 +296,12 @@ func TestUninstall_RestoresForeignPlugin(t *testing.T) {
 		t.Fatalf("seed foreign plugin: %v", err)
 	}
 
-	if _, err := Install(dir, testTemplates(t)); err != nil {
-		t.Fatalf("Install: %v", err)
+	if _, err := InstallPlugin(dir, testTemplates(t)); err != nil {
+		t.Fatalf("InstallPlugin: %v", err)
 	}
-	res, err := Uninstall(dir)
+	res, err := UninstallPlugin(dir)
 	if err != nil {
-		t.Fatalf("Uninstall: %v", err)
+		t.Fatalf("UninstallPlugin: %v", err)
 	}
 	if !res.Removed || len(res.Restored) != 1 {
 		t.Fatalf(
