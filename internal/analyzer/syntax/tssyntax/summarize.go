@@ -69,12 +69,12 @@ func summarizeScript(summary *syntax.File, options facts.Options, script scriptB
 		return
 	}
 	root := tsparse.Parse(text, script.kind)
-	facts, err := facts.Collect(root, text, options)
+	part, err := facts.Collect(root, text, options)
 	if err != nil {
 		summary.ParseError = fmt.Sprintf("skipped: %v", err)
 		return
 	}
-	merge(summary, facts, script.index)
+	merge(summary, part, script.index)
 	summary.ParseError = tsparse.FirstError(root, text)
 }
 
