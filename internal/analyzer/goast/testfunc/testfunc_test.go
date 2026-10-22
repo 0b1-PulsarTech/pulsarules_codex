@@ -179,7 +179,7 @@ func helperCases() []coversCase {
 	}
 }
 
-func TestTestKind(t *testing.T) {
+func TestKind(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -203,7 +203,7 @@ func TestTestKind(t *testing.T) {
 
 			file, fn := lastFunc(t, testCase.source)
 			if got, _ := Kind(file, fn); got != testCase.want {
-				t.Fatalf("TestKind = %q, want %q", got, testCase.want)
+				t.Fatalf("Kind = %q, want %q", got, testCase.want)
 			}
 		})
 	}
