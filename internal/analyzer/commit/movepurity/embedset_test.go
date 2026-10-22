@@ -45,6 +45,26 @@ func TestEmbedSet_StaysPure(t *testing.T) {
 			"file under a hidden directory below a plain directory pattern",
 			static, "internal/assets/static/_gen/a.txt", "internal/other/a.txt",
 		)),
+		accepted(assetRow(
+			"testdata file no pattern embeds",
+			static, "internal/assets/testdata/a.json", "internal/assets/testdata/sub/a.json",
+		)),
+		accepted(assetRow(
+			"documentation beside the root embedder",
+			"//go:embed templates", "docs/a.md", "docs/guide/a.md",
+		)),
+		accepted(assetRow(
+			"sibling package assets",
+			static, "internal/sibling/static/x.png", "internal/sibling/assets/x.png",
+		)),
+		accepted(assetRow(
+			"same-directory rename of a file no pattern covers",
+			"//go:embed *.txt", "internal/assets/a.png", "internal/assets/b.png",
+		)),
+		accepted(assetRow(
+			"same-directory rename of a hidden file under a plain directory pattern",
+			static, "internal/assets/static/.keep", "internal/assets/static/.keep2",
+		)),
 	}
 	runRenameCases(t, testCases)
 }
@@ -110,6 +130,64 @@ func TestEmbedSet_Detected(t *testing.T) {
 		grandparentRow(),
 	}
 	runRenameCases(t, testCases)
+}
+
+func TestEmbedSet_DetectedBeyondPackage(t *testing.T) {
+	t.Parallel()
+
+	const static = "//go:embed static"
+	testCases := []renameCase{
+		assetRow(
+			"testdata glob, file moves into a subdirectory",
+			"//go:embed testdata/*.json",
+			"internal/assets/testdata/a.json", "internal/assets/testdata/sub/a.json",
+		),
+		testEmbedderRow(
+			"testdata directory embedded by a test file, file leaves",
+			"//go:embed testdata",
+			"internal/assets/testdata/a.json", "internal/other/testdata/a.json",
+		),
+		assetRow(
+			"all: pattern on an underscore directory, file moves deeper",
+			"//go:embed all:_assets",
+			"internal/assets/_assets/x", "internal/assets/_assets/y/x",
+		),
+		assetRow(
+			"hidden file leaves into a hidden name under all:",
+			"//go:embed all:static", "internal/assets/static/.keep", "internal/other/.keep",
+		),
+		assetRow(
+			"hidden file leaves into a hidden name under a glob",
+			"//go:embed static/*", "internal/assets/static/.env", "internal/other/.env",
+		),
+		assetRow(
+			"hidden file leaves into a hidden name under an explicit name",
+			"//go:embed static/.keep", "internal/assets/static/.keep", "internal/other/.keep",
+		),
+		assetRow(
+			"underscore file leaves into an underscore name under all:",
+			"//go:embed all:static", "internal/assets/static/_x.txt", "internal/other/_x.txt",
+		),
+		assetRow(
+			"same-directory rename changes what a glob includes",
+			"//go:embed *.txt", "internal/assets/a.txt", "internal/assets/a.md",
+		),
+		assetRow(
+			"same-directory rename inside an embedded directory",
+			static, "internal/assets/static/a.css", "internal/assets/static/b.css",
+		),
+	}
+	runRenameCases(t, testCases)
+}
+
+func testEmbedderRow(name, directive, oldFile, newFile string) renameCase {
+	const production, testFile = "internal/assets/embed.go", "internal/assets/embed_test.go"
+	row := assetRow(name, directive, oldFile, newFile)
+	for _, tree := range []map[string]string{row.head, row.staged} {
+		delete(tree, production)
+		tree[testFile] = embedSrc("assets", directive)
+	}
+	return row
 }
 
 func grandparentRow() renameCase {

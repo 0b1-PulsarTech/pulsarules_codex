@@ -50,12 +50,13 @@ func (moves *moveContext) renameVerdict(rename pass.Rename) verdict {
 func (moves *moveContext) identicalVerdict(rename pass.Rename) verdict {
 	isGo := isGoFile(rename.OldPath) && isGoFile(rename.NewPath)
 	dirs := renameDirs(rename)
+	if !isGo && !gosrc.IsCompiled(rename.OldPath) {
+		return moves.assetVerdict(rename)
+	}
 	switch {
 	case dirs.oldDir == dirs.newDir,
 		gosrc.IsOutsidePackage(rename.OldPath) && gosrc.IsOutsidePackage(rename.NewPath):
 		return verdictPure
-	case !isGo && !gosrc.IsCompiled(rename.OldPath):
-		return moves.assetVerdict(rename)
 	case isGo:
 		got := moves.isGoEdit(fileEdit{
 			oldPath: rename.OldPath, newPath: rename.NewPath, isMove: true, isSame: true,
