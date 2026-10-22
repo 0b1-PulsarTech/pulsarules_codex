@@ -121,21 +121,28 @@ func (moves *moveContext) stagedEmbedFiles(patterns []string, dir string) map[st
 	return files
 }
 
-func (moves *moveContext) embedCoverDir(snap *snapshot, file string) string {
+func (moves *moveContext) embedCoverDir(snap *snapshot, file string) (coverDir, unread string) {
 	rest := path.Base(file)
 	for dir := path.Dir(file); ; dir = path.Dir(dir) {
 		files, err := snap.dir(dir)
-		if err != nil || moves.embedsIn(snap, files, rest) {
-			return dir
+		if err != nil {
+			return dir, dir + "/"
+		}
+		if covered, unreadable := moves.embedsIn(snap, files, rest); covered {
+			return dir, unreadable
 		}
 		if dir == "." || slices.Contains(files, path.Join(dir, "go.mod")) {
-			return ""
+			return "", ""
 		}
 		rest = path.Join(path.Base(dir), rest)
 	}
 }
 
-func (moves *moveContext) embedsIn(snap *snapshot, files []string, rel string) bool {
+func (moves *moveContext) embedsIn(
+	snap *snapshot,
+	files []string,
+	rel string,
+) (isCovered bool, unread string) {
 	for _, file := range files {
 		if !isGoFile(file) || moves.relocated[file] || gosrc.IsOutsidePackage(file) {
 			continue
@@ -143,15 +150,18 @@ func (moves *moveContext) embedsIn(snap *snapshot, files []string, rel string) b
 		// An unreadable or unparsable embedder counts: reporting beats a silent false negative.
 		src, err := snap.blob(file)
 		if err != nil {
-			return true
+			return true, file
 		}
 		if !strings.Contains(src, "go:embed") {
 			continue
 		}
 		parsed, err := snap.parse(file)
-		if err != nil || (!parsed.IsIgnored && gosrc.EmbedCovers(parsed.Embeds, rel)) {
-			return true
+		if err != nil {
+			return true, file
+		}
+		if !parsed.IsIgnored && gosrc.EmbedCovers(parsed.Embeds, rel) {
+			return true, ""
 		}
 	}
-	return false
+	return false, ""
 }

@@ -2,6 +2,7 @@ package movepurity
 
 import (
 	"path"
+	"slices"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -385,14 +386,49 @@ func embedFindingCases() []findingCase {
 	}
 }
 
+func unreadFindingCases() []findingCase {
+	const static, leaving = "//go:embed static", "internal/assets/static/logo.png"
+	const message = "move of " + leaving + " -> internal/other/logo.png may change the files " +
+		"a //go:embed pattern in internal/assets includes: "
+	const advice = "fix that file, or commit this rename on its own"
+	row := func(name string) renameCase {
+		return assetRow(name, static, leaving, "internal/other/logo.png")
+	}
+	unreadable := row("embedder blob cannot be read")
+	unreadable.failBlob = "internal/assets/embed.go"
+	broken := embedderAt(
+		row("embedder does not parse"),
+		"internal/assets/embed.go", embedSrc("assets", static)+"func (\n",
+	)
+	entering := embedderAt(
+		assetRow("asset enters beside an embedder that does not parse", static,
+			"internal/other/logo.png", leaving),
+		"internal/assets/embed.go", embedSrc("assets", static)+"func (\n",
+	)
+	return []findingCase{
+		{unreadable, message + "internal/assets/embed.go could not be read or parsed", advice},
+		{broken, message + "internal/assets/embed.go could not be read or parsed", advice},
+		{
+			entering,
+			"move of internal/other/logo.png -> " + leaving + " may change the files " +
+				"a //go:embed pattern in internal/assets includes: " +
+				"internal/assets/embed.go could not be read or parsed", advice,
+		},
+		{
+			failingHeadDir(row("directory cannot be listed"), "internal/assets"),
+			message + "internal/assets/ could not be read or parsed", advice,
+		},
+	}
+}
+
 func TestEmbedSet_Findings(t *testing.T) {
 	t.Parallel()
 
-	for _, testCase := range embedFindingCases() {
+	for _, testCase := range slices.Concat(embedFindingCases(), unreadFindingCases()) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			analyzer := NewAnalyzer(newFakeRepo(testCase.head, testCase.staged))
+			analyzer := NewAnalyzer(testCase.repo())
 			findings := analyzer.Analyze(&pass.Context{StagedRenames: testCase.renames})
 			if len(findings) != 1 {
 				t.Fatalf("got %d findings, want 1: %+v", len(findings), findings)

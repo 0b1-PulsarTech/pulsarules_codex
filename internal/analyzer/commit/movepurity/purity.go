@@ -73,14 +73,15 @@ func (moves *moveContext) identicalVerdict(rename pass.Rename) verdict {
 }
 
 func (moves *moveContext) coveredVerdict(rename pass.Rename) verdict {
-	dir := moves.embedCoverDir(moves.head, rename.OldPath)
+	dir, unread := moves.embedCoverDir(moves.head, rename.OldPath)
 	if dir == "" {
-		dir = moves.embedCoverDir(moves.staged, rename.NewPath)
+		dir, unread = moves.embedCoverDir(moves.staged, rename.NewPath)
 	}
 	if dir == "" {
 		return verdictPure
 	}
 	moves.embedDirs[rename.NewPath] = dir
+	moves.embedUnread[rename.NewPath] = unread
 	return verdictCovered
 }
 

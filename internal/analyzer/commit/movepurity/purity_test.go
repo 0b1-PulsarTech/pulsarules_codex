@@ -25,11 +25,7 @@ func runRenameCases(t *testing.T, testCases []renameCase) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			repo := newFakeRepo(testCase.head, testCase.staged)
-			repo.stagedModes = testCase.modes
-			repo.failHeadDir = testCase.failHeadDir
-			repo.failBlob = testCase.failBlob
-			moves := newMoveContext(repo, testCase.renames)
+			moves := newMoveContext(testCase.repo(), testCase.renames)
 			if got := moves.renameVerdict(
 				testCase.renames[0],
 			) == verdictPure; got != testCase.want {

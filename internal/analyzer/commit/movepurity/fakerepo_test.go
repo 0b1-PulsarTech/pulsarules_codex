@@ -121,6 +121,14 @@ func (repo noDirRepo) Dir(side vcs.Side, dir string) ([]string, error) {
 	return repo.fakeRepo.Dir(side, dir)
 }
 
+func (row renameCase) repo() fakeRepo {
+	fake := newFakeRepo(row.head, row.staged)
+	fake.stagedModes = row.modes
+	fake.failHeadDir = row.failHeadDir
+	fake.failBlob = row.failBlob
+	return fake
+}
+
 func embedRow(name, directive string, comoved []pass.Rename) renameCase {
 	const oldGo, newGo = "internal/util/a.go", "internal/routing/a.go"
 	staged := map[string]string{

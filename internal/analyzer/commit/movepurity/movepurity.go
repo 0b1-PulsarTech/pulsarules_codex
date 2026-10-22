@@ -82,9 +82,11 @@ func renameFinding(
 			"differs only by mechanical package/import fixups but is",
 		), true
 	case got == verdictEmbeds:
-		return embedderFinding(reporter, rename, moves.embedDirs[rename.NewPath]), true
+		return moves.embedFinding(reporter, rename, "move every file the pattern covers in the "+
+			"same commit, and keep the new location free of other files"), true
 	case got == verdictCovered:
-		return coveredFinding(reporter, rename, moves.embedDirs[rename.NewPath]), true
+		return moves.embedFinding(reporter, rename, "commit this rename on its own and say in "+
+			"its message which embedded files it adds or removes"), true
 	case got == verdictStrands:
 		return strandsCompiledFinding(reporter, rename, moves.stranded[rename.NewPath]), true
 	case isLow:
@@ -100,33 +102,28 @@ func renameFinding(
 	return renameCarriesEditFinding(reporter, rename), true
 }
 
-func embedderFinding(reporter finding.Reporter, rename pass.Rename, dir string) finding.Finding {
-	return embedSetFinding(reporter, rename, dir, "move every file the pattern covers in the "+
-		"same commit, and keep the new location free of other files")
-}
-
-func coveredFinding(reporter finding.Reporter, rename pass.Rename, dir string) finding.Finding {
-	return embedSetFinding(reporter, rename, dir, "commit this rename on its own and say in "+
-		"its message which embedded files it adds or removes")
-}
-
-func embedSetFinding(
+func (moves *moveContext) embedFinding(
 	reporter finding.Reporter,
 	rename pass.Rename,
-	dir, advice string,
+	advice string,
 ) finding.Finding {
+	dir := moves.embedDirs[rename.NewPath]
 	if dir == "." {
 		dir = "the module root"
 	}
-	return reporter.At(
-		rename.NewPath,
-		0,
-		fmt.Sprintf(
-			"move of %s -> %s changes the files a //go:embed pattern in %s includes",
-			rename.OldPath, rename.NewPath, dir,
-		),
-		advice,
+	message := fmt.Sprintf(
+		"move of %s -> %s changes the files a //go:embed pattern in %s includes",
+		rename.OldPath, rename.NewPath, dir,
 	)
+	if unread := moves.embedUnread[rename.NewPath]; unread != "" {
+		message = fmt.Sprintf(
+			"move of %s -> %s may change the files a //go:embed pattern in %s includes: "+
+				"%s could not be read or parsed",
+			rename.OldPath, rename.NewPath, dir, unread,
+		)
+		advice = "fix that file, or commit this rename on its own"
+	}
+	return reporter.At(rename.NewPath, 0, message, advice)
 }
 
 func unrelatedStagedEdits(

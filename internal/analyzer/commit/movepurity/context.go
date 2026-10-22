@@ -10,22 +10,23 @@ import (
 
 type (
 	moveContext struct {
-		dirMoves  map[string]string
-		moved     map[string]bool
-		relocated map[string]bool
-		movedTo   map[string]string
-		renames   []pass.Rename
-		head      *snapshot
-		staged    *snapshot
-		declared  map[pkgKey]map[string]bool
-		left      map[scopeKey]map[string]bool
-		taken     map[scopeKey]map[string]bool
-		owned     map[declScope]map[string]bool
-		dirNames  map[string]dirPackages
-		unlinked  map[string]string
-		stranded  map[string]string
-		embedDirs map[string]string
-		infos     []gosrc.MoveInfo
+		dirMoves    map[string]string
+		moved       map[string]bool
+		relocated   map[string]bool
+		movedTo     map[string]string
+		renames     []pass.Rename
+		head        *snapshot
+		staged      *snapshot
+		declared    map[pkgKey]map[string]bool
+		left        map[scopeKey]map[string]bool
+		taken       map[scopeKey]map[string]bool
+		owned       map[declScope]map[string]bool
+		dirNames    map[string]dirPackages
+		unlinked    map[string]string
+		stranded    map[string]string
+		embedDirs   map[string]string
+		embedUnread map[string]string
+		infos       []gosrc.MoveInfo
 	}
 	pkgKey struct {
 		dir string
@@ -39,21 +40,22 @@ type (
 
 func newMoveContext(reader gitReader, renames []pass.Rename) *moveContext {
 	moves := &moveContext{
-		dirMoves:  make(map[string]string, len(renames)),
-		moved:     make(map[string]bool, len(renames)*2),
-		relocated: map[string]bool{},
-		movedTo:   make(map[string]string, len(renames)),
-		renames:   renames,
-		head:      newSnapshot(reader, vcs.Head),
-		staged:    newSnapshot(reader, vcs.Staged),
-		declared:  map[pkgKey]map[string]bool{},
-		left:      map[scopeKey]map[string]bool{},
-		taken:     map[scopeKey]map[string]bool{},
-		owned:     map[declScope]map[string]bool{},
-		dirNames:  map[string]dirPackages{},
-		unlinked:  map[string]string{},
-		stranded:  map[string]string{},
-		embedDirs: map[string]string{},
+		dirMoves:    make(map[string]string, len(renames)),
+		moved:       make(map[string]bool, len(renames)*2),
+		relocated:   map[string]bool{},
+		movedTo:     make(map[string]string, len(renames)),
+		renames:     renames,
+		head:        newSnapshot(reader, vcs.Head),
+		staged:      newSnapshot(reader, vcs.Staged),
+		declared:    map[pkgKey]map[string]bool{},
+		left:        map[scopeKey]map[string]bool{},
+		taken:       map[scopeKey]map[string]bool{},
+		owned:       map[declScope]map[string]bool{},
+		dirNames:    map[string]dirPackages{},
+		unlinked:    map[string]string{},
+		stranded:    map[string]string{},
+		embedDirs:   map[string]string{},
+		embedUnread: map[string]string{},
 	}
 	for _, rename := range renames {
 		dirs := renameDirs(rename)
