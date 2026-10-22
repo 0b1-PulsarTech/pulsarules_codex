@@ -259,7 +259,7 @@ func runParamsAtCases(t *testing.T, testCases []paramsAtCase) {
 	}
 }
 
-func TestAnalysisContextParamsAt(t *testing.T) {
+func TestContextParamsAt(t *testing.T) {
 	t.Parallel()
 
 	svelte := []string{"**/*.svelte"}
@@ -293,7 +293,7 @@ func TestAnalysisContextParamsAt(t *testing.T) {
 	})
 }
 
-func TestAnalysisContextParamsAt_Precedence(t *testing.T) {
+func TestContextParamsAt_Precedence(t *testing.T) {
 	t.Parallel()
 
 	runParamsAtCases(t, []paramsAtCase{

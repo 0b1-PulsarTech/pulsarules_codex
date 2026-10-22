@@ -66,7 +66,7 @@ func echoSource(fc FileChange, _ []byte) []finding.Finding {
 	return []finding.Finding{{File: fc.Path}}
 }
 
-func TestAnalysisContext_EachSource(t *testing.T) {
+func TestContext_EachSource(t *testing.T) {
 	t.Parallel()
 
 	skips := source.NewSkipSet([]string{"testdata"})
@@ -128,7 +128,7 @@ func TestAnalysisContext_EachSource(t *testing.T) {
 	}
 }
 
-func TestAnalysisContext_EachGoFile(t *testing.T) {
+func TestContext_EachGoFile(t *testing.T) {
 	t.Parallel()
 
 	newCache := func() *astcache.Cache {
@@ -190,7 +190,7 @@ func TestAnalysisContext_EachGoFile(t *testing.T) {
 	}
 }
 
-func TestAnalysisContext_EachSyntaxFile(t *testing.T) {
+func TestContext_EachSyntaxFile(t *testing.T) {
 	t.Parallel()
 
 	skips := source.NewSkipSet([]string{"testdata", "vendor"})

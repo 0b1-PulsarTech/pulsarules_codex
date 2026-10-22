@@ -25,7 +25,7 @@ func newChangedGoASTsCache(t *testing.T) *astcache.Cache {
 	return cache
 }
 
-func TestAnalysisContext_ChangedGoASTs_NoCache(t *testing.T) {
+func TestContext_ChangedGoASTs_NoCache(t *testing.T) {
 	t.Parallel()
 
 	ctx := &Context{
@@ -37,7 +37,7 @@ func TestAnalysisContext_ChangedGoASTs_NoCache(t *testing.T) {
 	}
 }
 
-func TestAnalysisContext_ChangedGoASTs_Skips(t *testing.T) {
+func TestContext_ChangedGoASTs_Skips(t *testing.T) {
 	t.Parallel()
 
 	cache := newChangedGoASTsCache(t)
@@ -151,7 +151,7 @@ func (counter *readCounter) Read(path string) ([]byte, bool) {
 	return counter.Provider.Read(path)
 }
 
-func TestAnalysisContext_GoPackages(t *testing.T) {
+func TestContext_GoPackages(t *testing.T) {
 	t.Parallel()
 
 	tree := fstest.MapFS{"a/a.go": {Data: []byte("package a\n")}}
@@ -170,7 +170,7 @@ func TestAnalysisContext_GoPackages(t *testing.T) {
 	}
 }
 
-func TestAnalysisContext_GoPackages_NoSources(t *testing.T) {
+func TestContext_GoPackages_NoSources(t *testing.T) {
 	t.Parallel()
 
 	if dirs := (&Context{}).GoPackages().Dirs(); len(dirs) != 0 {
@@ -178,7 +178,7 @@ func TestAnalysisContext_GoPackages_NoSources(t *testing.T) {
 	}
 }
 
-func TestAnalysisContext_GoModule(t *testing.T) {
+func TestContext_GoModule(t *testing.T) {
 	t.Parallel()
 
 	withModule := t.TempDir()
@@ -210,7 +210,7 @@ func TestAnalysisContext_GoModule(t *testing.T) {
 	}
 }
 
-func TestAnalysisContext_GoModule_ReadsOnce(t *testing.T) {
+func TestContext_GoModule_ReadsOnce(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
