@@ -13,9 +13,9 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/projectroot"
 )
 
-func (cleaner *Cleaner) read(path string) (Report, string, error) {
+func (scrub *Cleaner) read(path string) (Report, string, error) {
 	report := Report{Path: path}
-	if cleaner.root == "" {
+	if scrub.root == "" {
 		// A refusal is data, not an error: the hook must stay silent and never block a turn.
 		report.SkipReason = "no project root"
 		return report, "", nil
@@ -25,7 +25,7 @@ func (cleaner *Cleaner) read(path string) (Report, string, error) {
 		return report, "", nil
 	}
 
-	resolved, err := projectroot.ResolveInside(cleaner.root, path)
+	resolved, err := projectroot.ResolveInside(scrub.root, path)
 	if err != nil {
 		if errors.Is(err, projectroot.ErrOutsideRoot) {
 			report.SkipReason = "outside the project root"
@@ -35,7 +35,7 @@ func (cleaner *Cleaner) read(path string) (Report, string, error) {
 	}
 	report.Path = resolved
 
-	if isFixture(cleaner.root, resolved) {
+	if isFixture(scrub.root, resolved) {
 		report.SkipReason = "under testdata"
 		return report, "", nil
 	}

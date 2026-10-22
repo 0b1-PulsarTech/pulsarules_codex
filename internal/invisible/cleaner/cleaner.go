@@ -70,8 +70,8 @@ type Cleaner struct {
 
 func New(root string) *Cleaner { return &Cleaner{root: root} }
 
-func (cleaner *Cleaner) Inspect(path string) (Report, error) {
-	report, src, err := cleaner.read(path)
+func (scrub *Cleaner) Inspect(path string) (Report, error) {
+	report, src, err := scrub.read(path)
 	if err != nil || report.Skipped() {
 		return report, err
 	}
@@ -82,8 +82,8 @@ func (cleaner *Cleaner) Inspect(path string) (Report, error) {
 	return report, nil
 }
 
-func (cleaner *Cleaner) CleanFile(path string) (Report, error) {
-	report, src, err := cleaner.read(path)
+func (scrub *Cleaner) CleanFile(path string) (Report, error) {
+	report, src, err := scrub.read(path)
 	if err != nil || report.Skipped() {
 		return report, err
 	}

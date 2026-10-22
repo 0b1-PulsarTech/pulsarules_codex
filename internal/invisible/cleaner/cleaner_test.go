@@ -228,13 +228,13 @@ func TestCleanFile_IsIdempotent(t *testing.T) {
 
 	root := t.TempDir()
 	path := seed(t, root, "f.md", "a\u200Bb\u00A0c\n")
-	cleaner := New(root)
+	scrub := New(root)
 
-	first, err := cleaner.CleanFile(path)
+	first, err := scrub.CleanFile(path)
 	if err != nil || !first.Changed {
 		t.Fatalf("first pass: changed=%v err=%v", first.Changed, err)
 	}
-	second, err := cleaner.CleanFile(path)
+	second, err := scrub.CleanFile(path)
 	if err != nil {
 		t.Fatalf("second pass: %v", err)
 	}
