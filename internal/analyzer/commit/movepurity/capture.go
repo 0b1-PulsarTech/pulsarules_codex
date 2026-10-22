@@ -82,16 +82,27 @@ func (moves *moveContext) embedsFollow(patterns []string, dirs dirPair) bool {
 	if len(patterns) == 0 {
 		return true
 	}
-	// An empty set cannot be told from a pattern the go tool rejects, so it never passes.
-	before, oldErr := gosrc.EmbedFiles(patterns, dirs.oldDir, moves.head.dir)
-	after, newErr := moves.stagedEmbedFiles(patterns, dirs.newDir)
-	return oldErr == nil && newErr == nil && len(before) > 0 && maps.Equal(before, after)
+	// A listing error leaves a set empty, and an empty set cannot be told from a pattern
+	// the go tool rejects, so neither passes.
+	before, _ := gosrc.EmbedFiles(patterns, dirs.oldDir, moves.head.dir)
+	after := moves.stagedEmbedFiles(patterns, dirs.newDir)
+	// Each covered old file lands at its twin, so an equal count means nothing else is covered.
+	return len(before) > 0 && moves.renamedAlong(before, dirs) && len(after) == len(before)
 }
 
-func (moves *moveContext) stagedEmbedFiles(patterns []string, dir string) (map[string]bool, error) {
+func (moves *moveContext) renamedAlong(files map[string]bool, dirs dirPair) bool {
+	for rel := range files {
+		if moves.movedTo[path.Join(dirs.oldDir, rel)] != path.Join(dirs.newDir, rel) {
+			return false
+		}
+	}
+	return true
+}
+
+func (moves *moveContext) stagedEmbedFiles(patterns []string, dir string) map[string]bool {
 	files, err := gosrc.EmbedFiles(patterns, dir, moves.head.dir)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	// A moves-only commit leaves the staged tree equal to HEAD plus its renames.
 	maps.DeleteFunc(files, func(rel string, _ bool) bool {
@@ -107,7 +118,7 @@ func (moves *moveContext) stagedEmbedFiles(patterns []string, dir string) (map[s
 			files[rel] = true
 		}
 	}
-	return files, nil
+	return files
 }
 
 func (moves *moveContext) embedCoverDir(snap *snapshot, file string) string {

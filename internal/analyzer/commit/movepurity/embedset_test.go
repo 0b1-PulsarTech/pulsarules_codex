@@ -280,7 +280,7 @@ func TestEmbedSet_NotCovered(t *testing.T) {
 	)
 	nested.head["internal/assets/sub/go.mod"] = "module example.com/sub\n"
 	nested.staged["internal/assets/sub/go.mod"] = "module example.com/sub\n"
-	testCases := []renameCase{accepted(moved), accepted(nested)}
+	testCases := []renameCase{accepted(moved), accepted(nested), accepted(movesToRootRow())}
 	runRenameCases(t, testCases)
 }
 
@@ -311,6 +311,54 @@ func landsAtRootRow() renameCase {
 		},
 		renames: []pass.Rename{{OldPath: "a/embed.go", NewPath: "embed.go", Score: 100}},
 	}
+}
+
+func TestEmbedRelocation_SameFile(t *testing.T) {
+	t.Parallel()
+
+	const embedPublic, embedStatic = "//go:embed public.txt", "//go:embed static"
+	const ownText, ownJS = "internal/routing/public.txt", "internal/routing/static/x.js"
+	public := []pass.Rename{pair("internal/util/public.txt", ownText)}
+	static := []pass.Rename{
+		pair("internal/util/static/x.js", ownJS),
+		pair("internal/util/static/y.js", "internal/routing/static/y.js"),
+	}
+	dir := func(name string, comoved []pass.Rename) renameCase {
+		return embedRow(name, embedStatic, comoved)
+	}
+	testCases := []renameCase{
+		withFile(
+			embedRow("own file in new dir, glob pattern", "//go:embed *.txt", nil),
+			ownText, ownText,
+		),
+		withFile(dir("own file in new dir, directory pattern", static[1:]), ownJS, ownJS),
+		withFile(
+			dir("different file renamed in under a kept name", static[1:]),
+			"internal/other/x.js", ownJS,
+		),
+		withFile(
+			embedRow("same count, different names", "//go:embed *.txt", nil),
+			"internal/routing/other.txt", "internal/routing/other.txt",
+		),
+		accepted(withFile(
+			dir("covered file of the new dir moves away", static),
+			"internal/routing/static/z.js", "internal/other/z.js",
+		)),
+		accepted(withFile(
+			embedRow("own file swapped out by the arriving one", embedPublic, public),
+			"internal/routing/public.txt", "internal/other/public.txt",
+		)),
+	}
+	runRenameCases(t, testCases)
+}
+
+func movesToRootRow() renameCase {
+	row := landsAtRootRow()
+	row.name = "package and its embedded file move to the module root"
+	row.staged["x.txt"] = "x\n"
+	delete(row.staged, "a/x.txt")
+	row.renames = append(row.renames, pair("a/x.txt", "x.txt"))
+	return row
 }
 
 func TestEmbedSet_Findings(t *testing.T) {
