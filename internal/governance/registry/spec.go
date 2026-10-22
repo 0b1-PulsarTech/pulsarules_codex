@@ -22,6 +22,7 @@ type Repository interface {
 	Blob(side vcs.Side, path string) (string, error)
 	Entry(side vcs.Side, path string) (mode, id string, err error)
 	Dir(side vcs.Side, dir string) ([]string, error)
+	Files(side vcs.Side, dir string) ([]string, error)
 }
 
 type Deps struct {

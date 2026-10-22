@@ -15,6 +15,7 @@ type fakeRepo struct {
 	staged      map[string]string
 	stagedModes map[string]string
 	failHeadDir string
+	failTree    string
 	failBlob    string
 }
 
@@ -63,6 +64,19 @@ func (repo fakeRepo) Dir(side vcs.Side, dir string) ([]string, error) {
 		return childrenOf(tree, dir), nil
 	}
 	return dirOf(tree, dir), nil
+}
+
+func (repo fakeRepo) Files(side vcs.Side, dir string) ([]string, error) {
+	if side == vcs.Head && dir == repo.failTree {
+		return nil, errMissing
+	}
+	prefix := dir + "/"
+	if dir == "." {
+		prefix = ""
+	}
+	return slices.DeleteFunc(slices.Sorted(maps.Keys(repo.tree(side))), func(name string) bool {
+		return !strings.HasPrefix(name, prefix)
+	}), nil
 }
 
 func blobOf(tree map[string]string, file string) (string, error) {
@@ -125,6 +139,7 @@ func (row renameCase) repo() fakeRepo {
 	fake := newFakeRepo(row.head, row.staged)
 	fake.stagedModes = row.modes
 	fake.failHeadDir = row.failHeadDir
+	fake.failTree = row.failTree
 	fake.failBlob = row.failBlob
 	return fake
 }
@@ -159,6 +174,11 @@ func accepted(row renameCase) renameCase {
 
 func failingHeadDir(row renameCase, dir string) renameCase {
 	row.failHeadDir = dir
+	return row
+}
+
+func failingHeadTree(row renameCase, dir string) renameCase {
+	row.failTree = dir
 	return row
 }
 

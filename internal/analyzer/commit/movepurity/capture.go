@@ -1,7 +1,6 @@
 package movepurity
 
 import (
-	"maps"
 	"path"
 	"slices"
 	"strings"
@@ -82,10 +81,14 @@ func (moves *moveContext) embedsFollow(patterns []string, dirs dirPair) bool {
 	if len(patterns) == 0 {
 		return true
 	}
-	// A listing error leaves a set empty, and an empty set cannot be told from a pattern
-	// the go tool rejects, so neither passes.
-	before, _ := gosrc.EmbedFiles(patterns, dirs.oldDir, moves.head.dir)
-	after := moves.stagedEmbedFiles(patterns, dirs.newDir)
+	// A failed listing of the old directory leaves no files, which never passes below.
+	oldFiles, _ := moves.head.tree(dirs.oldDir)
+	newFiles, err := moves.head.tree(dirs.newDir)
+	if err != nil {
+		return false
+	}
+	before := gosrc.EmbedFiles(patterns, dirs.oldDir, oldFiles)
+	after := gosrc.EmbedFiles(patterns, dirs.newDir, moves.stagedFiles(newFiles))
 	// Each covered old file lands at its twin, so an equal count means nothing else is covered.
 	return len(before) > 0 && moves.renamedAlong(before, dirs) && len(after) == len(before)
 }
@@ -99,24 +102,14 @@ func (moves *moveContext) renamedAlong(files map[string]bool, dirs dirPair) bool
 	return true
 }
 
-func (moves *moveContext) stagedEmbedFiles(patterns []string, dir string) map[string]bool {
-	files, err := gosrc.EmbedFiles(patterns, dir, moves.head.dir)
-	if err != nil {
-		return nil
-	}
+func (moves *moveContext) stagedFiles(headFiles []string) []string {
 	// A moves-only commit leaves the staged tree equal to HEAD plus its renames.
-	maps.DeleteFunc(files, func(rel string, _ bool) bool {
-		_, isGone := moves.movedTo[path.Join(dir, rel)]
+	files := slices.DeleteFunc(slices.Clone(headFiles), func(file string) bool {
+		_, isGone := moves.movedTo[file]
 		return isGone
 	})
 	for _, rename := range moves.renames {
-		rel, isUnder := rename.NewPath, true
-		if dir != "." {
-			rel, isUnder = strings.CutPrefix(rename.NewPath, dir+"/")
-		}
-		if isUnder && gosrc.EmbedCovers(patterns, rel) {
-			files[rel] = true
-		}
+		files = append(files, rename.NewPath)
 	}
 	return files
 }

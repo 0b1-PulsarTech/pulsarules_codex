@@ -1,7 +1,6 @@
 package gosrc
 
 import (
-	"fmt"
 	"go/ast"
 	"path"
 	"slices"
@@ -63,62 +62,37 @@ func EmbedCovers(patterns []string, rel string) bool {
 	return false
 }
 
-func EmbedFiles(
-	patterns []string,
-	root string,
-	children func(dir string) ([]string, error),
-) (map[string]bool, error) {
-	files := map[string]bool{}
-	prefix := root + "/"
-	if root == "." {
-		prefix = ""
-	}
-	var walk func(entry string) error
-	walk = func(entry string) error {
-		entries, err := children(entry)
-		if err != nil {
-			return fmt.Errorf("list %s: %w", entry, err)
+func EmbedFiles(patterns []string, root string, files []string) map[string]bool {
+	var rels []string
+	for _, file := range files {
+		rel, isUnder := file, true
+		if root != "." {
+			rel, isUnder = strings.CutPrefix(file, root+"/")
 		}
-		rel := strings.TrimPrefix(entry, prefix)
-		if len(entries) == 0 && entry != root && EmbedCovers(patterns, rel) {
-			files[rel] = true
+		if isUnder {
+			rels = append(rels, rel)
 		}
-		for _, child := range entries {
-			if !embedReaches(patterns, strings.TrimPrefix(child, prefix)) {
-				continue
-			}
-			if walkErr := walk(child); walkErr != nil {
-				return walkErr
-			}
+	}
+	modules := map[string]bool{}
+	for _, rel := range rels {
+		if path.Base(rel) == "go.mod" {
+			modules[path.Dir(rel)] = true
 		}
-		return nil
 	}
-	if err := walk(root); err != nil {
-		return nil, err
+	covered := map[string]bool{}
+	for _, rel := range rels {
+		if EmbedCovers(patterns, rel) && !inNestedModule(rel, modules) {
+			covered[rel] = true
+		}
 	}
-	return files, nil
+	return covered
 }
 
-func embedReaches(patterns []string, rel string) bool {
-	if EmbedCovers(patterns, rel) {
-		return true
-	}
-	segments := strings.Split(rel, "/")
-	for _, directive := range patterns {
-		pattern, _ := strings.CutPrefix(directive, "all:")
-		parts := strings.Split(pattern, "/")
-		if len(parts) > len(segments) && prefixMatches(parts, segments) {
+func inNestedModule(rel string, modules map[string]bool) bool {
+	for dir := path.Dir(rel); dir != "."; dir = path.Dir(dir) {
+		if modules[dir] {
 			return true
 		}
 	}
 	return false
-}
-
-func prefixMatches(parts, segments []string) bool {
-	for depth, segment := range segments {
-		if matched, err := path.Match(parts[depth], segment); err != nil || !matched {
-			return false
-		}
-	}
-	return true
 }

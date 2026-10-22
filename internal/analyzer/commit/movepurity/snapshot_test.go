@@ -1,8 +1,10 @@
 package movepurity
 
 import (
+	"fmt"
 	"maps"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -33,6 +35,11 @@ func (repo recordingRepo) Dir(side vcs.Side, dir string) ([]string, error) {
 	return repo.fakeRepo.Dir(side, dir)
 }
 
+func (repo recordingRepo) Files(side vcs.Side, dir string) ([]string, error) {
+	repo.calls[side.String()+" tree "+dir]++
+	return repo.fakeRepo.Files(side, dir)
+}
+
 func TestSnapshot_ReadsEachObjectOnce(t *testing.T) {
 	t.Parallel()
 
@@ -59,6 +66,14 @@ func TestSnapshot_ReadsEachObjectOnce(t *testing.T) {
 			name: "dir",
 			read: func(snap *snapshot) { _, _ = snap.dir("a") },
 			want: map[string]int{"HEAD dir a": 1},
+		},
+		{
+			name: "tree",
+			read: func(snap *snapshot) {
+				_, _ = snap.tree("a")
+				_, _ = snap.tree("a")
+			},
+			want: map[string]int{"HEAD tree a": 1},
 		},
 		{
 			name: "parse reads the blob once",
@@ -330,5 +345,54 @@ func TestAnalyzer_ReadsEachGitObjectOnce(t *testing.T) {
 		if count != 1 {
 			t.Errorf("%q ran %d times, want once per run", call, count)
 		}
+	}
+}
+
+func embedderMovingWith(filesPerDir int) (head, staged map[string]string, renames []pass.Rename) {
+	const oldGo, newGo = "internal/util/a.go", "internal/routing/a.go"
+	src := embedSrc("util", "//go:embed static")
+	head = map[string]string{oldGo: src}
+	staged = map[string]string{newGo: embedSrc("routing", "//go:embed static")}
+	renames = make([]pass.Rename, 1, 1+3*filesPerDir)
+	renames[0] = pair(oldGo, newGo)
+	for dir := range 3 {
+		for file := range filesPerDir {
+			name := fmt.Sprintf("static/d%d/f%d.txt", dir, file)
+			head["internal/util/"+name], staged["internal/routing/"+name] = "x\n", "x\n"
+			renames = append(renames, pair("internal/util/"+name, "internal/routing/"+name))
+		}
+	}
+	return head, staged, renames
+}
+
+func TestSnapshot_EmbedderMoveListsIgnoreFileCount(t *testing.T) {
+	t.Parallel()
+
+	listings := func(filesPerDir int) (total, trees int) {
+		head, staged, renames := embedderMovingWith(filesPerDir)
+		repo := newRecordingRepo(head, staged)
+		moves := newMoveContext(repo, renames)
+		if got := moves.renameVerdict(renames[0]); got != verdictPure {
+			t.Fatalf("renameVerdict() = %v, want pure", got)
+		}
+		for call, count := range repo.calls {
+			if strings.Contains(call, " tree ") {
+				trees += count
+			}
+			if strings.Contains(call, " tree ") || strings.Contains(call, " dir ") {
+				total += count
+			}
+		}
+		return total, trees
+	}
+	smallTotal, _ := listings(2)
+	bigTotal, bigTrees := listings(40)
+	if bigTotal != smallTotal || bigTrees != 2 {
+		t.Fatalf(
+			"listing calls: %d with 40 files per dir (%d trees), %d with 2; want equal, 2 trees",
+			bigTotal,
+			bigTrees,
+			smallTotal,
+		)
 	}
 }

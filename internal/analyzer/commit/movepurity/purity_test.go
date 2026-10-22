@@ -13,6 +13,7 @@ type renameCase struct {
 	staged      map[string]string
 	modes       map[string]string
 	failHeadDir string
+	failTree    string
 	failBlob    string
 	renames     []pass.Rename
 	want        bool

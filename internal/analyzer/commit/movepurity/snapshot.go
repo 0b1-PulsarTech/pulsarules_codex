@@ -12,6 +12,7 @@ type gitReader interface {
 	Blob(side vcs.Side, path string) (string, error)
 	Entry(side vcs.Side, path string) (mode, id string, err error)
 	Dir(side vcs.Side, dir string) ([]string, error)
+	Files(side vcs.Side, dir string) ([]string, error)
 }
 
 type (
@@ -33,6 +34,7 @@ type (
 		blobs   map[string]result[string]
 		entries map[string]result[entry]
 		dirs    map[string]result[[]string]
+		trees   map[string]result[[]string]
 		parsed  map[string]result[gosrc.File]
 		clauses map[string]clauseResult
 	}
@@ -45,6 +47,7 @@ func newSnapshot(reader gitReader, side vcs.Side) *snapshot {
 		blobs:   map[string]result[string]{},
 		entries: map[string]result[entry]{},
 		dirs:    map[string]result[[]string]{},
+		trees:   map[string]result[[]string]{},
 		parsed:  map[string]result[gosrc.File]{},
 		clauses: map[string]clauseResult{},
 	}
@@ -78,6 +81,14 @@ func (snap *snapshot) entryOf(file string) (entry, error) {
 func (snap *snapshot) dir(dir string) ([]string, error) {
 	got := cached(snap.dirs, dir, func() result[[]string] {
 		files, err := snap.reader.Dir(snap.side, dir)
+		return result[[]string]{value: files, err: err}
+	})
+	return got.value, got.err
+}
+
+func (snap *snapshot) tree(dir string) ([]string, error) {
+	got := cached(snap.trees, dir, func() result[[]string] {
+		files, err := snap.reader.Files(snap.side, dir)
 		return result[[]string]{value: files, err: err}
 	})
 	return got.value, got.err

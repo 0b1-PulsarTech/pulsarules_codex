@@ -3,6 +3,7 @@ package vcs
 import (
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -26,7 +27,23 @@ func (repo *Repository) Entry(side Side, file string) (mode, id string, err erro
 }
 
 func (repo *Repository) Dir(side Side, dir string) ([]string, error) {
-	args := []string{"--literal-pathspecs", "ls-tree", "-z", "--name-only", "HEAD"}
+	entries, err := repo.list(side, dir)
+	if err != nil {
+		return nil, err
+	}
+	return slices.DeleteFunc(
+		entries,
+		func(entry string) bool { return path.Dir(entry) != dir },
+	), nil
+}
+
+func (repo *Repository) Files(side Side, dir string) ([]string, error) {
+	return repo.list(side, dir, "-r")
+}
+
+func (repo *Repository) list(side Side, dir string, headFlags ...string) ([]string, error) {
+	args := append([]string{"--literal-pathspecs", "ls-tree", "-z", "--name-only"}, headFlags...)
+	args = append(args, "HEAD")
 	if side == Staged {
 		args = []string{"--literal-pathspecs", "ls-files", "-z", "--cached"}
 	}
@@ -37,13 +54,9 @@ func (repo *Repository) Dir(side Side, dir string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list %s dir %s: %w", side, dir, err)
 	}
-	var files []string
-	for entry := range strings.SplitSeq(out, "\x00") {
-		if entry != "" && path.Dir(entry) == dir {
-			files = append(files, entry)
-		}
-	}
-	return files, nil
+	return slices.DeleteFunc(strings.Split(out, "\x00"), func(entry string) bool {
+		return entry == ""
+	}), nil
 }
 
 func parseEntry(out, want string, idField int) (mode, id string, err error) {

@@ -268,7 +268,28 @@ func TestEmbedSet_NotCovered(t *testing.T) {
 	)
 	nested.head["internal/assets/sub/go.mod"] = "module example.com/sub\n"
 	nested.staged["internal/assets/sub/go.mod"] = "module example.com/sub\n"
-	testCases := []renameCase{accepted(moved), accepted(nested), accepted(movesToRootRow())}
+	left := embedRow("relocation leaves a nested module behind", "//go:embed static", []pass.Rename{
+		pair("internal/util/static/x.js", "internal/routing/static/x.js"),
+		pair("internal/util/static/y.js", "internal/routing/static/y.js"),
+	})
+	left = withFile(left, "internal/util/static/sub/go.mod", "")
+	left = withFile(left, "internal/util/static/sub/z.js", "")
+	whole := embedRow(
+		"relocation takes a nested module along",
+		"//go:embed static",
+		left.renames[1:],
+	)
+	whole = withFile(whole, "internal/util/static/sub/go.mod", "internal/routing/static/sub/go.mod")
+	whole = withFile(whole, "internal/util/static/sub/z.js", "internal/routing/static/sub/z.js")
+	testCases := []renameCase{
+		accepted(
+			moved,
+		),
+		accepted(nested),
+		accepted(movesToRootRow()),
+		accepted(left),
+		accepted(whole),
+	}
 	runRenameCases(t, testCases)
 }
 

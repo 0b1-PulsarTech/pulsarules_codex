@@ -137,6 +137,75 @@ func TestListDirs(t *testing.T) {
 	}
 }
 
+func TestListFiles(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeAndCommit(t, dir, "initial", map[string]string{
+		"a.go": "package a\n", "gl[ob]/g.go": "package g\n",
+		"sub/b.go": "package b\n", "sub/c.go": "package b\n", "sub/in/d.go": "package d\n",
+	})
+	writeFile(t, dir, "sub/e.go", "package b\n")
+	runGitOrFatal(t, dir, "add", "sub/e.go")
+	runGitOrFatal(t, dir, "rm", "-q", "sub/c.go")
+	repo, err := Open(dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+
+	testCases := []struct {
+		name string
+		side Side
+		dir  string
+		want []string
+	}{
+		{
+			"head sub lists every file below",
+			Head, "sub",
+			[]string{"sub/b.go", "sub/c.go", "sub/in/d.go"},
+		},
+		{"staged sub", Staged, "sub", []string{"sub/b.go", "sub/e.go", "sub/in/d.go"}},
+		{
+			"head root",
+			Head, ".",
+			[]string{"a.go", "gl[ob]/g.go", "sub/b.go", "sub/c.go", "sub/in/d.go"},
+		},
+		{"head literal glob dir", Head, "gl[ob]", []string{"gl[ob]/g.go"}},
+		{"head nested dir", Head, "sub/in", []string{"sub/in/d.go"}},
+		{"head missing dir", Head, "nope", nil},
+		{"staged missing dir", Staged, "nope", nil},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := repo.Files(testCase.side, testCase.dir)
+			if err != nil {
+				t.Fatalf("Files(%s, %s): %v", testCase.side, testCase.dir, err)
+			}
+			if !slices.Equal(got, testCase.want) {
+				t.Fatalf("got %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}
+
+func TestListFiles_ErrorNamesTheSide(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	initRepo(t, dir)
+	repo, err := Open(dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	_, listErr := repo.Files(Head, ".")
+	if listErr == nil || !strings.HasPrefix(listErr.Error(), "list HEAD dir .:") {
+		t.Fatalf("err = %v, want prefix %q", listErr, "list HEAD dir .:")
+	}
+}
+
 func TestEntry_ErrorNamesTheSide(t *testing.T) {
 	t.Parallel()
 

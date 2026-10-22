@@ -31,6 +31,8 @@ func (repo *goldenRepo) Entry(vcs.Side, string) (mode, id string, err error) { r
 
 func (repo *goldenRepo) Dir(vcs.Side, string) ([]string, error) { return nil, nil }
 
+func (repo *goldenRepo) Files(vcs.Side, string) ([]string, error) { return nil, nil }
+
 func (repo *goldenRepo) ListFiles() ([]string, error) {
 	var files []string
 	err := filepath.WalkDir(repo.root, func(path string, entry fs.DirEntry, walkErr error) error {
