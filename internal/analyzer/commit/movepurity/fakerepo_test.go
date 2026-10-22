@@ -37,14 +37,14 @@ func (repo fakeRepo) tree(side vcs.Side) map[string]string {
 	return repo.head
 }
 
-func (repo fakeRepo) Blob(side vcs.Side, path string) (string, error) {
-	return blobOf(repo.tree(side), path)
+func (repo fakeRepo) Blob(side vcs.Side, file string) (string, error) {
+	return blobOf(repo.tree(side), file)
 }
 
-func (repo fakeRepo) Entry(side vcs.Side, path string) (mode, id string, err error) {
-	content, readErr := blobOf(repo.tree(side), path)
+func (repo fakeRepo) Entry(side vcs.Side, file string) (mode, id string, err error) {
+	content, readErr := blobOf(repo.tree(side), file)
 	mode = "100644"
-	if override, ok := repo.stagedModes[path]; ok && side == vcs.Staged {
+	if override, ok := repo.stagedModes[file]; ok && side == vcs.Staged {
 		mode = override
 	}
 	return mode, content, readErr
@@ -61,8 +61,8 @@ func (repo fakeRepo) Dir(side vcs.Side, dir string) ([]string, error) {
 	return dirOf(tree, dir), nil
 }
 
-func blobOf(tree map[string]string, path string) (string, error) {
-	content, ok := tree[path]
+func blobOf(tree map[string]string, file string) (string, error) {
+	content, ok := tree[file]
 	if !ok {
 		return "", errMissing
 	}
@@ -92,11 +92,11 @@ func childrenOf(tree map[string]string, dir string) []string {
 
 type emptyRepo struct{ fakeRepo }
 
-func (repo emptyRepo) Blob(side vcs.Side, path string) (string, error) {
+func (repo emptyRepo) Blob(side vcs.Side, file string) (string, error) {
 	if side == vcs.Head {
 		return "", errMissing
 	}
-	return repo.fakeRepo.Blob(side, path)
+	return repo.fakeRepo.Blob(side, file)
 }
 
 type noHeadDirRepo struct{ fakeRepo }

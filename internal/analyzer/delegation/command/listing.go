@@ -16,8 +16,8 @@ func listingOf(provider source.Provider) listing {
 		return nil
 	}
 	files := listing{}
-	provider.Walk(func(path, _ string) bool {
-		files[filepath.ToSlash(path)] = struct{}{}
+	provider.Walk(func(file, _ string) bool {
+		files[filepath.ToSlash(file)] = struct{}{}
 		return true
 	})
 	return files
@@ -32,8 +32,8 @@ func (files listing) holds(root, dir string) bool {
 		return len(files) > 0
 	}
 	prefix := filepath.ToSlash(rel) + "/"
-	for path := range files {
-		if strings.HasPrefix(path, prefix) {
+	for file := range files {
+		if strings.HasPrefix(file, prefix) {
 			return true
 		}
 	}

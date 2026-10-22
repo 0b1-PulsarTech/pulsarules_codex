@@ -6,21 +6,21 @@ import (
 	"strings"
 )
 
-func (repo *Repository) Entry(side Side, path string) (mode, id string, err error) {
-	args := []string{"--literal-pathspecs", "ls-tree", "-z", "HEAD", "--", path}
+func (repo *Repository) Entry(side Side, file string) (mode, id string, err error) {
+	args := []string{"--literal-pathspecs", "ls-tree", "-z", "HEAD", "--", file}
 	idField := 2
 	if side == Staged {
-		args = []string{"--literal-pathspecs", "ls-files", "-s", "-z", "--", path}
+		args = []string{"--literal-pathspecs", "ls-files", "-s", "-z", "--", file}
 		idField = 1
 	}
 	var out string
 	out, err = runGit(repo.root, args...)
 	if err != nil {
-		return "", "", fmt.Errorf("read %s entry %s: %w", side, path, err)
+		return "", "", fmt.Errorf("read %s entry %s: %w", side, file, err)
 	}
-	mode, id, err = parseEntry(out, path, idField)
+	mode, id, err = parseEntry(out, file, idField)
 	if err != nil {
-		return "", "", fmt.Errorf("read %s entry %s: %w", side, path, err)
+		return "", "", fmt.Errorf("read %s entry %s: %w", side, file, err)
 	}
 	return mode, id, nil
 }
