@@ -3,6 +3,7 @@ package uninstall
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"io"
 	"io/fs"
 	"os"
@@ -14,8 +15,8 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
@@ -30,13 +31,8 @@ func TestRun_RoundTrip(t *testing.T) {
 		t.Fatalf("DoInjections: %v", err)
 	}
 
-	installOpts := &version.Options{
-		Command: "install",
-		Project: projectDir,
-		Skills:  []string{"go-style"},
-		NoMCP:   true,
-	}
-	if err := install.Run(inj, installOpts); err != nil {
+	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
+	if err := runInstall(t, inj, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	skillDoc := filepath.Join(projectDir, ".claude", "skills", "go-style", "SKILL.md")
@@ -48,8 +44,8 @@ func TestRun_RoundTrip(t *testing.T) {
 		t.Fatalf("install did not wire %q: %v", settingsPath, statErr)
 	}
 
-	uninstallOpts := &version.Options{Command: "uninstall", Project: projectDir}
-	if err := Run(inj, uninstallOpts); err != nil {
+	uninstallOpts := &Command{project: projectDir}
+	if err := uninstallOpts.Run(inj, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if _, statErr := os.Stat(skillDoc); !errors.Is(statErr, fs.ErrNotExist) {
@@ -61,7 +57,7 @@ func TestRun_RoundTrip(t *testing.T) {
 
 	t.Run("idempotent: second uninstall is not an error", func(t *testing.T) {
 		t.Parallel()
-		if err := Run(inj, uninstallOpts); err != nil {
+		if err := uninstallOpts.Run(inj, nil); err != nil {
 			t.Fatalf("second Run: %v", err)
 		}
 	})
@@ -76,18 +72,13 @@ func TestRun_KeepSkills(t *testing.T) {
 		t.Fatalf("DoInjections: %v", err)
 	}
 
-	installOpts := &version.Options{
-		Command: "install",
-		Project: projectDir,
-		Skills:  []string{"go-style"},
-		NoMCP:   true,
-	}
-	if err := install.Run(inj, installOpts); err != nil {
+	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
+	if err := runInstall(t, inj, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 
-	uninstallOpts := &version.Options{Command: "uninstall", Project: projectDir, KeepSkills: true}
-	if err := Run(inj, uninstallOpts); err != nil {
+	uninstallOpts := &Command{project: projectDir, keepSkills: true}
+	if err := uninstallOpts.Run(inj, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
@@ -117,13 +108,8 @@ func TestRun_RemovesLanguageConfig(t *testing.T) {
 		t.Fatalf("DoInjections: %v", err)
 	}
 
-	installOpts := &version.Options{
-		Command: "install",
-		Project: projectDir,
-		Skills:  []string{"go-style"},
-		NoMCP:   true,
-	}
-	if err := install.Run(inj, installOpts); err != nil {
+	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
+	if err := runInstall(t, inj, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	configPath := filepath.Join(projectDir, detect.ConfigFileName)
@@ -131,8 +117,8 @@ func TestRun_RemovesLanguageConfig(t *testing.T) {
 		t.Fatalf("install did not write %q: %v", configPath, statErr)
 	}
 
-	uninstallOpts := &version.Options{Command: "uninstall", Project: projectDir}
-	if err := Run(inj, uninstallOpts); err != nil {
+	uninstallOpts := &Command{project: projectDir}
+	if err := uninstallOpts.Run(inj, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if _, statErr := os.Stat(configPath); !errors.Is(statErr, fs.ErrNotExist) {
@@ -147,8 +133,8 @@ func TestRun_Idempotent(t *testing.T) {
 	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
 		t.Fatalf("DoInjections: %v", err)
 	}
-	opts := &version.Options{Command: "uninstall", Project: t.TempDir()}
-	if err := Run(inj, opts); err != nil {
+	opts := &Command{project: t.TempDir()}
+	if err := opts.Run(inj, nil); err != nil {
 		t.Fatalf("Run on untouched project: %v", err)
 	}
 }
@@ -162,14 +148,18 @@ func TestRun_DetectsBothTargetsWhenNoneGiven(t *testing.T) {
 		t.Fatalf("DoInjections: %v", err)
 	}
 
-	installOpts := &version.Options{
-		Command: "install",
-		Project: projectDir,
-		Skills:  []string{"go-style"},
-		Target:  []string{"claude", "opencode"},
-		NoMCP:   true,
+	installArgs := []string{
+		"--project",
+		projectDir,
+		"--skills",
+		"go-style",
+		"--target",
+		"claude",
+		"--target",
+		"opencode",
+		"--no-mcp",
 	}
-	if err := install.Run(inj, installOpts); err != nil {
+	if err := runInstall(t, inj, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	claudeSkill := filepath.Join(projectDir, ".claude", "skills", "go-style", "SKILL.md")
@@ -180,8 +170,8 @@ func TestRun_DetectsBothTargetsWhenNoneGiven(t *testing.T) {
 		}
 	}
 
-	uninstallOpts := &version.Options{Command: "uninstall", Project: projectDir}
-	if err := Run(inj, uninstallOpts); err != nil {
+	uninstallOpts := &Command{project: projectDir}
+	if err := uninstallOpts.Run(inj, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	for _, path := range []string{claudeSkill, opencodeConfig} {
@@ -200,14 +190,16 @@ func TestRun_UnwiresLocalHooksScopeByDefault(t *testing.T) {
 		t.Fatalf("DoInjections: %v", err)
 	}
 
-	installOpts := &version.Options{
-		Command:    "install",
-		Project:    projectDir,
-		Skills:     []string{"go-style"},
-		NoMCP:      true,
-		HooksScope: "local",
+	installArgs := []string{
+		"--project",
+		projectDir,
+		"--skills",
+		"go-style",
+		"--no-mcp",
+		"--hooks-scope",
+		"local",
 	}
-	if err := install.Run(inj, installOpts); err != nil {
+	if err := runInstall(t, inj, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	localSettings := filepath.Join(projectDir, ".claude", "settings.local.json")
@@ -215,8 +207,8 @@ func TestRun_UnwiresLocalHooksScopeByDefault(t *testing.T) {
 		t.Fatalf("install did not wire %q: %v", localSettings, statErr)
 	}
 
-	uninstallOpts := &version.Options{Command: "uninstall", Project: projectDir}
-	if err := Run(inj, uninstallOpts); err != nil {
+	uninstallOpts := &Command{project: projectDir}
+	if err := uninstallOpts.Run(inj, nil); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if _, statErr := os.Stat(localSettings); !errors.Is(statErr, fs.ErrNotExist) {
@@ -243,8 +235,8 @@ func TestRun_ReturnsErrorOnGitHookFailure(t *testing.T) {
 		t.Fatalf("mkdir %q: %v", hookAsDir, err)
 	}
 
-	opts := &version.Options{Command: "uninstall", Project: projectDir}
-	if err := Run(inj, opts); err == nil {
+	opts := &Command{project: projectDir}
+	if err := opts.Run(inj, nil); err == nil {
 		t.Fatal("expected a non-nil error when git hook removal fails")
 	}
 }
@@ -257,10 +249,8 @@ func TestRun_TargetErrorNotDoubled(t *testing.T) {
 	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
 		t.Fatalf("DoInjections: %v", err)
 	}
-	installOpts := &version.Options{
-		Command: "install", Project: projectDir, Skills: []string{"go-style"}, NoMCP: true,
-	}
-	if err := install.Run(inj, installOpts); err != nil {
+	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
+	if err := runInstall(t, inj, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 
@@ -272,8 +262,8 @@ func TestRun_TargetErrorNotDoubled(t *testing.T) {
 		t.Fatalf("replace settings.json with a directory: %v", err)
 	}
 
-	uninstallOpts := &version.Options{Command: "uninstall", Project: projectDir}
-	err := Run(inj, uninstallOpts)
+	uninstallOpts := &Command{project: projectDir}
+	err := uninstallOpts.Run(inj, nil)
 	if err == nil {
 		t.Fatal("expected an error when settings.json cannot be read")
 	}
@@ -410,19 +400,62 @@ func TestRun_HostileTreeStaysOnOneLine(t *testing.T) {
 	}
 }
 
-func TestUninstallBase_SettingsFiles(t *testing.T) {
+func TestUninstallContext_SettingsFiles(t *testing.T) {
 	t.Parallel()
 
-	opts := &version.Options{Project: t.TempDir(), HooksScope: "local"}
-	_, got, err := uninstallBase(opts)
-	if err != nil || !slices.Equal(got, []string{"settings.local.json"}) {
-		t.Fatalf("uninstallBase = %v, %v, want the local file", got, err)
+	opts := &Command{project: t.TempDir(), hooksScope: "local"}
+	ctx, err := uninstallContext(opts)
+	if err != nil || !slices.Equal(ctx.SettingsFiles, []string{"settings.local.json"}) {
+		t.Fatalf("uninstallContext = %v, %v, want the local file", ctx.SettingsFiles, err)
 	}
 
-	opts.HooksScope = "bogus"
-	_, _, err = uninstallBase(opts)
+	opts.hooksScope = "bogus"
+	_, err = uninstallContext(opts)
 	const want = `settings files: invalid --hooks-scope "bogus" (want project|local)`
 	if err == nil || err.Error() != want {
 		t.Errorf("err = %v, want %q", err, want)
+	}
+}
+
+func runInstall(tb testing.TB, inj remy.Injector, args []string) error {
+	tb.Helper()
+
+	cmd := &install.Command{}
+	fs := flag.NewFlagSet("install", flag.ContinueOnError)
+	cmd.Bind(fs)
+	if err := fs.Parse(args); err != nil {
+		tb.Fatalf("Parse(%q): %v", args, err)
+	}
+	return cmd.Run(inj, nil)
+}
+
+func TestRun_GlobalLeavesGitAndLanguageConfigAlone(t *testing.T) {
+	t.Parallel()
+
+	home := t.TempDir()
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+	languageConfig := filepath.Join(home, detect.ConfigFileName)
+	foreignHook := filepath.Join(home, ".git", "hooks", "pre-commit")
+	for path, body := range map[string]string{languageConfig: `{}`, foreignHook: "#!/bin/sh\n"} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatalf("seed %q: %v", path, err)
+		}
+	}
+
+	cmd := New(flags.Environment{Home: home})
+	cmd.global = true
+	if err := cmd.Run(inj, nil); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	for _, kept := range []string{languageConfig, foreignHook} {
+		if _, statErr := os.Stat(kept); statErr != nil {
+			t.Errorf("%q was removed by a global uninstall: %v", kept, statErr)
+		}
 	}
 }

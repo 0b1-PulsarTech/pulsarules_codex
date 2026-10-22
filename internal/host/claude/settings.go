@@ -9,7 +9,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 )
 
-func WireSettings(claudeDir, settingsFile string) error {
+func WireSettings(claudeDir, settingsFile string, loc Location) error {
 	if err := os.MkdirAll(claudeDir, disk.DirPrivate); err != nil {
 		return fmt.Errorf("mkdir %q: %w", claudeDir, err)
 	}
@@ -18,7 +18,7 @@ func WireSettings(claudeDir, settingsFile string) error {
 	if err != nil {
 		return jsondoc.PrefixParse(err, "merge settings: parse existing settings")
 	}
-	if err = mergeSettings(doc, buildHooksBlock()); err != nil {
+	if err = mergeSettings(doc, buildHooksBlock(loc)); err != nil {
 		return fmt.Errorf("merge settings: %w", err)
 	}
 	if err = doc.Save(); err != nil {

@@ -1,6 +1,7 @@
 package host
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
@@ -24,7 +25,7 @@ func (claudeTarget) Present(base string) bool {
 
 func (claudeTarget) Install(ctx Context) (Report, error) {
 	var report Report
-	claudeDir := filepath.Join(ctx.Base, claude.RootDir)
+	claudeDir := cmp.Or(ctx.ClaudeDir, filepath.Join(ctx.Base, claude.RootDir))
 	dest := filepath.Join(claudeDir, claude.SkillsSubdir)
 	if err := installSkills(ctx, dest, &report); err != nil {
 		return report, err
@@ -38,10 +39,23 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 			return report, err
 		}
 	}
+	warnShadowedSkills(ctx, claudeDir, &report)
 	if ctx.NoHooks {
 		return report, nil
 	}
-	sub, err := install.Claude(claudeDir, ctx.Templates, ctx.SettingsFile)
+	loc := claude.Location{}
+	if ctx.Global {
+		loc.GlobalDir = claudeDir
+	} else if sameDir(ctx.UserClaudeDir, claudeDir) {
+		// Rendered as a project install, this hook would resolve $CLAUDE_PROJECT_DIR in every
+		// other project and fail there.
+		loc.GlobalDir = claudeDir
+		report.Note(
+			"%s is the user Claude directory; the hook was wired as a global install",
+			claudeDir,
+		)
+	}
+	sub, err := install.Claude(claudeDir, ctx.Templates, ctx.SettingsFile, loc)
 	report.Merge(sub)
 	if err != nil {
 		return report, fmt.Errorf("install hooks: %w", err)
@@ -51,7 +65,7 @@ func (claudeTarget) Install(ctx Context) (Report, error) {
 
 func (claudeTarget) Uninstall(ctx UninstallContext) (Report, error) {
 	var report Report
-	claudeDir := filepath.Join(ctx.Base, claude.RootDir)
+	claudeDir := cmp.Or(ctx.ClaudeDir, filepath.Join(ctx.Base, claude.RootDir))
 	if !ctx.KeepSkills {
 		if err := removeSkills(
 			filepath.Join(claudeDir, claude.SkillsSubdir),

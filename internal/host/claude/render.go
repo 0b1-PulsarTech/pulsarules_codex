@@ -23,12 +23,12 @@ type hooksBlock struct {
 	Hooks map[string][]hookGroup `json:"hooks"`
 }
 
-func buildHooksBlock() hooksBlock {
+func buildHooksBlock(loc Location) hooksBlock {
 	block := hooksBlock{Hooks: map[string][]hookGroup{}}
 	for _, row := range hook.Events() {
 		command := hookCommand{
 			Type:    "command",
-			Command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/` + reminderScriptAsset + `" ` + row.Mode,
+			Command: loc.command(row.Mode),
 		}
 		if row.Timeout > 0 {
 			command.Timeout = json.RawMessage(strconv.Itoa(row.Timeout))
@@ -39,8 +39,8 @@ func buildHooksBlock() hooksBlock {
 	return block
 }
 
-func RenderHooksBlock() ([]byte, error) {
-	out, err := json.MarshalIndent(buildHooksBlock(), "", "  ")
+func RenderHooksBlock(loc Location) ([]byte, error) {
+	out, err := json.MarshalIndent(buildHooksBlock(loc), "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("marshal hooks block: %w", err)
 	}

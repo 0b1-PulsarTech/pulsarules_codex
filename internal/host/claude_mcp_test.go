@@ -3,6 +3,7 @@ package host
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -285,5 +286,34 @@ func TestWireClaudeMCP_NotesWiredServers(t *testing.T) {
 	want := "wired MCP servers (gopls) into " + filepath.Join(base, ".mcp.json")
 	if len(report.Notes) != 1 || report.Notes[0] != want {
 		t.Errorf("Notes = %q, want [%q]", report.Notes, want)
+	}
+}
+
+//nolint:paralleltest // fakeGoplsOnPath needs t.Setenv, which bars t.Parallel.
+func TestWireClaudeMCP_GlobalWritesNoMCPFile(t *testing.T) {
+	fakeGoplsOnPath(t)
+	home := t.TempDir()
+	ctx := newTestContext(t, home, []string{"go-style"})
+	ctx.Languages = detect.NewSet(language.Go)
+	ctx.Global = true
+	skillsDir := filepath.Join(home, ".claude", "skills")
+
+	var report Report
+	if err := wireClaudeMCP(ctx, skillsDir, &report); err != nil {
+		t.Fatalf("wireClaudeMCP: %v", err)
+	}
+
+	const wantNote = "add the gopls MCP server for every project with: " +
+		"claude mcp add --scope user gopls -- gopls mcp"
+	if len(report.Notes) != 1 || report.Notes[0] != wantNote {
+		t.Errorf("Notes = %q, want [%q]", report.Notes, wantNote)
+	}
+	for _, name := range []string{".mcp.json", ".gitignore"} {
+		if _, err := os.Stat(filepath.Join(home, name)); !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("global install wrote %s under the home directory, stat err = %v", name, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(skillsDir, "gopls-navigation", "SKILL.md")); err != nil {
+		t.Errorf("the gopls skill is still generated: %v", err)
 	}
 }

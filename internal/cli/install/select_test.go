@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
@@ -160,23 +159,23 @@ func TestResolveSelection_Skills(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		opts    *version.Options
+		cmd     *Command
 		wantIDs []string
 		wantErr bool
 	}{
 		{
 			name:    "named skills",
-			opts:    &version.Options{Skills: []string{"a", "b"}},
+			cmd:     &Command{skills: []string{"a", "b"}},
 			wantIDs: []string{"a", "b"},
 		},
-		{name: "given but empty selects none by name", opts: &version.Options{Skills: []string{}}},
-		{name: "not given on a non-terminal fails", opts: &version.Options{}, wantErr: true},
+		{name: "given but empty selects none by name", cmd: &Command{skills: []string{}}},
+		{name: "not given on a non-terminal fails", cmd: &Command{}, wantErr: true},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := resolveSelection(testCase.opts, nil, &prompter{})
+			got, err := resolveSelection(testCase.cmd, nil, &prompter{})
 			if (err != nil) != testCase.wantErr {
 				t.Fatalf("err = %v, wantErr %v", err, testCase.wantErr)
 			}

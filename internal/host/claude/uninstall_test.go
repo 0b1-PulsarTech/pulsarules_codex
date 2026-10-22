@@ -14,7 +14,7 @@ func TestUninstallHook(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := filepath.Join(t.TempDir(), ".claude")
-	if _, err := InstallHook(fakeTemplates(), claudeDir); err != nil {
+	if _, err := InstallHook(fakeTemplates(), claudeDir, Location{}); err != nil {
 		t.Fatalf("InstallHook: %v", err)
 	}
 
@@ -33,7 +33,7 @@ func TestUninstallHook_LeavesUnrelatedContent(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := filepath.Join(t.TempDir(), ".claude")
-	if _, err := InstallHook(fakeTemplates(), claudeDir); err != nil {
+	if _, err := InstallHook(fakeTemplates(), claudeDir, Location{}); err != nil {
 		t.Fatalf("InstallHook: %v", err)
 	}
 	extra := filepath.Join(claudeDir, "hooks", "user-hook.sh")
@@ -61,7 +61,7 @@ func TestUninstallHook_ForeignReadme(t *testing.T) {
 	t.Parallel()
 
 	claudeDir := filepath.Join(t.TempDir(), ".claude")
-	if _, err := InstallHook(fakeTemplates(), claudeDir); err != nil {
+	if _, err := InstallHook(fakeTemplates(), claudeDir, Location{}); err != nil {
 		t.Fatalf("InstallHook: %v", err)
 	}
 	readme := filepath.Join(claudeDir, "hooks", "README.md")
@@ -100,7 +100,7 @@ func TestUninstallHook_RestoresBackup(t *testing.T) {
 	if err := os.WriteFile(readme, []byte(foreign), 0o600); err != nil {
 		t.Fatalf("seed foreign readme: %v", err)
 	}
-	if _, err := InstallHook(fakeTemplates(), claudeDir); err != nil {
+	if _, err := InstallHook(fakeTemplates(), claudeDir, Location{}); err != nil {
 		t.Fatalf("InstallHook: %v", err)
 	}
 

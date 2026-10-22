@@ -8,14 +8,22 @@ import (
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
-func Run(inj remy.Injector, opts *version.Options) error {
-	absBase, settingsFiles, err := uninstallBase(opts)
+func (cmd *Command) Run(inj remy.Injector, _ []string) error {
+	if err := cmd.uninstall(inj); err != nil {
+		return fmt.Errorf("uninstall: %w", err)
+	}
+	return nil
+}
+
+func (cmd *Command) ProjectDir() string { return cmd.project }
+
+func (cmd *Command) uninstall(inj remy.Injector) error {
+	ctx, err := uninstallContext(cmd)
 	if err != nil {
 		return err
 	}
@@ -25,26 +33,14 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	}
 
 	// No default target: with none given, every layout found on disk is unwired.
-	targets, err := resolveTargets(opts, deps.targets, absBase)
+	targets, err := resolveTargets(cmd, deps.targets, ctx.Base)
 	if err != nil {
 		return err
 	}
 
-	ctx := host.UninstallContext{
-		Base:          absBase,
-		SettingsFiles: settingsFiles,
-		KeepSkills:    opts.KeepSkills,
-	}
 	errs := uninstallTargets(deps, targets, ctx)
-
-	gitReport, hookErr := install.UninstallGit(absBase)
-	gitReport.Print(os.Stdout, os.Stderr)
-	if hookErr != nil {
-		errs = append(errs, hookErr)
-	}
-
-	if langErr := removeLanguageConfig(absBase); langErr != nil {
-		errs = append(errs, langErr)
+	if !cmd.global {
+		errs = append(errs, uninstallProjectWide(ctx.Base)...)
 	}
 
 	if len(errs) > 0 {
@@ -56,17 +52,44 @@ func Run(inj remy.Injector, opts *version.Options) error {
 	return nil
 }
 
-func uninstallBase(opts *version.Options) (absBase string, settingsFiles []string, err error) {
-	absBase, err = opts.BaseDir()
-	if err != nil {
-		return "", nil, fmt.Errorf("base dir: %w", err)
+func uninstallProjectWide(absBase string) []error {
+	// Git hooks and the language config belong to one repository, never a home directory.
+	var errs []error
+	gitReport, hookErr := install.UninstallGit(absBase)
+	gitReport.Print(os.Stdout, os.Stderr)
+	if hookErr != nil {
+		errs = append(errs, hookErr)
 	}
-	var scope flags.HooksScope
-	scope, err = flags.ParseHooksScope(opts.HooksScope)
-	if err != nil {
-		return "", nil, fmt.Errorf("settings files: %w", err)
+	if langErr := removeLanguageConfig(absBase); langErr != nil {
+		errs = append(errs, langErr)
 	}
-	return absBase, scope.Files(), nil
+	return errs
+}
+
+func uninstallContext(cmd *Command) (host.UninstallContext, error) {
+	scope := flags.Scope{Global: cmd.global, Project: cmd.project}.WithEnv(cmd.env)
+	absBase, err := flags.BaseDir(scope)
+	if err != nil {
+		return host.UninstallContext{}, fmt.Errorf("base dir: %w", err)
+	}
+	var claudeDir string
+	if cmd.global {
+		claudeDir, err = flags.UserClaudeDir(scope)
+	}
+	if err != nil {
+		return host.UninstallContext{}, fmt.Errorf("claude dir: %w", err)
+	}
+	hooksScope, err := flags.ParseHooksScope(cmd.hooksScope)
+	if err != nil {
+		return host.UninstallContext{}, fmt.Errorf("settings files: %w", err)
+	}
+	return host.UninstallContext{
+		Base:          absBase,
+		Global:        cmd.global,
+		ClaudeDir:     claudeDir,
+		SettingsFiles: hooksScope.Files(),
+		KeepSkills:    cmd.keepSkills,
+	}, nil
 }
 
 func uninstallTargets(
@@ -100,8 +123,13 @@ func removeLanguageConfig(absBase string) error {
 	return nil
 }
 
-func resolveTargets(opts *version.Options, reg *host.Registry, base string) ([]string, error) {
-	explicit := opts.ExplicitTargets()
+func resolveTargets(cmd *Command, reg *host.Registry, base string) ([]string, error) {
+	explicit := cmd.explicitTargets()
+	if len(explicit) == 0 && cmd.global {
+		// Only claude has a global layout; detection under the home directory
+		// would also match a user's own AGENTS.md or .opencode.
+		return []string{"claude"}, nil
+	}
 	if len(explicit) == 0 {
 		return reg.DetectTargets(base), nil
 	}

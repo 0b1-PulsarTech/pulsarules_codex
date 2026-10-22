@@ -13,7 +13,7 @@ import (
 func renderedHooks(t *testing.T) map[string][]hookGroup {
 	t.Helper()
 
-	raw, err := RenderHooksBlock()
+	raw, err := RenderHooksBlock(Location{})
 	if err != nil {
 		t.Fatalf("RenderHooksBlock: %v", err)
 	}
@@ -103,11 +103,36 @@ func TestRenderHooksBlock_MatchesGolden(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read golden: %v", err)
 	}
-	got, err := RenderHooksBlock()
+	got, err := RenderHooksBlock(Location{})
 	if err != nil {
 		t.Fatalf("RenderHooksBlock: %v", err)
 	}
 	if string(got) != string(want) {
 		t.Errorf("hooks block differs from the golden:\n%s", got)
+	}
+}
+
+func TestRenderHooksBlock_GlobalNamesTheInstalledScript(t *testing.T) {
+	t.Parallel()
+
+	raw, err := RenderHooksBlock(Location{GlobalDir: "/home/user/.claude"})
+	if err != nil {
+		t.Fatalf("RenderHooksBlock: %v", err)
+	}
+	var block hooksBlock
+	if err = json.Unmarshal(raw, &block); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	for event, groups := range block.Hooks {
+		for _, group := range groups {
+			command := group.Hooks[0].Command
+			const prefix = `bash '/home/user/.claude/hooks/skill-router-reminder.sh' `
+			if !strings.HasPrefix(command, prefix) {
+				t.Errorf("%s command = %q, want prefix %q", event, command, prefix)
+			}
+			if strings.Contains(command, "CLAUDE_PROJECT_DIR") {
+				t.Errorf("%s command = %q, must not depend on the project dir", event, command)
+			}
+		}
 	}
 }

@@ -3,9 +3,13 @@ package host
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/agents"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/claude"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
@@ -54,4 +58,63 @@ func warnUnparseable(report *Report, err error) bool {
 	}
 	report.Warn("%v", err)
 	return true
+}
+
+func sameDir(first, second string) bool {
+	// File identity, so a symlinked path to the same directory is the same directory.
+	if first == "" || second == "" {
+		return false
+	}
+	firstInfo, firstErr := os.Stat(first)
+	secondInfo, secondErr := os.Stat(second)
+	return firstErr == nil && secondErr == nil && os.SameFile(firstInfo, secondInfo)
+}
+
+func warnShadowedSkills(ctx Context, claudeDir string, report *Report) {
+	// Advisory: an unreadable or odd entry counts as not ours and never fails the install.
+	if ctx.Global || ctx.UserClaudeDir == "" || sameDir(ctx.UserClaudeDir, claudeDir) {
+		return
+	}
+	userSkills := filepath.Join(ctx.UserClaudeDir, claude.SkillsSubdir)
+	var installed, shadowed []string
+	unchecked := 0
+	for _, id := range ordered.Dedupe(append(slices.Clone(ctx.IDs), "gopls-navigation")) {
+		if _, err := os.Stat(
+			filepath.Join(claudeDir, claude.SkillsSubdir, id, "SKILL.md"),
+		); err != nil {
+			continue
+		}
+		installed = append(installed, id)
+		_, ours, err := ownedfile.Check(filepath.Join(userSkills, id, "SKILL.md"))
+		switch {
+		case err != nil:
+			unchecked++
+		case ours:
+			shadowed = append(shadowed, id)
+		}
+	}
+	if unchecked > 0 {
+		report.Warn("could not check %d skills in %s for shadowing; skipped", unchecked, userSkills)
+	}
+	if len(shadowed) > 0 {
+		report.Warn("%s", shadowWarning(len(installed), shadowed, userSkills))
+	}
+}
+
+func shadowWarning(installed int, shadowed []string, userSkills string) string {
+	// Claude Code prefers a personal skill over a project one with the same name.
+	const advice = "take precedence over this project's copies " +
+		"(remove them with uninstall --global, or accept the global versions)"
+	if len(shadowed) == installed {
+		return fmt.Sprintf("all %d installed skills are also installed in %s and %s",
+			installed, userSkills, advice)
+	}
+	const maxListed = 10
+	listed := shadowed[:min(len(shadowed), maxListed)]
+	text := strings.Join(listed, ", ")
+	if more := len(shadowed) - len(listed); more > 0 {
+		text += fmt.Sprintf(" +%d more", more)
+	}
+	return fmt.Sprintf("%d of %d installed skills also installed in %s %s: %s",
+		len(shadowed), installed, userSkills, advice, text)
 }

@@ -23,7 +23,7 @@ func Parse(args []string, env flags.Environment) (Invocation, error) {
 		return Invocation{Env: env}, nil
 	}
 	name := args[0]
-	if version.IsHelp(name) || version.IsVersion(name) {
+	if IsHelp(name) || version.IsVersion(name) {
 		return Invocation{Name: name, Env: env}, nil
 	}
 	for _, candidate := range table() {
@@ -31,13 +31,13 @@ func Parse(args []string, env flags.Environment) (Invocation, error) {
 			return parseEntry(candidate, args[1:], env)
 		}
 	}
-	return parseLegacy(args, env)
+	return Invocation{}, fmt.Errorf("unknown command %q", name)
 }
 
 func parseEntry(candidate entry, flagArgs []string, env flags.Environment) (Invocation, error) {
 	call := Invocation{Name: candidate.name, Env: env, Runner: candidate.build(env)}
 	fs := flag.NewFlagSet(candidate.name, flag.ContinueOnError)
-	fs.Usage = func() { _ = version.Usage() }
+	fs.Usage = func() { _ = Usage() }
 	flags.BindCommon(fs, &call.Root, &call.LogLevel, env)
 	call.Runner.Bind(fs)
 	if err := fs.Parse(flagArgs); err != nil {
@@ -46,19 +46,4 @@ func parseEntry(candidate entry, flagArgs []string, env flags.Environment) (Invo
 	}
 	call.Args = fs.Args()
 	return call, nil
-}
-
-func parseLegacy(args []string, env flags.Environment) (Invocation, error) {
-	opts, err := version.ParseArgs(args, env)
-	if err != nil {
-		return Invocation{}, err
-	}
-	run := commands()[opts.Command]
-	return Invocation{
-		Name:     opts.Command,
-		Root:     opts.Root,
-		LogLevel: opts.LogLevel,
-		Env:      env,
-		Runner:   legacyRunner{name: opts.Command, opts: opts, run: run},
-	}, nil
 }

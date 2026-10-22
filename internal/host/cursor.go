@@ -17,6 +17,8 @@ var _ Target = cursorTarget{}
 
 func (cursorTarget) Name() string { return "cursor" }
 
+func (cursorTarget) ProjectOnly() {}
+
 func (cursorTarget) Present(base string) bool {
 	_, err := os.Stat(filepath.Join(base, cursor.RulesDir))
 	return err == nil

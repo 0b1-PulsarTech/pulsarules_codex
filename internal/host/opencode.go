@@ -17,6 +17,8 @@ var _ Target = opencodeTarget{}
 
 func (opencodeTarget) Name() string { return "opencode" }
 
+func (opencodeTarget) ProjectOnly() {}
+
 func (opencodeTarget) Present(base string) bool {
 	if _, err := os.Stat(filepath.Join(base, ".opencode")); err == nil {
 		return true

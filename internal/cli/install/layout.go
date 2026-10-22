@@ -4,18 +4,17 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func applySelectedLayout(
-	opts *version.Options,
+	cmd *Command,
 	idx *knowledge.Index,
 	console *prompter,
 ) error {
-	layout := opts.Layout
-	if opts.Interactive && layout == "" {
+	layout := cmd.layout
+	if cmd.interactive && layout == "" {
 		layout = promptLayout(idx, console)
 	}
 	if layout == "" {

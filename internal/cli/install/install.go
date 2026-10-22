@@ -8,14 +8,21 @@ import (
 	"golang.org/x/term"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/claude"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/detect"
 )
 
-func Run(inj remy.Injector, opts *version.Options) error {
-	cfg, err := resolveInstallConfig(opts)
+func (cmd *Command) Run(inj remy.Injector, _ []string) error {
+	if err := cmd.install(inj); err != nil {
+		return fmt.Errorf("install: %w", err)
+	}
+	return nil
+}
+
+func (cmd *Command) ProjectDir() string { return cmd.project }
+
+func (cmd *Command) install(inj remy.Injector) error {
+	cfg, err := resolveInstallConfig(cmd)
 	if err != nil {
 		return err
 	}
@@ -24,18 +31,25 @@ func Run(inj remy.Injector, opts *version.Options) error {
 		return err
 	}
 
-	if opts.PrintHooks {
-		return printHooksBlock()
+	if cmd.printHooks {
+		return printHooksBlock(cfg)
+	}
+
+	targets := cmd.targets()
+	// Refuse before any prompt: a question about an install that cannot happen is noise.
+	if err = deps.targets.Check(targets); err != nil {
+		return err
+	}
+	if cfg.global {
+		if err = deps.targets.CheckGlobal(targets); err != nil {
+			return err
+		}
 	}
 
 	console := newPrompter(os.Stdin, os.Stdout)
 	console.isTerminal = term.IsTerminal(int(os.Stdin.Fd()))
-	ctx, err := newTargetContext(opts, cfg, deps, console)
+	ctx, err := newTargetContext(cmd, cfg, deps, console)
 	if err != nil {
-		return err
-	}
-	targets := opts.Targets()
-	if err = deps.targets.Check(targets); err != nil {
 		return err
 	}
 	for _, name := range targets {
@@ -48,11 +62,11 @@ func Run(inj remy.Injector, opts *version.Options) error {
 		}
 	}
 
-	return installPostTargets(opts, cfg)
+	return installPostTargets(cmd, cfg)
 }
 
-func printHooksBlock() error {
-	block, err := claude.RenderHooksBlock()
+func printHooksBlock(cfg installConfig) error {
+	block, err := claude.RenderHooksBlock(claude.Location{GlobalDir: cfg.claudeDir})
 	if err != nil {
 		return fmt.Errorf("render hooks block: %w", err)
 	}
@@ -61,20 +75,20 @@ func printHooksBlock() error {
 }
 
 func newTargetContext(
-	opts *version.Options,
+	cmd *Command,
 	cfg installConfig,
 	deps installCollaborators,
 	console *prompter,
 ) (host.Context, error) {
-	if err := applySelectedLayout(opts, deps.idx, console); err != nil {
+	if err := applySelectedLayout(cmd, deps.idx, console); err != nil {
 		return host.Context{}, fmt.Errorf("apply layout: %w", err)
 	}
-	languages, err := resolveLanguages(cfg.absBase, opts.Languages)
+	languages, err := resolveLanguages(cfg, cmd.languages)
 	if err != nil {
 		return host.Context{}, err
 	}
 
-	selection, err := resolveSelection(opts, deps.idx, console)
+	selection, err := resolveSelection(cmd, deps.idx, console)
 	if err != nil {
 		return host.Context{}, err
 	}
@@ -89,51 +103,59 @@ func newTargetContext(
 	}
 
 	return host.Context{
-		Templates:    deps.templates,
-		Index:        deps.idx,
-		Renderer:     deps.rnd,
-		Base:         cfg.absBase,
-		IDs:          ids,
-		RouterFilter: routerFilter,
-		NoMCP:        opts.NoMCP,
-		NoHooks:      opts.NoHooks,
-		SettingsFile: cfg.settingsFile,
-		Languages:    languages,
+		Templates:     deps.templates,
+		Index:         deps.idx,
+		Renderer:      deps.rnd,
+		Base:          cfg.absBase,
+		Global:        cfg.global,
+		ClaudeDir:     cfg.claudeDir,
+		UserClaudeDir: cfg.userClaudeDir,
+		IDs:           ids,
+		RouterFilter:  routerFilter,
+		NoMCP:         cmd.noMCP,
+		NoHooks:       cmd.noHooks,
+		SettingsFile:  cfg.settingsFile,
+		Languages:     languages,
 	}, nil
 }
 
-func resolveLanguages(absBase string, override []string) (detect.Set, error) {
-	languages, err := detect.Resolve(absBase, override)
-	if err != nil {
-		return detect.Set{}, fmt.Errorf("resolve project languages: %w", err)
-	}
-	if languages.Empty() {
-		// An empty set installs every skill, not none.
-		_, _ = fmt.Fprintf(os.Stderr,
-			"warning: no project language detected in %q; installing every skill "+
-				"regardless of language. Pass --languages to say which apply.\n", absBase)
-	}
-	return languages, nil
-}
-
 type installConfig struct {
-	absBase      string
-	settingsFile string
-	gitHooks     []string
+	absBase       string
+	claudeDir     string
+	userClaudeDir string
+	global        bool
+	settingsFile  string
+	gitHooks      []string
 }
 
-func resolveInstallConfig(opts *version.Options) (installConfig, error) {
-	absBase, err := opts.BaseDir()
+func resolveInstallConfig(cmd *Command) (installConfig, error) {
+	scope := flags.Scope{Global: cmd.global, Project: cmd.project}.WithEnv(cmd.env)
+	absBase, err := flags.BaseDir(scope)
 	if err != nil {
 		return installConfig{}, fmt.Errorf("base dir: %w", err)
 	}
-	scope, err := flags.ParseHooksScope(opts.HooksScope)
+	userClaudeDir, err := flags.UserClaudeDir(scope)
+	if err != nil {
+		return installConfig{}, fmt.Errorf("claude dir: %w", err)
+	}
+	var claudeDir string
+	if cmd.global {
+		claudeDir = userClaudeDir
+	}
+	hooksScope, err := flags.ParseHooksScope(cmd.hooksScope)
 	if err != nil {
 		return installConfig{}, fmt.Errorf("settings file: %w", err)
 	}
-	gitHooks, err := resolveGitHooks(opts)
+	gitHooks, err := resolveGitHooks(cmd)
 	if err != nil {
 		return installConfig{}, err
 	}
-	return installConfig{absBase: absBase, settingsFile: scope.File(), gitHooks: gitHooks}, nil
+	return installConfig{
+		absBase:       absBase,
+		claudeDir:     claudeDir,
+		userClaudeDir: userClaudeDir,
+		global:        cmd.global,
+		settingsFile:  hooksScope.File(),
+		gitHooks:      gitHooks,
+	}, nil
 }

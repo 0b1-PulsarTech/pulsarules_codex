@@ -11,10 +11,11 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/mcp"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/mcpserver"
 )
 
 func wireClaudeMCP(ctx Context, skillsDir string, report *Report) error {
-	wired, skipped, err := mcp.Write(ctx.Base, ctx.Languages)
+	wired, skipped, err := writeMCPServers(ctx, report)
 	if err != nil {
 		return fmt.Errorf("write mcp: %w", err)
 	}
@@ -35,6 +36,23 @@ func wireClaudeMCP(ctx Context, skillsDir string, report *Report) error {
 		)
 	}
 	return nil
+}
+
+func writeMCPServers(ctx Context, report *Report) (wired, skipped []string, err error) {
+	if !ctx.Global {
+		return mcp.Write(ctx.Base, ctx.Languages)
+	}
+	// Claude reads user-level servers from ~/.claude.json, which Claude itself rewrites;
+	// a file of ours there would race it, so the user adds the server with Claude's own command.
+	var available []mcpserver.Server
+	available, skipped = mcpserver.Available(ctx.Languages.Sorted())
+	for _, srv := range available {
+		report.Note(
+			"add the %s MCP server for every project with: claude mcp add --scope user %s -- %s",
+			srv.Name, srv.Name, strings.Join(append([]string{srv.Command}, srv.Args...), " "),
+		)
+	}
+	return nil, skipped, nil
 }
 
 func unwireClaudeMCP(repoDir string, report *Report) error {

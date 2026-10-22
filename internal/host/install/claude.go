@@ -10,8 +10,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/gitignore"
 )
 
-func Claude(claudeDir string, templates fs.FS, settingsFile string) (report.Report, error) {
-	rpt, err := installClaude(claudeDir, templates, settingsFile)
+func Claude(
+	claudeDir string, templates fs.FS, settingsFile string, loc claude.Location,
+) (report.Report, error) {
+	rpt, err := installClaude(claudeDir, templates, settingsFile, loc)
 	if err != nil {
 		return rpt, fmt.Errorf("install claude: %w", err)
 	}
@@ -27,18 +29,18 @@ func UninstallClaude(claudeDir, settingsFile string) (report.Report, error) {
 }
 
 func installClaude(
-	claudeDir string, templates fs.FS, settingsFile string,
+	claudeDir string, templates fs.FS, settingsFile string, loc claude.Location,
 ) (report.Report, error) {
-	ledger, err := claude.InstallHook(templates, claudeDir)
+	ledger, err := claude.InstallHook(templates, claudeDir, loc)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("install claude hook: %w", err)
 	}
 	rpt := ledger.Report()
-	if err = claude.WireSettings(claudeDir, settingsFile); err != nil {
+	if err = claude.WireSettings(claudeDir, settingsFile, loc); err != nil {
 		return rpt, fmt.Errorf("wire claude settings: %w", err)
 	}
-	if err = gitignore.Ensure(claudeDir, "/bin/", "/hooks/"); err != nil {
-		return rpt, fmt.Errorf("ensure claude gitignore: %w", err)
+	if err = ensureGitignore(claudeDir, loc); err != nil {
+		return rpt, err
 	}
 	rpt.Note("wired hook into %s", filepath.Join(claudeDir, settingsFile))
 	return rpt, nil
@@ -63,4 +65,15 @@ func uninstallClaude(claudeDir, settingsFile string) (report.Report, error) {
 	}
 	rpt.Merge(ledger.Report())
 	return rpt, nil
+}
+
+func ensureGitignore(claudeDir string, loc claude.Location) error {
+	if loc.GlobalDir != "" {
+		// A user-level directory is no repository, so it gets no .gitignore from us.
+		return nil
+	}
+	if err := gitignore.Ensure(claudeDir, "/bin/", "/hooks/"); err != nil {
+		return fmt.Errorf("ensure claude gitignore: %w", err)
+	}
+	return nil
 }

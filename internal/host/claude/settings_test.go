@@ -26,7 +26,7 @@ func TestWireSettings_FreshFile(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			claudeDir := filepath.Join(t.TempDir(), ".claude")
-			if err := WireSettings(claudeDir, testCase.settingsFile); err != nil {
+			if err := WireSettings(claudeDir, testCase.settingsFile, Location{}); err != nil {
 				t.Fatalf("WireSettings: %v", err)
 			}
 			hooks := readHooks(t, claudeDir, testCase.settingsFile)
@@ -41,7 +41,7 @@ func wireTwice(tb testing.TB, claudeDir, settingsFile string) {
 	tb.Helper()
 
 	for range 2 {
-		if err := WireSettings(claudeDir, settingsFile); err != nil {
+		if err := WireSettings(claudeDir, settingsFile, Location{}); err != nil {
 			tb.Fatalf("WireSettings: %v", err)
 		}
 	}
@@ -123,7 +123,7 @@ func TestWireSettings_ThirdPartyCommand(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if err := WireSettings(claudeDir, settingsFile); err != nil {
+	if err := WireSettings(claudeDir, settingsFile, Location{}); err != nil {
 		t.Fatalf("WireSettings: %v", err)
 	}
 
@@ -213,7 +213,7 @@ func TestWireSettings_KeepsAnyUserHookTimeoutValue(t *testing.T) {
 			if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
 				t.Fatalf("seed: %v", err)
 			}
-			if err := WireSettings(claudeDir, "settings.json"); err != nil {
+			if err := WireSettings(claudeDir, "settings.json", Location{}); err != nil {
 				t.Fatalf("WireSettings must accept any user timeout: %v", err)
 			}
 			if got := userStopTimeout(t, claudeDir); got != testCase.timeout {
@@ -233,7 +233,7 @@ func TestWireSettings_Unparseable(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	err := WireSettings(claudeDir, "settings.json")
+	err := WireSettings(claudeDir, "settings.json", Location{})
 	if !errors.Is(err, jsondoc.ErrUnparseable) {
 		t.Fatalf("err = %v, want jsondoc.ErrUnparseable", err)
 	}
@@ -285,7 +285,7 @@ func TestWireSettings_ParseFailureWording(t *testing.T) {
 			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
 				t.Fatalf("seed: %v", err)
 			}
-			err := WireSettings(claudeDir, testCase.settingsFile)
+			err := WireSettings(claudeDir, testCase.settingsFile, Location{})
 			if !errors.Is(err, jsondoc.ErrUnparseable) {
 				t.Fatalf("err = %v, want jsondoc.ErrUnparseable", err)
 			}
@@ -321,7 +321,7 @@ func TestWireSettings_NullInputIsWired(t *testing.T) {
 			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
 				t.Fatalf("seed: %v", err)
 			}
-			if err := WireSettings(claudeDir, testCase.settingsFile); err != nil {
+			if err := WireSettings(claudeDir, testCase.settingsFile, Location{}); err != nil {
 				t.Fatalf("WireSettings(%s): %v", testCase.seed, err)
 			}
 			hooks := readHooks(t, claudeDir, testCase.settingsFile)

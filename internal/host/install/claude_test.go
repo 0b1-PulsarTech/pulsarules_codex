@@ -7,8 +7,10 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/claude"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/jsondoc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -27,7 +29,7 @@ func TestClaude_InstallThenUninstallNotes(t *testing.T) {
 
 	claudeDir := filepath.Join(t.TempDir(), ".claude")
 	settings := filepath.Join(claudeDir, "settings.local.json")
-	installed, err := Claude(claudeDir, testTemplates(t), "settings.local.json")
+	installed, err := Claude(claudeDir, testTemplates(t), "settings.local.json", claude.Location{})
 	if err != nil {
 		t.Fatalf("Claude: %v", err)
 	}
@@ -88,7 +90,7 @@ func TestClaude_InstallFailureWording(t *testing.T) {
 			if err := os.WriteFile(path, []byte(testCase.seed), 0o600); err != nil {
 				t.Fatalf("seed: %v", err)
 			}
-			_, err := Claude(claudeDir, testTemplates(t), testCase.settingsFile)
+			_, err := Claude(claudeDir, testTemplates(t), testCase.settingsFile, claude.Location{})
 			if !errors.Is(err, jsondoc.ErrUnparseable) {
 				t.Fatalf("Claude err = %v, want ErrUnparseable", err)
 			}
@@ -124,5 +126,53 @@ func TestClaude_UninstallWarningWording(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestClaude_GlobalWritesAnAbsoluteCommandAndNoGitignore(t *testing.T) {
+	t.Parallel()
+
+	claudeDir := filepath.Join(t.TempDir(), "claude")
+	loc := claude.Location{GlobalDir: claudeDir}
+	if _, err := Claude(claudeDir, testTemplates(t), "settings.json", loc); err != nil {
+		t.Fatalf("Claude: %v", err)
+	}
+
+	settings, err := os.ReadFile(filepath.Join(claudeDir, "settings.json")) //nolint:gosec // test.
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	if want := filepath.Join(
+		claudeDir,
+		"hooks",
+		"skill-router-reminder.sh",
+	); !strings.Contains(
+		string(settings),
+		want,
+	) {
+		t.Errorf("settings do not name %q:\n%s", want, settings)
+	}
+	if strings.Contains(string(settings), "CLAUDE_PROJECT_DIR") {
+		t.Errorf("a global install must not depend on the project dir:\n%s", settings)
+	}
+	if _, statErr := os.Stat(
+		filepath.Join(claudeDir, ".gitignore"),
+	); !errors.Is(
+		statErr,
+		fs.ErrNotExist,
+	) {
+		t.Errorf("global install wrote a .gitignore, stat err = %v", statErr)
+	}
+
+	if _, err = UninstallClaude(claudeDir, "settings.json"); err != nil {
+		t.Fatalf("UninstallClaude: %v", err)
+	}
+	if _, statErr := os.Stat(
+		filepath.Join(claudeDir, "settings.json"),
+	); !errors.Is(
+		statErr,
+		fs.ErrNotExist,
+	) {
+		t.Errorf("uninstall left the global hook wiring, stat err = %v", statErr)
 	}
 }

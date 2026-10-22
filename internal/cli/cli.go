@@ -9,29 +9,8 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/uninstall"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 )
-
-type handler func(inj remy.Injector, opts *version.Options) error
-
-func commands() map[string]handler {
-	return map[string]handler{
-		"install":   prefixed("install", install.Run),
-		"uninstall": prefixed("uninstall", uninstall.Run),
-	}
-}
-
-func prefixed(name string, run handler) handler {
-	return func(inj remy.Injector, opts *version.Options) error {
-		if runErr := run(inj, opts); runErr != nil {
-			return fmt.Errorf("%s: %w", name, runErr)
-		}
-		return nil
-	}
-}
 
 func (call Invocation) Run(inj remy.Injector) error {
 	return call.Runner.Run(inj, call.Args)
@@ -61,12 +40,4 @@ func (call Invocation) BootstrapOptions() bootstrap.Options {
 		LogLevel:   call.LogLevel,
 		LogPath:    call.Env.LogPath,
 	}
-}
-
-func resolveProjectDir(opts *version.Options) string {
-	if opts.Command == "install" || opts.Command == "uninstall" {
-		// The checkout install/uninstall target is also the analyzed repository.
-		return opts.Project
-	}
-	return "."
 }

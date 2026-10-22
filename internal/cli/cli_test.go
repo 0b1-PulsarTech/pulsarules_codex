@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,7 +17,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/command"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
@@ -41,21 +39,19 @@ func TestRun_PrefixesInstallAndUninstallErrors(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		opts       version.Options
+		args       []string
 		wantPrefix string
 	}{
 		{
 			name:       "uninstall without a scope",
-			opts:       version.Options{Command: "uninstall"},
+			args:       []string{"uninstall"},
 			wantPrefix: "uninstall: ",
 		},
 		{
 			name: "install with an unknown target",
-			opts: version.Options{
-				Command:   "install",
-				Skills:    []string{"go-style"},
-				Languages: []string{"go"},
-				Target:    []string{"bogus"},
+			args: []string{
+				"install", "--project", "", "--skills", "go-style", "--languages", "go",
+				"--target", "bogus",
 			},
 			wantPrefix: "install: invalid --target",
 		},
@@ -68,11 +64,15 @@ func TestRun_PrefixesInstallAndUninstallErrors(t *testing.T) {
 			if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
 				t.Fatalf("DoInjections: %v", err)
 			}
-			opts := testCase.opts
-			if opts.Command == "install" {
-				opts.Project = t.TempDir()
+			args := slices.Clone(testCase.args)
+			if idx := slices.Index(args, "--project"); idx >= 0 {
+				args[idx+1] = t.TempDir()
 			}
-			err := commands()[opts.Command](inj, &opts)
+			call, err := Parse(args, flags.Environment{})
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			err = call.Run(inj)
 			if err == nil {
 				t.Fatal("expected an error")
 			}
@@ -136,45 +136,37 @@ func TestErrorPrinters_StaySingleLine(t *testing.T) {
 	}
 }
 
-func TestResolveProjectDir(t *testing.T) {
+func TestBootstrapOptions_ProjectDir(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name string
-		opts *version.Options
+		args []string
 		want string
 	}{
 		{
-			name: "every other command defaults to the working directory",
-			opts: &version.Options{
-				Command: "list",
-				Env:     flags.Environment{ProjectDir: "/from-env"},
-			},
-			want: ".",
+			name: "install anchors on its project", args: []string{"install", "--project", "/repo"},
+			want: "/repo",
 		},
+		{
+			name: "uninstall anchors on its project",
+			args: []string{"uninstall", "--project", "/repo"},
+			want: "/repo",
+		},
+		{name: "every other command uses the working directory", args: []string{"list"}, want: "."},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			if got := resolveProjectDir(testCase.opts); got != testCase.want {
-				t.Errorf("resolveProjectDir() = %q, want %q", got, testCase.want)
+
+			call, err := Parse(testCase.args, flags.Environment{ProjectDir: "/from-env"})
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got := call.BootstrapOptions().ProjectDir; got != testCase.want {
+				t.Errorf("ProjectDir = %q, want %q", got, testCase.want)
 			}
 		})
-	}
-}
-
-func TestResolveProjectDir_InstallFlag(t *testing.T) {
-	t.Parallel()
-
-	opts, err := version.ParseArgs(
-		[]string{"install", "--project", "/tmp/repo", "--all"},
-		flags.Environment{},
-	)
-	if err != nil {
-		t.Fatalf("ParseArgs: %v", err)
-	}
-	if got := resolveProjectDir(opts); got != "/tmp/repo" {
-		t.Errorf("resolveProjectDir() = %q, want %q", got, "/tmp/repo")
 	}
 }
 
@@ -182,31 +174,35 @@ func TestBootstrapOptions_ReadsTheEnvironmentOnce(t *testing.T) {
 	t.Parallel()
 
 	logPath := filepath.Join("/proj", ".claude", "hook-execution.log")
-	opts := &version.Options{
-		Command: "hook",
-		Root:    "/root",
-		Env:     flags.Environment{LogPath: logPath},
+	call, err := Parse(
+		[]string{"hook", "--root", "/root", "stop"},
+		flags.Environment{LogPath: logPath},
+	)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
 	}
-	got := Invocation{
-		Root:   opts.Root,
-		Env:    opts.Env,
-		Runner: legacyRunner{name: opts.Command, opts: opts},
-	}.BootstrapOptions()
+	got := call.BootstrapOptions()
 	if got.LogPath != logPath || got.Root != "/root" {
 		t.Errorf("BootstrapOptions() = %+v, want LogPath %q and Root /root", got, logPath)
 	}
-	unset := Invocation{Runner: legacyRunner{opts: &version.Options{Command: "hook"}}}
+	unset, err := Parse([]string{"hook"}, flags.Environment{})
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
 	if got = unset.BootstrapOptions(); got.LogPath != "" {
 		t.Errorf("unset env LogPath = %q, want empty so logfile decides", got.LogPath)
 	}
 }
 
-func TestDispatchCommands_MatchBoundCommands(t *testing.T) {
+func TestTable_NamesAreUnique(t *testing.T) {
 	t.Parallel()
 
-	dispatched := slices.Sorted(maps.Keys(commands()))
-	if bound := version.Commands(); !slices.Equal(dispatched, bound) {
-		t.Errorf("Run dispatches %v, ParseArgs binds %v", dispatched, bound)
+	seen := map[string]bool{}
+	for _, candidate := range table() {
+		if seen[candidate.name] {
+			t.Errorf("command %q is registered twice", candidate.name)
+		}
+		seen[candidate.name] = true
 	}
 }
 

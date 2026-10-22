@@ -77,9 +77,14 @@ calls that mode.
 `skill-router-reminder.sh` is a thin orchestrator: the settings entry locates it via
 `$CLAUDE_PROJECT_DIR` (a Claude Code variable, legitimately named there); the script forwards the
 mode (`session-start`/`pre-edit`/...) and the stdin payload to the installed binary, after exporting
-`PULSARULES_PROJECT_DIR`, `PULSARULES_SKILLS_DIR=$CLAUDE_PROJECT_DIR/.claude/skills`, and
-`PULSARULES_LOG_PATH=$CLAUDE_PROJECT_DIR/.claude/hook-execution.log`. If the binary is absent the
+`PULSARULES_PROJECT_DIR`, `PULSARULES_SKILLS_DIR` (the project's `.claude/skills`, then the user's),
+and `PULSARULES_LOG_PATH=$CLAUDE_PROJECT_DIR/.claude/hook-execution.log`. If the binary is absent the
 script exits `0` (no-op).
+
+A global install (`install --global`) writes the same script under the user's Claude directory
+(`~/.claude`, or `$CLAUDE_CONFIG_DIR`), and its settings entry names that script by absolute path.
+Its binary, log and skills live there too. When the project also has its own install, the global
+script exits `0` and lets the project hook run alone.
 
 Claude Code's own hook events map onto the shared modes above like this:
 

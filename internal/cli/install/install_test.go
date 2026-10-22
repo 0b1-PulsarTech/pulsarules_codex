@@ -3,6 +3,7 @@ package install
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -39,7 +39,7 @@ func newTestCollaborators(tb testing.TB) installCollaborators {
 func TestNewTargetContext_LayoutThenSkillsShareOneReader(t *testing.T) {
 	deps := newTestCollaborators(t)
 	catalog := deps.idx.SkillsOrdered()
-	opts := &version.Options{Interactive: true, Languages: []string{"go"}, NoMCP: true}
+	cmd := &Command{interactive: true, languages: []string{"go"}, noMCP: true}
 	cfg := installConfig{absBase: t.TempDir()}
 	var prompts strings.Builder
 	console := newPrompter(strings.NewReader("monorepo\n1,3\n"), &prompts)
@@ -48,7 +48,7 @@ func TestNewTargetContext_LayoutThenSkillsShareOneReader(t *testing.T) {
 	var ctx host.Context
 	var err error
 	stdout, _ := captureStreams(t, func() {
-		ctx, err = newTargetContext(opts, cfg, deps, console)
+		ctx, err = newTargetContext(cmd, cfg, deps, console)
 	})
 	if err != nil {
 		t.Fatalf("newTargetContext: %v", err)
@@ -83,14 +83,13 @@ func TestRun_MalformedMCPJSON_ErrorNotDoubled(t *testing.T) {
 		t.Fatalf("DoInjections: %v", err)
 	}
 	const forcedLanguage = "go"
-	opts := &version.Options{
-		Command:   "install",
-		Project:   projectDir,
-		Skills:    []string{"go-style"},
-		Languages: []string{forcedLanguage},
+	cmd := &Command{
+		project:   projectDir,
+		skills:    []string{"go-style"},
+		languages: []string{forcedLanguage},
 	}
 
-	err := Run(inj, opts)
+	err := cmd.Run(inj, nil)
 	if err == nil {
 		t.Fatal("expected an error from a malformed .mcp.json")
 	}
@@ -145,11 +144,11 @@ func captureStreams(tb testing.TB, fn func()) (stdout, stderr string) {
 //nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
 func TestInstallPostTargets_EmptyGitHooks(t *testing.T) {
 	dir := t.TempDir()
-	opts := &version.Options{NoGitHooks: false}
+	cmd := &Command{noGitHooks: false}
 
 	output, _ := captureStreams(t, func() {
 		if err := installPostTargets(
-			opts,
+			cmd,
 			installConfig{absBase: dir, gitHooks: []string{}},
 		); err != nil {
 			t.Fatalf("installPostTargets: %v", err)
@@ -171,12 +170,12 @@ func injectRun(tb testing.TB, inj remy.Injector) {
 //nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
 func TestRun_PrintHooks(t *testing.T) {
 	projectDir := t.TempDir()
-	opts := &version.Options{Command: "install", Project: projectDir, PrintHooks: true}
+	cmd := &Command{project: projectDir, printHooks: true}
 
 	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
 	injectRun(t, inj)
 	var runErr error
-	stdout, _ := captureStreams(t, func() { runErr = Run(inj, opts) })
+	stdout, _ := captureStreams(t, func() { runErr = cmd.Run(inj, nil) })
 	if runErr != nil {
 		t.Fatalf("Run: %v", runErr)
 	}
@@ -218,14 +217,16 @@ func TestRun_RejectsAMalformedTargetBeforeWriting(t *testing.T) {
 			for _, value := range testCase.flags {
 				args = append(args, "--target", value)
 			}
-			opts, err := version.ParseArgs(args, flags.Environment{})
-			if err != nil {
-				t.Fatalf("ParseArgs: %v", err)
+			cmd := &Command{}
+			flagSet := flag.NewFlagSet("install", flag.ContinueOnError)
+			cmd.Bind(flagSet)
+			if err := flagSet.Parse(args[1:]); err != nil {
+				t.Fatalf("Parse: %v", err)
 			}
 
 			inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
 			injectRun(t, inj)
-			err = Run(inj, opts)
+			err := cmd.Run(inj, nil)
 			want := fmt.Sprintf("invalid --target %q (want ", testCase.bad)
 			if err == nil || !strings.Contains(err.Error(), want) {
 				t.Fatalf("err = %v, want an error containing %q", err, want)
@@ -259,8 +260,8 @@ func TestResolveInstallConfig_SettingsFile(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			opts := &version.Options{Project: t.TempDir(), HooksScope: testCase.scope}
-			cfg, err := resolveInstallConfig(opts)
+			cmd := &Command{project: t.TempDir(), hooksScope: testCase.scope}
+			cfg, err := resolveInstallConfig(cmd)
 			if testCase.wantText != "" {
 				if err == nil || err.Error() != testCase.wantText {
 					t.Fatalf("err = %v, want %q", err, testCase.wantText)
@@ -274,5 +275,161 @@ func TestResolveInstallConfig_SettingsFile(t *testing.T) {
 				t.Errorf("settingsFile = %q, want %q", cfg.settingsFile, testCase.want)
 			}
 		})
+	}
+}
+
+//nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
+func TestRun_GlobalStaysInsideTheClaudeConfigDir(t *testing.T) {
+	home := t.TempDir()
+	configDir := filepath.Join(t.TempDir(), "claude")
+	cmd := New(flags.Environment{Home: home, ConfigDir: configDir})
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+	cmd.global = true
+	cmd.skills = []string{"go-style"}
+	cmd.languages = []string{"go"}
+	cmd.noMCP = true
+
+	var err error
+	stdout, _ := captureStreams(t, func() { err = cmd.Run(inj, nil) })
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	skill := filepath.Join(configDir, "skills", "go-style", "SKILL.md")
+	if _, statErr := os.Stat(skill); statErr != nil {
+		t.Errorf("skill not written to the config dir: %v", statErr)
+	}
+	entries, readErr := os.ReadDir(home)
+	if readErr != nil || len(entries) != 0 {
+		t.Errorf("home directory = %v, %v, want it untouched", entries, readErr)
+	}
+	if !strings.Contains(stdout, "per repository; skipped under --global") {
+		t.Errorf("stdout = %q, want the git hook skip note", stdout)
+	}
+	slashDir := filepath.ToSlash(configDir)
+	settings := readFile(t, filepath.Join(configDir, "settings.json"))
+	wantCommand := "bash '" + slashDir + "/hooks/skill-router-reminder.sh' post-edit"
+	if !strings.Contains(settings, wantCommand) {
+		t.Errorf("settings.json = %s, want the absolute quoted command %q", settings, wantCommand)
+	}
+	script := readFile(t, filepath.Join(configDir, "hooks", "skill-router-reminder.sh"))
+	wantBin := "\nbin='" + slashDir + "/bin/pulsarules_cli'\n"
+	if !strings.Contains(script, wantBin) {
+		t.Errorf("hook script = %s, want the absolute %q", script, wantBin)
+	}
+}
+
+func readFile(tb testing.TB, path string) string {
+	tb.Helper()
+	body, err := os.ReadFile(path) //nolint:gosec // test fixture path.
+	if err != nil {
+		tb.Fatalf("read %q: %v", path, err)
+	}
+	return string(body)
+}
+
+//nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
+func TestRun_ProjectNeverWritesIntoTheUserDirs(t *testing.T) {
+	home, configDir, projectDir := t.TempDir(), t.TempDir(), t.TempDir()
+	cmd := New(flags.Environment{Home: home, ConfigDir: configDir})
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+	cmd.project = projectDir
+	cmd.skills = []string{"go-style"}
+	cmd.languages = []string{"go"}
+	cmd.noMCP = true
+
+	var err error
+	captureStreams(t, func() { err = cmd.Run(inj, nil) })
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	skill := filepath.Join(projectDir, ".claude", "skills", "go-style", "SKILL.md")
+	if _, statErr := os.Stat(skill); statErr != nil {
+		t.Errorf("skill not written to the project: %v", statErr)
+	}
+	for _, dir := range []string{home, configDir} {
+		if entries, readErr := os.ReadDir(dir); readErr != nil || len(entries) != 0 {
+			t.Errorf("%q = %v, %v, want a project install to leave it empty", dir, entries, readErr)
+		}
+	}
+}
+
+//nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
+func TestRun_PrintHooksGlobalIsAbsolute(t *testing.T) {
+	configDir := filepath.Join(t.TempDir(), "claude")
+	cmd := New(flags.Environment{Home: t.TempDir(), ConfigDir: configDir})
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+	cmd.global = true
+	cmd.printHooks = true
+
+	var err error
+	stdout, _ := captureStreams(t, func() { err = cmd.Run(inj, nil) })
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	want := "bash '" + filepath.ToSlash(configDir) + "/hooks/skill-router-reminder.sh' stop"
+	if !strings.Contains(stdout, want) {
+		t.Errorf("stdout = %s, want the absolute command %q", stdout, want)
+	}
+	if _, statErr := os.Stat(configDir); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("--print-hooks created %q, stat err = %v", configDir, statErr)
+	}
+}
+
+func TestRun_GlobalRefusesProjectOnlyTargetsBeforeInstalling(t *testing.T) {
+	t.Parallel()
+
+	home := t.TempDir()
+	cmd := New(flags.Environment{Home: home})
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+	cmd.global = true
+	cmd.target = []string{"claude", "agents"}
+	cmd.skills = []string{"go-style"}
+
+	err := cmd.Run(inj, nil)
+	if !errors.Is(err, host.ErrProjectOnly) || !strings.Contains(err.Error(), `target "agents"`) {
+		t.Fatalf("Run = %v, want a refusal naming the agents target", err)
+	}
+	if entries, readErr := os.ReadDir(home); readErr != nil || len(entries) != 0 {
+		t.Errorf(
+			"home = %v, %v, want nothing installed for the claude target either",
+			entries,
+			readErr,
+		)
+	}
+}
+
+//nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
+func TestRun_GlobalRefusesBeforeAnyPrompt(t *testing.T) {
+	home := t.TempDir()
+	cmd := New(flags.Environment{Home: home})
+	inj := remy.NewInjector(remy.Config{DuckTypeElements: true})
+	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
+		t.Fatalf("DoInjections: %v", err)
+	}
+	cmd.global = true
+	cmd.interactive = true
+	cmd.target = []string{"opencode"}
+
+	var err error
+	stdout, _ := captureStreams(t, func() { err = cmd.Run(inj, nil) })
+	if !errors.Is(err, host.ErrProjectOnly) || !strings.Contains(err.Error(), `target "opencode"`) {
+		t.Fatalf("Run = %v, want a refusal naming the opencode target", err)
+	}
+	if stdout != "" {
+		t.Errorf("stdout = %q, want no prompt before the refusal", stdout)
 	}
 }

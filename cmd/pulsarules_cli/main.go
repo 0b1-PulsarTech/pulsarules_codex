@@ -27,8 +27,8 @@ func main() {
 		die(err)
 	}
 
-	if call.Name == "" || version.IsHelp(call.Name) {
-		_ = version.Usage()
+	if call.Name == "" || cli.IsHelp(call.Name) {
+		_ = cli.Usage()
 		return
 	}
 	if version.IsVersion(call.Name) {

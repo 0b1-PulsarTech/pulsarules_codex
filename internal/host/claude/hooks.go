@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -41,8 +40,12 @@ func hookAssets() []hookAsset {
 	}
 }
 
-func InstallHook(templates fs.FS, claudeDir string) (ledger ownedfile.Ledger, err error) {
-	hooksDir := filepath.Join(claudeDir, "hooks")
+func InstallHook(
+	templates fs.FS,
+	claudeDir string,
+	loc Location,
+) (ledger ownedfile.Ledger, err error) {
+	hooksDir := filepath.Join(claudeDir, hooksSubdir)
 	if err = os.MkdirAll(hooksDir, disk.DirPrivate); err != nil {
 		return ledger, fmt.Errorf("mkdir %q: %w", hooksDir, err)
 	}
@@ -53,7 +56,12 @@ func InstallHook(templates fs.FS, claudeDir string) (ledger ownedfile.Ledger, er
 		}
 		if asset.render {
 			var renderErr error
-			assetBytes, renderErr = renderReminderScript(asset.templateName, assetBytes)
+			assetBytes, renderErr = renderReminderScript(
+				asset.templateName,
+				assetBytes,
+				loc,
+				filepath.ListSeparator,
+			)
 			if renderErr != nil {
 				return ledger, renderErr
 			}
@@ -72,25 +80,21 @@ func InstallHook(templates fs.FS, claudeDir string) (ledger ownedfile.Ledger, er
 }
 
 type reminderScriptValues struct {
-	BinaryRelPath string
-	SkillsRelPath string
-	LogRelPath    string
+	Bin        string
+	SkillsDirs string
+	Log        string
+	DeferTo    string
 }
 
-func renderReminderScript(name string, body []byte) ([]byte, error) {
+func renderReminderScript(
+	name string, body []byte, loc Location, listSeparator rune,
+) ([]byte, error) {
 	tmpl, err := template.New(name).Parse(string(body))
 	if err != nil {
 		return nil, fmt.Errorf("parse hooks/%s: %w", name, err)
 	}
-	const logFileName = "hook-execution.log"
-	// path.Join, not filepath.Join: these paths are embedded in a bash script.
-	values := reminderScriptValues{
-		BinaryRelPath: path.Join(RootDir, binSubdir, selfbin.Name),
-		SkillsRelPath: path.Join(RootDir, SkillsSubdir),
-		LogRelPath:    path.Join(RootDir, logFileName),
-	}
 	var buf strings.Builder
-	if execErr := tmpl.Execute(&buf, values); execErr != nil {
+	if execErr := tmpl.Execute(&buf, loc.scriptValues(listSeparator)); execErr != nil {
 		return nil, fmt.Errorf("render hooks/%s: %w", name, execErr)
 	}
 	return []byte(buf.String()), nil

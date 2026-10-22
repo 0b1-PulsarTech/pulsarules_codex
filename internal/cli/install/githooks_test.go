@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 )
 
 func TestValidateGitHooks(t *testing.T) {
@@ -51,17 +50,17 @@ func TestResolveGitHooks_NamesTheBadFlag(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		opts     *version.Options
+		cmd      *Command
 		wantFlag string
 	}{
 		{
 			name:     "a severity typo names its flag",
-			opts:     &version.Options{Tuning: flags.Tuning{TypographicSeverity: "fatal"}},
+			cmd:      &Command{tuning: flags.Tuning{TypographicSeverity: "fatal"}},
 			wantFlag: "--typographic-severity",
 		},
 		{
 			name:     "an extra-types typo names its flag",
-			opts:     &version.Options{Tuning: flags.Tuning{BranchExtraTypes: "Release"}},
+			cmd:      &Command{tuning: flags.Tuning{BranchExtraTypes: "Release"}},
 			wantFlag: "--branch-extra-types",
 		},
 	}
@@ -69,7 +68,7 @@ func TestResolveGitHooks_NamesTheBadFlag(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := resolveGitHooks(testCase.opts)
+			_, err := resolveGitHooks(testCase.cmd)
 			if err == nil || !strings.Contains(err.Error(), testCase.wantFlag) {
 				t.Fatalf("resolveGitHooks err = %v, want one naming %q", err, testCase.wantFlag)
 			}
@@ -80,8 +79,8 @@ func TestResolveGitHooks_NamesTheBadFlag(t *testing.T) {
 func TestResolveGitHooks_Dedupes(t *testing.T) {
 	t.Parallel()
 
-	opts := &version.Options{GitHooks: []string{"pre-push", "commit-msg", "pre-push"}}
-	got, err := resolveGitHooks(opts)
+	cmd := &Command{gitHooks: []string{"pre-push", "commit-msg", "pre-push"}}
+	got, err := resolveGitHooks(cmd)
 	if err != nil {
 		t.Fatalf("resolveGitHooks: %v", err)
 	}
@@ -132,12 +131,12 @@ func TestInstallPostTargets_Branches(t *testing.T) {
 			if testCase.blockGitDir {
 				seedFile(t, filepath.Join(dir, ".git"), "not a directory")
 			}
-			opts := &version.Options{NoGitHooks: testCase.noGitHooks}
+			cmd := &Command{noGitHooks: testCase.noGitHooks}
 			cfg := installConfig{absBase: dir, gitHooks: testCase.gitHooks}
 
 			var runErr error
 			stdout, stderr := captureStreams(t, func() {
-				runErr = installPostTargets(opts, cfg)
+				runErr = installPostTargets(cmd, cfg)
 			})
 			if runErr != nil {
 				t.Fatalf("installPostTargets: %v", runErr)
@@ -164,20 +163,20 @@ func TestInstallPostTargets_BakesOptions(t *testing.T) {
 	testCases := []struct {
 		name      string
 		hook      string
-		opts      version.Options
+		cmd       Command
 		wantFlags []string
 	}{
 		{
 			name:      "typographic severity reaches the pre-commit hook",
 			hook:      "pre-commit",
-			opts:      version.Options{Tuning: flags.Tuning{TypographicSeverity: "warning"}},
+			cmd:       Command{tuning: flags.Tuning{TypographicSeverity: "warning"}},
 			wantFlags: []string{"--typographic-severity warning"},
 		},
 		{
 			name: "branch extra types reach the pre-push hook",
 			hook: "pre-push",
-			opts: version.Options{
-				Tuning: flags.Tuning{BranchExtraTypes: "spike,experiment"},
+			cmd: Command{
+				tuning: flags.Tuning{BranchExtraTypes: "spike,experiment"},
 			},
 			wantFlags: []string{"--branch-extra-types spike,experiment"},
 		},
@@ -189,7 +188,7 @@ func TestInstallPostTargets_BakesOptions(t *testing.T) {
 
 			var runErr error
 			captureStreams(t, func() {
-				runErr = installPostTargets(&testCase.opts, cfg)
+				runErr = installPostTargets(&testCase.cmd, cfg)
 			})
 			if runErr != nil {
 				t.Fatalf("installPostTargets: %v", runErr)
@@ -211,5 +210,38 @@ func seedFile(tb testing.TB, filePath, content string) {
 	tb.Helper()
 	if err := os.WriteFile(filePath, []byte(content), 0o600); err != nil {
 		tb.Fatalf("seed %q: %v", filePath, err)
+	}
+}
+
+//nolint:paralleltest // captureStreams swaps os.Stdout and os.Stderr.
+func TestInstallPostTargets_GlobalSkipNote(t *testing.T) {
+	const skipNote = "skipped under --global"
+	testCases := []struct {
+		name       string
+		noGitHooks bool
+		wantNote   bool
+	}{
+		{name: "git hooks would have been installed", wantNote: true},
+		{name: "git hooks were declined", noGitHooks: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			cmd := &Command{noGitHooks: testCase.noGitHooks}
+			var err error
+			stdout, _ := captureStreams(t, func() {
+				err = installPostTargets(cmd, installConfig{absBase: t.TempDir(), global: true})
+			})
+			if err != nil {
+				t.Fatalf("installPostTargets: %v", err)
+			}
+			if got := strings.Contains(stdout, skipNote); got != testCase.wantNote {
+				t.Errorf(
+					"stdout = %q, skip note present = %v, want %v",
+					stdout,
+					got,
+					testCase.wantNote,
+				)
+			}
+		})
 	}
 }

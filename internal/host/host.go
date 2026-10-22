@@ -10,20 +10,25 @@ import (
 )
 
 type Context struct {
-	Templates    fs.FS
-	Index        *knowledge.Index
-	Renderer     *render.Renderer
-	Base         string
-	IDs          []string
-	RouterFilter []string
-	NoMCP        bool
-	NoHooks      bool
-	SettingsFile string
-	Languages    detect.Set
+	Templates     fs.FS
+	Index         *knowledge.Index
+	Renderer      *render.Renderer
+	Base          string
+	Global        bool
+	ClaudeDir     string
+	UserClaudeDir string
+	IDs           []string
+	RouterFilter  []string
+	NoMCP         bool
+	NoHooks       bool
+	SettingsFile  string
+	Languages     detect.Set
 }
 
 type UninstallContext struct {
 	Base          string
+	Global        bool
+	ClaudeDir     string
 	SettingsFiles []string
 	KeepSkills    bool
 }

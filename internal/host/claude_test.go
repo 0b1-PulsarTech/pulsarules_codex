@@ -315,3 +315,109 @@ func TestClaudeUninstall_NoteOnRemoval(t *testing.T) {
 		})
 	}
 }
+
+func TestClaudeInstall_ProjectAtTheUserDirIsAGlobalInstall(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		link       bool
+		elsewhere  bool
+		wantGlobal bool
+	}{
+		{name: "the same path", wantGlobal: true},
+		{name: "reached through a symlink", link: true, wantGlobal: true},
+		{name: "a different directory stays a project install", elsewhere: true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			home := t.TempDir()
+			base := home
+			if testCase.link {
+				base = filepath.Join(t.TempDir(), "home")
+				if err := os.Symlink(home, base); err != nil {
+					t.Skipf("symlinks are unavailable: %v", err)
+				}
+			}
+			ctx := newTestContext(t, base, []string{"go-style"})
+			ctx.NoHooks = false
+			ctx.UserClaudeDir = filepath.Join(home, ".claude")
+			if testCase.elsewhere {
+				ctx.UserClaudeDir = filepath.Join(t.TempDir(), ".claude")
+			}
+			report, err := (claudeTarget{}).Install(ctx)
+			if err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+
+			claudeDir := filepath.Join(base, ".claude")
+			want := hookStyle{testCase.wantGlobal, testCase.wantGlobal, testCase.wantGlobal}
+			if got := observeHookStyle(t, claudeDir, report); got != want {
+				t.Errorf("hook style = %+v, want %+v", got, want)
+			}
+
+			uctx := UninstallContext{Base: base, SettingsFiles: []string{"settings.json"}}
+			if _, err = (claudeTarget{}).Uninstall(uctx); err != nil {
+				t.Fatalf("Uninstall: %v", err)
+			}
+			if _, statErr := os.Stat(
+				filepath.Join(claudeDir, "hooks"),
+			); !errors.Is(
+				statErr,
+				fs.ErrNotExist,
+			) {
+				t.Errorf("uninstall left the hooks dir, stat err = %v", statErr)
+			}
+		})
+	}
+}
+
+func readFile(tb testing.TB, path string) string {
+	tb.Helper()
+	body, err := os.ReadFile(path) //nolint:gosec // test fixture path.
+	if err != nil {
+		tb.Fatalf("read %q: %v", path, err)
+	}
+	return string(body)
+}
+
+func TestClaudeInstall_ShadowCheckNeverAbortsTheInstall(t *testing.T) {
+	t.Parallel()
+
+	base, userDir := t.TempDir(), t.TempDir()
+	seedFile(t, filepath.Join(userDir, "skills"), "a file where the skills dir belongs")
+	ctx := newTestContext(t, base, []string{"go-style"})
+	ctx.NoHooks = false
+	ctx.UserClaudeDir = userDir
+
+	report, err := (claudeTarget{}).Install(ctx)
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(base, ".claude", "settings.json")); statErr != nil {
+		t.Errorf("the hooks were not wired after the shadow check: %v", statErr)
+	}
+	if len(report.Warnings) != 1 || !strings.Contains(report.Warnings[0], "could not check") {
+		t.Errorf("Warnings = %q, want one could-not-check line", report.Warnings)
+	}
+}
+
+type hookStyle struct {
+	settingsGlobal bool
+	binAbsolute    bool
+	noted          bool
+}
+
+func observeHookStyle(tb testing.TB, claudeDir string, report Report) hookStyle {
+	tb.Helper()
+	settings := readFile(tb, filepath.Join(claudeDir, "settings.json"))
+	script := readFile(tb, filepath.Join(claudeDir, "hooks", "skill-router-reminder.sh"))
+	wantNote := "is the user Claude directory; the hook was wired as a global install"
+	return hookStyle{
+		settingsGlobal: !strings.Contains(settings, `"$CLAUDE_PROJECT_DIR/.claude/hooks`),
+		binAbsolute:    strings.Contains(script, "bin='"+filepath.ToSlash(claudeDir)+"/bin/"),
+		noted:          strings.Contains(strings.Join(report.Notes, "\n"), wantNote),
+	}
+}

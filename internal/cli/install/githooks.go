@@ -6,22 +6,21 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ordered"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs/githook"
 )
 
-func resolveGitHooks(opts *version.Options) ([]string, error) {
-	hooks := ordered.Dedupe(opts.GitHooks)
-	if opts.NoGitHooks {
+func resolveGitHooks(cmd *Command) ([]string, error) {
+	hooks := ordered.Dedupe(cmd.gitHooks)
+	if cmd.noGitHooks {
 		// Moot with --no-git-hooks: nothing is installed, so a bad name is harmless.
 		return hooks, nil
 	}
 	if err := validateGitHooks(hooks); err != nil {
 		return nil, err
 	}
-	if err := opts.Tuning.Validate(); err != nil {
+	if err := cmd.tuning.Validate(); err != nil {
 		return nil, err
 	}
 	return hooks, nil
@@ -37,11 +36,18 @@ func validateGitHooks(hooks []string) error {
 	return nil
 }
 
-func installPostTargets(opts *version.Options, cfg installConfig) error {
-	if !opts.NoGitHooks {
+func installPostTargets(cmd *Command, cfg installConfig) error {
+	if cfg.global {
+		// Git hooks and the hook binary live in a repository's .git, not in a home directory.
+		if !cmd.noGitHooks {
+			_, _ = fmt.Println("git hooks are per repository; skipped under --global")
+		}
+		return nil
+	}
+	if !cmd.noGitHooks {
 		rpt, hookErr := install.Git(cfg.absBase, cfg.gitHooks, githook.Options{
-			TypographicSeverity: opts.Tuning.TypographicSeverity,
-			BranchExtraTypes:    opts.Tuning.BranchExtraTypes,
+			TypographicSeverity: cmd.tuning.TypographicSeverity,
+			BranchExtraTypes:    cmd.tuning.BranchExtraTypes,
 		})
 		rpt.Print(os.Stdout, os.Stderr)
 		if hookErr != nil {

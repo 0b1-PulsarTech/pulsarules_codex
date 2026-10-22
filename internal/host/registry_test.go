@@ -1,6 +1,7 @@
 package host
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -227,6 +228,78 @@ func TestRegistry_Check(t *testing.T) {
 			}
 			if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
 				t.Fatalf("err = %v, want containing %q", err, testCase.wantErr)
+			}
+		})
+	}
+}
+
+func TestRegistryCheckGlobal(t *testing.T) {
+	t.Parallel()
+	reg := NewRegistry()
+
+	testCases := []struct {
+		name    string
+		targets []string
+		wantErr string
+	}{
+		{name: "claude has a global layout", targets: []string{"claude"}},
+		{name: "none given", targets: nil},
+		{
+			name:    "opencode",
+			targets: []string{"opencode"},
+			wantErr: `target "opencode": supports only --project`,
+		},
+		{
+			name:    "agents",
+			targets: []string{"agents"},
+			wantErr: `target "agents": supports only --project`,
+		},
+		{
+			name:    "cursor",
+			targets: []string{"cursor"},
+			wantErr: `target "cursor": supports only --project`,
+		},
+		{
+			name:    "one project-only target among good ones",
+			targets: []string{"claude", "cursor"},
+			wantErr: `target "cursor": supports only --project`,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := reg.CheckGlobal(testCase.targets)
+			if testCase.wantErr == "" {
+				if err != nil {
+					t.Fatalf("CheckGlobal = %v, want nil", err)
+				}
+				return
+			}
+			if !errors.Is(err, ErrProjectOnly) || err.Error() != testCase.wantErr {
+				t.Errorf("CheckGlobal = %v, want %q wrapping ErrProjectOnly", err, testCase.wantErr)
+			}
+		})
+	}
+}
+
+func TestRegistryInstall_GlobalRefusesProjectOnlyTargets(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{"opencode", "agents", "cursor"} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			home := t.TempDir()
+			ctx := newTestContext(t, home, []string{"go-style"})
+			ctx.Global = true
+			_, err := NewRegistry().Install(name, ctx)
+			if !errors.Is(err, ErrProjectOnly) {
+				t.Fatalf("Install = %v, want ErrProjectOnly", err)
+			}
+			entries, readErr := os.ReadDir(home)
+			if readErr != nil || len(entries) != 0 {
+				t.Errorf("home = %v, %v, want it untouched", entries, readErr)
 			}
 		})
 	}

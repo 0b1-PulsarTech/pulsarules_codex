@@ -1,10 +1,15 @@
 package host
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
 )
+
+var ErrProjectOnly = errors.New("supports only --project")
+
+type projectOnly interface{ ProjectOnly() }
 
 type Registry struct {
 	byName map[string]Target
@@ -24,6 +29,11 @@ func (reg *Registry) Install(name string, ctx Context) (Report, error) {
 	tgt, ok := reg.byName[name]
 	if !ok {
 		return Report{}, fmt.Errorf("unknown target %q", name)
+	}
+	if ctx.Global {
+		if err := reg.CheckGlobal([]string{name}); err != nil {
+			return Report{}, err
+		}
 	}
 	report, err := tgt.Install(ctx)
 	if err != nil {
@@ -55,6 +65,15 @@ func (reg *Registry) Check(names []string) error {
 			return fmt.Errorf(
 				"invalid --target %q (want %s)", name, strings.Join(reg.Names(), "|"),
 			)
+		}
+	}
+	return nil
+}
+
+func (reg *Registry) CheckGlobal(names []string) error {
+	for _, name := range names {
+		if _, isProjectOnly := reg.byName[name].(projectOnly); isProjectOnly {
+			return fmt.Errorf("target %q: %w", name, ErrProjectOnly)
 		}
 	}
 	return nil

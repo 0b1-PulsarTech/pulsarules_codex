@@ -10,7 +10,16 @@
 #
 # Non-blocking by design: if the binary is not present (or not executable) it
 # exits 0 so a missing tool never blocks an edit. See README.md for the rationale.
-bin="$CLAUDE_PROJECT_DIR/{{.BinaryRelPath}}"
+{{- if .DeferTo}}
+
+# A project install has its own hook; running both would remind twice. The project hook runs
+# as `bash script`, so presence is what counts, not the executable bit.
+project_hook={{.DeferTo}}
+if [ -f "$project_hook" ] && [ ! "$project_hook" -ef "$0" ]; then
+  exit 0
+fi
+{{- end}}
+bin={{.Bin}}
 [ -x "$bin" ] || exit 0
 
 # Generic Go reads only the host-neutral PULSARULES_PROJECT_DIR,
@@ -18,6 +27,6 @@ bin="$CLAUDE_PROJECT_DIR/{{.BinaryRelPath}}"
 # CLAUDE_PROJECT_DIR, so this Claude-specific script is where that
 # translation - and the Claude skills/log layout - happens.
 export PULSARULES_PROJECT_DIR="$CLAUDE_PROJECT_DIR"
-export PULSARULES_SKILLS_DIR="$CLAUDE_PROJECT_DIR/{{.SkillsRelPath}}"
-export PULSARULES_LOG_PATH="$CLAUDE_PROJECT_DIR/{{.LogRelPath}}"
+export PULSARULES_SKILLS_DIR={{.SkillsDirs}}
+export PULSARULES_LOG_PATH={{.Log}}
 exec "$bin" hook "$1"

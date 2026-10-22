@@ -7,24 +7,23 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/selection"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
 
 func resolveSelection(
-	opts *version.Options,
+	cmd *Command,
 	idx *knowledge.Index,
 	console *prompter,
 ) (selection.Choice, error) {
 	switch {
-	case opts.RouterOnly:
+	case cmd.routerOnly:
 		return selection.Choice{RouterOnly: true}, nil
-	case opts.All:
+	case cmd.all:
 		return selection.Choice{All: true}, nil
-	case opts.Skills != nil:
-		return selection.Choice{IDs: opts.Skills}, nil
+	case cmd.skills != nil:
+		return selection.Choice{IDs: cmd.skills}, nil
 	case console.isTerminal:
 		return promptSkillSelection(idx, console)
 	// A non-TTY fails: prompting would hang CI, and installing everything would

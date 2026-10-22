@@ -1,18 +1,18 @@
 package uninstall
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/wrapped-owls/goremy-di/remy"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/bootstrap"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/version"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
 )
 
 func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
@@ -23,10 +23,8 @@ func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
 	if err := bootstrap.DoInjections(inj, bootstrap.Options{ProjectDir: "."}); err != nil {
 		t.Fatalf("DoInjections: %v", err)
 	}
-	installOpts := &version.Options{
-		Command: "install", Project: projectDir, Skills: []string{"go-style"}, NoMCP: true,
-	}
-	if err := install.Run(inj, installOpts); err != nil {
+	installArgs := []string{"--project", projectDir, "--skills", "go-style", "--no-mcp"}
+	if err := runInstall(t, inj, installArgs); err != nil {
 		t.Fatalf("install.Run: %v", err)
 	}
 	skillDoc := filepath.Join(projectDir, ".claude", "skills", "go-style", "SKILL.md")
@@ -52,11 +50,13 @@ func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
 			for _, value := range testCase.flags {
 				args = append(args, "--target", value)
 			}
-			opts, err := version.ParseArgs(args, flags.Environment{})
-			if err != nil {
-				t.Fatalf("ParseArgs: %v", err)
+			opts := &Command{}
+			fs := flag.NewFlagSet("uninstall", flag.ContinueOnError)
+			opts.Bind(fs)
+			if err := fs.Parse(args[1:]); err != nil {
+				t.Fatalf("Parse: %v", err)
 			}
-			err = Run(inj, opts)
+			err := opts.Run(inj, nil)
 			want := fmt.Sprintf(
 				"invalid --target %q (want agents|claude|cursor|opencode)",
 				testCase.bad,
@@ -68,5 +68,18 @@ func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
 				t.Errorf("an invalid --target removed %q: %v", skillDoc, statErr)
 			}
 		})
+	}
+}
+
+func TestResolveTargets_GlobalDefaultsToClaude(t *testing.T) {
+	t.Parallel()
+
+	home := t.TempDir()
+	if err := os.WriteFile(filepath.Join(home, "AGENTS.md"), []byte("mine"), 0o600); err != nil {
+		t.Fatalf("seed AGENTS.md: %v", err)
+	}
+	got, err := resolveTargets(&Command{global: true}, host.NewRegistry(), home)
+	if err != nil || !slices.Equal(got, []string{"claude"}) {
+		t.Errorf("resolveTargets = %v, %v, want [claude]", got, err)
 	}
 }

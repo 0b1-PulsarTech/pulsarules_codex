@@ -9,8 +9,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/generate"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/governance"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/hook"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/install"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/list"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/packaging"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/uninstall"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/validate"
 )
 
@@ -52,6 +54,14 @@ func table() []entry {
 		{
 			name:  "governance",
 			build: func(env flags.Environment) command.Runner { return governance.New(env) },
+		},
+		{
+			name:  "install",
+			build: func(env flags.Environment) command.Runner { return install.New(env) },
+		},
+		{
+			name:  "uninstall",
+			build: func(env flags.Environment) command.Runner { return uninstall.New(env) },
 		},
 		{
 			name:  "hook",

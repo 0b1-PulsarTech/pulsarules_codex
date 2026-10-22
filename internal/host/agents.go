@@ -11,6 +11,8 @@ var _ Target = agentsTarget{}
 
 func (agentsTarget) Name() string { return "agents" }
 
+func (agentsTarget) ProjectOnly() {}
+
 func (agentsTarget) Present(base string) bool {
 	if _, err := os.Stat(filepath.Join(base, "AGENTS.md")); err != nil {
 		return false
