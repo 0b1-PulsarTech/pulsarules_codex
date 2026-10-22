@@ -27,14 +27,14 @@ func (check emojiCheck) validateCatalog() []finding.Finding {
 	var findings []finding.Finding
 	for _, shortcode := range check.message.LeadingEmojis {
 		if replacement, banned := emoji.ProhibitedReplacement(shortcode); banned {
-			message := "emoji :" + shortcode + ": is prohibited by project convention"
+			reason := "emoji :" + shortcode + ": is prohibited by project convention"
 			if replacement != "" {
-				message += "; use :" + replacement + ": instead"
+				reason += "; use :" + replacement + ": instead"
 			}
 			findings = append(
 				findings,
 				check.reporters[ruleEmojiProhibited].NewWithSuggestion(
-					message,
+					reason,
 					check.suggestionText(),
 				),
 			)
