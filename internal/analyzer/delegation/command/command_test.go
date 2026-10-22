@@ -111,7 +111,7 @@ func (counter walkCounter) Walk(func(path, ext string) bool) { counter.walks.Add
 func TestAnalyzeListsOnlyWhenACommandIsConfigured(t *testing.T) {
 	t.Parallel()
 
-	command := pass.DelegatedCommand{
+	delegated := pass.DelegatedCommand{
 		ID: entryID, Format: "dart-analyze-json", Run: []string{"no-such-tool-xyz"},
 	}
 	testCases := []struct {
@@ -122,7 +122,7 @@ func TestAnalyzeListsOnlyWhenACommandIsConfigured(t *testing.T) {
 		{"nil config", nil, 0},
 		{"no delegated entry", &pass.AnalysisConfig{}, 0},
 		{"one delegated entry", &pass.AnalysisConfig{
-			Delegated: []pass.DelegatedCommand{command},
+			Delegated: []pass.DelegatedCommand{delegated},
 		}, 1},
 	}
 	for _, testCase := range testCases {

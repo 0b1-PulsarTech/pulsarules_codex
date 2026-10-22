@@ -45,8 +45,8 @@ func synopsisLines() ([]string, error) {
 	return append(lines, "version"), nil
 }
 
-func IsHelp(command string) bool {
-	switch command {
+func IsHelp(arg string) bool {
+	switch arg {
 	case "help", "-h", "--help":
 		return true
 	}
