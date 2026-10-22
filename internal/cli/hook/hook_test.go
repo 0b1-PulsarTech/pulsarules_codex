@@ -245,21 +245,29 @@ func (rec closeRecorder) Close() error {
 	return nil
 }
 
-//nolint:paralleltest // captureStderr swaps os.Stderr.
+//nolint:paralleltest // captureStream swaps os.Stdout and os.Stderr.
 func TestCommand_Run_NeverFailsOnALoggerFailure(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+
 	needs := hookServices(t)
 	needs.OpenLogger = func() (Logging, error) {
 		return Logging{}, errors.New("build logger: boom")
 	}
 	var err error
-	stderr := captureStderr(t, func() {
-		err = New(flags.Environment{}).Run(needs, []string{"pre-search"})
+	var stderr string
+	stdout := captureStream(t, &os.Stdout, func() {
+		stderr = captureStderr(t, func() {
+			err = New(flags.Environment{}).Run(needs, []string{"session-start"})
+		})
 	})
 	if err != nil {
 		t.Errorf("Run() = %v, want nil so the turn is never blocked", err)
 	}
 	if want := "hook: build logger: build logger: boom\n"; stderr != want {
 		t.Errorf("stderr = %q, want %q", stderr, want)
+	}
+	if stdout != "" {
+		t.Errorf("stdout = %q, want nothing: a failed logger must stop the hook", stdout)
 	}
 }
 
