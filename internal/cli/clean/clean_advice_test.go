@@ -125,7 +125,7 @@ func TestSweep_EscapePhraseIsTheSharedOne(t *testing.T) {
 				t.Fatalf("write: %v", err)
 			}
 			var out strings.Builder
-			if err := sweep(&out, root, report, nil); err != nil {
+			if err := sweep(&out, root, inspecting(), nil); err != nil {
 				t.Fatalf("sweep: %v", err)
 			}
 			if !strings.Contains(out.String(), testCase.want) {

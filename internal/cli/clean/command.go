@@ -28,9 +28,9 @@ func (cmd *Command) ProjectDir() string {
 
 func (cmd *Command) Run(inj remy.Injector, _ []string) error {
 	// Only --write mutates; the dangerous path is the one a caller has to ask for.
-	how := report
+	how := inspecting()
 	if cmd.write {
-		how = rewrite
+		how = rewriting()
 	}
 	repo, err := command.OptionalRepository(inj)
 	if err != nil {

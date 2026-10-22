@@ -15,14 +15,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/source"
 )
 
-type mode uint8
-
-const (
-	report mode = iota
-	rewrite
-)
-
-func sweep(out io.Writer, dir string, how mode, repo discovery.Lister) error {
+func sweep(out io.Writer, dir string, how sweepStrategy, repo discovery.Lister) error {
 	root, scope, err := scopeWithin(dir, repo)
 	if err != nil {
 		return err
@@ -35,7 +28,7 @@ func sweep(out io.Writer, dir string, how mode, repo discovery.Lister) error {
 			return true
 		}
 		// Walk yields a path relative to root; Abs would anchor it to the working directory.
-		found, err := inspectOrClean(cleanerItem, filepath.Join(root, rel), how)
+		found, err := how.apply(cleanerItem, filepath.Join(root, rel))
 		if err != nil {
 			walkErr = err
 			return false
@@ -51,11 +44,7 @@ func sweep(out io.Writer, dir string, how mode, repo discovery.Lister) error {
 		return fmt.Errorf("clean %q: %w", root, walkErr)
 	}
 
-	line := tally.ReportLine()
-	if how == rewrite {
-		line = tally.WriteLine()
-	}
-	_, _ = fmt.Fprintln(out, line)
+	_, _ = fmt.Fprintln(out, how.summary(tally))
 	return nil
 }
 
@@ -109,14 +98,7 @@ func walkSources(root string, repo discovery.Lister, visit func(rel, ext string)
 	provider.Walk(visit)
 }
 
-func inspectOrClean(cleaner *cleaner.Cleaner, path string, how mode) (cleaner.Report, error) {
-	if how == rewrite {
-		return cleaner.CleanFile(path)
-	}
-	return cleaner.Inspect(path)
-}
-
-func printReport(out io.Writer, found cleaner.Report, how mode) {
+func printReport(out io.Writer, found cleaner.Report, how sweepStrategy) {
 	path := printable.Path(found.Path)
 	if found.Skipped() {
 		_, _ = fmt.Fprintf(out, "%s: %s\n", path, found.SkipNote())
@@ -125,16 +107,12 @@ func printReport(out io.Writer, found cleaner.Report, how mode) {
 	for _, acted := range found.Acted {
 		_, _ = fmt.Fprintf(out, "%s:%d removed %s\n", path, acted.Line, acted.Name)
 	}
-	verb := "found"
-	if how == rewrite {
-		verb = "left"
-	}
 	for _, left := range found.Remaining {
 		note := advice(left.Class, filepath.Ext(found.Path), found.EscapeAdvice(left))
 		if held := found.HeldNote(left); held != "" {
 			note = held
 		}
-		_, _ = fmt.Fprintf(out, "%s:%d %s %s (%s)\n", path, left.Line, verb, left.Name, note)
+		_, _ = fmt.Fprintf(out, "%s:%d %s %s (%s)\n", path, left.Line, how.verb, left.Name, note)
 	}
 }
 
