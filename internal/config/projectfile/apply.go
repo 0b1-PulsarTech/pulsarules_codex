@@ -8,7 +8,6 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
 func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
@@ -106,30 +105,6 @@ func (val *validator) checkOverride(field *fieldPath, override OverrideEntry) {
 		val.checkSeverity(idField.key("severity"), rules.Severity)
 		val.checkOverrideParams(idField.key("params"), id, rules.Params)
 	}
-}
-
-func (val *validator) checkGlobBudget(globs []string) bool {
-	size, wildcards, tails := 0, 0, 0
-	for _, pattern := range globs {
-		size += len(pattern)
-		wildcards += glob.WildcardWork(pattern)
-		tails += glob.StarTail(pattern)
-	}
-	at := val.root.key("overrides and tests")
-	switch {
-	case len(globs) > MaxTotalGlobs:
-		val.fail(at, "more than %d globs in total", MaxTotalGlobs)
-	case size > MaxTotalGlobBytes:
-		val.fail(at, "globs exceed %d bytes in total", MaxTotalGlobBytes)
-	case wildcards > MaxWildcardWork:
-		val.fail(at, "wildcard classes and ? exceed %d in total", MaxWildcardWork)
-	case tails > MaxStarTextBytes:
-		val.fail(at, "text after the first * of each segment exceeds %d bytes in total",
-			MaxStarTextBytes)
-	default:
-		return true
-	}
-	return false
 }
 
 func (val *validator) checkOverrideParams(field *fieldPath, id string, params map[string]any) {

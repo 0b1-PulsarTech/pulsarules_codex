@@ -2,7 +2,6 @@ package projectfile
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 	"testing"
 )
@@ -339,63 +338,6 @@ func overlongProblems(prefix string, count int) string {
 		problems[idx] = fmt.Sprintf("%stests[%d]: glob longer than 256 bytes", prefix, idx)
 	}
 	return strings.Join(problems, "; ")
-}
-
-func TestValidateGlobChecksPrecedeBudgets(t *testing.T) {
-	t.Parallel()
-
-	list := func(globs ...string) string { return "['" + strings.Join(globs, "', '") + "']" }
-	overlong := "**/*" + strings.Repeat("a", 300)
-	tail := "*" + strings.Repeat("b", 255)
-	class := "[" + strings.Repeat("a", 127) + "]"
-	prefix := Name + ": "
-	testCases := []struct {
-		name    string
-		content string
-		want    string
-	}{
-		{
-			"overlong globs are not charged to the budgets",
-			"version: 1\ntests: " + list(slices.Repeat([]string{overlong}, 8)...) + "\n",
-			overlongProblems(prefix, 8),
-		},
-		{
-			"the class budget is reported before the star text budget",
-			"version: 1\ntests: " + list(slices.Repeat([]string{tail}, 9)...) +
-				"\noverrides: [{files: " + list(class, class) + "}]\n",
-			prefix + "overrides and tests: wildcard classes and ? exceed 256 in total",
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-			file, err := decodeFile([]byte(testCase.content))
-			if err != nil {
-				t.Fatalf("decodeFile() error = %v", err)
-			}
-			if err = file.Validate(testRules()); err == nil || err.Error() != testCase.want {
-				t.Fatalf("Validate() error = %v, want only %q", err, testCase.want)
-			}
-		})
-	}
-}
-
-func TestValidateUncompilableGlobsAreNotCharged(t *testing.T) {
-	t.Parallel()
-
-	unclosed := "'[" + strings.Repeat("a", 130) + "'"
-	content := "version: 1\ntests: [" + unclosed + ", " + unclosed + "]\n"
-	file, err := decodeFile([]byte(content))
-	if err != nil {
-		t.Fatalf("decodeFile() error = %v", err)
-	}
-	err = file.Validate(testRules())
-	if err == nil || strings.Contains(err.Error(), "overrides and tests") {
-		t.Fatalf("Validate() error = %v, want only the compile problems", err)
-	}
-	if got := strings.Count(err.Error(), "compile glob"); got != 2 {
-		t.Fatalf("Validate() error = %v, want 2 compile problems", err)
-	}
 }
 
 func TestValidateAnyAnalyzer(t *testing.T) {

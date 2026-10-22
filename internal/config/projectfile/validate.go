@@ -1,7 +1,6 @@
 package projectfile
 
 import (
-	"fmt"
 	"maps"
 	"path/filepath"
 	"slices"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/workspace/glob"
 )
 
 type validator struct {
@@ -146,35 +144,4 @@ func delegatedIDs(entries []DelegatedEntry) map[string]bool {
 		ids[entry.ID] = entry.ID != ""
 	}
 	return ids
-}
-
-func (val *validator) checkGlobs(at *fieldPath, globs []string) []string {
-	passed := make([]string, 0, len(globs))
-	for idx, pattern := range globs {
-		if fault := globFault(pattern); fault != "" {
-			val.fail(at.item(idx), "%s", fault)
-			continue
-		}
-		if _, err := glob.Compile(pattern); err != nil {
-			reason := strings.TrimPrefix(err.Error(), fmt.Sprintf("compile glob %q: ", pattern))
-			val.fail(at.item(idx), "compile glob %q: %s", clipValue(pattern), clipValue(reason))
-			continue
-		}
-		passed = append(passed, pattern)
-	}
-	return passed
-}
-
-func globFault(pattern string) string {
-	switch {
-	case len(pattern) > MaxGlobBytes:
-		return fmt.Sprintf("glob longer than %d bytes", MaxGlobBytes)
-	case glob.HasBrace(pattern):
-		return "brace alternatives are not supported; list each glob"
-	case glob.StarCount(pattern) > MaxGlobStars:
-		return fmt.Sprintf(
-			"glob has more than %d * (** and lone * segments are free)", MaxGlobStars,
-		)
-	}
-	return ""
 }
