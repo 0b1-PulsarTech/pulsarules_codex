@@ -122,8 +122,6 @@ func TestTailStartVisitsOnlyTheTail(t *testing.T) {
 	}
 }
 
-func clipTail(text string, limit int) string { return clip(text, limit, len(ellipsis), tailEdge) }
-
 func fitHead(text string, limit int) string {
 	kept, whole := Fit(text, limit)
 	return fmt.Sprint(kept, " ", whole)
@@ -154,11 +152,6 @@ func TestShorten(t *testing.T) {
 		{"head complete escape text", Shorten, "a" + bs + "x41yzvv", 8, "a" + bs + "x41..."},
 		{"head invalid bytes", Shorten, "a\xff\xff\xff", 8, `a\xff...`},
 		{"head backslash then rune", Shorten, "x" + bs + acc + "abcd", 4, "x..."},
-		{"tail fits", clipTail, "abc", 3, "abc"},
-		{"tail cut", clipTail, "abcdefg", 6, "...efg"},
-		{"tail never splits a rune", clipTail, "ab" + acc + acc + "x", 6, "..." + acc + "x"},
-		{"tail escapes the kept part", clipTail, "a" + ctl + ctl + ctl, 11, `...\x01\x01`},
-		{"tail literal backslash", clipTail, "xxxx" + bs + acc + "ab", 8, "..." + bs + acc + "ab"},
 		{"fit stops before the limit", fitHead, "ab" + ctl + "cd", 6, "ab" + ctl + " false"},
 		{"fit keeps all", fitHead, "ab", 2, "ab true"},
 	}
