@@ -15,6 +15,7 @@ type fakeRepo struct {
 	staged      map[string]string
 	stagedModes map[string]string
 	failHeadDir string
+	failBlob    string
 }
 
 var _ gitReader = fakeRepo{}
@@ -38,6 +39,9 @@ func (repo fakeRepo) tree(side vcs.Side) map[string]string {
 }
 
 func (repo fakeRepo) Blob(side vcs.Side, file string) (string, error) {
+	if side == vcs.Head && file == repo.failBlob {
+		return "", errMissing
+	}
 	return blobOf(repo.tree(side), file)
 }
 

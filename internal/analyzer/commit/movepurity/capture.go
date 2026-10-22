@@ -118,14 +118,19 @@ func (moves *moveContext) embedCoverDir(snap *snapshot, file string) string {
 
 func (moves *moveContext) embedsIn(snap *snapshot, files []string, rel string) bool {
 	for _, file := range files {
-		if !isGoFile(file) || moves.relocated[file] {
+		if !isGoFile(file) || moves.relocated[file] || gosrc.IsOutsidePackage(file) {
 			continue
 		}
-		if src, err := snap.blob(file); err != nil || !strings.Contains(src, "go:embed") {
+		// An unreadable or unparsable embedder counts: reporting beats a silent false negative.
+		src, err := snap.blob(file)
+		if err != nil {
+			return true
+		}
+		if !strings.Contains(src, "go:embed") {
 			continue
 		}
 		parsed, err := snap.parse(file)
-		if err == nil && !parsed.IsIgnored && gosrc.EmbedCovers(parsed.Embeds, rel) {
+		if err != nil || (!parsed.IsIgnored && gosrc.EmbedCovers(parsed.Embeds, rel)) {
 			return true
 		}
 	}

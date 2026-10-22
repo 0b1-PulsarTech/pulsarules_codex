@@ -1,6 +1,7 @@
 package movepurity
 
 import (
+	"path"
 	"testing"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -182,11 +183,14 @@ func TestEmbedSet_DetectedBeyondPackage(t *testing.T) {
 }
 
 func testEmbedderRow(name, directive, oldFile, newFile string) renameCase {
-	const production, testFile = "internal/assets/embed.go", "internal/assets/embed_test.go"
 	row := assetRow(name, directive, oldFile, newFile)
+	return embedderAt(row, "internal/assets/embed_test.go", embedSrc("assets", directive))
+}
+
+func embedderAt(row renameCase, file, src string) renameCase {
 	for _, tree := range []map[string]string{row.head, row.staged} {
-		delete(tree, production)
-		tree[testFile] = embedSrc("assets", directive)
+		delete(tree, "internal/assets/embed.go")
+		tree[file] = src
 	}
 	return row
 }
@@ -212,6 +216,49 @@ func renamedEmbedderRow() renameCase {
 		staged:  map[string]string{newGo: src, moved: "x\n", "internal/web/static/y.txt": "y\n"},
 		renames: []pass.Rename{pair(asset, moved), {OldPath: oldGo, NewPath: newGo, Score: 100}},
 	}
+}
+
+func TestEmbedSet_GuardsFailClosed(t *testing.T) {
+	t.Parallel()
+
+	const static, leaving = "//go:embed static", "internal/assets/static/logo.png"
+	row := func(name string) renameCase {
+		return assetRow(name, static, leaving, "internal/other/logo.png")
+	}
+	unreadable := row("embedder blob cannot be read")
+	unreadable.failBlob = "internal/assets/embed.go"
+	broken := row("embedder does not parse")
+	broken = embedderAt(broken, "internal/assets/embed.go", embedSrc("assets", static)+"func (\n")
+	testCases := []renameCase{
+		failingHeadDir(row("embedder directory cannot be listed"), "internal/assets"),
+		unreadable,
+		broken,
+	}
+	runRenameCases(t, testCases)
+}
+
+func TestEmbedSet_SkipsEmbeddersNeverCompiled(t *testing.T) {
+	t.Parallel()
+
+	const static = "//go:embed static"
+	row := func(name, file, src string) renameCase {
+		leaving := path.Dir(file) + "/static/logo.png"
+		base := assetRow(name, static, leaving, "internal/other/logo.png")
+		return accepted(embedderAt(base, file, src))
+	}
+	testCases := []renameCase{
+		row("build-ignored embedder", "internal/assets/embed.go",
+			"//go:build ignore\n\n"+embedSrc("assets", static)),
+		row("embedder under testdata", "internal/assets/testdata/gen.go",
+			embedSrc("gen", static)),
+		row("embedder under an underscore directory", "internal/assets/_gen/gen.go",
+			embedSrc("gen", static)),
+		row("embedder with an underscore file name", "internal/assets/_gen.go",
+			embedSrc("assets", static)),
+		row("embedder with a dot file name", "internal/assets/.gen.go",
+			embedSrc("assets", static)),
+	}
+	runRenameCases(t, testCases)
 }
 
 func TestEmbedSet_NotCovered(t *testing.T) {
