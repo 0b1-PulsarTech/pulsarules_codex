@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestRead(t *testing.T) {
+func TestReadOptional(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -30,16 +30,16 @@ func TestRead(t *testing.T) {
 
 			got, err := ReadOptional(path)
 			if err != nil {
-				t.Fatalf("Read: %v", err)
+				t.Fatalf("ReadOptional: %v", err)
 			}
 			if string(got) != testCase.wantString {
-				t.Errorf("Read = %q, want %q", got, testCase.wantString)
+				t.Errorf("ReadOptional = %q, want %q", got, testCase.wantString)
 			}
 		})
 	}
 }
 
-func TestRead_StatFailure(t *testing.T) {
+func TestReadOptional_StatFailure(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
