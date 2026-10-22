@@ -122,10 +122,10 @@ By default governance analyzes only files git reports as changed (via
 hook and pre-commit hook rely on. --all-files instead analyzes every source file
 git lists (git ls-files, tracked plus untracked-but-not-ignored), minus tool and
 dependency directories such as .claude/, testdata/, vendor/ and node_modules/, and
-falls back to a filesystem walk (skipping sources.DefaultSkipDirs) only if git
-ls-files itself fails; governance requires a git work tree. A full audit of the
-whole repository thus sees files the changed-set never would. Combine with --scope
-full for a complete governance sweep:
+falls back to a filesystem walk (skipping the default dependency and tool
+directories) only if git ls-files itself fails; governance requires a git work
+tree. A full audit of the whole repository thus sees files the changed-set never
+would. Combine with --scope full for a complete governance sweep:
 `pulsarules_cli governance --project . --scope full --all-files`.
 
 Findings in generated files are suppressed by default. A file counts as
