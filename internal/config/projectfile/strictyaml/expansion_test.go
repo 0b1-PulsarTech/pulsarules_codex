@@ -302,6 +302,7 @@ func clipPathCases() []clipPathCase {
 		{"empty", "", ""},
 		{"short", "a.b", "a.b"},
 		{"exactly the clip", strings.Repeat("a", 80), strings.Repeat("a", 80)},
+		{"a short control character", "a\x01b", `a\x01b`},
 		{"one over", "b" + strings.Repeat("a", 80), "..." + strings.Repeat("a", 80)},
 		{
 			"a rune across the cut",
