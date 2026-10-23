@@ -6,8 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/safeyaml"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/catalog"
 )
 
@@ -57,7 +56,7 @@ func readItem[Item any](standards fs.FS, path string) (Item, string, error) {
 	if err != nil {
 		return item, "", fmt.Errorf("frontmatter %q: %w", path, err)
 	}
-	if err = yaml.Unmarshal(meta, &item); err != nil {
+	if err = safeyaml.Unmarshal(meta, &item); err != nil {
 		return item, "", fmt.Errorf("parse %q: %w", path, err)
 	}
 	return item, body, nil
@@ -89,7 +88,7 @@ func readSkills(standards fs.FS, idx *Index) error {
 		return fmt.Errorf("read skills.yaml: %w", err)
 	}
 	var loaded skillsFile
-	if err = yaml.Unmarshal(raw, &loaded); err != nil {
+	if err = safeyaml.Unmarshal(raw, &loaded); err != nil {
 		return fmt.Errorf("parse skills.yaml: %w", err)
 	}
 	for _, skill := range loaded.Skills {

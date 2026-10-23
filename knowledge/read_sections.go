@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 
-	"gopkg.in/yaml.v3"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/safeyaml"
 )
 
 func readOptionalYAML[Doc any](standards fs.FS, name string) (Doc, error) {
@@ -18,7 +18,7 @@ func readOptionalYAML[Doc any](standards fs.FS, name string) (Doc, error) {
 		}
 		return loaded, fmt.Errorf("read %s: %w", name, err)
 	}
-	if err = yaml.Unmarshal(raw, &loaded); err != nil {
+	if err = safeyaml.Unmarshal(raw, &loaded); err != nil {
 		return loaded, fmt.Errorf("parse %s: %w", name, err)
 	}
 	return loaded, nil

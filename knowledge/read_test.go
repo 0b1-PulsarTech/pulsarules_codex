@@ -220,3 +220,52 @@ func TestReadIndex_DuplicateIDRejected(t *testing.T) {
 		})
 	}
 }
+
+func TestReadIndex_YAMLPanicShapeIsAnError(t *testing.T) {
+	t.Parallel()
+
+	const crafted = "<<: ~\n{!!str []: x} : x\n"
+	baseFS := func(extra fstest.MapFS) fstest.MapFS {
+		standards := fstest.MapFS{
+			"skills.yaml":         {Data: []byte("skills:\n  - id: real\n    name: Real\n")},
+			"rules/README.md":     {Data: []byte("# rules\n")},
+			"patterns/README.md":  {Data: []byte("# patterns\n")},
+			"workflows/README.md": {Data: []byte("# workflows\n")},
+		}
+		maps.Copy(standards, extra)
+		return standards
+	}
+	testCases := []struct {
+		name      string
+		standards fstest.MapFS
+		want      string
+	}{
+		{
+			"front matter", baseFS(fstest.MapFS{
+				"rules/one.md": {Data: []byte("---\n" + crafted + "---\nbody\n")},
+			}),
+			`load rules: parse "rules/one.md": yaml: runtime error: hash of unhashable type`,
+		},
+		{
+			"skills.yaml", baseFS(fstest.MapFS{
+				"skills.yaml": {Data: []byte(crafted)},
+			}),
+			`parse skills.yaml: yaml: runtime error: hash of unhashable type`,
+		},
+		{
+			"router.yaml", baseFS(fstest.MapFS{
+				"router.yaml": {Data: []byte(crafted)},
+			}),
+			`load router: parse router.yaml: yaml: runtime error: hash of unhashable type`,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := readIndex(testCase.standards)
+			if err == nil || !strings.HasPrefix(err.Error(), testCase.want) {
+				t.Errorf("readIndex error = %v, want prefix %q", err, testCase.want)
+			}
+		})
+	}
+}
