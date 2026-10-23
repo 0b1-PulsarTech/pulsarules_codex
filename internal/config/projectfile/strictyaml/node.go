@@ -10,6 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/language/lexer"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/safeyaml"
 )
 
 func mergeTargets(node *yaml.Node) ([]*yaml.Node, bool) {
@@ -55,7 +56,8 @@ func taggedNull(node *yaml.Node) bool {
 }
 
 func undecodableKey(key *yaml.Node) bool {
-	return key.Kind == yaml.ScalarNode && !isNull(key) && key.Decode(new(string)) != nil
+	return key.Kind == yaml.ScalarNode && !isNull(key) &&
+		safeyaml.DecodeNode(key, new(string)) != nil
 }
 
 func shape(typ reflect.Type) (yaml.Kind, string) {

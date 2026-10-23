@@ -4,6 +4,8 @@ import (
 	"reflect"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/safeyaml"
 )
 
 type pair struct {
@@ -35,7 +37,7 @@ func (walker *schemaWalker) walk(node *yaml.Node, typ reflect.Type, at *Field) {
 		typ = typ.Elem()
 	}
 	if typ.Kind() == reflect.Interface {
-		if node.Decode(new(any)) != nil {
+		if safeyaml.DecodeNode(node, new(any)) != nil {
 			walker.report(line, at, "invalid value")
 		}
 		return
@@ -61,7 +63,7 @@ func (walker *schemaWalker) walkValue(node *yaml.Node, typ reflect.Type, at *Fie
 		if typ.Kind() == reflect.Int && node.ShortTag() != "!!int" {
 			return false
 		}
-		return node.Decode(reflect.New(typ).Interface()) == nil
+		return safeyaml.DecodeNode(node, reflect.New(typ).Interface()) == nil
 	}
 	return true
 }

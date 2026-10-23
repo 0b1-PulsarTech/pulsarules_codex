@@ -8,6 +8,8 @@ import (
 	"reflect"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/safeyaml"
 )
 
 const (
@@ -51,7 +53,7 @@ func Decode[Target any](path string, content []byte) (Document[Target], error) {
 		return parsed, nil
 	}
 	target := new(Target)
-	err = root.Decode(target)
+	err = safeyaml.DecodeNode(root, target)
 	if err == nil {
 		parsed.Value = target
 		return parsed, nil
@@ -69,7 +71,7 @@ func Decode[Target any](path string, content []byte) (Document[Target], error) {
 func readDocument(path string, content []byte) (*yaml.Node, error) {
 	decoder := yaml.NewDecoder(bytes.NewReader(content))
 	var root yaml.Node
-	err := decoder.Decode(&root)
+	err := safeyaml.DecodeNext(decoder, &root)
 	if errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("%s: version: required", path)
 	}
@@ -78,7 +80,7 @@ func readDocument(path string, content []byte) (*yaml.Node, error) {
 	}
 	for {
 		var extra yaml.Node
-		err = decoder.Decode(&extra)
+		err = safeyaml.DecodeNext(decoder, &extra)
 		if errors.Is(err, io.EOF) {
 			return &root, nil
 		}

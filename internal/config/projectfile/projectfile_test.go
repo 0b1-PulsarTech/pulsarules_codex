@@ -131,6 +131,16 @@ func aliasKeyCases() []parseCase {
 			"&k version: 1\n*k : 2\n",
 			[]string{".pulsarules.yaml: line 2: version: duplicate key, first at line 1"},
 		},
+		{
+			"a mapping alias key beside a merge key",
+			"version: 1\nb: &b {x: 1}\nanalyzers:\n  doc-comment: {<<: ~, *b : 1}\n",
+			[]string{
+				".pulsarules.yaml: line 2: b: unknown key",
+				".pulsarules.yaml: line 4: analyzers.doc-comment.<<: " +
+					"want a mapping or a list of mappings",
+				".pulsarules.yaml: line 4: analyzers.doc-comment.<complex key>: unknown key",
+			},
+		},
 	}
 }
 
