@@ -265,6 +265,8 @@ func leftoverCases() []leftoverCase {
 			errors.New("yaml: line x: cannot do it"),
 			".pulsarules.yaml: invalid value",
 		},
+		{"other package text", errors.New("yaml: odd config.x"), ".pulsarules.yaml: odd config.x"},
+		{"own package text", errors.New("yaml: strictyaml.x"), ".pulsarules.yaml: invalid value"},
 	}
 }
 
