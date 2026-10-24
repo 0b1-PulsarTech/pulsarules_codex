@@ -4,6 +4,7 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'lines.dart';
 
 const _directives = ['ignore:', 'ignore_for_file:', 'pulsarules:'];
+const _maxDeprecatedLines = 3;
 
 String _body(String lexeme) {
   var text = lexeme.trim();
@@ -57,7 +58,7 @@ DocShape docShape(Comment doc, Lines lines, Token? chain) {
   final deprecated =
       prose.isNotEmpty &&
       prose.first.startsWith('Deprecated:') &&
-      own.length <= 3 &&
+      own.length <= _maxDeprecatedLines &&
       !own.contains('');
   final marker = prose.isNotEmpty && prose.first.startsWith('simplification:');
   return DocShape(

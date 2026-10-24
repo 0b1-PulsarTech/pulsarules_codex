@@ -148,7 +148,9 @@ func TestFindMagicNumbers_SkipsTestFiles(t *testing.T) {
 			fc := pass.FileChange{Path: "foo.go", Extension: ".go", IsTest: testCase.isTest}
 			reporter := finding.NewReporter("complexity", finding.SeverityInfo, finding.CatAST)
 
-			if got := findMagicNumbers(fset, fc, file, fn, reporter); len(got) != testCase.want {
+			settings := magicSettings{reporter: reporter, allowed: defaultAllowedNumbers()}
+			got := findMagicNumbers(fset, fc, file, fn, settings)
+			if len(got) != testCase.want {
 				t.Errorf("findMagicNumbers = %+v, want %d finding(s)", got, testCase.want)
 			}
 		})
@@ -178,7 +180,11 @@ func TestFindMagicNumbers_ReportsEveryLiteral(t *testing.T) {
 	reporter := finding.NewReporter("complexity", finding.SeverityInfo, finding.CatAST)
 
 	got := findMagicNumbers(
-		fset, pass.FileChange{Path: "foo.go", Extension: ".go"}, file, fn, reporter,
+		fset,
+		pass.FileChange{Path: "foo.go", Extension: ".go"},
+		file,
+		fn,
+		magicSettings{reporter: reporter, allowed: defaultAllowedNumbers()},
 	)
 	if len(got) != 3 {
 		t.Fatalf("findMagicNumbers = %+v, want one finding per literal", got)
