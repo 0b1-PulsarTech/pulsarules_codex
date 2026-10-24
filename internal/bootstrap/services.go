@@ -30,7 +30,7 @@ type Services struct {
 	Loader func() *loader.Layered
 }
 
-func resolve(inj remy.Injector, build builders) (Services, error) {
+func resolve(inj remy.Injector, build builders, userConfigDir string) (Services, error) {
 	var svc Services
 	var err error
 	if svc.Index, err = lookup[*knowledge.Index](inj, "knowledge index"); err != nil {
@@ -45,7 +45,7 @@ func resolve(inj remy.Injector, build builders) (Services, error) {
 	if svc.Targets, err = lookup[*host.Registry](inj, "target registry"); err != nil {
 		return Services{}, err
 	}
-	svc.Loader = sync.OnceValue(build.newLoader)
+	svc.Loader = sync.OnceValue(func() *loader.Layered { return build.newLoader(userConfigDir) })
 	svc.OpenRepository = deferred[*vcs.Repository](inj)
 	svc.OpenLogger = func() (*slog.Logger, io.Closer, error) {
 		built, err := remy.Get[logging](inj)

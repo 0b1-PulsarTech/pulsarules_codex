@@ -16,8 +16,11 @@ type Rules struct {
 }
 
 type File struct {
-	Path             string                   `yaml:"-"`
-	Sources          []string                 `yaml:"-"`
+	Path    string   `yaml:"-"`
+	Sources []string `yaml:"-"`
+	// PersonalOff lists analyzers the user layer switches off everywhere an override does not
+	// enable them again; set by the loader, never read from a file.
+	PersonalOff      []string                 `yaml:"-"`
 	Version          int                      `yaml:"version"`
 	Preset           string                   `yaml:"preset"`
 	IncludeGenerated *bool                    `yaml:"include_generated"`

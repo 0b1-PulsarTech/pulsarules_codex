@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/config/projectfile/strictyaml"
@@ -21,7 +22,7 @@ func (stack layers) merge() (*projectfile.File, error) {
 	keptBase := stack.privateWins()
 	merged := &projectfile.File{
 		Path:             mergedName(base, private),
-		Sources:          []string{base.Path, private.Path},
+		Sources:          slices.Concat(sourcesOf(base), sourcesOf(private)),
 		Version:          base.Version,
 		Preset:           cmp.Or(private.Preset, base.Preset),
 		IncludeGenerated: cmp.Or(private.IncludeGenerated, base.IncludeGenerated),
@@ -41,8 +42,62 @@ func (stack layers) merge() (*projectfile.File, error) {
 	return merged, nil
 }
 
+func (stack layers) combine() (*projectfile.File, error) {
+	merged, err := stack.mergeChecked()
+	if err != nil {
+		return nil, err
+	}
+	if err = stack.checkOverrides(merged); err != nil {
+		return nil, err
+	}
+	return merged, nil
+}
+
+func (stack layers) mergeChecked() (*projectfile.File, error) {
+	// Each file alone must build, so a fault of one file is never blamed on the merge.
+	for _, layer := range []*projectfile.File{stack.base, stack.private} {
+		if _, err := Build(layer, ""); err != nil {
+			return nil, &fileError{File: layer.Path, Err: err}
+		}
+	}
+	merged, err := stack.merge()
+	if err != nil {
+		return nil, &fileError{
+			File: firstSource(stack.base), Lead: mergedName(stack.base, stack.private), Err: err,
+		}
+	}
+	return merged, nil
+}
+
+func (stack layers) checkOverrides(merged *projectfile.File) error {
+	private := stack.private
+	// Checked against the merged project state, but numbered as in the private file.
+	project := *merged
+	project.Overrides = merged.Overrides[:len(merged.Overrides)-len(private.Overrides)]
+	cfg, err := Build(&project, stack.preset)
+	if err != nil {
+		return &fileError{File: faultFile(nil, merged), Err: err}
+	}
+	if err = private.CheckOverrides(cfg); err != nil {
+		return &fileError{File: private.Path, Err: err}
+	}
+	return nil
+}
+
 func mergedName(base, private *projectfile.File) string {
-	return base.Path + mergedJoin + private.Path + mergedSuffix
+	sources := slices.Concat(sourcesOf(base), sourcesOf(private))
+	return strings.Join(sources, mergedJoin) + mergedSuffix
+}
+
+func sourcesOf(file *projectfile.File) []string {
+	if len(file.Sources) > 0 {
+		return file.Sources
+	}
+	return []string{file.Path}
+}
+
+func firstSource(file *projectfile.File) string {
+	return sourcesOf(file)[0]
 }
 
 func checkMergedSizes(merged *projectfile.File) error {

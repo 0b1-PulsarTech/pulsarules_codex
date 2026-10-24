@@ -433,7 +433,7 @@ func TestLoaderUsesInjectedRules(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := New(testCase.rules).Load("", path, "")
+			_, err := New(testCase.rules, "").Load("", path, "")
 			if (err != nil) != testCase.wantErr {
 				t.Fatalf("Load() error = %v, wantErr %v", err, testCase.wantErr)
 			}
@@ -454,5 +454,5 @@ func TestLoaderDoesNotLinkTheRegistry(t *testing.T) {
 }
 
 func testLoader() *Layered {
-	return New(registry.ConfigRules())
+	return New(registry.ConfigRules(), "")
 }

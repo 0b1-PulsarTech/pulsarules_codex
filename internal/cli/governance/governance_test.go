@@ -418,7 +418,7 @@ func TestRunGovernance_RepositoryFailure(t *testing.T) {
 }
 
 func testLoader() *loader.Layered {
-	return loader.New(registry.ConfigRules())
+	return loader.New(registry.ConfigRules(), "")
 }
 
 func unopenableRepository() func() (*vcs.Repository, error) {
@@ -451,5 +451,5 @@ func TestGovernanceConfig_UsesTheGivenLoader(t *testing.T) {
 }
 
 func anyAnalyzerLoader() *loader.Layered {
-	return loader.New(projectfile.Rules{AnyAnalyzer: true})
+	return loader.New(projectfile.Rules{AnyAnalyzer: true}, "")
 }

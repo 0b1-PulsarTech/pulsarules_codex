@@ -13,11 +13,12 @@ import (
 )
 
 type Layered struct {
-	rules projectfile.Rules
+	rules         projectfile.Rules
+	userConfigDir string
 }
 
-func New(rules projectfile.Rules) *Layered {
-	return &Layered{rules: rules}
+func New(rules projectfile.Rules, userConfigDir string) *Layered {
+	return &Layered{rules: rules, userConfigDir: userConfigDir}
 }
 
 func (layered *Layered) Load(root, explicit, presetFlag string) (*projectfile.File, error) {

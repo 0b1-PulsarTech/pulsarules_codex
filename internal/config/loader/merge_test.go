@@ -392,3 +392,56 @@ func TestMergeSizeBoundaries(t *testing.T) {
 		})
 	}
 }
+
+func TestMergedSourcesStayFlat(t *testing.T) {
+	t.Parallel()
+
+	doc := "version: 1\n"
+	user := parseFile(t, "user.yaml", doc)
+	team := parseFile(t, ".pulsarules.yaml", doc)
+	local := parseFile(t, ".git/pulsarules.yaml", doc)
+	rules := testLoader().rules
+	pair, err := layers{base: user, private: team, rules: rules}.merge()
+	if err != nil {
+		t.Fatalf("merge() error = %v", err)
+	}
+	all, err := layers{base: pair, private: local, rules: rules}.merge()
+	if err != nil {
+		t.Fatalf("merge() error = %v", err)
+	}
+	wantSources := []string{"user.yaml", ".pulsarules.yaml", ".git/pulsarules.yaml"}
+	if !slices.Equal(all.Sources, wantSources) {
+		t.Errorf("Sources = %v, want %v", all.Sources, wantSources)
+	}
+	wantName := "user.yaml + .pulsarules.yaml + .git/pulsarules.yaml (merged)"
+	if all.Path != wantName {
+		t.Errorf("Path = %q, want %q", all.Path, wantName)
+	}
+	if got := firstSource(all); got != "user.yaml" {
+		t.Errorf("firstSource() = %q, want user.yaml", got)
+	}
+}
+
+func TestCombineBlamesTheFirstSourceOfAMergedBase(t *testing.T) {
+	t.Parallel()
+
+	manyDirs := func(prefix string) []string {
+		dirs := make([]string, 600)
+		for at := range dirs {
+			dirs[at] = fmt.Sprintf("%s%d", prefix, at)
+		}
+		return dirs
+	}
+	stack := layers{
+		base: &projectfile.File{
+			Path: "user.yaml + team.yaml (merged)", Sources: []string{"user.yaml", "team.yaml"},
+			Version: 1, SkipDirs: manyDirs("a"),
+		},
+		private: &projectfile.File{Path: "private.yaml", Version: 1, SkipDirs: manyDirs("b")},
+		rules:   testLoader().rules,
+	}
+	_, err := stack.combine()
+	if got := faultFile(err, nil); err == nil || got != "user.yaml" {
+		t.Fatalf("combine() = %v, blamed %q, want a failure blamed on user.yaml", err, got)
+	}
+}

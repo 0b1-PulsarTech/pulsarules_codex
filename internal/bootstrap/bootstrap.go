@@ -17,7 +17,7 @@ import (
 type builders struct {
 	openRepository func(dir string) (*vcs.Repository, error)
 	newCatalog     func() (*emoji.Catalog, error)
-	newLoader      func() *loader.Layered
+	newLoader      func(userConfigDir string) *loader.Layered
 	newLogger      func(cfg logfile.Config) (*slog.Logger, io.Closer, error)
 }
 
@@ -29,8 +29,10 @@ func defaultBuilders() builders {
 	return builders{
 		openRepository: vcs.Open,
 		newCatalog:     emoji.NewCatalog,
-		newLoader:      func() *loader.Layered { return loader.New(registry.ConfigRules()) },
-		newLogger:      logfile.New,
+		newLoader: func(userConfigDir string) *loader.Layered {
+			return loader.New(registry.ConfigRules(), userConfigDir)
+		},
+		newLogger: logfile.New,
 	}
 }
 
@@ -39,7 +41,7 @@ func newServices(opts Options, build builders) (Services, error) {
 	if err := doInjections(inj, opts, build); err != nil {
 		return Services{}, err
 	}
-	return resolve(inj, build)
+	return resolve(inj, build, opts.UserConfigDir)
 }
 
 func doInjections(inj remy.Injector, opts Options, build builders) error {

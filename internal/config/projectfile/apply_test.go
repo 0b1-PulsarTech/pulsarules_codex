@@ -228,3 +228,27 @@ func globOverrides(sizes ...int) string {
 	}
 	return "version: 1\noverrides: [" + strings.Join(entries, ", ") + "]\n"
 }
+
+func TestApplyToPersonalOffKeepsOverrideNumbering(t *testing.T) {
+	t.Parallel()
+
+	on := true
+	file := &File{
+		Version:     1,
+		PersonalOff: []string{"file-size"},
+		Overrides: []OverrideEntry{{
+			Files:     []string{"lib/**"},
+			Analyzers: map[string]AnalyzerEntry{"doc-comment": {Enabled: &on}},
+		}},
+	}
+	cfg := config.Defaults()
+	cfg.Preset = config.PresetMinimal
+	cfg.ApplyPreset()
+	err := file.ApplyTo(cfg)
+	if err == nil || !strings.Contains(err.Error(), "overrides[0].analyzers.doc-comment") {
+		t.Fatalf("ApplyTo() = %v, want the error numbered overrides[0]", err)
+	}
+	if len(cfg.Overrides) != 2 || !cfg.Overrides[0].Files.IsOpen() || !cfg.Enabled("file-size") {
+		t.Fatalf("overrides = %+v, want an open one first and file-size on", cfg.Overrides)
+	}
+}

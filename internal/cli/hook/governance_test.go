@@ -247,7 +247,7 @@ func TestGovernanceCheck_CatalogFailureYieldsNothing(t *testing.T) {
 }
 
 func testLoader() func() *loader.Layered {
-	return func() *loader.Layered { return loader.New(registry.ConfigRules()) }
+	return func() *loader.Layered { return loader.New(registry.ConfigRules(), "") }
 }
 
 func TestGovernor_Changes_UsesItsLoader(t *testing.T) {
@@ -261,7 +261,7 @@ func TestGovernor_Changes_UsesItsLoader(t *testing.T) {
 	}{
 		{"registry rules reject it", testLoader(), true},
 		{"a loader built for any analyzer accepts it", func() *loader.Layered {
-			return loader.New(projectfile.Rules{AnyAnalyzer: true})
+			return loader.New(projectfile.Rules{AnyAnalyzer: true}, "")
 		}, false},
 	}
 	for _, testCase := range testCases {

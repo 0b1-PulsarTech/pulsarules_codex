@@ -182,7 +182,7 @@ func TestBootstrapOptions_ReadsTheEnvironmentOnce(t *testing.T) {
 	logPath := filepath.Join("/proj", ".claude", "hook-execution.log")
 	call, err := Parse(
 		[]string{"hook", "--root", "/root", "stop"},
-		flags.Environment{LogPath: logPath},
+		flags.Environment{LogPath: logPath, UserConfigDir: "/user-config"},
 		io.Discard,
 	)
 	if err != nil {
@@ -191,6 +191,9 @@ func TestBootstrapOptions_ReadsTheEnvironmentOnce(t *testing.T) {
 	got := call.BootstrapOptions()
 	if got.LogPath != logPath || got.Root != "/root" {
 		t.Errorf("BootstrapOptions() = %+v, want LogPath %q and Root /root", got, logPath)
+	}
+	if got.UserConfigDir != "/user-config" {
+		t.Errorf("UserConfigDir = %q, want /user-config from the environment", got.UserConfigDir)
 	}
 	unset, err := Parse([]string{"hook"}, flags.Environment{}, io.Discard)
 	if err != nil {

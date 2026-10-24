@@ -32,9 +32,10 @@ func (call Invocation) BootstrapOptions() bootstrap.Options {
 		projectDir = anchored.ProjectDir()
 	}
 	return bootstrap.Options{
-		Root:       call.root,
-		ProjectDir: projectDir,
-		LogLevel:   call.logLevel,
-		LogPath:    call.env.LogPath,
+		Root:          call.root,
+		ProjectDir:    projectDir,
+		LogLevel:      call.logLevel,
+		LogPath:       call.env.LogPath,
+		UserConfigDir: call.env.UserConfigDir,
 	}
 }

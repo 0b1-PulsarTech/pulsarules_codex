@@ -73,28 +73,13 @@ func TestNewServices_BuildsOnlyWhatIsAsked(t *testing.T) {
 	t.Parallel()
 
 	logPath := filepath.Join(t.TempDir(), "x.log")
-	var repositories, catalogs, loaders, loggers int
-	counted := defaultBuilders()
-	openRepository, newCatalog, newLoader, newLogger :=
-		counted.openRepository, counted.newCatalog, counted.newLoader, counted.newLogger
-	counted.openRepository = func(dir string) (*vcs.Repository, error) {
-		repositories++
-		return openRepository(dir)
-	}
-	counted.newCatalog = func() (*emoji.Catalog, error) {
-		catalogs++
-		return newCatalog()
-	}
-	counted.newLoader = func() *loader.Layered {
-		loaders++
-		return newLoader()
-	}
-	counted.newLogger = func(cfg logfile.Config) (*slog.Logger, io.Closer, error) {
-		loggers++
-		return newLogger(cfg)
-	}
+	counts := &buildCounts{}
+	counted := counts.builders()
 
-	svc, err := newServices(Options{ProjectDir: ".", LogLevel: "debug", LogPath: logPath}, counted)
+	userDir := t.TempDir()
+	svc, err := newServices(Options{
+		ProjectDir: ".", LogLevel: "debug", LogPath: logPath, UserConfigDir: userDir,
+	}, counted)
 	if err != nil {
 		t.Fatalf("newServices: %v", err)
 	}
@@ -110,13 +95,13 @@ func TestNewServices_BuildsOnlyWhatIsAsked(t *testing.T) {
 		ask   func()
 		built *int
 	}{
-		{"repository", func() { _, _ = svc.OpenRepository() }, &repositories},
-		{"catalog", func() { _, _ = svc.LoadCatalog() }, &catalogs},
-		{"config loader", func() { _ = svc.Loader() }, &loaders},
+		{"repository", func() { _, _ = svc.OpenRepository() }, &counts.repositories},
+		{"catalog", func() { _, _ = svc.LoadCatalog() }, &counts.catalogs},
+		{"config loader", func() { _ = svc.Loader() }, &counts.loaders},
 		{"logger", func() {
 			_, closer, _ := svc.OpenLogger()
 			t.Cleanup(func() { _ = closer.Close() })
-		}, &loggers},
+		}, &counts.loggers},
 	}
 	for _, testCase := range testCases {
 		if *testCase.built != 0 {
@@ -129,6 +114,7 @@ func TestNewServices_BuildsOnlyWhatIsAsked(t *testing.T) {
 			t.Errorf("%s builds after one request = %d, want 1", testCase.name, *testCase.built)
 		}
 	}
+	requireUserDir(t, counts.loaderDir, userDir)
 	if _, statErr := os.Stat(logPath); statErr != nil {
 		t.Errorf("the log file is missing after the logger was asked for: %v", statErr)
 	}
@@ -142,4 +128,41 @@ func TestNewServices_BuildsOnlyWhatIsAsked(t *testing.T) {
 			)
 		}
 	}
+}
+
+func requireUserDir(t *testing.T, got, want string) {
+	t.Helper()
+
+	if got != want {
+		t.Errorf("the loader got UserConfigDir %q, want %q from Options", got, want)
+	}
+}
+
+type buildCounts struct {
+	repositories, catalogs, loaders, loggers int
+	loaderDir                                string
+}
+
+func (counts *buildCounts) builders() builders {
+	counted := defaultBuilders()
+	openRepository, newCatalog, newLoader, newLogger :=
+		counted.openRepository, counted.newCatalog, counted.newLoader, counted.newLogger
+	counted.openRepository = func(dir string) (*vcs.Repository, error) {
+		counts.repositories++
+		return openRepository(dir)
+	}
+	counted.newCatalog = func() (*emoji.Catalog, error) {
+		counts.catalogs++
+		return newCatalog()
+	}
+	counted.newLoader = func(userConfigDir string) *loader.Layered {
+		counts.loaders++
+		counts.loaderDir = userConfigDir
+		return newLoader(userConfigDir)
+	}
+	counted.newLogger = func(cfg logfile.Config) (*slog.Logger, io.Closer, error) {
+		counts.loggers++
+		return newLogger(cfg)
+	}
+	return counted
 }

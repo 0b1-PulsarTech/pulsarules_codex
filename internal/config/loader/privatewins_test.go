@@ -299,3 +299,141 @@ func TestOverridePrecedence(t *testing.T) {
 		})
 	}
 }
+
+type liftCase struct {
+	name, user, flag string
+	spec             layout
+	wantErr          string
+	wantLifted       []string
+	// wantScopedAt names the analyzer an override must enable at big/ only, path-less included.
+	wantScopedAt string
+	wantOffEvery string
+}
+
+func liftCases() []liftCase {
+	const sizeOff = "analyzers: {file-size: {enabled: false}}\n"
+	const (
+		branchOff  = "analyzers: {branch-name: {enabled: false}}\n"
+		overNarrow = "an override can only narrow it"
+	)
+	return []liftCase{
+		{
+			name: "a user disable never invalidates a team override", user: baseStrict + sizeOff,
+			spec:       layout{base: doc(enableDoc("big/**", "file-size")), git: true},
+			wantLifted: []string{"file-size"}, wantScopedAt: "file-size",
+		},
+		{
+			name: "a user preset never invalidates a team override", user: privateMinimal,
+			spec:       layout{base: doc(enableDoc("big/**", "complexity")), git: true},
+			wantLifted: []string{"complexity"}, wantScopedAt: "complexity",
+		},
+		{
+			name: "a user disable never invalidates a private override", user: doc(sizeOff),
+			spec:       layout{private: doc(enableDoc("big/**", "file-size")), git: true},
+			wantLifted: []string{"file-size"}, wantScopedAt: "file-size",
+		},
+		{
+			name: "a user disable holds for a finding with no path", user: doc(branchOff),
+			spec:       layout{base: doc(enableDoc("big/**", "branch-name")), git: true},
+			wantLifted: []string{"branch-name"}, wantScopedAt: "branch-name",
+		},
+		{
+			name: "a team override that disables it does not lift", user: doc(sizeOff),
+			spec: layout{
+				base: doc(overridesOf(
+					"{files: ['big/**'], analyzers: {file-size: {enabled: false}}}",
+				)),
+				git: true,
+			},
+			wantOffEvery: "file-size",
+		},
+		{
+			name: "an empty user file hides no preset flag violation", user: doc(), flag: "minimal",
+			spec:    layout{base: doc(enableDoc("big/**", "complexity")), git: true},
+			wantErr: overNarrow,
+		},
+		{
+			name: "no user file reports the preset flag violation", flag: "minimal",
+			spec:    layout{base: doc(enableDoc("big/**", "complexity")), git: true},
+			wantErr: overNarrow,
+		},
+		{
+			name: "a preset flag over a user preset lifts nothing", user: privateMinimal,
+			flag: "strict",
+			spec: layout{base: doc(enableDoc("big/**", "complexity")), git: true},
+		},
+		{
+			name: "nothing to lift emits no personal override", user: doc(sizeOff),
+			spec: layout{base: doc(enableDoc("big/**", "complexity")), git: true},
+		},
+	}
+}
+
+func TestUnderlayLiftsOnlyWhatAnOverrideEnables(t *testing.T) {
+	t.Parallel()
+
+	for _, testCase := range liftCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			layered := New(testLoader().rules, placeUser(t, testCase.user))
+			file, err := layered.Load(testCase.spec.build(t), "", testCase.flag)
+			if err == nil {
+				var cfg *config.GovernanceConfig
+				if cfg, err = Build(file, testCase.flag); err == nil {
+					assertLifted(t, file, cfg, testCase)
+					return
+				}
+			}
+			if testCase.wantErr == "" || !strings.Contains(err.Error(), testCase.wantErr) {
+				t.Fatalf("error = %v, want containing %q", err, testCase.wantErr)
+			}
+		})
+	}
+}
+
+func assertLifted(
+	t *testing.T, file *projectfile.File, cfg *config.GovernanceConfig, testCase liftCase,
+) {
+	t.Helper()
+	if testCase.wantErr != "" {
+		t.Fatalf("no error, want one containing %q", testCase.wantErr)
+	}
+	if !slices.Equal(file.PersonalOff, testCase.wantLifted) {
+		t.Fatalf("PersonalOff = %v, want %v", file.PersonalOff, testCase.wantLifted)
+	}
+	if len(testCase.wantLifted) == 0 {
+		assertNoOpenOverride(t, file, cfg)
+	}
+	if id := testCase.wantOffEvery; id != "" && cfg.Enabled(id) {
+		t.Fatalf("%s runs, want it off for the whole project", id)
+	}
+	if id := testCase.wantScopedAt; id != "" {
+		assertScopedAt(t, cfg, id)
+	}
+}
+
+func assertNoOpenOverride(t *testing.T, file *projectfile.File, cfg *config.GovernanceConfig) {
+	t.Helper()
+	if len(file.Overrides) != len(cfg.Overrides) {
+		t.Fatalf("overrides = %+v, want only the file's %d", cfg.Overrides, len(file.Overrides))
+	}
+	for _, override := range cfg.Overrides {
+		if override.Files.IsOpen() {
+			t.Fatalf("open override %+v emitted with nothing lifted", override)
+		}
+	}
+}
+
+func assertScopedAt(t *testing.T, cfg *config.GovernanceConfig, id string) {
+	t.Helper()
+	if !cfg.Enabled(id) {
+		t.Fatalf("%s is off for the whole project, an override cannot reach it", id)
+	}
+	for path, want := range map[string]bool{"big/a.go": true, "other/a.go": false, "": false} {
+		hit := finding.Finding{AnalyzerID: id, File: path}
+		kept := len(overrides.Apply([]finding.Finding{hit}, id, cfg.Overrides)) == 1
+		if kept != want {
+			t.Errorf("%s kept at %q = %v, want %v", id, path, kept, want)
+		}
+	}
+}

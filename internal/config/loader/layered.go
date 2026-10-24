@@ -9,7 +9,10 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
 
-const privateFileName = "pulsarules.yaml"
+const (
+	privateFileName = "pulsarules.yaml"
+	userDirName     = "pulsarules"
+)
 
 type commonDirResolver func(dir string) (string, error)
 
@@ -19,63 +22,56 @@ type layers struct {
 	rules         projectfile.Rules
 }
 
+type layerLoader func(rules projectfile.Rules) (*projectfile.File, error)
+
 func (layered *Layered) loadLayers(
 	root string, resolve commonDirResolver, presetFlag string,
 ) (*projectfile.File, error) {
-	base, baseErr := loadOptional(filepath.Join(root, projectfile.Name),
-		projectfile.Name, layered.rules)
-	rules := privateRules(layered.rules, base)
-	// A failed base hides its delegated ids, so the private ids cannot be judged yet.
-	rules.AnyAnalyzer = baseErr != nil
-	private, privateErr := loadPrivate(root, resolve, rules)
-	switch {
-	case baseErr != nil && privateErr != nil:
-		return nil, joinFaults(baseErr, privateErr)
-	case baseErr != nil:
-		return nil, baseErr
-	case privateErr != nil:
-		return nil, privateErr
-	case private == nil:
-		return base, nil
-	case base == nil:
-		return private, nil
+	loaders := []layerLoader{
+		func(rules projectfile.Rules) (*projectfile.File, error) {
+			return layered.loadUser(root, rules)
+		},
+		func(rules projectfile.Rules) (*projectfile.File, error) {
+			return loadOptional(filepath.Join(root, projectfile.Name), projectfile.Name, rules)
+		},
+		func(rules projectfile.Rules) (*projectfile.File, error) {
+			return loadPrivate(root, resolve, rules)
+		},
 	}
-	stack := layers{base: base, private: private, preset: presetFlag, rules: layered.rules}
-	return stack.combine()
+	rules := layered.rules
+	var user *projectfile.File
+	var files []*projectfile.File
+	var faults []error
+	for at, load := range loaders {
+		file, err := load(rules)
+		if err != nil {
+			faults = append(faults, err)
+			// A failed layer hides its delegated ids, so the layers above cannot be judged yet.
+			rules.AnyAnalyzer = true
+			continue
+		}
+		if file == nil {
+			continue
+		}
+		rules = privateRules(rules, file)
+		if at == 0 {
+			user = file
+			continue
+		}
+		files = append(files, file)
+	}
+	if len(faults) > 0 {
+		return nil, joinAll(faults)
+	}
+	return layered.stack(user, files, presetFlag)
 }
 
-func (stack layers) combine() (*projectfile.File, error) {
-	// Each file alone must build, so a fault of one file is never blamed on the merge.
-	for _, layer := range []*projectfile.File{stack.base, stack.private} {
-		if _, err := Build(layer, ""); err != nil {
-			return nil, &fileError{File: layer.Path, Err: err}
-		}
+func joinAll(faults []error) error {
+	joined := faults[0]
+	for _, next := range faults[1:] {
+		joined = joinFaults(joined, next)
 	}
-	merged, err := stack.merge()
-	if err != nil {
-		return nil, &fileError{
-			File: stack.base.Path, Lead: mergedName(stack.base, stack.private), Err: err,
-		}
-	}
-	if err = stack.checkOverrides(merged); err != nil {
-		return nil, err
-	}
-	return merged, nil
-}
-
-func (stack layers) checkOverrides(merged *projectfile.File) error {
-	private := stack.private
-	// Checked against the merged project state, but numbered as in the private file.
-	project := *merged
-	project.Overrides = merged.Overrides[:len(merged.Overrides)-len(private.Overrides)]
-	cfg, err := Build(&project, stack.preset)
-	if err != nil {
-		return &fileError{File: faultFile(nil, merged), Err: err}
-	}
-	if err = private.CheckOverrides(cfg); err != nil {
-		return &fileError{File: private.Path, Err: err}
-	}
-	return nil
+	return joined
 }
 
 func loadPrivate(

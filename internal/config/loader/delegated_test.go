@@ -1,6 +1,8 @@
 package loader
 
 import (
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -189,4 +191,201 @@ func dartSeverity(cfg *config.GovernanceConfig) string {
 	probe := []finding.Finding{{AnalyzerID: "dart-an", Severity: finding.SeverityError}}
 	rules := slices.Concat(cfg.SeverityRules, cfg.Overrides)
 	return overrides.Apply(probe, "dart-an", rules)[0].Severity.String()
+}
+
+type userCase struct {
+	name         string
+	user         string
+	noUserDir    bool
+	spec         layout
+	wantPreset   string
+	wantFileSize string
+	wantNil      bool
+	wantErr      []string
+	wantFile     string
+}
+
+func userLayerCases() []userCase {
+	return slices.Concat(userOverrideCases(), userOverflowCases(), userMergeCases())
+}
+
+const (
+	sizeOff  = "analyzers: {file-size: {enabled: false}}\n"
+	userPath = "pulsarules/pulsarules.yaml"
+)
+
+func userOverrideCases() []userCase {
+	const dartAn = "delegated: [{id: dart-an, run: [dart, analyze], format: dart-analyze-json}]\n"
+	return []userCase{
+		{
+			name: "the team tunes a command only the user file defines",
+			user: "version: 1\n" + dartAn,
+			spec: layout{base: "version: 1\nanalyzers: {dart-an: {severity: info}}\n", git: true},
+		},
+		{
+			name: "the private file tunes a command only the user file defines",
+			user: "version: 1\n" + dartAn,
+			spec: layout{
+				base: "version: 1\n", git: true,
+				private: "version: 1\nanalyzers: {dart-an: {severity: info}}\n",
+			},
+		},
+	}
+}
+
+func userOverflowCases() []userCase {
+	return []userCase{
+		{
+			name: "three layers overflowing a list blame the user file",
+			user: doc("skip_dirs: " + names("u", 400)),
+			spec: layout{
+				base: doc("skip_dirs: " + names("t", 400)), git: true,
+				private: doc("skip_dirs: " + names("p", 400)),
+			},
+			wantErr:  []string{"skip_dirs: more than 1024 entries"},
+			wantFile: userPath,
+		},
+		{
+			name: "project layers overflowing a list blame the team file",
+			user: "version: 1\n" + sizeOff,
+			spec: layout{
+				base: doc("skip_dirs: " + names("t", 600)), git: true,
+				private: doc("skip_dirs: " + names("p", 600)),
+			},
+			wantErr:  []string{"skip_dirs: more than 1024 entries"},
+			wantFile: ".pulsarules.yaml",
+		},
+	}
+}
+
+func userMergeCases() []userCase {
+	const sizeOn = "analyzers: {file-size: {enabled: true}}\n"
+	return []userCase{
+		{
+			name: "user only", user: baseStrict, spec: layout{git: true},
+			wantPreset: "strict",
+		},
+		{
+			name: "user plus team, team wins", user: baseStrict + sizeOn,
+			spec:       layout{base: privateMinimal + sizeOff, git: true},
+			wantPreset: "minimal", wantFileSize: "off",
+		},
+		{
+			name: "all three layers", user: baseStrict + sizeOn,
+			spec: layout{
+				base: "version: 1\n" + sizeOff, private: "version: 1\n" + sizeOn, git: true,
+			},
+			wantPreset: "strict", wantFileSize: "on",
+		},
+		{
+			name: "private still wins over both", user: baseStrict + sizeOn,
+			spec: layout{
+				base:    "version: 1\npreset: recommended\n" + sizeOn,
+				private: privateMinimal + sizeOff,
+				git:     true,
+			},
+			wantPreset: "minimal", wantFileSize: "off",
+		},
+		{
+			name: "a user preset under a team preset", user: baseStrict,
+			spec:       layout{base: privateMinimal, git: true},
+			wantPreset: "minimal",
+		},
+		{
+			name: "no user dir", noUserDir: true, user: bogusKey,
+			spec: layout{base: baseStrict, git: true}, wantPreset: "strict",
+		},
+		{
+			name: "no user file", spec: layout{base: baseStrict, git: true},
+			wantPreset: "strict",
+		},
+		{
+			name: "nothing anywhere", spec: layout{git: true}, wantNil: true,
+		},
+		{
+			name: "a fault is blamed on the user file", user: bogusKey,
+			spec:     layout{base: baseStrict, git: true},
+			wantErr:  []string{userPath + ": line 2: bogus: unknown key"},
+			wantFile: userPath,
+		},
+		{
+			name: "faults of user and team are both named", user: bogusKey,
+			spec:    layout{base: bogusKey, git: true},
+			wantErr: []string{userPath + ": line 2: bogus", "; .pulsarules.yaml: line 2: bogus"},
+		},
+	}
+}
+
+func TestLoadUserLayer(t *testing.T) {
+	t.Parallel()
+
+	for _, testCase := range userLayerCases() {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			userDir := placeUser(t, testCase.user)
+			if testCase.noUserDir {
+				userDir = ""
+			}
+			layered := New(testLoader().rules, userDir)
+			file, err := layered.Load(testCase.spec.build(t), "", "")
+			if testCase.wantErr != nil {
+				assertErrorHas(t, err, testCase.wantErr)
+				if got := faultFile(err, nil); testCase.wantFile != "" &&
+					!strings.HasSuffix(got, testCase.wantFile) {
+					t.Fatalf("faultFile() = %q, want the user file", got)
+				}
+				return
+			}
+			if err != nil || (file == nil) != testCase.wantNil {
+				t.Fatalf("Load() = %+v, %v", file, err)
+			}
+			if file != nil {
+				assertMerged(t, file, testCase)
+			}
+		})
+	}
+}
+
+func placeUser(t *testing.T, content string) string {
+	t.Helper()
+	userDir := t.TempDir()
+	if content == "" {
+		return userDir
+	}
+	if err := os.MkdirAll(filepath.Join(userDir, userDirName), 0o750); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	write(t, filepath.Join(userDir, userDirName, privateFileName), content)
+	return userDir
+}
+
+func assertMerged(t *testing.T, file *projectfile.File, testCase userCase) {
+	t.Helper()
+	if file.Preset != testCase.wantPreset {
+		t.Errorf("Preset = %q, want %q", file.Preset, testCase.wantPreset)
+	}
+	if got := enabledOf(file, "file-size"); got != testCase.wantFileSize {
+		t.Errorf("file-size = %q, want %q", got, testCase.wantFileSize)
+	}
+}
+
+func enabledOf(file *projectfile.File, id string) string {
+	switch enabled := file.Analyzers[id].Enabled; {
+	case enabled == nil:
+		return ""
+	case *enabled:
+		return "on"
+	default:
+		return "off"
+	}
+}
+
+func TestLoadUserEmptyDir(t *testing.T) {
+	cwd := placeUser(t, baseStrict)
+	t.Chdir(cwd)
+	rules := testLoader().rules
+	file, err := New(rules, "").loadUser(t.TempDir(), rules)
+	if file != nil || err != nil {
+		t.Fatalf("loadUser(empty dir) = %+v, %v, want nil, nil", file, err)
+	}
 }

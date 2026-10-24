@@ -16,7 +16,7 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 		&cmd.config,
 		"config",
 		"",
-		"project config file `PATH` (default: <project>/.pulsarules.yaml if present)",
+		"config file `PATH` replacing the user, project and private layers (default: all three)",
 	)
 	fs.StringVar(&cmd.scope, "scope", "full", "analysis scope (`full|commit|changed`)")
 	fs.StringVar(

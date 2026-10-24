@@ -39,10 +39,13 @@ silently ignores it.
 
 --config names the project config file that turns analyzers on or off, sets their
 params and severity, scopes both to path globs and declares delegated commands.
-Without it, <project>/.pulsarules.yaml is used when present. An unknown key or
-param is an error, and an invalid file fails governance and the hooks. Precedence:
-built-ins, preset (--preset, else the file's, else recommended), the file, then
-the flags.
+Without it, the layers below are merged, each overriding the one before:
+the user file <user-config-dir>/pulsarules/pulsarules.yaml (on Linux
+$XDG_CONFIG_HOME or ~/.config), <project>/.pulsarules.yaml, then the private
+<git-common-dir>/pulsarules.yaml. The preset comes from the highest layer that
+names one. An unknown key or param is an error, and an invalid file fails
+governance and the hooks. Precedence: built-ins, preset (--preset, else the
+layers', else recommended), the layers, then the flags.
 
 --golangci-config overrides the golangci-lint config discovery path. When unset,
 the runner searches the project root, tools/, and build/ directories for

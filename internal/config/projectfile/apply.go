@@ -11,6 +11,11 @@ import (
 )
 
 func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
+	file.Apply(govCfg)
+	return file.CheckOverrides(govCfg)
+}
+
+func (file *File) Apply(govCfg *config.GovernanceConfig) {
 	if file.IncludeGenerated != nil {
 		govCfg.IncludeGenerated = *file.IncludeGenerated
 	}
@@ -19,6 +24,7 @@ func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 	for id, entry := range file.Analyzers {
 		applyAnalyzer(govCfg, id, entry)
 	}
+	file.applyPersonalOff(govCfg)
 	for _, override := range file.Overrides {
 		govCfg.Overrides = append(govCfg.Overrides, toCoreOverride(override))
 	}
@@ -29,7 +35,26 @@ func (file *File) ApplyTo(govCfg *config.GovernanceConfig) error {
 		command.Run = slices.Clone(entry.Run)
 		govCfg.Delegated = append(govCfg.Delegated, command)
 	}
-	return file.CheckOverrides(govCfg)
+}
+
+func (file *File) applyPersonalOff(govCfg *config.GovernanceConfig) {
+	if len(file.PersonalOff) == 0 {
+		return
+	}
+	if govCfg.Analyzers == nil {
+		govCfg.Analyzers = map[string]pass.AnalyzerConfig{}
+	}
+	isOff := false
+	off := make(map[string]pass.OverrideConfig, len(file.PersonalOff))
+	for _, id := range file.PersonalOff {
+		// Run it, so an override can enable it on its own paths.
+		current := govCfg.Analyzers[id]
+		current.Enabled = true
+		govCfg.Analyzers[id] = current
+		off[id] = pass.OverrideConfig{Enabled: &isOff}
+	}
+	// An open set covers a finding with no path, and later overrides win on their own paths.
+	govCfg.Overrides = append(govCfg.Overrides, pass.NewOverride(nil, off))
 }
 
 func (file *File) CheckOverrides(govCfg *config.GovernanceConfig) error {
