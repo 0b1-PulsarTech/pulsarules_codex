@@ -60,6 +60,7 @@ func TestParams_Golden(t *testing.T) {
 		"history-narration":   {"extensions"},
 		"package-file-count":  {"max_files", "exempt", "extensions"},
 		"complexity":          {"max_complexity", "max_func_lines", "max_params"},
+		"magic-number":        {"allowed_numbers"},
 		"single-letter-name":  {"exported_only", "allowed_names"},
 		"too-many-results":    {"max_results"},
 		"body-header-comment": {"min_lines"},

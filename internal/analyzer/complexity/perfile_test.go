@@ -21,13 +21,9 @@ func flagMessages(name string) []string {
 	return messages
 }
 
-func goOnlyMessages(name, literal string) []string {
-	return append(flagMessages(name), "magic number "+literal+" in "+name)
-}
-
-func perFunctionMessages(name, literal string) []string {
+func perFunctionMessages(name string) []string {
 	head := name + " has 6 parameters, max 5"
-	return append([]string{head}, goOnlyMessages(name, literal)...)
+	return append([]string{head}, flagMessages(name)...)
 }
 
 type checkChangedCase struct {
@@ -40,7 +36,7 @@ type checkChangedCase struct {
 func checkChangedCases() []checkChangedCase {
 	const stubbedSource = "package foo\n\n" + "func stub(int) int; " +
 		"func A(a, b, c, d, e, f bool) { _ = 7 }; func B(a, b, c, d, e, f bool) { _ = 8 }\n"
-	both := append(perFunctionMessages("A", "7"), perFunctionMessages("B", "8")...)
+	both := append(perFunctionMessages("A"), perFunctionMessages("B")...)
 	return slices.Concat([]checkChangedCase{
 		{
 			name:    "functions on one line report each function whole",
@@ -62,7 +58,7 @@ func fallbackCases() []checkChangedCase {
 	const splitLineSource = "package foo\n\n" +
 		"func A(a, b, c, d, e, f bool) { _ = 7 }\n" +
 		"func B(a, b, c, d, e, f bool) { _ = 8 }\n"
-	goOnly := append(goOnlyMessages("A", "7"), goOnlyMessages("B", "8")...)
+	goOnly := append(flagMessages("A"), flagMessages("B")...)
 	return []checkChangedCase{
 		{
 			name:   "no summary falls back to the go-only findings",

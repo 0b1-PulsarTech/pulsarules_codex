@@ -120,11 +120,6 @@ func TestAnalyze_DefaultSeverityPerFinding(t *testing.T) {
 		want   finding.Severity
 	}{
 		{
-			name:   "magic number is info",
-			source: "package foo\nfunc f() {\n\tx := 42\n\t_ = x\n}\n",
-			want:   finding.SeverityInfo,
-		},
-		{
 			name:   "flag argument is warning",
 			source: "package foo\nfunc f(on bool) {\n\tif on {\n\t}\n}\n",
 			want:   finding.SeverityWarning,
@@ -183,7 +178,6 @@ func TestCheckFile(t *testing.T) {
 		maxFuncLines:  defaultMaxFuncLines,
 		maxParams:     defaultMaxParams,
 		warnReporter:  analyzer.warnReporter,
-		infoReporter:  analyzer.infoReporter,
 	}
 
 	for _, testCase := range checkFileTestCases() {
@@ -211,7 +205,6 @@ type checkFileTestCase struct {
 func checkFileTestCases() []checkFileTestCase {
 	cases := checkFileCasesThresholds()
 	cases = append(cases, checkFileCasesFlagArgs()...)
-	cases = append(cases, checkFileCasesMagicNumbers()...)
 	return cases
 }
 
@@ -366,7 +359,6 @@ func TestCheckFile_SummaryFromAnyLanguage(t *testing.T) {
 		maxFuncLines:  defaultMaxFuncLines,
 		maxParams:     defaultMaxParams,
 		warnReporter:  analyzer.warnReporter,
-		infoReporter:  analyzer.infoReporter,
 	}
 	for _, testCase := range summaryCases() {
 		t.Run(testCase.name, func(t *testing.T) {

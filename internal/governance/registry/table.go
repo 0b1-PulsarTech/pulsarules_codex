@@ -93,6 +93,7 @@ func styleSpecs() []entry {
 		plain(controlflow.Describe(), GateStatic, controlflow.NewAnalyzer),
 		plain(shadowing.Describe(), GateStatic, shadowing.NewAnalyzer),
 		plain(complexity.Describe(), GateStatic, complexity.NewAnalyzer),
+		plain(complexity.DescribeMagicNumber(), GateStatic, complexity.NewMagicNumberAnalyzer),
 		plain(namedreturns.Describe(), GateStatic, namedreturns.NewAnalyzer),
 		plain(testdoc.Describe(), GateStatic, testdoc.NewAnalyzer),
 		plain(singleuse.Describe(), GateStatic, singleuse.NewAnalyzer),

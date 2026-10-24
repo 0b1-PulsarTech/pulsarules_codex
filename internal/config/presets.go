@@ -37,6 +37,7 @@ func minimalAnalyzers() map[string]pass.AnalyzerConfig {
 		"control-flow":       {Enabled: false},
 		"shadowing":          {Enabled: false},
 		"complexity":         {Enabled: false},
+		"magic-number":       {Enabled: false},
 		"named-returns":      {Enabled: false},
 		"context-discipline": {Enabled: false},
 		// pprof-labels stays enabled even in minimal: it catches PII leaking

@@ -91,7 +91,8 @@ func TestMaxGateFor_ReproducesScopeMembership(t *testing.T) {
 	late := []string{"branch-name", "golangci-lint", "delegated-command"}
 	style := []string{
 		"go-syntax", "dart-syntax", "typescript-syntax", "javascript-syntax", "svelte-syntax",
-		"control-flow", "shadowing", "complexity", "named-returns", "test-comment",
+		"control-flow", "shadowing", "complexity", "magic-number", "named-returns",
+		"test-comment",
 		"single-use-declaration", "doc-comment", "body-header-comment", "single-letter-name",
 		"variadic-index", "too-many-results", "ungrouped-interfaces", "package-level-var",
 		"package-file-count", "time-discipline", "context-discipline", "pprof-labels",

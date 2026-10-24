@@ -16,7 +16,6 @@ type thresholds struct {
 	maxFuncLines  int
 	maxParams     int
 	warnReporter  finding.Reporter
-	infoReporter  finding.Reporter
 }
 
 func (th thresholds) maxFuncLinesFor(fc pass.FileChange) int {
@@ -89,7 +88,7 @@ func (th thresholds) checkGoFile(
 	decls := bodyDecls(file)
 	findings := make([]finding.Finding, 0, len(decls))
 	for _, fn := range decls {
-		findings = append(findings, th.checkGoFunc(fset, fc, file, fn)...)
+		findings = append(findings, th.checkGoFunc(fset, fc, fn)...)
 	}
 	return findings
 }
@@ -97,14 +96,12 @@ func (th thresholds) checkGoFile(
 func (th thresholds) checkGoFunc(
 	fset *token.FileSet,
 	fc pass.FileChange,
-	file *ast.File,
 	fn *ast.FuncDecl,
 ) []finding.Finding {
 	if fset == nil {
 		return nil
 	}
-	findings := checkFlagArguments(fset, fc, fn, th.warnReporter)
-	return append(findings, findMagicNumbers(fset, fc, file, fn, th.infoReporter)...)
+	return checkFlagArguments(fset, fc, fn, th.warnReporter)
 }
 
 func bodyDecls(file *ast.File) []*ast.FuncDecl {

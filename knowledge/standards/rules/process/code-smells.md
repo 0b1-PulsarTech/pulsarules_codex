@@ -15,6 +15,7 @@ linters:
 analyzers:
     - control-flow
     - complexity
+    - magic-number
     - golangci-lint
     - package-level-var
 ---

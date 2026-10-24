@@ -32,7 +32,7 @@ func (th thresholds) checkChanged(ctx *pass.Context, fc pass.FileChange) []findi
 	var findings []finding.Finding
 	for idx, fn := range neutral {
 		findings = append(findings, th.checkTopLevel(fc, fn)...)
-		findings = append(findings, th.checkGoFunc(fset, fc, tree, decls[idx])...)
+		findings = append(findings, th.checkGoFunc(fset, fc, decls[idx])...)
 	}
 	return findings
 }

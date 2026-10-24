@@ -18,7 +18,6 @@ type Analyzer struct {
 	maxFuncLines  int
 	maxParams     int
 	warnReporter  finding.Reporter
-	infoReporter  finding.Reporter
 }
 
 const (
@@ -33,7 +32,6 @@ func NewAnalyzer() *Analyzer {
 		maxFuncLines:  defaultMaxFuncLines,
 		maxParams:     defaultMaxParams,
 		warnReporter:  finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
-		infoReporter:  finding.NewReporter(ID, finding.SeverityInfo, finding.CatAST),
 	}
 }
 
@@ -53,7 +51,6 @@ func (analyzer *Analyzer) resolveThresholds(ctx *pass.Context) thresholds {
 		maxFuncLines:  params.Int(paramMaxFuncLines, analyzer.maxFuncLines),
 		maxParams:     params.Int(paramMaxParams, analyzer.maxParams),
 		warnReporter:  analyzer.warnReporter,
-		infoReporter:  analyzer.infoReporter,
 	}
 }
 
