@@ -58,6 +58,8 @@ type File struct {
 	ImportGroups     []string
 	Names            []Name
 	DocSites         []DocSite
+	Elses            []Else
+	Numbers          []Number
 }
 
 type Function struct {
@@ -70,6 +72,16 @@ type Function struct {
 }
 
 type Block struct{ Line, Depth int }
+
+type Else struct {
+	Line      int
+	AfterExit bool
+}
+
+type Number struct {
+	Value string
+	Line  int
+}
 
 type Import struct {
 	Literal, Prefer string
