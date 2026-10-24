@@ -36,7 +36,8 @@ func writeAgents(ctx Context, report *Report) error {
 }
 
 func writeAgentsIn(ctx Context, dir string, report *Report) error {
-	outcome, err := agents.Write(ctx.Templates, dir, ctx.Index, ctx.IDs)
+	outcome, ledger, err := agents.Write(ctx.Templates, dir, ctx.Index, ctx.IDs)
+	report.Merge(ledger.Report())
 	if err != nil {
 		return fmt.Errorf("write agents: %w", err)
 	}
@@ -46,7 +47,8 @@ func writeAgentsIn(ctx Context, dir string, report *Report) error {
 
 func removeAgents(base string, report *Report) error {
 	path := filepath.Join(base, agents.FileName)
-	outcome, err := ownedfile.RemoveOwned(path)
+	outcome, ledger, err := ownedfile.RemoveOwned(path)
+	report.Merge(ledger.Report())
 	if err != nil {
 		return fmt.Errorf("remove agents: %w", err)
 	}

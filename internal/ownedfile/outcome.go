@@ -1,6 +1,7 @@
 package ownedfile
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -20,40 +21,63 @@ const (
 
 func WriteOwned(
 	path string, body []byte, mode fs.FileMode, makeDir func(dir string) error,
-) (Outcome, error) {
+) (Outcome, Ledger, error) {
 	// makeDir lets each host phrase a mkdir failure: their error texts predate this writer.
-	exists, ours, err := Check(path)
+	var ledger Ledger
+	content, exists, err := readExisting(path)
 	if err != nil {
-		return Kept, fmt.Errorf("check %q: %w", path, err)
+		return Kept, ledger, fmt.Errorf("check %q: %w", path, err)
 	}
-	if exists && !ours {
-		return Kept, nil
+	if exists && !bytes.Contains(content, []byte(Marker)) {
+		return Kept, ledger, nil
 	}
 	if err = makeDir(filepath.Dir(path)); err != nil {
-		return Kept, err
+		return Kept, ledger, err
 	}
-	if err = os.WriteFile(path, body, mode); err != nil {
-		return Kept, fmt.Errorf("write %q: %w", path, err)
+	if exists && Edited(content) {
+		if err = saveEdits(path, &ledger); err != nil {
+			return Kept, ledger, err
+		}
 	}
-	return written, nil
+	if err = os.WriteFile(path, Stamp(body), mode); err != nil {
+		return Kept, ledger, fmt.Errorf("write %q: %w", path, err)
+	}
+	return written, ledger, nil
 }
 
-func RemoveOwned(path string) (Outcome, error) {
-	// An absent file is not ours: a caller that listed the directory first can lose a race.
-	_, ours, err := Check(path)
+func saveEdits(path string, ledger *Ledger) error {
+	backupPath, err := Backup(path)
 	if err != nil {
-		return Kept, fmt.Errorf("check %q: %w", path, err)
+		return err
 	}
-	if !ours {
-		return Kept, nil
+	ledger.AddBackup(EditedMessage(path, backupPath))
+	return nil
+}
+
+func RemoveOwned(path string) (Outcome, Ledger, error) {
+	// An absent file is not ours: a caller that listed the directory first can lose a race.
+	var ledger Ledger
+	content, exists, err := readExisting(path)
+	if err != nil {
+		return Kept, ledger, fmt.Errorf("check %q: %w", path, err)
+	}
+	if !exists || !bytes.Contains(content, []byte(Marker)) {
+		return Kept, ledger, nil
+	}
+	if Edited(content) {
+		// Moved aside rather than deleted, so the edits outlive the uninstall.
+		if err = saveEdits(path, &ledger); err != nil {
+			return Kept, ledger, err
+		}
+		return Removed, ledger, nil
 	}
 	if err = os.Remove(path); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return Kept, nil
+			return Kept, ledger, nil
 		}
-		return Kept, fmt.Errorf("remove %q: %w", path, err)
+		return Kept, ledger, fmt.Errorf("remove %q: %w", path, err)
 	}
-	return Removed, nil
+	return Removed, ledger, nil
 }
 
 func (outcome Outcome) ReportWrite(path, wroteFormat string) report.Report {

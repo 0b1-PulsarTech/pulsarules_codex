@@ -52,7 +52,7 @@ func Remove(dest, docName string) (RemoveResult, error) {
 
 func removeOwnedDoc(dir, docName string) (ownedfile.Ledger, error) {
 	docPath := filepath.Join(dir, docName)
-	if _, err := ownedfile.RemoveOwned(docPath); err != nil {
+	if _, _, err := ownedfile.RemoveOwned(docPath); err != nil {
 		return ownedfile.Ledger{}, err
 	}
 	if _, err := gitignore.Remove(dir, docName, gitignoreName); err != nil {

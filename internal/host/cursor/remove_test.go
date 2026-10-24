@@ -87,7 +87,7 @@ func TestRemoveRules(t *testing.T) {
 			dir := filepath.Join(projectDir, RulesDir)
 			seedRules(t, dir, testCase.seed)
 
-			removed, err := RemoveRules(projectDir)
+			removed, _, err := RemoveRules(projectDir)
 			if err != nil {
 				t.Fatalf("RemoveRules: %v", err)
 			}
@@ -120,11 +120,11 @@ func TestRemoveRules_Idempotent(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	first, err := RemoveRules(projectDir)
+	first, _, err := RemoveRules(projectDir)
 	if err != nil || len(first) != 1 {
 		t.Fatalf("RemoveRules #1: removed=%v err=%v", first, err)
 	}
-	second, err := RemoveRules(projectDir)
+	second, _, err := RemoveRules(projectDir)
 	if err != nil || len(second) != 0 {
 		t.Fatalf("RemoveRules #2: removed=%v err=%v", second, err)
 	}
@@ -150,7 +150,7 @@ func TestRemoveRules_VanishedSymlink(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	removed, err := RemoveRules(projectDir)
+	removed, _, err := RemoveRules(projectDir)
 	if err != nil {
 		t.Fatalf("RemoveRules: %v", err)
 	}
@@ -170,7 +170,41 @@ func TestRemoveRules_ReadDirErrorWhenParentIsAFile(t *testing.T) {
 		t.Fatalf("seed blocker: %v", err)
 	}
 
-	if _, err := RemoveRules(projectDir); err == nil {
+	if _, _, err := RemoveRules(projectDir); err == nil {
 		t.Error("expected an error, got nil")
+	}
+}
+
+func TestRemoveRules_KeepsAnEditedRuleInABackup(t *testing.T) {
+	t.Parallel()
+
+	projectDir := t.TempDir()
+	const body = "---\ndescription: d\n---\n<!-- Installed by pulsarules_cli -->\n\nbody\n"
+	if _, _, err := WriteRule(projectDir, "go-style", body); err != nil {
+		t.Fatalf("WriteRule: %v", err)
+	}
+	path := filepath.Join(projectDir, RulesDir, "go-style.mdc")
+	edited, err := os.ReadFile(path) //nolint:gosec // temp dir.
+	if err != nil {
+		t.Fatal(err)
+	}
+	edited = append(edited, "my addition\n"...)
+	if err = os.WriteFile(path, edited, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	removed, ledger, err := RemoveRules(projectDir)
+	if err != nil || !slices.Equal(removed, []string{"go-style"}) || len(ledger.BackedUp) != 1 {
+		t.Fatalf(
+			"RemoveRules = %v, %v, %v, want one removed rule and one backup",
+			removed,
+			ledger,
+			err,
+		)
+	}
+	if got, readErr := os.ReadFile(
+		path + ".pulsarules-backup",
+	); readErr != nil ||
+		string(got) != string(edited) { //nolint:gosec // temp dir.
+		t.Errorf("backup = %q, %v, want the edited rule", got, readErr)
 	}
 }

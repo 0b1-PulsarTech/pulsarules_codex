@@ -78,7 +78,8 @@ func writeCursorRules(ctx Context, report *Report) error {
 }
 
 func writeCursorFile(base, id, body string, report *Report) error {
-	outcome, err := cursor.WriteRule(base, id, body)
+	outcome, ledger, err := cursor.WriteRule(base, id, body)
+	report.Merge(ledger.Report())
 	if err != nil {
 		return fmt.Errorf("write cursor rule %q: %w", id, err)
 	}
@@ -92,7 +93,8 @@ func (cursorTarget) Uninstall(ctx UninstallContext) (Report, error) {
 	if ctx.KeepSkills {
 		return report, nil
 	}
-	removed, err := cursor.RemoveRules(ctx.Base)
+	removed, ledger, err := cursor.RemoveRules(ctx.Base)
+	report.Merge(ledger.Report())
 	if err != nil {
 		return report, fmt.Errorf("remove cursor rules: %w", err)
 	}

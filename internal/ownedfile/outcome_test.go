@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -15,7 +16,7 @@ func TestWriteOwned_ReturnsTheCallersDirError(t *testing.T) {
 
 	errDir := errors.New("caller-worded mkdir failure")
 	path := filepath.Join(t.TempDir(), "sub", "rule.mdc")
-	outcome, err := WriteOwned(path, []byte("x"), 0o600, func(string) error { return errDir })
+	outcome, _, err := WriteOwned(path, []byte("x"), 0o600, func(string) error { return errDir })
 	if !errors.Is(err, errDir) || err.Error() != errDir.Error() || outcome != Kept {
 		t.Errorf("WriteOwned = %v, %v, want Kept and exactly the caller's error", outcome, err)
 	}
@@ -27,16 +28,17 @@ func TestWriteOwned_ReturnsTheCallersDirError(t *testing.T) {
 func TestWriteOwned(t *testing.T) {
 	t.Parallel()
 
+	stamped := string(Stamp([]byte(ownedBody)))
 	testCases := []struct {
 		name        string
 		seed        string
 		wantOutcome Outcome
 		wantBody    string
 	}{
-		{name: "absent path is written", wantOutcome: written, wantBody: ownedBody},
+		{name: "absent path is written", wantOutcome: written, wantBody: stamped},
 		{
 			name: "owned occupant is replaced", seed: ownedBody + "old", wantOutcome: written,
-			wantBody: ownedBody,
+			wantBody: stamped,
 		},
 		{
 			name: "foreign occupant is kept", seed: "user content\n", wantOutcome: Kept,
@@ -56,7 +58,7 @@ func TestWriteOwned(t *testing.T) {
 					t.Fatalf("seed: %v", err)
 				}
 			}
-			outcome, err := WriteOwned(path, []byte(ownedBody), 0o600, makeTestDir)
+			outcome, _, err := WriteOwned(path, []byte(ownedBody), 0o600, makeTestDir)
 			if err != nil {
 				t.Fatalf("WriteOwned: %v", err)
 			}
@@ -102,7 +104,7 @@ func TestWriteOwned_Failures(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if outcome, err := WriteOwned(
+			if outcome, _, err := WriteOwned(
 				testCase.path,
 				[]byte("x"),
 				0o600,
@@ -141,7 +143,7 @@ func TestRemoveOwned(t *testing.T) {
 					t.Fatalf("seed: %v", err)
 				}
 			}
-			outcome, err := RemoveOwned(path)
+			outcome, _, err := RemoveOwned(path)
 			if err != nil {
 				t.Fatalf("RemoveOwned: %v", err)
 			}
@@ -163,7 +165,7 @@ func TestRemoveOwned_CheckFails(t *testing.T) {
 	if err := os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
 		t.Fatalf("seed: %v", err)
 	}
-	if outcome, err := RemoveOwned(filepath.Join(blocker, "AGENTS.md")); err == nil ||
+	if outcome, _, err := RemoveOwned(filepath.Join(blocker, "AGENTS.md")); err == nil ||
 		outcome != Kept {
 		t.Errorf("RemoveOwned = %v, %v, want Kept and an error", outcome, err)
 	}
@@ -185,7 +187,7 @@ func TestRemoveOwned_RemoveFails(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
 
-	if outcome, err := RemoveOwned(path); err == nil || outcome != Kept {
+	if outcome, _, err := RemoveOwned(path); err == nil || outcome != Kept {
 		t.Errorf("RemoveOwned = %v, %v, want Kept and an error", outcome, err)
 	}
 }
@@ -219,5 +221,71 @@ func TestOutcome_ReportWrite(t *testing.T) {
 					got, testCase.wantNotes, testCase.wantWarnings)
 			}
 		})
+	}
+}
+
+func TestOwned_EditsSurviveInTheBackup(t *testing.T) {
+	t.Parallel()
+
+	const notes = "my notes\n"
+	testCases := []struct {
+		name string
+		edit string
+	}{
+		{"edited file is backed up", notes},
+		{"untouched file is silent", ""},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			path := filepath.Join(t.TempDir(), "AGENTS.md")
+			if _, _, err := WriteOwned(path, []byte(ownedBody), 0o600, makeTestDir); err != nil {
+				t.Fatalf("first write: %v", err)
+			}
+			appendText(t, path, testCase.edit)
+			_, writeLedger, err := WriteOwned(path, []byte(ownedBody), 0o600, makeTestDir)
+			if err != nil {
+				t.Fatalf("rewrite: %v", err)
+			}
+			assertBackup(t, path, writeLedger, testCase.edit)
+			appendText(t, path, testCase.edit)
+			outcome, removeLedger, err := RemoveOwned(path)
+			if err != nil || outcome != Removed {
+				t.Fatalf("RemoveOwned = %v, %v, want Removed", outcome, err)
+			}
+			assertBackup(t, path, removeLedger, testCase.edit)
+			if _, statErr := os.Stat(path); statErr == nil {
+				t.Error("the owned file must be gone after uninstall")
+			}
+		})
+	}
+}
+
+func appendText(tb testing.TB, path, text string) {
+	tb.Helper()
+	body, err := os.ReadFile(path) //nolint:gosec // temp dir.
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if err = os.WriteFile(path, append(body, text...), 0o600); err != nil {
+		tb.Fatal(err)
+	}
+}
+
+func assertBackup(tb testing.TB, path string, ledger Ledger, edit string) {
+	tb.Helper()
+	wantBackup := edit != ""
+	backup, err := os.ReadFile(path + BackupSuffix) //nolint:gosec // temp dir.
+	if (err == nil) != wantBackup || wantBackup && !strings.HasSuffix(string(backup), edit) {
+		tb.Errorf("backup = %q, %v, want one ending in %q: %v", backup, err, edit, wantBackup)
+	}
+	if (len(ledger.BackedUp) == 1) != wantBackup || len(ledger.BackedUp) > 1 {
+		tb.Errorf("BackedUp = %q, want a note: %v", ledger.BackedUp, wantBackup)
+	}
+	if wantBackup {
+		if err = os.Remove(path + BackupSuffix); err != nil {
+			tb.Fatal(err)
+		}
 	}
 }

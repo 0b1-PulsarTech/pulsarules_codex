@@ -13,7 +13,7 @@ const RulesDir = ".cursor/rules"
 
 const PointerID = "pulsarules-contract"
 
-func WriteRule(projectDir, id, body string) (ownedfile.Outcome, error) {
+func WriteRule(projectDir, id, body string) (ownedfile.Outcome, ownedfile.Ledger, error) {
 	path := filepath.Join(projectDir, RulesDir, id+".mdc")
 	return ownedfile.WriteOwned(path, []byte(body), disk.ModeFilePrivate, makeRulesDir)
 }

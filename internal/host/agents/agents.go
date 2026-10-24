@@ -32,14 +32,14 @@ const FileName = "AGENTS.md"
 
 func Write(
 	templates fs.FS, projectDir string, idx *knowledge.Index, ids []string,
-) (ownedfile.Outcome, error) {
+) (ownedfile.Outcome, ownedfile.Ledger, error) {
 	tmpl, err := template.ParseFS(templates, "docs/AGENTS.md.tmpl")
 	if err != nil {
-		return ownedfile.Kept, fmt.Errorf("parse AGENTS.md.tmpl: %w", err)
+		return ownedfile.Kept, ownedfile.Ledger{}, fmt.Errorf("parse AGENTS.md.tmpl: %w", err)
 	}
 	contractText, err := contract.Session(templates)
 	if err != nil {
-		return ownedfile.Kept, fmt.Errorf("routing contract: %w", err)
+		return ownedfile.Kept, ownedfile.Ledger{}, fmt.Errorf("routing contract: %w", err)
 	}
 	const defaultProjectDescription = "A Go service following the pulsarules_codex " +
 		"engineering standards."
@@ -51,7 +51,7 @@ func Write(
 	}
 	var buf bytes.Buffer
 	if err = tmpl.Execute(&buf, doc); err != nil {
-		return ownedfile.Kept, fmt.Errorf("render AGENTS.md: %w", err)
+		return ownedfile.Kept, ownedfile.Ledger{}, fmt.Errorf("render AGENTS.md: %w", err)
 	}
 	path := filepath.Join(projectDir, FileName)
 	return ownedfile.WriteOwned(path, buf.Bytes(), disk.ModeFilePrivate, makeProjectDir)

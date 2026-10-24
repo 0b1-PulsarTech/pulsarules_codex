@@ -12,24 +12,25 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
 )
 
-func RemoveRules(projectDir string) (removed []string, err error) {
+func RemoveRules(projectDir string) (removed []string, ledger ownedfile.Ledger, err error) {
 	dir := filepath.Join(projectDir, RulesDir)
 	var entries []os.DirEntry
 	entries, err = os.ReadDir(dir)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, nil
+			return nil, ledger, nil
 		}
-		return nil, fmt.Errorf("read dir %q: %w", dir, err)
+		return nil, ledger, fmt.Errorf("read dir %q: %w", dir, err)
 	}
 
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".mdc") {
 			continue
 		}
-		outcome, ruleErr := ownedfile.RemoveOwned(filepath.Join(dir, entry.Name()))
+		outcome, saved, ruleErr := ownedfile.RemoveOwned(filepath.Join(dir, entry.Name()))
+		ledger.BackedUp = append(ledger.BackedUp, saved.BackedUp...)
 		if ruleErr != nil {
-			return removed, ruleErr
+			return removed, ledger, ruleErr
 		}
 		if outcome == ownedfile.Removed {
 			removed = append(removed, strings.TrimSuffix(entry.Name(), ".mdc"))
@@ -37,7 +38,7 @@ func RemoveRules(projectDir string) (removed []string, err error) {
 	}
 
 	if err = disk.RemoveEmptyDir(dir); err != nil {
-		return removed, fmt.Errorf("remove empty dir: %w", err)
+		return removed, ledger, fmt.Errorf("remove empty dir: %w", err)
 	}
-	return removed, nil
+	return removed, ledger, nil
 }

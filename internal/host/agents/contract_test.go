@@ -24,7 +24,7 @@ func TestWrite_MatchesSessionStart(t *testing.T) {
 	}
 
 	projectDir := t.TempDir()
-	wrote, err := Write(templates, projectDir, idx, []string{"go-style"})
+	wrote, _, err := Write(templates, projectDir, idx, []string{"go-style"})
 	if err != nil {
 		t.Fatalf("Write: %v", err)
 	}

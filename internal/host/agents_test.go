@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -195,5 +196,57 @@ func TestAgentsInstall_UserAuthoredRoundTrip(t *testing.T) {
 	}
 	if string(got) != foreign {
 		t.Errorf("AGENTS.md content changed, got %q want %q", got, foreign)
+	}
+}
+
+func TestAGENTSMD_EditsSurviveReinstallAndUninstall(t *testing.T) {
+	t.Parallel()
+
+	for _, target := range []Target{agentsTarget{}, opencodeTarget{}, codexTarget{}} {
+		t.Run(target.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			base := t.TempDir()
+			path := filepath.Join(base, "AGENTS.md")
+			ctx := newTestContext(t, base, []string{"go-style"})
+			if _, err := target.Install(ctx); err != nil {
+				t.Fatalf("Install: %v", err)
+			}
+			const notes = "\nMy own team rules.\n"
+			appendToFile(t, path, notes)
+			reinstalled, err := target.Install(ctx)
+			if err != nil || len(reinstalled.Warnings) != 1 {
+				t.Fatalf("reinstall = %v, %q, want one backup warning", err, reinstalled.Warnings)
+			}
+			assertFileEnds(t, path+".pulsarules-backup", notes)
+			if err = os.Remove(path + ".pulsarules-backup"); err != nil {
+				t.Fatal(err)
+			}
+			appendToFile(t, path, notes)
+			removed, err := target.Uninstall(UninstallContext{Base: base})
+			if err != nil || len(removed.Warnings) != 1 {
+				t.Fatalf("uninstall = %v, %q, want one backup warning", err, removed.Warnings)
+			}
+			assertFileEnds(t, path+".pulsarules-backup", notes)
+		})
+	}
+}
+
+func appendToFile(tb testing.TB, path, text string) {
+	tb.Helper()
+	body, err := os.ReadFile(path) //nolint:gosec // test fixture.
+	if err != nil {
+		tb.Fatal(err)
+	}
+	if err = os.WriteFile(path, append(body, text...), 0o600); err != nil {
+		tb.Fatal(err)
+	}
+}
+
+func assertFileEnds(tb testing.TB, path, suffix string) {
+	tb.Helper()
+	got, err := os.ReadFile(path) //nolint:gosec // test fixture.
+	if err != nil || !strings.HasSuffix(string(got), suffix) {
+		tb.Errorf("%s = %q, %v, want it to end with %q", path, got, err, suffix)
 	}
 }

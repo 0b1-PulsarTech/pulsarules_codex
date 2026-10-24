@@ -44,7 +44,7 @@ func TestWriteRule(t *testing.T) {
 
 			newBody := "---\ndescription: new\nglobs:\nalwaysApply: false\n---\n" +
 				"<!-- Installed by pulsarules_cli -->\n\nnew body\n"
-			wrote, err := WriteRule(projectDir, "go-style", newBody)
+			wrote, _, err := WriteRule(projectDir, "go-style", newBody)
 			if err != nil {
 				t.Fatalf("WriteRule: %v", err)
 			}
@@ -54,7 +54,7 @@ func TestWriteRule(t *testing.T) {
 
 			want := testCase.seedContent
 			if testCase.wantWrote {
-				want = newBody
+				want = string(ownedfile.Stamp([]byte(newBody)))
 			}
 			got, readErr := os.ReadFile(path) //nolint:gosec // temp dir.
 			if readErr != nil {
@@ -75,7 +75,7 @@ func TestWriteRule_CheckErrorUnderAFile(t *testing.T) {
 		t.Fatalf("seed blocker: %v", err)
 	}
 
-	if _, err := WriteRule(projectDir, "go-style", "body"); err == nil {
+	if _, _, err := WriteRule(projectDir, "go-style", "body"); err == nil {
 		t.Error("expected an error, got nil")
 	}
 }
@@ -93,7 +93,7 @@ func TestWriteRule_MkdirErrorWording(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(cursorDir, 0o700) })
 
-	_, err := WriteRule(projectDir, "go-style", "body")
+	_, _, err := WriteRule(projectDir, "go-style", "body")
 	rulesDir := filepath.Join(cursorDir, "rules")
 	want := "mkdir: mkdir " + rulesDir + ": permission denied"
 	if err == nil || err.Error() != want {
@@ -110,7 +110,7 @@ func TestWriteRule_ReadErrorWhenPathIsADirectory(t *testing.T) {
 		t.Fatalf("seed directory in place of go-style.mdc: %v", err)
 	}
 
-	if _, err := WriteRule(projectDir, "go-style", "body"); err == nil {
+	if _, _, err := WriteRule(projectDir, "go-style", "body"); err == nil {
 		t.Error("expected an error reading a directory as go-style.mdc, got nil")
 	}
 }

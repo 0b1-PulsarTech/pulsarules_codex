@@ -19,7 +19,7 @@ func TestWrite_RendersOnlySelectedSkills(t *testing.T) {
 		t.Fatalf("load embedded knowledge: %v", err)
 	}
 	projectDir := t.TempDir()
-	wrote, err := Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
+	wrote, _, err := Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
 	if err != nil {
 		t.Fatalf("Write: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestWrite_OwnershipDiscipline(t *testing.T) {
 				}
 			}
 
-			wrote, writeErr := Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
+			wrote, _, writeErr := Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
 			if writeErr != nil {
 				t.Fatalf("Write: %v", writeErr)
 			}
@@ -170,7 +170,7 @@ func TestWrite_Errors(t *testing.T) {
 					t.Fatalf("seed directory in place of AGENTS.md: %v", mkErr)
 				}
 			}
-			if _, writeErr := Write(
+			if _, _, writeErr := Write(
 				testCase.templates,
 				projectDir,
 				idx,
@@ -199,7 +199,7 @@ func TestWrite_MkdirErrorWording(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(parent, 0o700) })
 
 	projectDir := filepath.Join(parent, "project")
-	_, err = Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
+	_, _, err = Write(fakeTemplates(), projectDir, idx, []string{"go-style"})
 	want := "mkdir " + `"` + projectDir + `": mkdir ` + projectDir + ": permission denied"
 	if err == nil || err.Error() != want {
 		t.Fatalf("Write err = %v, want %q", err, want)
