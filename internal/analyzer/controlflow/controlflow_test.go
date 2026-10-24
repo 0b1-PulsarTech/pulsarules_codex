@@ -143,3 +143,51 @@ func TestCheckNesting(t *testing.T) {
 		})
 	}
 }
+
+func TestAnalyze_ForbidElseOnGo(t *testing.T) {
+	t.Parallel()
+
+	source := "package foo\nfunc f(a, b bool) {\n" +
+		"\tif a {\n\t} else if b {\n\t} else {\n\t\tg()\n\t}\n" +
+		"\tif a {\n\t\treturn\n\t} else {\n\t\treturn\n\t}\n}\nfunc g() {}\n"
+	testCases := []struct {
+		name   string
+		params map[string]any
+		want   []string
+	}{
+		{
+			name: "default reports the else bodies that exit",
+			want: []string{"11:else block contains return; use early return instead"},
+		},
+		{
+			name:   "forbid_else reports each else once, else-if included, without the body check",
+			params: map[string]any{paramForbidElse: true},
+			want: []string{
+				"4:" + forbidElseMessage,
+				"5:" + forbidElseMessage,
+				"10:" + forbidElseMessage,
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := goContext(t, source)
+			ctx.Config = &pass.AnalysisConfig{Analyzers: map[string]pass.AnalyzerConfig{
+				ID: {Enabled: true, Params: testCase.params},
+			}}
+			findings := NewAnalyzer().Analyze(ctx)
+			got := make([]string, 0, len(findings))
+			for _, hit := range findings {
+				if hit.AnalyzerID != ID+"/else" {
+					t.Fatalf("finding id = %q, want control-flow/else", hit.AnalyzerID)
+				}
+				got = append(got, fmt.Sprintf("%d:%s", hit.Line, hit.Message))
+			}
+			if !slices.Equal(got, testCase.want) {
+				t.Fatalf("findings = %q, want %q", got, testCase.want)
+			}
+		})
+	}
+}

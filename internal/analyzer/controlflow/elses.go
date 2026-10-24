@@ -73,3 +73,24 @@ func checkElseBlock(
 		}
 	}
 }
+
+func forbidGoElses(
+	fset *token.FileSet,
+	fc pass.FileChange,
+	file *ast.File,
+	reporter finding.Reporter,
+) []finding.Finding {
+	var findings []finding.Finding
+	ast.Inspect(file, func(node ast.Node) bool {
+		if ifStmt, ok := node.(*ast.IfStmt); ok && ifStmt.Else != nil {
+			findings = append(findings, reporter.At(
+				fc.Path,
+				fset.Position(ifStmt.Else.Pos()).Line,
+				forbidElseMessage,
+				forbidElseSuggestion,
+			))
+		}
+		return true
+	})
+	return findings
+}

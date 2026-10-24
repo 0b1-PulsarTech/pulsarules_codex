@@ -113,7 +113,7 @@ func runCheckFile(t *testing.T, source string, expect int) {
 	}
 
 	fc := pass.FileChange{Path: "foo.go", Extension: ".go"}
-	got := checkElses(cache.FileSet(), fc, file, NewAnalyzer().reporter)
+	got := checkElses(cache.FileSet(), fc, file, NewAnalyzer().elseReporter)
 	total := 0
 	for _, found := range got {
 		total += len(found)

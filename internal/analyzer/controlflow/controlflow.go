@@ -2,51 +2,60 @@ package controlflow
 
 import (
 	"fmt"
+	"go/ast"
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/finding"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/syntax"
 )
 
-const ID = "control-flow"
+const (
+	ID              = "control-flow"
+	paramForbidElse = "forbid_else"
+)
 
 type Analyzer struct {
-	maxNesting int
-	reporter   finding.Reporter
+	maxNesting   int
+	reporter     finding.Reporter
+	elseReporter finding.Reporter
 }
 
 func NewAnalyzer() *Analyzer {
 	const defaultMaxNesting = 4
 	return &Analyzer{
-		maxNesting: defaultMaxNesting,
-		reporter:   finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
+		maxNesting:   defaultMaxNesting,
+		reporter:     finding.NewReporter(ID, finding.SeverityWarning, finding.CatAST),
+		elseReporter: finding.NewReporter(ID+"/else", finding.SeverityWarning, finding.CatAST),
 	}
 }
 
 func (analyzer *Analyzer) Analyze(ctx *pass.Context) []finding.Finding {
+	forbid := ctx.Params(ID).Bool(paramForbidElse, false)
 	return ctx.EachSyntaxFile(func(fc pass.FileChange, file *syntax.File) []finding.Finding {
-		return analyzer.checkBlocks(
-			fc,
-			file,
-			goElses(ctx, fc, analyzer.reporter),
-			analyzer.reporter,
-		)
+		tree := goTree(ctx, fc)
+		var byBlock map[int][]finding.Finding
+		if tree != nil && !forbid {
+			byBlock = checkElses(ctx.ASTCache.FileSet(), fc, tree, analyzer.elseReporter)
+		}
+		findings := analyzer.checkBlocks(fc, file, byBlock, analyzer.reporter)
+		if tree != nil && forbid {
+			findings = append(
+				findings,
+				forbidGoElses(ctx.ASTCache.FileSet(), fc, tree, analyzer.elseReporter)...,
+			)
+		}
+		if forbid {
+			return append(findings, forbidSyntaxElses(fc, file, analyzer.elseReporter)...)
+		}
+		return append(findings, exitSyntaxElses(fc, file, analyzer.elseReporter)...)
 	})
 }
 
-func goElses(
-	ctx *pass.Context,
-	fc pass.FileChange,
-	reporter finding.Reporter,
-) map[int][]finding.Finding {
+func goTree(ctx *pass.Context, fc pass.FileChange) *ast.File {
 	if ctx.ASTCache == nil {
 		return nil
 	}
-	tree := ctx.ASTCache.Get(fc.Path)
-	if tree == nil {
-		return nil
-	}
-	return checkElses(ctx.ASTCache.FileSet(), fc, tree, reporter)
+	return ctx.ASTCache.Get(fc.Path)
 }
 
 func (analyzer *Analyzer) checkBlocks(
@@ -72,5 +81,5 @@ func (analyzer *Analyzer) checkBlocks(
 }
 
 func Describe() pass.Descriptor {
-	return pass.Descriptor{ID: ID, Rule: "code-smells", Params: []string{"forbid_else"}}
+	return pass.Descriptor{ID: ID, Rule: "code-smells", Params: []string{paramForbidElse}}
 }
