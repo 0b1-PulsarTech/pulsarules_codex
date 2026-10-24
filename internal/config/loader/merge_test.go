@@ -218,9 +218,9 @@ func TestMergeLimits(t *testing.T) {
 func bombDoc() string {
 	lines := []string{
 		"analyzers:", "  big-comment:", "    params:", "      max_lines:",
-		"        - &l0 [" + strings.Repeat("x", 1000) + "]",
-		"        - &l1 [" + strings.TrimSuffix(strings.Repeat("*l0, ", 9), ", ") + "]",
-		"        - &l2 [" + strings.TrimSuffix(strings.Repeat("*l1, ", 9), ", ") + "]",
+		"        k0: &l0 [" + strings.Repeat("x", 1000) + "]",
+		"        k1: &l1 [" + strings.TrimSuffix(strings.Repeat("*l0, ", 9), ", ") + "]",
+		"        k2: &l2 [" + strings.TrimSuffix(strings.Repeat("*l1, ", 9), ", ") + "]",
 	}
 	return doc(lines...)
 }
@@ -228,7 +228,7 @@ func bombDoc() string {
 func denseDoc() string {
 	inner := "[" + strings.TrimSuffix(strings.Repeat("ab,", 987), ",") + "]"
 	outer := strings.TrimSuffix(strings.Repeat(inner+",", 81), ",")
-	return doc("analyzers: {big-comment: {params: {max_lines: [" + outer + "]}}}")
+	return doc("analyzers: {big-comment: {params: {max_lines: {k: [" + outer + "]}}}}")
 }
 
 type singleFileCase struct {

@@ -101,6 +101,7 @@ func (val *validator) checkParams(field *strictyaml.Field, id string, params map
 			val.fail(field.Key(key), "unknown param")
 		}
 	}
+	val.checkListParams(field, params)
 }
 
 func (val *validator) checkDelegated(entries []DelegatedEntry) {

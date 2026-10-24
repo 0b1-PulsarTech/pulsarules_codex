@@ -14,9 +14,12 @@ type validateCase struct {
 
 func testRules() Rules {
 	return Rules{
-		AnalyzerIDs:      []string{"file-size", "big-comment", "golangci-lint"},
-		ReservedIDs:      []string{"file-size", "big-comment", "golangci-lint", "output"},
-		Params:           map[string][]string{"file-size": {"max_lines", "error_lines"}},
+		AnalyzerIDs: []string{"file-size", "big-comment", "golangci-lint"},
+		ReservedIDs: []string{"file-size", "big-comment", "golangci-lint", "output"},
+		Params: map[string][]string{
+			"file-size":   {"max_lines", "error_lines"},
+			"big-comment": {"allowed_numbers"},
+		},
 		DelegatedFormats: []string{"dart-analyze-json"},
 	}
 }
