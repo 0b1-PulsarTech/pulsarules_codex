@@ -72,5 +72,5 @@ func (analyzer *Analyzer) checkBlocks(
 }
 
 func Describe() pass.Descriptor {
-	return pass.Descriptor{ID: ID, Rule: "code-smells"}
+	return pass.Descriptor{ID: ID, Rule: "code-smells", Params: []string{"forbid_else"}}
 }

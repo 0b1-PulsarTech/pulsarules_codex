@@ -36,9 +36,9 @@ func lookupRule(rules map[string]string, analyzerID string) string {
 	if rid, ok := rules[analyzerID]; ok {
 		return rid
 	}
-	// Sub-IDs like "golangci-lint/gocyclo" come from the delegated linter.
-	if strings.HasPrefix(analyzerID, "golangci-lint/") {
-		return rules["golangci-lint"]
+	// A sub-ID such as "golangci-lint/gocyclo" or "control-flow/else" shares its base rule.
+	if base, _, found := strings.Cut(analyzerID, "/"); found {
+		return rules[base]
 	}
 	return ""
 }

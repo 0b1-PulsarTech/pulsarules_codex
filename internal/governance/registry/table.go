@@ -28,6 +28,7 @@ import (
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filecount"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/filesize"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/layout/importgroup"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/denylist"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/identifier"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/naming/singleletter"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
@@ -100,6 +101,7 @@ func styleSpecs() []entry {
 		plain(doc.Describe(), GateStatic, doc.NewAnalyzer),
 		plain(bodyheader.Describe(), GateStatic, bodyheader.NewAnalyzer),
 		plain(singleletter.Describe(), GateStatic, singleletter.NewAnalyzer),
+		plain(denylist.Describe(), GateStatic, denylist.NewAnalyzer),
 		plain(variadicindex.Describe(), GateStatic, variadicindex.NewAnalyzer),
 		plain(resultcount.Describe(), GateStatic, resultcount.NewAnalyzer),
 		plain(interfacegroup.Describe(), GateStatic, interfacegroup.NewAnalyzer),

@@ -11,6 +11,7 @@ linters:
 analyzers:
     - naming
     - single-letter-name
+    - forbidden-token
 ---
 
 # Naming

@@ -94,6 +94,7 @@ func TestMaxGateFor_ReproducesScopeMembership(t *testing.T) {
 		"control-flow", "shadowing", "complexity", "magic-number", "named-returns",
 		"test-comment",
 		"single-use-declaration", "doc-comment", "body-header-comment", "single-letter-name",
+		"forbidden-token",
 		"variadic-index", "too-many-results", "ungrouped-interfaces", "package-level-var",
 		"package-file-count", "time-discipline", "context-discipline", "pprof-labels",
 	}

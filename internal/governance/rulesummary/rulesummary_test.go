@@ -194,6 +194,10 @@ func TestLookupRule(t *testing.T) {
 		{"variadic-index", "flag-arguments"},
 		{"package-level-var", "code-smells"},
 		{"package-file-count", "code-placement-go"},
+		{"golangci-lint/gocyclo", "code-smells"},
+		{"control-flow/else", "code-smells"},
+		{"forbidden-token/dir", "naming"},
+		{"unknown-analyzer/sub", ""},
 	}
 
 	for _, testCase := range testCases {
