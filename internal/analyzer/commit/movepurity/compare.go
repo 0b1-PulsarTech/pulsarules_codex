@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/dartsrc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 )
@@ -93,4 +94,77 @@ func (moves *moveContext) qualRules(
 		return moves.renameRules(oldFile, newFile, scope, edit.dirs())
 	}
 	return moves.dependantRules(oldFile, newFile, scope, edit.dirs().oldDir)
+}
+
+func isDartFile(file string) bool { return strings.HasSuffix(file, ".dart") }
+
+func (moves *moveContext) dartEdit(edit fileEdit) verdict {
+	if !isDartFile(edit.oldPath) || !isDartFile(edit.newPath) {
+		return verdictEdited
+	}
+	oldSrc, oldErr := moves.head.blob(edit.oldPath)
+	newSrc, newErr := moves.staged.blob(edit.newPath)
+	if oldErr != nil || newErr != nil {
+		return verdictEdited
+	}
+	oldFile, oldParseErr := dartsrc.Parse(oldSrc)
+	newFile, newParseErr := dartsrc.Parse(newSrc)
+	if oldParseErr != nil || newParseErr != nil {
+		return verdictEdited
+	}
+	pair := dartsrc.Pair{
+		Old: dartsrc.Source{File: oldFile, Path: edit.oldPath, Roots: moves.rootsFunc(moves.head)},
+		New: dartsrc.Source{
+			File:  newFile,
+			Path:  edit.newPath,
+			Roots: moves.rootsFunc(moves.staged),
+		},
+	}
+	// A re-sort is no consequence of a move: a file that differs needs a rewritten URI.
+	isEquivalent, rewrites := dartsrc.Equivalent(pair, moves.followsMove)
+	if isEquivalent && (rewrites > 0 || edit.isSame) {
+		return verdictPure
+	}
+	return verdictEdited
+}
+
+func (moves *moveContext) rootsFunc(snap *snapshot) func() dartsrc.Roots {
+	return func() dartsrc.Roots { return moves.rootsOf(snap) }
+}
+
+func (moves *moveContext) identicalMove(rename pass.Rename) verdict {
+	if isDartFile(rename.OldPath) && isDartFile(rename.NewPath) {
+		return moves.dartIdentical(rename)
+	}
+	return moves.identicalVerdict(rename)
+}
+
+func (moves *moveContext) dartIdentical(rename pass.Rename) verdict {
+	if got := moves.coveredVerdict(rename); got != verdictPure {
+		return got
+	}
+	edit := fileEdit{oldPath: rename.OldPath, newPath: rename.NewPath, isMove: true, isSame: true}
+	if moves.dartEdit(edit) == verdictPure {
+		return verdictPure
+	}
+	return verdictUnsafe
+}
+
+func (moves *moveContext) isGoEdit(edit fileEdit) verdict {
+	if !edit.isGo() {
+		return moves.dartEdit(edit)
+	}
+	oldFile, oldErr := moves.head.parse(edit.oldPath)
+	newFile, newErr := moves.staged.parse(edit.newPath)
+	if oldErr != nil || newErr != nil {
+		return verdictEdited
+	}
+	return moves.goEquivalent(oldFile, newFile, edit)
+}
+
+func (moves *moveContext) followsMove(oldTarget, newTarget string) bool {
+	if moved, ok := moves.movedTo[oldTarget]; ok {
+		return newTarget == moved
+	}
+	return newTarget == oldTarget
 }

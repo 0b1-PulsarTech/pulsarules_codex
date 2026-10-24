@@ -3,6 +3,7 @@ package movepurity
 import (
 	"slices"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/dartsrc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/commit/movepurity/gosrc"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/analyzer/pass"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
@@ -27,6 +28,7 @@ type (
 		embedDirs   map[string]string
 		embedUnread map[string]string
 		infos       []gosrc.MoveInfo
+		dartRoots   map[*snapshot]dartsrc.Roots
 	}
 	pkgKey struct {
 		dir string
@@ -56,6 +58,7 @@ func newMoveContext(reader gitReader, renames []pass.Rename) *moveContext {
 		stranded:    map[string]string{},
 		embedDirs:   map[string]string{},
 		embedUnread: map[string]string{},
+		dartRoots:   map[*snapshot]dartsrc.Roots{},
 	}
 	for _, rename := range renames {
 		dirs := renameDirs(rename)
@@ -122,4 +125,14 @@ func (moves *moveContext) moveInfos() []gosrc.MoveInfo {
 		moves.infos = append(moves.infos, *moved)
 	}
 	return moves.infos
+}
+
+func (moves *moveContext) rootsOf(snap *snapshot) dartsrc.Roots {
+	return cached(moves.dartRoots, snap, func() dartsrc.Roots {
+		files, err := snap.tree(".")
+		if err != nil {
+			return dartsrc.Roots{}
+		}
+		return dartsrc.BuildRoots(files, snap.blob)
+	})
 }

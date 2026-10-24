@@ -17,6 +17,7 @@ type fakeRepo struct {
 	failHeadDir string
 	failTree    string
 	failBlob    string
+	failStaged  string
 }
 
 var _ gitReader = fakeRepo{}
@@ -41,6 +42,9 @@ func (repo fakeRepo) tree(side vcs.Side) map[string]string {
 
 func (repo fakeRepo) Blob(side vcs.Side, file string) (string, error) {
 	if side == vcs.Head && file == repo.failBlob {
+		return "", errMissing
+	}
+	if side == vcs.Staged && file == repo.failStaged {
 		return "", errMissing
 	}
 	return blobOf(repo.tree(side), file)
@@ -141,6 +145,7 @@ func (row renameCase) repo() fakeRepo {
 	fake.failHeadDir = row.failHeadDir
 	fake.failTree = row.failTree
 	fake.failBlob = row.failBlob
+	fake.failStaged = row.failStaged
 	return fake
 }
 

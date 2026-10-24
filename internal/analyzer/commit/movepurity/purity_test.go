@@ -15,6 +15,7 @@ type renameCase struct {
 	failHeadDir string
 	failTree    string
 	failBlob    string
+	failStaged  string
 	renames     []pass.Rename
 	want        bool
 	wantVerdict verdict

@@ -43,7 +43,7 @@ func (moves *moveContext) renameVerdict(rename pass.Rename) verdict {
 		return verdictEdited
 	}
 	if isSame {
-		return moves.identicalVerdict(rename)
+		return moves.identicalMove(rename)
 	}
 	// A rename that already reports an edit keeps that verdict; the embed check decides the rest.
 	got := moves.isGoEdit(fileEdit{oldPath: rename.OldPath, newPath: rename.NewPath, isMove: true})
@@ -99,18 +99,6 @@ func (moves *moveContext) importChangeVerdict(changedPath string) verdict {
 		return verdictPure
 	}
 	return moves.isGoEdit(fileEdit{oldPath: changedPath, newPath: changedPath})
-}
-
-func (moves *moveContext) isGoEdit(edit fileEdit) verdict {
-	if !edit.isGo() {
-		return verdictEdited
-	}
-	oldFile, oldErr := moves.head.parse(edit.oldPath)
-	newFile, newErr := moves.staged.parse(edit.newPath)
-	if oldErr != nil || newErr != nil {
-		return verdictEdited
-	}
-	return moves.goEquivalent(oldFile, newFile, edit)
 }
 
 func notPureMoveFinding(reporter finding.Reporter, rename pass.Rename) finding.Finding {
