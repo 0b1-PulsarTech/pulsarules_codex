@@ -53,6 +53,8 @@ func TestHelperSemantics(t *testing.T) {
 		{"test container bodies", "test/scopes_test.dart", checkContainerBlocks},
 		{"owners, parameters, aliases, labels", "lib/owners.dart", checkNames},
 		{"doc shapes", "lib/docs.dart", checkDocShapes},
+		{"else keywords and exits", "lib/elses.dart", checkElses},
+		{"literals outside const declarations", "lib/numbers.dart", checkNumbers},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -185,6 +187,49 @@ func checkDocShapes(t *testing.T, file *syntax.File) {
 	}
 	if !reflect.DeepEqual(file.DocSites, want) {
 		t.Errorf("doc sites = %+v, want %+v", file.DocSites, want)
+	}
+}
+
+func checkElses(t *testing.T, file *syntax.File) {
+	t.Helper()
+	want := []syntax.Else{
+		{Line: 4, AfterExit: true},
+		{Line: 12},
+		{Line: 14},
+		{Line: 16},
+		{Line: 24, AfterExit: true},
+		{Line: 27, AfterExit: true},
+		{Line: 31, AfterExit: true},
+		{Line: 35},
+		{Line: 39},
+		{Line: 40},
+		{Line: 42, AfterExit: true},
+		{Line: 43, AfterExit: true},
+		{Line: 46},
+		{Line: 48},
+		{Line: 56},
+		{Line: 62, AfterExit: true},
+		{Line: 72, AfterExit: true},
+		{Line: 78},
+		{Line: 81},
+		{Line: 89, AfterExit: true},
+	}
+	if !reflect.DeepEqual(file.Elses, want) {
+		t.Errorf("elses = %+v, want %+v", file.Elses, want)
+	}
+}
+
+func checkNumbers(t *testing.T, file *syntax.File) {
+	t.Helper()
+	want := []syntax.Number{
+		{Value: "250", Line: 10},
+		{Value: "0.5", Line: 12},
+		{Value: "2", Line: 14},
+		{Value: "0", Line: 16},
+		{Value: "8", Line: 20},
+	}
+	if !reflect.DeepEqual(file.Numbers, want) {
+		t.Errorf("numbers = %+v, want %+v", file.Numbers, want)
 	}
 }
 

@@ -2,10 +2,12 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 
 import 'docs.dart';
+import 'elses.dart';
 import 'functions.dart';
 import 'imports.dart';
 import 'lines.dart';
 import 'names.dart';
+import 'numbers.dart';
 
 Map<String, Object> summarize(String path, String content, bool isTest) {
   final result = parseString(
@@ -20,7 +22,11 @@ Map<String, Object> summarize(String path, String content, bool isTest) {
   final docs = DocCollector(lines, isTest);
   unit.accept(functions);
   unit.accept(names);
+  final elses = ElseCollector(lines);
+  final numbers = NumberCollector(lines);
   unit.accept(docs);
+  unit.accept(elses);
+  unit.accept(numbers);
   return {
     'functions': functions.functions.map((frame) => frame.toJson()).toList(),
     'blocks': functions.blocks,
@@ -28,6 +34,8 @@ Map<String, Object> summarize(String path, String content, bool isTest) {
     'importGroups': importGroups,
     'names': names.names,
     'docSites': docs.sites,
+    'elses': elses.elses,
+    'numbers': numbers.numbers,
     'parseError': _firstError(result, lines),
   };
 }
