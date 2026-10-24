@@ -5,12 +5,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook"
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/hookset"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/selfbin"
 )
 
 const (
-	hooksSubdir = "hooks"
-	projectDir  = `"$CLAUDE_PROJECT_DIR/` + RootDir
+	RootDir      = ".claude"
+	SkillsSubdir = "skills"
+	projectDir   = `"$CLAUDE_PROJECT_DIR/` + RootDir
 )
 
 type Location struct {
@@ -23,20 +26,20 @@ func (loc Location) isGlobal() bool { return loc.GlobalDir != "" }
 func (loc Location) scriptPath() string {
 	if loc.isGlobal() {
 		dir := filepath.ToSlash(loc.GlobalDir)
-		return shellQuote(path.Join(dir, hooksSubdir, reminderScriptAsset))
+		return shellQuote(path.Join(dir, hookset.HooksSubdir, hookset.ScriptName))
 	}
-	return projectDir + `/` + hooksSubdir + `/` + reminderScriptAsset + `"`
+	return projectDir + `/` + hookset.HooksSubdir + `/` + hookset.ScriptName + `"`
 }
 
 func (loc Location) command(mode string) string {
 	return "bash " + loc.scriptPath() + " " + mode
 }
 
-func (loc Location) scriptValues(listSeparator rune) reminderScriptValues {
+func (loc Location) scriptValues(listSeparator rune) hookset.ScriptValues {
 	const logFileName = "hook-execution.log"
 	if !loc.isGlobal() {
-		return reminderScriptValues{
-			Bin: projectDir + `/` + binSubdir + `/` + selfbin.Name + `"`,
+		return hookset.ScriptValues{
+			Bin: projectDir + `/` + hookset.BinSubdir + `/` + selfbin.Name + `"`,
 			// The user directory follows Claude's own CLAUDE_CONFIG_DIR; a project script has no
 			// other way to know where a global install put its skills.
 			SkillsDirs: joinShellList(
@@ -49,17 +52,21 @@ func (loc Location) scriptValues(listSeparator rune) reminderScriptValues {
 		}
 	}
 	dir := filepath.ToSlash(loc.GlobalDir)
-	return reminderScriptValues{
-		Bin: shellQuote(path.Join(dir, binSubdir, selfbin.Name)),
+	return hookset.ScriptValues{
+		Bin: shellQuote(path.Join(dir, hookset.BinSubdir, selfbin.Name)),
 		SkillsDirs: joinShellList(
 			listSeparator,
 			projectDir+`/`+SkillsSubdir+`"`,
 			shellQuote(path.Join(dir, SkillsSubdir)),
 		),
 		Log:         shellQuote(path.Join(dir, logFileName)),
-		DeferTo:     projectDir + `/` + hooksSubdir + `/` + reminderScriptAsset + `"`,
+		DeferTo:     projectDir + `/` + hookset.HooksSubdir + `/` + hookset.ScriptName + `"`,
 		ProjectRoot: `"$CLAUDE_PROJECT_DIR"`,
 	}
+}
+
+func (loc Location) block() hookset.Block {
+	return hookset.BuildBlock(loc.command, func(event hook.Event) string { return event.Matcher })
 }
 
 func shellQuote(value string) string {
