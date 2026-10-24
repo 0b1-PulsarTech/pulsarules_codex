@@ -215,3 +215,38 @@ func TestSummarizeSvelteLocalAliases(t *testing.T) {
 		t.Fatalf("groups %v, want %v", groups, want)
 	}
 }
+
+func TestSummarizeSvelteElses(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		text string
+		want []syntax.Else
+	}{
+		{
+			name: "template else blocks never count",
+			text: "{#if ok}\n<p>a</p>\n{:else}\n<p>b</p>\n{/if}\n",
+		},
+		{
+			name: "script else keeps the file line",
+			text: "<p>x</p>\n{#if ok}\n{:else}\n{/if}\n<script>\nfunction f(a) {\nif (a) {\nreturn 1;\n} else {\nreturn 2;\n}\n}\n</script>\n",
+			want: []syntax.Else{{Line: 9, AfterExit: true}},
+		},
+		{
+			name: "two scripts merge their elses",
+			text: "<script context=\"module\">\nif (a) {\n} else {\n}\n</script>\n<script>\nif (b) {\n} else {\n}\n</script>\n",
+			want: []syntax.Else{{Line: 3}, {Line: 8}},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := summarizeText(t, syntax.Source{Path: "a.svelte"}, testCase.text)
+			if !slices.Equal(got.Elses, testCase.want) {
+				t.Fatalf("elses %v, want %v", got.Elses, testCase.want)
+			}
+		})
+	}
+}

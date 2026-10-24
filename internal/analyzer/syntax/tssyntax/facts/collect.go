@@ -33,11 +33,12 @@ func Collect(root *ast.SourceFile, text string, options Options) (syntax.File, e
 	statements := node.Statements()
 	functions := &functionFacts{source: src, isTest: options.IsTest}
 	names := &nameFacts{source: src, locals: exportedLocals(statements)}
+	elses := &elseFacts{source: src}
 	imports := &importFacts{source: src, local: options.Local}
 	imports.collect(statements)
 	docs := &docFacts{source: src, factory: ast.NewNodeFactory(ast.NodeFactoryHooks{})}
 	docs.docStatements(statements, "")
-	if err := newWalker(functions, complexityFacts{functions}, names).run(node); err != nil {
+	if err := newWalker(functions, complexityFacts{functions}, names, elses).run(node); err != nil {
 		return syntax.File{}, err
 	}
 	file := syntax.File{
@@ -46,6 +47,7 @@ func Collect(root *ast.SourceFile, text string, options Options) (syntax.File, e
 		Names:     names.out,
 		Imports:   imports.out,
 		DocSites:  docs.out,
+		Elses:     elses.out,
 	}
 	if len(imports.out) > 0 {
 		file.ImportGroups = importGroupNames()

@@ -83,6 +83,7 @@ func merge(target *syntax.File, part syntax.File, block int) {
 	target.Blocks = append(target.Blocks, part.Blocks...)
 	target.Names = append(target.Names, part.Names...)
 	target.DocSites = append(target.DocSites, part.DocSites...)
+	target.Elses = append(target.Elses, part.Elses...)
 	mergeImports(target, part, block)
 }
 
