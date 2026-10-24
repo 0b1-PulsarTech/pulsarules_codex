@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/dialect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/throwsite"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
@@ -26,6 +27,8 @@ type Dispatcher struct {
 	router     *fileRouter
 	throws     *throwsite.Scanner
 	out        io.Writer
+	output     *dialect.Output
+	dialect    string
 	errOut     io.Writer
 	projectDir string
 	skillsDirs []string
@@ -41,6 +44,7 @@ type Deps struct {
 	ErrOut     io.Writer
 	ProjectDir string
 	SkillsDir  string
+	Dialect    string
 	Governance func(root string, status vcs.Status) (block string, count int)
 }
 
@@ -68,6 +72,8 @@ func NewDispatcher(deps Deps) *Dispatcher {
 		router:     newFileRouter(deps.Index),
 		throws:     throwsite.New(),
 		out:        out,
+		output:     dialect.NewOutput(deps.Dialect),
+		dialect:    deps.Dialect,
 		errOut:     errOut,
 		projectDir: deps.ProjectDir,
 		skillsDirs: filepath.SplitList(deps.SkillsDir),

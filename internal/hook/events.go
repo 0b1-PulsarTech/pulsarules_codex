@@ -84,7 +84,11 @@ func Events() []Event {
 }
 
 func stopHandler(
-	disp *Dispatcher, session *sessionTracker, _ hookPayload, host string,
+	disp *Dispatcher, session *sessionTracker, in hookPayload, host string,
 ) (stopOutcome, error) {
+	// Both hosts set this when a Stop hook already continued the turn: the documented loop guard.
+	if in.StopHookActive {
+		return stopOutcome{}, nil
+	}
 	return disp.emitStop(host, session)
 }

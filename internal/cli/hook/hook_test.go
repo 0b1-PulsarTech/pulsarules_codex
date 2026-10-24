@@ -2,6 +2,7 @@ package hook
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -293,5 +294,70 @@ func TestCommand_BootstrapFailed(t *testing.T) {
 	if strings.Contains(text, "\n") || !strings.Contains(text, `a\n[ERROR] forged`) ||
 		!strings.HasPrefix(text, "pulsarules_cli: hook: ") {
 		t.Errorf("output = %q, want one escaped line", out.String())
+	}
+}
+
+//nolint:paralleltest // t.Setenv and the os.Stdin/os.Stdout swaps bar t.Parallel.
+func TestCommand_Run_CodexDialectEndToEnd(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+
+	project, skills := t.TempDir(), t.TempDir()
+	writeHookFile(t, project, "go.mod", "module x\n")
+	writeHookFile(t, project, "a.go", "package x\n")
+	if err := os.MkdirAll(filepath.Join(skills, "go-style"), disk.ModeDirPrivate); err != nil {
+		t.Fatalf("mkdir skill: %v", err)
+	}
+	writeHookFile(t, skills, "go-style/SKILL.md", "x")
+	testCases := []struct {
+		name    string
+		dialect string
+		mode    string
+		payload string
+		want    bool
+	}{
+		{
+			"codex patch is routed to its file", "codex", "post-edit",
+			`{"session_id":"cx1","cwd":"` + project + `","tool_name":"apply_patch",` +
+				`"tool_input":{"command":"*** Update File: a.go\n"}}`,
+			true,
+		},
+		{
+			"claude dialect cannot see the patch", "", "post-edit",
+			`{"session_id":"cx2","cwd":"` + project + `","tool_name":"apply_patch",` +
+				`"tool_input":{"command":"*** Update File: a.go\n"}}`,
+			false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			stdin, err := os.CreateTemp(t.TempDir(), "stdin")
+			if err != nil {
+				t.Fatalf("create stdin: %v", err)
+			}
+			if _, err = stdin.WriteString(testCase.payload); err != nil {
+				t.Fatalf("write stdin: %v", err)
+			}
+			if _, err = stdin.Seek(0, 0); err != nil {
+				t.Fatalf("rewind stdin: %v", err)
+			}
+			savedStdin := os.Stdin
+			os.Stdin = stdin
+			defer func() { os.Stdin = savedStdin }()
+
+			env := flags.Environment{
+				ProjectDir: project, SkillsDir: skills, HookDialect: testCase.dialect,
+			}
+			out := captureStream(t, &os.Stdout, func() {
+				if err = New(env).Run(hookCollaborators(t), []string{testCase.mode}); err != nil {
+					t.Errorf("Run() = %v, want nil", err)
+				}
+			})
+			if got := out != ""; got != testCase.want {
+				t.Fatalf("emitted = %v, want %v:\n%s", got, testCase.want, out)
+			}
+			if got := out != "" && !json.Valid([]byte(out)); got {
+				t.Errorf("output is not one JSON object: %q", out)
+			}
+		})
 	}
 }

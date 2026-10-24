@@ -61,6 +61,7 @@ func (cmd *Command) Run(needs Collaborators, args []string) error {
 		Out:        os.Stdout,
 		ProjectDir: cmd.env.ProjectDir,
 		SkillsDir:  cmd.env.SkillsDir,
+		Dialect:    cmd.env.HookDialect,
 	}, needs.LoadCatalog, needs.Loader)
 
 	var mode string

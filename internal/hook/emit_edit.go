@@ -14,7 +14,7 @@ import (
 
 func (disp *Dispatcher) emitPreEdit(session *sessionTracker, in hookPayload, host string) error {
 	filePath := in.ToolInput.FilePath
-	if !disp.router.Routes(filePath) {
+	if !in.patchOp.PreEdit() || !disp.router.Routes(filePath) {
 		return nil
 	}
 	// Gate per file path, not per session: the failure this hook guards
@@ -36,6 +36,9 @@ func fileEvent(prefix, filePath string) string {
 
 func (disp *Dispatcher) emitPostEdit(session *sessionTracker, in hookPayload, host string) error {
 	filePath := in.ToolInput.FilePath
+	if !in.patchOp.PostEdit() {
+		return nil
+	}
 
 	// Before the skills gate below, which returns early for any extension
 	// that routes no skill; no trigger names .md, where most markers live.

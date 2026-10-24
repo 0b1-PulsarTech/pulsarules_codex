@@ -11,6 +11,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/dialect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge/templates"
 )
@@ -339,5 +340,91 @@ func TestDispatchStop_MissingChecklistTemplate(t *testing.T) {
 	}
 	if !strings.Contains(logBuf.String(), "stop checklist unavailable") {
 		t.Errorf("log missing checklist failure:\n%s", logBuf.String())
+	}
+}
+
+func TestDispatchStop_HookActiveIsSilent(t *testing.T) {
+	t.Parallel()
+
+	for _, hostDialect := range []string{"", dialect.Codex} {
+		t.Run("dialect "+hostDialect, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			gitInit(t, dir)
+			seedFiles(t, dir, 1)
+			disp, out := dispatchCapture(Deps{
+				ProjectDir: dir, Dialect: hostDialect,
+				Governance: stubGovernance("\nblock\n", 1),
+			})
+			active := fmt.Appendf(
+				nil,
+				`{"session_id":%q,"stop_hook_active":true}`,
+				uniqueSessionID(t),
+			)
+
+			_ = disp.Dispatch("stop", active)
+
+			if out.Len() != 0 {
+				t.Errorf("stop_hook_active must be silent, got %q", out.String())
+			}
+		})
+	}
+}
+
+func TestDispatchStop_DedupeKey(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name             string
+		dialect          string
+		wantAfterNewFile bool
+	}{
+		{"codex keys on the findings alone", dialect.Codex, false},
+		{"claude keys on the whole context", "", true},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			gitInit(t, dir)
+			seedFiles(t, dir, 1)
+			block := "\nfindings one\n"
+			disp, out := dispatchCapture(Deps{
+				ProjectDir: dir, Dialect: testCase.dialect,
+				Governance: func(string, vcs.Status) (string, int) { return block, 1 },
+			})
+			payload := newSessionPayload(t)
+
+			_ = disp.Dispatch("stop", payload)
+			if out.Len() == 0 {
+				t.Fatal("first stop with findings must emit")
+			}
+
+			out.Reset()
+			if err := os.WriteFile(
+				filepath.Join(dir, "other.md"),
+				[]byte("x\n"),
+				0o600,
+			); err != nil {
+				t.Fatalf("write: %v", err)
+			}
+			_ = disp.Dispatch("stop", payload)
+			if got := out.Len() != 0; got != testCase.wantAfterNewFile {
+				t.Errorf(
+					"emitted after an unrelated new file = %v, want %v",
+					got,
+					testCase.wantAfterNewFile,
+				)
+			}
+
+			out.Reset()
+			block = "\nfindings two\n"
+			_ = disp.Dispatch("stop", payload)
+			if out.Len() == 0 {
+				t.Error("changed findings must emit again")
+			}
+		})
 	}
 }

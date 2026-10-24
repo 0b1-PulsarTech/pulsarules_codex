@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/hook/dialect"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/printable"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/vcs"
 )
@@ -38,7 +39,8 @@ func searchTargetsGo(in hookPayload) bool {
 			return true
 		}
 	}
-	if in.ToolName != "Bash" {
+	// Codex names its shell tool exec_command; both carry the command text.
+	if in.ToolName != "Bash" && in.ToolName != "exec_command" {
 		return false
 	}
 	fields := strings.Fields(in.ToolInput.Command)
@@ -83,24 +85,35 @@ func (disp *Dispatcher) emitStop(event string, session *sessionTracker) (stopOut
 		// dirty tree the governance checks have nothing to say about.
 		return stopOutcome{}, nil
 	}
-	context, err := disp.stopHeader(result)
+	header, err := disp.stopHeader(result)
 	if err != nil {
 		return outcome, err
 	}
+	context := header + disp.stopBody(status)
+	// Codex blocks on the findings alone, so the same findings plus an unrelated file change
+	// must not block again; Claude only adds context and keeps the full text as its key.
+	dedupeKey := context
+	if disp.dialect == dialect.Codex {
+		dedupeKey = header
+	}
+	if !session.FirstEmission(event, dedupeKey) {
+		return outcome, nil
+	}
+	disp.emitOutput(event, context)
+	return outcome, nil
+}
+
+func (disp *Dispatcher) stopBody(status vcs.Status) string {
 	bullets, err := disp.stopChecklist(status)
 	if err != nil {
 		// The block is the point of the Stop hook; a missing checklist only drops the bullets.
 		disp.logger.Warn("stop checklist unavailable", "error", err.Error())
 	}
+	body := ""
 	if bullets != "" {
-		context += "\n" + bullets
+		body = "\n" + bullets
 	}
-	context += "\n\nUncommitted changes:\n" + cappedStatus(status)
-	if !session.FirstEmission(event, context) {
-		return outcome, nil
-	}
-	disp.emitOutput(event, context)
-	return outcome, nil
+	return body + "\n\nUncommitted changes:\n" + cappedStatus(status)
 }
 
 type stopChecklistFlags struct {

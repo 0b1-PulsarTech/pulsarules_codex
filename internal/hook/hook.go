@@ -1,6 +1,7 @@
 package hook
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -9,22 +10,27 @@ import (
 )
 
 func (disp *Dispatcher) Dispatch(mode string, payload []byte) error {
-	in := decodeHookPayload(payload)
-	session := newSessionTracker(in.SessionID)
+	payloads := decodeHookPayloads(payload, disp.dialect)
+	session := newSessionTracker(payloads[0].SessionID)
 	disp.warnMissingProjectDir(session)
 	start := time.Now()
 
-	var (
-		outcome stopOutcome
-		err     error
-	)
+	var outcome stopOutcome
+	var errs []error
 	for _, event := range Events() {
-		if event.Mode == mode {
-			outcome, err = event.handle(disp, session, in, event.Host)
-			break
+		if event.Mode != mode {
+			continue
 		}
+		for _, in := range payloads {
+			var err error
+			outcome, err = event.handle(disp, session, in, event.Host)
+			errs = append(errs, err)
+		}
+		break
 	}
+	err := errors.Join(errs...)
 
+	disp.flushOutput()
 	disp.record(session, dispatchRecord{mode: mode, start: start, outcome: outcome, err: err})
 	// A hook must never block: a handler failure surfaces only through the log.
 	return nil
