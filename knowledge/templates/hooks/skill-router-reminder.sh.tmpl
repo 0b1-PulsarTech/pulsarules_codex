@@ -26,7 +26,7 @@ bin={{.Bin}}
 # PULSARULES_SKILLS_DIR and PULSARULES_LOG_PATH; Claude Code only sets
 # CLAUDE_PROJECT_DIR, so this Claude-specific script is where that
 # translation - and the Claude skills/log layout - happens.
-export PULSARULES_PROJECT_DIR="$CLAUDE_PROJECT_DIR"
+export PULSARULES_PROJECT_DIR={{.ProjectRoot}}
 export PULSARULES_SKILLS_DIR={{.SkillsDirs}}
 export PULSARULES_LOG_PATH={{.Log}}
 exec "$bin" hook "$1"

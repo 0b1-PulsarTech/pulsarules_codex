@@ -44,7 +44,8 @@ func (loc Location) scriptValues(listSeparator rune) reminderScriptValues {
 				projectDir+`/`+SkillsSubdir+`"`,
 				`"${CLAUDE_CONFIG_DIR:-$HOME/`+RootDir+`}/`+SkillsSubdir+`"`,
 			),
-			Log: projectDir + `/` + logFileName + `"`,
+			Log:         projectDir + `/` + logFileName + `"`,
+			ProjectRoot: `"$CLAUDE_PROJECT_DIR"`,
 		}
 	}
 	dir := filepath.ToSlash(loc.GlobalDir)
@@ -55,8 +56,9 @@ func (loc Location) scriptValues(listSeparator rune) reminderScriptValues {
 			projectDir+`/`+SkillsSubdir+`"`,
 			shellQuote(path.Join(dir, SkillsSubdir)),
 		),
-		Log:     shellQuote(path.Join(dir, logFileName)),
-		DeferTo: projectDir + `/` + hooksSubdir + `/` + reminderScriptAsset + `"`,
+		Log:         shellQuote(path.Join(dir, logFileName)),
+		DeferTo:     projectDir + `/` + hooksSubdir + `/` + reminderScriptAsset + `"`,
+		ProjectRoot: `"$CLAUDE_PROJECT_DIR"`,
 	}
 }
 

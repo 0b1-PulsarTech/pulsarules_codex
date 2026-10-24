@@ -54,7 +54,8 @@ func TestLocation_ScriptValues(t *testing.T) {
 				Bin: `"$CLAUDE_PROJECT_DIR/.claude/bin/pulsarules_cli"`,
 				SkillsDirs: `"$CLAUDE_PROJECT_DIR/.claude/skills":` +
 					`"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"`,
-				Log: `"$CLAUDE_PROJECT_DIR/.claude/hook-execution.log"`,
+				Log:         `"$CLAUDE_PROJECT_DIR/.claude/hook-execution.log"`,
+				ProjectRoot: `"$CLAUDE_PROJECT_DIR"`,
 			},
 		},
 		{
@@ -62,10 +63,11 @@ func TestLocation_ScriptValues(t *testing.T) {
 			loc:       Location{GlobalDir: "/home/user/.claude"},
 			separator: ':',
 			want: reminderScriptValues{
-				Bin:        `'/home/user/.claude/bin/pulsarules_cli'`,
-				SkillsDirs: `"$CLAUDE_PROJECT_DIR/.claude/skills":'/home/user/.claude/skills'`,
-				Log:        `'/home/user/.claude/hook-execution.log'`,
-				DeferTo:    `"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh"`,
+				Bin:         `'/home/user/.claude/bin/pulsarules_cli'`,
+				SkillsDirs:  `"$CLAUDE_PROJECT_DIR/.claude/skills":'/home/user/.claude/skills'`,
+				Log:         `'/home/user/.claude/hook-execution.log'`,
+				DeferTo:     `"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh"`,
+				ProjectRoot: `"$CLAUDE_PROJECT_DIR"`,
 			},
 		},
 		{
@@ -73,10 +75,11 @@ func TestLocation_ScriptValues(t *testing.T) {
 			loc:       Location{GlobalDir: "C:/Users/user/.claude"},
 			separator: ';',
 			want: reminderScriptValues{
-				Bin:        `'C:/Users/user/.claude/bin/pulsarules_cli'`,
-				SkillsDirs: `"$CLAUDE_PROJECT_DIR/.claude/skills"";"'C:/Users/user/.claude/skills'`,
-				Log:        `'C:/Users/user/.claude/hook-execution.log'`,
-				DeferTo:    `"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh"`,
+				Bin:         `'C:/Users/user/.claude/bin/pulsarules_cli'`,
+				SkillsDirs:  `"$CLAUDE_PROJECT_DIR/.claude/skills"";"'C:/Users/user/.claude/skills'`,
+				Log:         `'C:/Users/user/.claude/hook-execution.log'`,
+				DeferTo:     `"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-router-reminder.sh"`,
+				ProjectRoot: `"$CLAUDE_PROJECT_DIR"`,
 			},
 		},
 	}

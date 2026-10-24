@@ -80,10 +80,11 @@ func InstallHook(
 }
 
 type reminderScriptValues struct {
-	Bin        string
-	SkillsDirs string
-	Log        string
-	DeferTo    string
+	Bin         string
+	SkillsDirs  string
+	Log         string
+	DeferTo     string
+	ProjectRoot string
 }
 
 func renderReminderScript(

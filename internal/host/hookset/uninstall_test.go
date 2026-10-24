@@ -1,0 +1,192 @@
+package hookset
+
+import (
+	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/0b1-PulsarTech/pulsarules_codex/internal/ownedfile"
+)
+
+func TestUninstall(t *testing.T) {
+	t.Parallel()
+
+	claudeDir := filepath.Join(t.TempDir(), ".claude")
+	if _, err := Install(fakeTemplates(), claudeDir, testValues()); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	if _, err := Uninstall(claudeDir); err != nil {
+		t.Fatalf("UninstallHook: %v", err)
+	}
+
+	for _, dir := range []string{"hooks", "bin"} {
+		if _, err := os.Stat(filepath.Join(claudeDir, dir)); !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("expected %q to be removed once empty, stat err = %v", dir, err)
+		}
+	}
+}
+
+func TestUninstall_LeavesUnrelatedContent(t *testing.T) {
+	t.Parallel()
+
+	claudeDir := filepath.Join(t.TempDir(), ".claude")
+	if _, err := Install(fakeTemplates(), claudeDir, testValues()); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	extra := filepath.Join(claudeDir, "hooks", "user-hook.sh")
+	if err := os.WriteFile(
+		extra,
+		[]byte("#!/bin/sh\n"),
+		0o755,
+	); err != nil { //nolint:gosec // test fixture.
+		t.Fatalf("seed extra file: %v", err)
+	}
+
+	if _, err := Uninstall(claudeDir); err != nil {
+		t.Fatalf("UninstallHook: %v", err)
+	}
+
+	if _, err := os.Stat(extra); err != nil {
+		t.Errorf("expected unrelated hook file to survive, stat err = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(claudeDir, "hooks")); err != nil {
+		t.Errorf("expected hooks dir to survive (not empty), stat err = %v", err)
+	}
+}
+
+func TestUninstall_ForeignReadme(t *testing.T) {
+	t.Parallel()
+
+	claudeDir := filepath.Join(t.TempDir(), ".claude")
+	if _, err := Install(fakeTemplates(), claudeDir, testValues()); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	readme := filepath.Join(claudeDir, "hooks", "README.md")
+	foreign := "# My own notes\nDo not touch.\n"
+	if err := os.WriteFile(readme, []byte(foreign), 0o600); err != nil {
+		t.Fatalf("overwrite foreign readme: %v", err)
+	}
+
+	if _, err := Uninstall(claudeDir); err != nil {
+		t.Fatalf("UninstallHook: %v", err)
+	}
+
+	got, readErr := os.ReadFile(readme) //nolint:gosec // test fixture.
+	if readErr != nil {
+		t.Fatalf("expected foreign README.md to survive, read err = %v", readErr)
+	}
+	if string(got) != foreign {
+		t.Errorf("README.md content changed, got %q want %q", got, foreign)
+	}
+	script := filepath.Join(claudeDir, "hooks", "skill-router-reminder.sh")
+	if _, statErr := os.Stat(script); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Errorf("expected marker-carrying script to be removed, stat err = %v", statErr)
+	}
+}
+
+func TestUninstall_RestoresBackup(t *testing.T) {
+	t.Parallel()
+
+	claudeDir := filepath.Join(t.TempDir(), ".claude")
+	hooksDir := filepath.Join(claudeDir, "hooks")
+	if err := os.MkdirAll(hooksDir, 0o750); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	readme := filepath.Join(hooksDir, "README.md")
+	foreign := "# My own notes about this hooks dir\n"
+	if err := os.WriteFile(readme, []byte(foreign), 0o600); err != nil {
+		t.Fatalf("seed foreign readme: %v", err)
+	}
+	if _, err := Install(fakeTemplates(), claudeDir, testValues()); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	ledger, err := Uninstall(claudeDir)
+	if err != nil {
+		t.Fatalf("UninstallHook: %v", err)
+	}
+	wantMsg := ownedfile.RestoreMessage(readme)
+	if len(ledger.Restored) != 1 || ledger.Restored[0] != wantMsg {
+		t.Fatalf("restored = %v, want [%q]", ledger.Restored, wantMsg)
+	}
+	got, readErr := os.ReadFile(readme) //nolint:gosec // test fixture.
+	if readErr != nil {
+		t.Fatalf("read restored readme: %v", readErr)
+	}
+	if string(got) != foreign {
+		t.Errorf("restored content = %q, want %q", got, foreign)
+	}
+}
+
+func TestUninstall_Idempotent(t *testing.T) {
+	t.Parallel()
+
+	claudeDir := filepath.Join(t.TempDir(), ".claude")
+	if _, err := Uninstall(claudeDir); err != nil {
+		t.Fatalf("UninstallHook on untouched dir: %v", err)
+	}
+}
+
+func TestUninstall_ForeignAssetSurvives(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name       string
+		asset      string
+		content    string
+		wantExists bool
+	}{
+		{
+			name:       "foreign README survives",
+			asset:      "README.md",
+			content:    "# My own notes about this hooks dir\n",
+			wantExists: true,
+		},
+		{
+			name:  "installed README is removed",
+			asset: "README.md",
+			content: "<!-- Installed by pulsarules_cli; " +
+				"remove or edit this file to disable. -->\n",
+			wantExists: false,
+		},
+		{
+			name:       "foreign script survives",
+			asset:      "skill-router-reminder.sh",
+			content:    "#!/usr/bin/env bash\necho mine\n",
+			wantExists: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			claudeDir := t.TempDir()
+			hooksDir := filepath.Join(claudeDir, "hooks")
+			if err := os.MkdirAll(hooksDir, 0o750); err != nil {
+				t.Fatalf("mkdir: %v", err)
+			}
+			assetPath := filepath.Join(hooksDir, testCase.asset)
+			if err := os.WriteFile(assetPath, []byte(testCase.content), 0o600); err != nil {
+				t.Fatalf("write asset: %v", err)
+			}
+
+			if _, err := Uninstall(claudeDir); err != nil {
+				t.Fatalf("UninstallHook: %v", err)
+			}
+
+			_, err := os.Stat(assetPath)
+			if testCase.wantExists && err != nil {
+				t.Errorf(
+					"%s was deleted; a file this tool did not write must survive",
+					testCase.asset,
+				)
+			}
+			if !testCase.wantExists && err == nil {
+				t.Errorf("%s survived; an installed asset must be removed", testCase.asset)
+			}
+		})
+	}
+}
