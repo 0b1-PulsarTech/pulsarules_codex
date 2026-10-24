@@ -22,13 +22,13 @@ func (cmd *Command) Bind(fs *flag.FlagSet) {
 		&cmd.global,
 		"global",
 		false,
-		"uninstall for the user: ~/.claude, or $CLAUDE_CONFIG_DIR when set",
+		"uninstall for the user: ~/.claude (or $CLAUDE_CONFIG_DIR) and ~/.codex (or $CODEX_HOME)",
 	)
-	fs.StringVar(&cmd.project, "project", "", "uninstall from `PATH`/.claude/skills")
+	fs.StringVar(&cmd.project, "project", "", "uninstall from the project at `PATH`")
 	fs.Var(
 		flags.NewRepeatable(&cmd.target),
 		"target",
-		"uninstall target (repeatable): `claude|opencode|agents|cursor ...` "+
+		"uninstall target (repeatable): `claude|codex|opencode|agents|cursor ...` "+
 			"(default: every target detected on disk)",
 	)
 	fs.StringVar(

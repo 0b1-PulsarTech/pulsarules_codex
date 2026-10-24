@@ -66,12 +66,14 @@ func uninstallContext(cmd *Command) (host.UninstallContext, error) {
 	if err != nil {
 		return host.UninstallContext{}, fmt.Errorf("base dir: %w", err)
 	}
-	var claudeDir string
+	var claudeDir, codexDir string
 	if cmd.global {
-		claudeDir, err = flags.UserClaudeDir(scope)
-	}
-	if err != nil {
-		return host.UninstallContext{}, fmt.Errorf("claude dir: %w", err)
+		if claudeDir, err = flags.UserClaudeDir(scope); err != nil {
+			return host.UninstallContext{}, fmt.Errorf("claude dir: %w", err)
+		}
+		if codexDir, err = flags.UserCodexDir(scope); err != nil {
+			return host.UninstallContext{}, fmt.Errorf("codex dir: %w", err)
+		}
 	}
 	hooksScope, err := flags.ParseHooksScope(cmd.hooksScope)
 	if err != nil {
@@ -81,6 +83,7 @@ func uninstallContext(cmd *Command) (host.UninstallContext, error) {
 		Base:          absBase,
 		Global:        cmd.global,
 		ClaudeDir:     claudeDir,
+		CodexDir:      codexDir,
 		SettingsFiles: hooksScope.Files(),
 		KeepSkills:    cmd.keepSkills,
 	}, nil
@@ -120,9 +123,9 @@ func removeLanguageConfig(absBase string) error {
 func resolveTargets(cmd *Command, reg *host.Registry, base string) ([]string, error) {
 	explicit := cmd.target
 	if len(explicit) == 0 && cmd.global {
-		// Only claude has a global layout; detection under the home directory
+		// Only claude and codex have a global layout; detection under the home directory
 		// would also match a user's own AGENTS.md or .opencode.
-		return []string{"claude"}, nil
+		return []string{"claude", "codex"}, nil
 	}
 	if len(explicit) == 0 {
 		return reg.DetectTargets(base), nil

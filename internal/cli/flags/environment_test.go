@@ -17,6 +17,7 @@ func TestReadEnvironment(t *testing.T) {
 	t.Setenv("HOME", "/home/user")
 	t.Setenv("CLAUDE_CONFIG_DIR", "/claude/config")
 	t.Setenv("XDG_CONFIG_HOME", "/xdg")
+	t.Setenv("CODEX_HOME", "/codex/home")
 
 	wantUserDir, err := os.UserConfigDir()
 	if err != nil {
@@ -25,6 +26,7 @@ func TestReadEnvironment(t *testing.T) {
 	want := Environment{
 		Home:          "/home/user",
 		ConfigDir:     "/claude/config",
+		CodexHome:     "/codex/home",
 		ProjectDir:    "/project",
 		SkillsDir:     "/skills",
 		LogPath:       "/log/path",
@@ -45,6 +47,7 @@ func TestReadEnvironment_Unset(t *testing.T) {
 	for _, name := range []string{
 		"PULSARULES_PROJECT_DIR", "PULSARULES_SKILLS_DIR",
 		"PULSARULES_LOG_PATH", "PULSARULES_LOG_LEVEL", "PULSARULES_HOOK_DIALECT", "HOME", "CLAUDE_CONFIG_DIR",
+		"CODEX_HOME",
 	} {
 		t.Setenv(name, "")
 	}

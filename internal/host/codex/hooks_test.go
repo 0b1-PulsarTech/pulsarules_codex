@@ -128,6 +128,41 @@ func TestProjectScript_FindsItsRootFromItsOwnPath(t *testing.T) {
 	}
 }
 
+func TestWireHooks_ThenUnwire(t *testing.T) {
+	t.Parallel()
+
+	codexDir := filepath.Join(t.TempDir(), RootDir)
+	if err := WireHooks(codexDir, Location{}); err != nil {
+		t.Fatalf("WireHooks: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(codexDir, HooksFile)); err != nil {
+		t.Fatalf("WireHooks wrote no hooks file: %v", err)
+	}
+	changed, err := UnwireHooks(codexDir)
+	if err != nil || !changed {
+		t.Fatalf("UnwireHooks = %v, %v, want a change", changed, err)
+	}
+	if _, err = os.Stat(filepath.Join(codexDir, HooksFile)); !os.IsNotExist(err) {
+		t.Errorf("an emptied hooks file must go, stat err = %v", err)
+	}
+	if changed, err = UnwireHooks(codexDir); err != nil || changed {
+		t.Errorf("second UnwireHooks = %v, %v, want a quiet no-op", changed, err)
+	}
+}
+
+func TestUninstallHook_RemovesTheScriptAndBinary(t *testing.T) {
+	t.Parallel()
+
+	codexDir := filepath.Join(t.TempDir(), RootDir)
+	installStubbed(t, codexDir, Location{})
+	if _, err := UninstallHook(codexDir); err != nil {
+		t.Fatalf("UninstallHook: %v", err)
+	}
+	if entries, err := os.ReadDir(codexDir); err != nil || len(entries) != 0 {
+		t.Errorf("codex dir after UninstallHook = %v, %v, want it empty", entries, err)
+	}
+}
+
 func TestHooksFile_SymlinkIsRefused(t *testing.T) {
 	t.Parallel()
 

@@ -12,10 +12,11 @@ type Scope struct {
 	Home    string
 	// ConfigDir is Claude Code's own CLAUDE_CONFIG_DIR, honoured in global scope only.
 	ConfigDir string
+	CodexHome string
 }
 
 func (scope Scope) WithEnv(env Environment) Scope {
-	scope.Home, scope.ConfigDir = env.Home, env.ConfigDir
+	scope.Home, scope.ConfigDir, scope.CodexHome = env.Home, env.ConfigDir, env.CodexHome
 	return scope
 }
 
@@ -46,6 +47,21 @@ func UserClaudeDir(scope Scope) (string, error) {
 	dir := scope.ConfigDir
 	if dir == "" && scope.Home != "" {
 		dir = filepath.Join(scope.Home, ".claude")
+	}
+	if dir == "" {
+		return "", nil
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", fmt.Errorf("absolute %q: %w", dir, err)
+	}
+	return abs, nil
+}
+
+func UserCodexDir(scope Scope) (string, error) {
+	dir := scope.CodexHome
+	if dir == "" && scope.Home != "" {
+		dir = filepath.Join(scope.Home, ".codex")
 	}
 	if dir == "" {
 		return "", nil

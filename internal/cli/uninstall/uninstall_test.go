@@ -445,7 +445,7 @@ func TestRun_GlobalLeavesGitAndLanguageConfigAlone(t *testing.T) {
 	}
 }
 
-func TestResolveTargets_GlobalDefaultsToClaude(t *testing.T) {
+func TestResolveTargets_GlobalDefaultsToTheGlobalTargets(t *testing.T) {
 	t.Parallel()
 
 	home := t.TempDir()
@@ -453,7 +453,7 @@ func TestResolveTargets_GlobalDefaultsToClaude(t *testing.T) {
 		t.Fatalf("seed AGENTS.md: %v", err)
 	}
 	got, err := resolveTargets(&Command{global: true}, host.NewRegistry(), home)
-	if err != nil || !slices.Equal(got, []string{"claude"}) {
-		t.Errorf("resolveTargets = %v, %v, want [claude]", got, err)
+	if err != nil || !slices.Equal(got, []string{"claude", "codex"}) {
+		t.Errorf("resolveTargets = %v, %v, want [claude codex]", got, err)
 	}
 }

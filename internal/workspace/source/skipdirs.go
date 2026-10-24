@@ -8,7 +8,7 @@ import (
 
 func DefaultSkipDirs() []string {
 	return []string{
-		".git", ".claude", ".opencode", ".idea", ".vscode",
+		".git", ".claude", ".codex", ".opencode", ".idea", ".vscode",
 		"build", "generated", "testdata", "dist", "out", "coverage",
 		"vendor",
 		"node_modules", ".next", ".nuxt", ".svelte-kit",

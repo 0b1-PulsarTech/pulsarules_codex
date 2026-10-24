@@ -32,11 +32,15 @@ func workflowsForSkills(idx *knowledge.Index, skillIDs []string) []string {
 }
 
 func writeAgents(ctx Context, report *Report) error {
-	outcome, err := agents.Write(ctx.Templates, ctx.Base, ctx.Index, ctx.IDs)
+	return writeAgentsIn(ctx, ctx.Base, report)
+}
+
+func writeAgentsIn(ctx Context, dir string, report *Report) error {
+	outcome, err := agents.Write(ctx.Templates, dir, ctx.Index, ctx.IDs)
 	if err != nil {
 		return fmt.Errorf("write agents: %w", err)
 	}
-	report.Merge(outcome.ReportWrite(filepath.Join(ctx.Base, agents.FileName), "wrote %s"))
+	report.Merge(outcome.ReportWrite(filepath.Join(dir, agents.FileName), "wrote %s"))
 	return nil
 }
 
@@ -50,6 +54,14 @@ func removeAgents(base string, report *Report) error {
 		report.Note("removed %s", path)
 	}
 	return nil
+}
+
+func warnBlock(report *Report, heading, block string) {
+	// Each line is its own warning because the report prints one escaped line at a time.
+	report.Warn("%s", heading)
+	for line := range strings.SplitSeq(strings.TrimRight(block, "\n"), "\n") {
+		report.Warn("    %s", line)
+	}
 }
 
 func warnUnparseable(report *Report, err error) bool {

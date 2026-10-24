@@ -106,11 +106,40 @@ func TestUserClaudeDir(t *testing.T) {
 	}
 }
 
+func TestUserCodexDir(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		scope Scope
+		want  string
+	}{
+		{name: "default under home", scope: Scope{Home: "/h"}, want: "/h/.codex"},
+		{name: "codex home wins", scope: Scope{Home: "/h", CodexHome: "/cx"}, want: "/cx"},
+		{
+			name:  "relative codex home is made absolute",
+			scope: Scope{CodexHome: "cx"},
+			want:  filepath.Join(workDir(t), "cx"),
+		},
+		{name: "nothing known"},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := UserCodexDir(testCase.scope)
+			if err != nil || got != testCase.want {
+				t.Errorf("UserCodexDir = %q, %v, want %q", got, err, testCase.want)
+			}
+		})
+	}
+}
+
 func TestScope_WithEnv(t *testing.T) {
 	t.Parallel()
 
-	got := Scope{Global: true}.WithEnv(Environment{Home: "/h", ConfigDir: "/c"})
-	want := Scope{Global: true, Home: "/h", ConfigDir: "/c"}
+	got := Scope{Global: true}.WithEnv(Environment{Home: "/h", ConfigDir: "/c", CodexHome: "/x"})
+	want := Scope{Global: true, Home: "/h", ConfigDir: "/c", CodexHome: "/x"}
 	if got != want {
 		t.Errorf("WithEnv = %+v, want %+v", got, want)
 	}

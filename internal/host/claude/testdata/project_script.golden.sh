@@ -14,9 +14,8 @@ bin="$CLAUDE_PROJECT_DIR/.claude/bin/pulsarules_cli"
 [ -x "$bin" ] || exit 0
 
 # Generic Go reads only the host-neutral PULSARULES_PROJECT_DIR,
-# PULSARULES_SKILLS_DIR and PULSARULES_LOG_PATH; Claude Code only sets
-# CLAUDE_PROJECT_DIR, so this Claude-specific script is where that
-# translation - and the Claude skills/log layout - happens.
+# PULSARULES_SKILLS_DIR and PULSARULES_LOG_PATH; this script is where the
+# host's own project root and skills/log layout are translated into them.
 export PULSARULES_PROJECT_DIR="$CLAUDE_PROJECT_DIR"
 export PULSARULES_SKILLS_DIR="$CLAUDE_PROJECT_DIR/.claude/skills":"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
 export PULSARULES_LOG_PATH="$CLAUDE_PROJECT_DIR/.claude/hook-execution.log"

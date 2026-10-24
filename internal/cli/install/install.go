@@ -9,7 +9,6 @@ import (
 
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/cli/flags"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host"
-	"github.com/0b1-PulsarTech/pulsarules_codex/internal/host/claude"
 	"github.com/0b1-PulsarTech/pulsarules_codex/internal/skill/render"
 	"github.com/0b1-PulsarTech/pulsarules_codex/knowledge"
 )
@@ -35,11 +34,11 @@ func (cmd *Command) install(shared host.Context, registry *host.Registry) error 
 		return err
 	}
 
+	targets := cmd.targets()
 	if cmd.printHooks {
-		return printHooksBlock(cfg)
+		return printHooksBlock(cfg, targets)
 	}
 
-	targets := cmd.targets()
 	// Refuse before any prompt: a question about an install that cannot happen is noise.
 	if err = registry.Check(targets); err != nil {
 		return err
@@ -67,15 +66,6 @@ func (cmd *Command) install(shared host.Context, registry *host.Registry) error 
 	}
 
 	return installPostTargets(cmd, cfg)
-}
-
-func printHooksBlock(cfg installConfig) error {
-	block, err := claude.RenderHooksBlock(claude.Location{GlobalDir: cfg.claudeDir})
-	if err != nil {
-		return fmt.Errorf("render hooks block: %w", err)
-	}
-	_, _ = fmt.Print(string(block))
-	return nil
 }
 
 func newTargetContext(
@@ -110,6 +100,7 @@ func newTargetContext(
 	shared.Global = cfg.global
 	shared.ClaudeDir = cfg.claudeDir
 	shared.UserClaudeDir = cfg.userClaudeDir
+	shared.CodexDir = cfg.codexDir
 	shared.IDs = ids
 	shared.RouterFilter = routerFilter
 	shared.NoMCP = cmd.noMCP
@@ -123,6 +114,7 @@ type installConfig struct {
 	absBase       string
 	claudeDir     string
 	userClaudeDir string
+	codexDir      string
 	global        bool
 	settingsFile  string
 	gitHooks      []string
@@ -138,9 +130,12 @@ func resolveInstallConfig(cmd *Command) (installConfig, error) {
 	if err != nil {
 		return installConfig{}, fmt.Errorf("claude dir: %w", err)
 	}
-	var claudeDir string
+	var claudeDir, codexDir string
 	if cmd.global {
 		claudeDir = userClaudeDir
+		if codexDir, err = flags.UserCodexDir(scope); err != nil {
+			return installConfig{}, fmt.Errorf("codex dir: %w", err)
+		}
 	}
 	hooksScope, err := flags.ParseHooksScope(cmd.hooksScope)
 	if err != nil {
@@ -154,6 +149,7 @@ func resolveInstallConfig(cmd *Command) (installConfig, error) {
 		absBase:       absBase,
 		claudeDir:     claudeDir,
 		userClaudeDir: userClaudeDir,
+		codexDir:      codexDir,
 		global:        cmd.global,
 		settingsFile:  hooksScope.File(),
 		gitHooks:      gitHooks,

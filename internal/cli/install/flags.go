@@ -46,9 +46,13 @@ func (cmd *Command) bindSelection(fs *flag.FlagSet) {
 		&cmd.global,
 		"global",
 		false,
-		"install for the user: ~/.claude, or $CLAUDE_CONFIG_DIR when set",
+		"install for the user: ~/.claude (or $CLAUDE_CONFIG_DIR), ~/.codex (or $CODEX_HOME) and "+
+			"~/.agents/skills for codex",
 	)
-	fs.StringVar(&cmd.project, "project", "", "install to `PATH`/.claude/skills")
+	fs.StringVar(
+		&cmd.project, "project", "",
+		"install into the project at `PATH` (.claude/skills, .agents/skills, ...)",
+	)
 	fs.BoolVar(&cmd.all, "all", false, "install every skill")
 	fs.Var(
 		flags.NewCommaList(&cmd.skills),
@@ -58,8 +62,8 @@ func (cmd *Command) bindSelection(fs *flag.FlagSet) {
 	fs.Var(
 		flags.NewRepeatable(&cmd.target),
 		"target",
-		"install target (repeatable): `claude|opencode|agents|cursor ...` (default claude); "+
-			"only claude supports --global",
+		"install target (repeatable): `claude|codex|opencode|agents|cursor ...` (default claude); "+
+			"only claude and codex support --global",
 	)
 	fs.BoolVar(
 		&cmd.routerOnly,
@@ -71,7 +75,7 @@ func (cmd *Command) bindSelection(fs *flag.FlagSet) {
 		&cmd.noHooks,
 		"no-hooks",
 		false,
-		"skip the Claude hook script and settings wiring; git hooks use --no-git-hooks",
+		"skip the Claude/Codex hook script and wiring; git hooks use --no-git-hooks",
 	)
 	fs.BoolVar(
 		&cmd.printHooks,
@@ -86,13 +90,13 @@ func (cmd *Command) bindWiring(fs *flag.FlagSet) {
 		&cmd.noMCP,
 		"no-mcp",
 		false,
-		"skip writing .mcp.json + generating the gopls-navigation skill",
+		"skip writing the MCP config (.mcp.json, .codex/config.toml) + the gopls-navigation skill",
 	)
 	fs.StringVar(
 		&cmd.hooksScope,
 		"hooks-scope",
 		"project",
-		"hook settings file: `project|local` (settings.json | settings.local.json)",
+		"Claude hook settings file: `project|local` (settings.json | settings.local.json)",
 	)
 	fs.StringVar(
 		&cmd.layout,

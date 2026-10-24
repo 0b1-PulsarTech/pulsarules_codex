@@ -17,6 +17,7 @@ type Context struct {
 	Global        bool
 	ClaudeDir     string
 	UserClaudeDir string
+	CodexDir      string
 	IDs           []string
 	RouterFilter  []string
 	NoMCP         bool
@@ -29,6 +30,7 @@ type UninstallContext struct {
 	Base          string
 	Global        bool
 	ClaudeDir     string
+	CodexDir      string
 	SettingsFiles []string
 	KeepSkills    bool
 }

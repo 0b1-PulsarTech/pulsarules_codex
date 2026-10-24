@@ -269,7 +269,7 @@ func installCases() []runnerCase {
 		{
 			name:       "uninstall lists the registered targets",
 			args:       []string{"uninstall", "--project", dirMark, "--target", "bogus"},
-			wantResult: `uninstall: invalid --target "bogus" (want agents|claude|cursor|opencode)`,
+			wantResult: `uninstall: invalid --target "bogus" (want agents|claude|codex|cursor|opencode)`,
 		},
 	}
 }

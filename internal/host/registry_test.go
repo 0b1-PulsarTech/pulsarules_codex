@@ -37,7 +37,7 @@ func TestRegistryHas(t *testing.T) {
 
 func TestRegistryNames(t *testing.T) {
 	t.Parallel()
-	want := []string{"agents", "claude", "cursor", "opencode"}
+	want := []string{"agents", "claude", "codex", "cursor", "opencode"}
 	if got := NewRegistry().Names(); !slices.Equal(got, want) {
 		t.Fatalf("Names() = %v, want %v", got, want)
 	}
@@ -167,6 +167,12 @@ func TestRegistryDetectTargets(t *testing.T) {
 			want:  []string{"opencode"},
 		},
 		{
+			name:  "codex dir with AGENTS.md",
+			dirs:  []string{".codex"},
+			files: []string{"AGENTS.md"},
+			want:  []string{"codex"},
+		},
+		{
 			name: "cursor rules only",
 			dirs: []string{filepath.Join(".cursor", "rules")},
 			want: []string{"cursor"},
@@ -243,6 +249,7 @@ func TestRegistryCheckGlobal(t *testing.T) {
 		wantErr string
 	}{
 		{name: "claude has a global layout", targets: []string{"claude"}},
+		{name: "codex has a global layout", targets: []string{"codex"}},
 		{name: "none given", targets: nil},
 		{
 			name:    "opencode",

@@ -49,7 +49,7 @@ func TestRun_UnknownTargetRemovesNothing(t *testing.T) {
 			}
 			err := opts.Run(wired.targets)
 			want := fmt.Sprintf(
-				"invalid --target %q (want agents|claude|cursor|opencode)",
+				"invalid --target %q (want agents|claude|codex|cursor|opencode)",
 				testCase.bad,
 			)
 			if err == nil || !strings.Contains(err.Error(), want) {

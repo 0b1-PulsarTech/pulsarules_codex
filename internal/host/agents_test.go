@@ -43,20 +43,25 @@ func TestAgentsTargetPresent(t *testing.T) {
 	}
 }
 
-func TestAgentsTargetPresent_DefersToOpencode(t *testing.T) {
+func TestAgentsTargetPresent_DefersToTheTargetsThatShareAgentsMD(t *testing.T) {
 	t.Parallel()
 
-	base := t.TempDir()
-	agentsPath := filepath.Join(base, "AGENTS.md")
-	if err := os.WriteFile(agentsPath, []byte("# AGENTS.md\n"), 0o600); err != nil {
-		t.Fatalf("seed AGENTS.md: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Join(base, ".opencode"), 0o750); err != nil {
-		t.Fatalf("mkdir .opencode: %v", err)
-	}
+	for _, dir := range []string{".opencode", ".codex"} {
+		t.Run(dir, func(t *testing.T) {
+			t.Parallel()
 
-	if got := (agentsTarget{}).Present(base); got {
-		t.Error("Present() = true, want false (opencode already owns this AGENTS.md)")
+			base := t.TempDir()
+			agentsPath := filepath.Join(base, "AGENTS.md")
+			if err := os.WriteFile(agentsPath, []byte("# AGENTS.md\n"), 0o600); err != nil {
+				t.Fatalf("seed AGENTS.md: %v", err)
+			}
+			if err := os.MkdirAll(filepath.Join(base, dir), 0o750); err != nil {
+				t.Fatalf("mkdir %s: %v", dir, err)
+			}
+			if got := (agentsTarget{}).Present(base); got {
+				t.Errorf("Present() = true, want false (the %s target owns this AGENTS.md)", dir)
+			}
+		})
 	}
 }
 

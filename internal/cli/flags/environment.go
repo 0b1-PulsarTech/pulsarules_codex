@@ -11,6 +11,7 @@ import (
 type Environment struct {
 	Home        string
 	ConfigDir   string
+	CodexHome   string
 	ProjectDir  string
 	SkillsDir   string
 	LogPath     string
@@ -28,6 +29,7 @@ func ReadEnvironment() Environment {
 	return Environment{
 		Home:          home,
 		ConfigDir:     os.Getenv("CLAUDE_CONFIG_DIR"),
+		CodexHome:     os.Getenv("CODEX_HOME"),
 		ProjectDir:    os.Getenv("PULSARULES_PROJECT_DIR"),
 		SkillsDir:     os.Getenv("PULSARULES_SKILLS_DIR"),
 		LogPath:       os.Getenv("PULSARULES_LOG_PATH"),

@@ -12,6 +12,7 @@ func TestSkipSet_SkipsDir(t *testing.T) {
 		want bool
 	}{
 		{"zero value falls back to defaults", SkipSet{}, "node_modules", true},
+		{"zero value skips the codex install", SkipSet{}, ".codex", true},
 		{"zero value keeps go tree", SkipSet{}, "internal", false},
 		{"configured empty set skips nothing", NewSkipSet(nil), "node_modules", false},
 		{"configured set matches its own entries", NewSkipSet([]string{"dist"}), "dist", true},

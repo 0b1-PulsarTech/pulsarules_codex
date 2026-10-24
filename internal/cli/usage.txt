@@ -10,7 +10,16 @@ else. The cursor target renders skills into <target>/.cursor/rules as one .mdc
 file per skill, each alwaysApply:false so Cursor pulls it in on demand by
 matching its description, plus one small alwaysApply:true pointer rule carrying
 the routing contract - Cursor injects every alwaysApply:true rule into every
-request, so the full skill set (tens of KB) never goes on that path.
+request, so the full skill set (tens of KB) never goes on that path. The codex
+target renders skills into <target>/.agents/skills (the root Codex reads), writes
+<target>/AGENTS.md like the agents target, wires the skill-router hooks into
+<target>/.codex/hooks.json (Codex dialect, found by a parent-walk from the working
+directory, so no git is needed), and writes the gopls and dart MCP servers into
+<target>/.codex/config.toml as one marked block that uninstall removes; a user's own
+[mcp_servers.<name>] entry is never replaced. With --global, codex installs skills into
+~/.agents/skills, and the hooks, AGENTS.md and config.toml under ~/.codex (or $CODEX_HOME
+when set); a project install then takes over its own sessions. Codex asks you to trust the
+project and approve the hooks once: run /hooks in Codex after install.
 
 --layout applies a customization profile (e.g. monorepo | inner-modules) that
 overrides which rules a skill composes; --interactive prompts for it when unset.
@@ -86,13 +95,15 @@ whole install command before anything is written, naming the valid set. Use
 
 uninstall reverses install. Unlike install, it does not default to the
 "claude" target: with no --target it probes the project for every layout it
-can detect on disk (a .claude dir, a .opencode dir / opencode.json, a root
-AGENTS.md, or a .cursor/rules dir) and reverses all of them; pass --target to
-narrow it to one layout. It removes the hook wiring from both settings.json
+can detect on disk (a .claude dir, a .codex dir, a .opencode dir / opencode.json,
+a root AGENTS.md, or a .cursor/rules dir) and reverses all of them; with --global
+and no --target it reverses claude and codex. Pass --target to narrow it to one
+layout. It removes the hook wiring from both settings.json
 and settings.local.json by default, since it cannot recover which
 --hooks-scope install used; pass --hooks-scope to narrow to just one file. The
 removal is command-level, so an unrelated command sharing the same hook
 matcher group survives. It also removes the gopls entry from .mcp.json, the
+marked MCP block from .codex/config.toml, the codex hooks from .codex/hooks.json, the
 opencode plugin plus its opencode.json wiring, and the git hooks install wrote
 into .git/hooks/. The root AGENTS.md is removed only when its content still
 carries the marker install wrote it with, so a hand-authored one is never
@@ -160,10 +171,11 @@ to read <DIR>/knowledge from disk (dev edits without rebuild).
 
 --log-level (debug|info|warn|error) enables hook execution logging, written to the
 path the installed host wrapper supplies via $PULSARULES_LOG_PATH (e.g.
-<projectDir>/.claude/hook-execution.log for the claude target); falls back to
-$PULSARULES_LOG_LEVEL when unset. Logging is off by default and costs nothing (no
-file is created); it also stays off when $PULSARULES_LOG_PATH is unset (an older
-installed wrapper, or the binary run by hand), rather than guessing a location.
+<projectDir>/.claude/hook-execution.log for the claude target, .codex/hook-execution.log
+for codex); falls back to $PULSARULES_LOG_LEVEL when unset. Logging is off by default
+and costs nothing (no file is created); it also stays off when $PULSARULES_LOG_PATH is
+unset (an older installed wrapper, or the binary run by hand), rather than guessing a
+location.
 
 clean sweeps the files the governance gate walks that lie inside --project (or
 the working directory) and reports every AI watermark marker it finds in .go

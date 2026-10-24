@@ -17,8 +17,8 @@ func (agentsTarget) Present(base string) bool {
 	if _, err := os.Stat(filepath.Join(base, "AGENTS.md")); err != nil {
 		return false
 	}
-	// Defer to opencode, which also writes and reverses the root AGENTS.md.
-	return !opencodeTarget{}.Present(base)
+	// Defer to opencode and codex, which also write and reverse the root AGENTS.md.
+	return !opencodeTarget{}.Present(base) && !codexTarget{}.Present(base)
 }
 
 func (agentsTarget) Install(ctx Context) (Report, error) {
